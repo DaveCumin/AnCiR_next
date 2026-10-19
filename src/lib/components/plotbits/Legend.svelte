@@ -299,14 +299,14 @@
 
 	const POSITION_LABELS = {
 		auto: 'Auto (avoid data)',
-		topright: 'Top Right',
-		topleft: 'Top Left',
-		bottomright: 'Bottom Right',
-		bottomleft: 'Bottom Left',
-		outsideright: 'Outside Right',
+		topright: 'Top right',
+		topleft: 'Top left',
+		bottomright: 'Bottom right',
+		bottomleft: 'Bottom left',
+		outsideright: 'Outside right',
 		custom: 'Custom'
 	};
-	// 'Outside Right' only where the plot reserves room for it, but always listed when it is
+	// 'Outside right' only where the plot reserves room for it, but always listed when it is
 	// the current value, so a select never shows a value it has no option for.
 	const positionOptions = $derived(
 		LEGEND_POSITIONS.filter(

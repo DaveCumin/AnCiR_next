@@ -368,10 +368,10 @@
 						options={['right', 'topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
 						optionsDisplay={[
 							'Beside plot',
-							'Top Right',
-							'Top Left',
-							'Bottom Right',
-							'Bottom Left',
+							'Top right',
+							'Top left',
+							'Bottom right',
+							'Bottom left',
 							'Custom'
 						]}
 						onChange={(v) => onPositionChange(v)}

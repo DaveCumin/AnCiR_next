@@ -5,6 +5,7 @@
 	// output columns rendered as normal column rows. Mirrors the canvas node /
 	// Control Panel so a node looks the same everywhere. Rewiring stays on the
 	// canvas / Control Panel — inputs here are display-only.
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { appState, deleteOperationNode } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
@@ -137,7 +138,7 @@
 	{#if inputCols.length > 0}
 		<div class="node-inputs" title="Inputs (edit wiring on the canvas)">
 			<span class="in-label">in:</span>
-			{inputCols.map((c) => c.name).join(', ')}
+			{inputCols.map((c) => displayNameOf(c)).join(', ')}
 		</div>
 	{/if}
 

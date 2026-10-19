@@ -5,13 +5,21 @@
 // carries the live wired column ids (tpObj.args.xIN / .yIN / .out).
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { getColumnById } from '$lib/core/Column.svelte';
+import { displayNameOf } from '$lib/core/columnLabels.js';
 import { joinMode, joinSourceOn } from '$lib/utils/joinPairing.js';
 
 export const RAW_COLOUR = '#234154'; // navy — input / raw
 export const OUT_COLOUR = '#BE796B'; // terracotta — output / fitted
 
 const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
-const colName = (id) => getColumnById(id)?.name ?? String(id);
+// Labels and titles read what a person reads: a column's display name ("amplitude", not the
+// internal `joined_483_38`) and the node's display name ("Join data", not the `JoinData` key).
+const colName = (id) => displayNameOf(getColumnById(id)) || String(id);
+const nodeTitle = (node) =>
+	node?.displayName ||
+	appConsts.tableProcessMap?.get?.(node?.name)?.displayName ||
+	appConsts.processMap?.get?.(node?.name)?.displayName ||
+	node?.name;
 const isRef = (id) => typeof id === 'number' && id >= 0;
 
 /**
@@ -76,7 +84,8 @@ function tpViz(tp) {
 				});
 			}
 		}
-		if (series.length) return { type: 'scatterplot', title: `${tp.name}: data + fit`, series };
+		if (series.length)
+			return { type: 'scatterplot', title: `${nodeTitle(tp)}: data + fit`, series };
 	}
 
 	// JoinData by time: every joined value column against the joined time, as points (A's and
@@ -95,7 +104,7 @@ function tpViz(tp) {
 			if (joinSourceOn(tp.args) && isRef(out.source) && isRef(value)) {
 				return {
 					type: 'boxplot',
-					title: `${tp.name}: by source`,
+					title: `${nodeTitle(tp)}: by source`,
 					box: { x: out.source, y: value },
 					showSigBars: false
 				};
@@ -111,7 +120,7 @@ function tpViz(tp) {
 			colour: i === 0 ? RAW_COLOUR : OUT_COLOUR
 		}));
 		if (isRef(t) && series.length)
-			return { type: 'scatterplot', title: `${tp.name}: joined`, series };
+			return { type: 'scatterplot', title: `${nodeTitle(tp)}: joined`, series };
 		return tableFallback(tp, yINs);
 	}
 
@@ -120,7 +129,12 @@ function tpViz(tp) {
 		const x = tp.args?.xIN;
 		const y = yINs[0];
 		if (isRef(x) && isRef(y)) {
-			return { type: 'boxplot', title: `${tp.name}: groups`, box: { x, y }, showSigBars: true };
+			return {
+				type: 'boxplot',
+				title: `${nodeTitle(tp)}: groups`,
+				box: { x, y },
+				showSigBars: true
+			};
 		}
 	}
 
@@ -130,7 +144,7 @@ function tpViz(tp) {
 	if (tp.name === 'Correlation') {
 		const cols = yINs.filter(isRef);
 		if (cols.length >= 2) {
-			return { type: 'correlationheatmap', title: `${tp.name}: heatmap`, columns: cols };
+			return { type: 'correlationheatmap', title: `${nodeTitle(tp)}: heatmap`, columns: cols };
 		}
 	}
 
@@ -140,7 +154,7 @@ function tpViz(tp) {
 	if (tp.name === 'NormalityTest') {
 		const cols = yINs.filter(isRef);
 		if (cols.length) {
-			return { type: 'qqplot', title: `${tp.name}: Q-Q`, columns: cols };
+			return { type: 'qqplot', title: `${nodeTitle(tp)}: Q-Q`, columns: cols };
 		}
 	}
 
@@ -151,7 +165,7 @@ function tpViz(tp) {
 		if (isRef(xOut) && isRef(yOut)) {
 			return {
 				type: 'scatterplot',
-				title: `${tp.name}: correlogram`,
+				title: `${nodeTitle(tp)}: correlogram`,
 				series: [{ x: xOut, y: yOut, label: 'cross-correlation', kind: 'line', colour: OUT_COLOUR }]
 			};
 		}
@@ -160,7 +174,8 @@ function tpViz(tp) {
 	// DescribeData → a histogram of each described column.
 	if (tp.name === 'DescribeData') {
 		const cols = yINs.filter(isRef);
-		if (cols.length) return { type: 'histogram', title: `${tp.name}: histograms`, columns: cols };
+		if (cols.length)
+			return { type: 'histogram', title: `${nodeTitle(tp)}: histograms`, columns: cols };
 	}
 
 	// LogisticRegression → fitted probability vs the linear predictor η (the general logistic
@@ -187,7 +202,7 @@ function tpViz(tp) {
 				kind: 'points',
 				colour: OUT_COLOUR
 			});
-			return { type: 'scatterplot', title: `${tp.name}: fit`, series };
+			return { type: 'scatterplot', title: `${nodeTitle(tp)}: fit`, series };
 		}
 	}
 
@@ -197,7 +212,7 @@ function tpViz(tp) {
 		const timeRef = isRef(tp.args?.timeIN) ? tp.args.timeIN : -1;
 		const series = yINs.filter(isRef).map((yId) => ({ x: timeRef, y: yId, label: colName(yId) }));
 		if (series.length)
-			return { type: 'circularphase', title: `${tp.name}: circular phase`, series };
+			return { type: 'circularphase', title: `${nodeTitle(tp)}: circular phase`, series };
 	}
 
 	// Fallback: a table of the inputs + every numeric output column.
@@ -217,7 +232,7 @@ function foldedProfileViz(tp, entry, out, yINs) {
 		}
 	}
 	if (!series.length) return null;
-	return { type: 'scatterplot', title: `${tp.name}: ${FOLDED_PROFILE.get(tp.name)}`, series };
+	return { type: 'scatterplot', title: `${nodeTitle(tp)}: ${FOLDED_PROFILE.get(tp.name)}`, series };
 }
 
 /**
@@ -245,14 +260,14 @@ function rhythmicityViz(tp, entry, out, yINs) {
 		}
 	}
 	if (!series.length) return null;
-	return { type: 'scatterplot', title: `${tp.name}: ${primary.y} vs ${primary.x}`, series };
+	return { type: 'scatterplot', title: `${nodeTitle(tp)}: ${primary.y} vs ${primary.x}`, series };
 }
 
 function tableFallback(tp, yINs) {
 	const outIds = Object.values(tp.args?.out ?? {}).filter(isRef);
 	const refs = [...new Set([tp.args?.xIN, ...yINs, ...outIds].filter(isRef))];
 	if (!refs.length) return null;
-	return { type: 'tableplot', title: `${tp.name}: values`, columnRefs: refs };
+	return { type: 'tableplot', title: `${nodeTitle(tp)}: values`, columnRefs: refs };
 }
 
 function processViz(proc) {
@@ -260,7 +275,7 @@ function processViz(proc) {
 	const result = core.data.find((c) => c.producerNodeId === `process_${proc.id}`);
 	const refs = [inId, result?.id].filter(isRef);
 	if (!refs.length) return null;
-	return { type: 'tableplot', title: `${proc.name}: values`, columnRefs: refs };
+	return { type: 'tableplot', title: `${nodeTitle(proc)}: values`, columnRefs: refs };
 }
 
 function scatterInner(series) {

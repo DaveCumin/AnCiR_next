@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		normalizeYInputs,
 		migrateLegacyYIN,
@@ -237,7 +238,7 @@
 				maxPeriod
 			});
 
-			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null, t: tt });
+			fitEntries.push({ label: `"${displayNameOf(yCol)}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -256,7 +257,7 @@
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitResult.fitted[i]),
-						`"${yCol.name}"`
+						`"${displayNameOf(yCol)}"`
 					)
 				);
 				if (result.t.length === 0) result.t = tt;
@@ -350,6 +351,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
@@ -413,7 +415,7 @@
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(
 		Object.entries(rwave?.y_results ?? {}).map(([yId, result]) => ({
-			name: getColumnById(Number(yId))?.name ?? String(yId),
+			name: displayNameById(Number(yId), String(yId)),
 			result
 		}))
 	);
@@ -638,7 +640,7 @@
 			'A'
 		];
 		const rows = validEntries.map(([yId, r]) => {
-			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const name = displayNameById(Number(yId), String(yId));
 			const fr = r.fitResult;
 			return [
 				name,
@@ -847,7 +849,7 @@
 					<StoreValueButton
 						label="Period"
 						getter={() => yResult?.fitResult?.period}
-						defaultName={`rectwave_period_${yName}`}
+						{...storedValueNames('rectwave_period', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -857,7 +859,7 @@
 					<StoreValueButton
 						label={`Acrophase (time of peak, ${phaseNote})`}
 						getter={() => rwAcrophase(yResult?.fitResult)}
-						defaultName={`rectwave_acrophase_${yName}`}
+						{...storedValueNames('rectwave_acrophase', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -866,7 +868,7 @@
 					<StoreValueButton
 						label="Duty cycle"
 						getter={() => yResult?.fitResult?.parameters?.dutyCycle}
-						defaultName={`rectwave_dutycycle_${yName}`}
+						{...storedValueNames('rectwave_dutycycle', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -875,7 +877,7 @@
 					<StoreValueButton
 						label="Kappa"
 						getter={() => yResult?.fitResult?.parameters?.kappa}
-						defaultName={`rectwave_kappa_${yName}`}
+						{...storedValueNames('rectwave_kappa', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -884,7 +886,7 @@
 					<StoreValueButton
 						label="Half-amplitude"
 						getter={() => yResult?.fitResult?.parameters?.A}
-						defaultName={`rectwave_amplitude_${yName}`}
+						{...storedValueNames('rectwave_amplitude', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -893,7 +895,7 @@
 					<StoreValueButton
 						label="Midline"
 						getter={() => yResult?.fitResult?.parameters?.M}
-						defaultName={`rectwave_midline_${yName}`}
+						{...storedValueNames('rectwave_midline', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -902,7 +904,7 @@
 					<StoreValueButton
 						label="RMSE"
 						getter={() => yResult?.fitResult?.rmse}
-						defaultName={`rectwave_rmse_${yName}`}
+						{...storedValueNames('rectwave_rmse', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -911,7 +913,7 @@
 					<StoreValueButton
 						label="R²"
 						getter={() => yResult?.fitResult?.rSquared}
-						defaultName={`rectwave_r2_${yName}`}
+						{...storedValueNames('rectwave_r2', yId)}
 						source="Rectangular Wave"
 					/>
 				</p>
@@ -930,7 +932,7 @@
 						<StoreValueButton
 							label="Permutation p"
 							getter={() => yResult?.pValue}
-							defaultName={`rectwave_perm_p_${yName}`}
+							{...storedValueNames('rectwave_perm_p', yId)}
 							source="Rectangular Wave (permutation)"
 						/>
 					</p>
@@ -961,7 +963,7 @@
 				{@const xout = getColumnById(p.args.out.rectwavex)}
 				<div class="tp-outputs">
 					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
@@ -971,7 +973,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = rwave?.y_results?.[yId]}
-								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								{@const srcName = displayNameById(Number(yId), yId)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
@@ -986,7 +988,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(rwave?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					{@const srcName = displayNameById(Number(yId), yId)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render rwaveStats(yResult, srcName, yId)}
@@ -999,8 +1001,7 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(rwave.outputXData ? 'predicted ' : 'fitted ') +
-								(getColumnById(Number(id))?.name ?? id)
+								(rwave.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
 						)
 					]}
 					data={[

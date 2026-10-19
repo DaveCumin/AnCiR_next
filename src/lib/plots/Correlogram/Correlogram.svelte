@@ -6,6 +6,7 @@
 	} from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		viewFontScale,
 		viewStyleFor,
@@ -707,6 +708,7 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
@@ -752,7 +754,7 @@
 		return theData.plot.data
 			.filter((d) => d.acfData?.lags?.length > 0 && d.acfData?.correlations?.length > 0)
 			.map((d) => ({
-				label: d.y?.name || '',
+				label: displayNameOf(d.y) || '',
 				colour: d.line?.colour || d.points?.colour || 'black',
 				findYAt: (x) => findNearestY(d.acfData.lags, d.acfData.correlations, x)
 			}));
@@ -949,20 +951,22 @@
 
 						{#if datum.visiblePeak}
 							<p>
-								<strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} h</strong>
+								<strong>Peak lag: {datum.visiblePeak.lag.toFixed(2)} h</strong>
 								<StoreValueButton
-									label="Peak Lag"
+									label="Peak lag"
 									getter={() => datum.visiblePeak?.lag}
-									defaultName={`correlogram_peak_lag_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('correlogram_peak_lag', datum.y, { fallback: 'data' + i })}
 									source="Correlogram"
 								/>
 							</p>
 							<p>
-								<strong>Peak Correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong>
+								<strong>Peak correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong>
 								<StoreValueButton
-									label="Peak Correlation"
+									label="Peak correlation"
 									getter={() => datum.visiblePeak?.correlation}
-									defaultName={`correlogram_peak_correlation_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('correlogram_peak_correlation', datum.y, {
+										fallback: 'data' + i
+									})}
 									source="Correlogram"
 								/>
 							</p>
@@ -975,20 +979,22 @@
 							{/if}
 						{:else if datum.peak}
 							<p>
-								<strong>Peak Lag: {datum.peak.lag.toFixed(2)} h</strong>
+								<strong>Peak lag: {datum.peak.lag.toFixed(2)} h</strong>
 								<StoreValueButton
-									label="Peak Lag"
+									label="Peak lag"
 									getter={() => datum.peak?.lag}
-									defaultName={`correlogram_peak_lag_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('correlogram_peak_lag', datum.y, { fallback: 'data' + i })}
 									source="Correlogram"
 								/>
 							</p>
 							<p>
-								<strong>Peak Correlation: {datum.peak.correlation.toFixed(3)}</strong>
+								<strong>Peak correlation: {datum.peak.correlation.toFixed(3)}</strong>
 								<StoreValueButton
-									label="Peak Correlation"
+									label="Peak correlation"
 									getter={() => datum.peak?.correlation}
-									defaultName={`correlogram_peak_correlation_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('correlogram_peak_correlation', datum.y, {
+										fallback: 'data' + i
+									})}
 									source="Correlogram"
 								/>
 							</p>
@@ -997,7 +1003,7 @@
 						<Line lineData={datum.line} which="controls" title="Line" />
 						<Points pointsData={datum.points} which="controls" />
 
-						<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
+						<Line lineData={datum.confidenceLine} which="controls" title="Confidence bounds" />
 						{#if datum.confidenceLine.draw}
 							<ControlInput label="Confidence level">
 								<select bind:value={datum.confidenceLevel}>
@@ -1093,7 +1099,7 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
-				dataLabel={datum.y.name || ''}
+				dataLabel={displayNameOf(datum.y) || ''}
 				dataColour={datum.line.colour}
 				xLabel={theData.plot.xAxis.label || 'Lag (h)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
@@ -1113,7 +1119,7 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
-				dataLabel={datum.y.name || ''}
+				dataLabel={displayNameOf(datum.y) || ''}
 				dataColour={datum.points.colour}
 				xLabel={theData.plot.xAxis.label || 'Lag (h)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}

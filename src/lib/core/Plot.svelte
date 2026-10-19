@@ -460,7 +460,7 @@
 			const { id: savedId, plotid } = json;
 			for (const retired of RETIRED_PLOT_FIELDS) void json[retired];
 			const id = savedId ?? plotid;
-			const name = json.name ?? 'Untitled Plot';
+			const name = json.name ?? 'Untitled plot';
 
 			const {
 				x,

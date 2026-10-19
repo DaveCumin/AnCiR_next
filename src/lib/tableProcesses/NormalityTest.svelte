@@ -9,6 +9,7 @@
 	//   • D'Agostino-Pearson K² (scipy normaltest) — omnibus skew + kurtosis, needs n ≥ 8.
 	//   • Jarque-Bera — the same moment idea, valid down to n ≥ 3 but weaker in small samples.
 	// Output is fixed long-form columns so it composes (filter non-normal, feed a table, etc.).
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -51,7 +52,7 @@
 			const { statistic, pvalue, n } = normalityTest(col.getData() ?? [], method);
 			// `normal`: 1 = fail to reject normality, 0 = reject (non-normal), NaN = not evaluable.
 			const normal = Number.isNaN(pvalue) ? NaN : pvalue >= alpha ? 1 : 0;
-			return { variable: col.name ?? String(id), statistic, pvalue, n, normal };
+			return { variable: displayNameOf(col) || String(id), statistic, pvalue, n, normal };
 		});
 
 		const minN = Math.min(...rows.map((r) => r.n).filter(Number.isFinite));

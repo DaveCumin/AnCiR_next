@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
@@ -67,7 +68,7 @@
 
 			y_results[yId] = {
 				segments,
-				sourceColName: yCol.name || String(yId)
+				sourceColName: displayNameOf(yCol) || String(yId)
 			};
 		}
 
@@ -339,7 +340,7 @@
 		// Create any outputs still missing.
 		for (const d of desired) {
 			if (Number(p.args.out[d.key]) >= 0) continue;
-			const srcName = getColumnById(d.yId)?.name ?? String(d.yId);
+			const srcName = getColumnById(d.yId)?.name ?? String(d.yId); // stored name, not display: seeds the output column name
 			p.args.out[d.key] = createOutputColumn(srcName, d.seg);
 			changed = true;
 		}
@@ -434,7 +435,7 @@
 			if (hasData) {
 				const y_results = {};
 				for (const yId of p.args.yIN ?? []) {
-					const srcName = getColumnById(yId)?.name ?? String(yId);
+					const srcName = displayNameById(yId, String(yId));
 					const segments = [];
 					for (let seg = 0; seg < segmentCount; seg++) {
 						const outKey = `${yId}_${seg + 1}`;

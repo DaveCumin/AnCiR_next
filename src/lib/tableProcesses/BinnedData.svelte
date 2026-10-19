@@ -287,6 +287,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
@@ -552,7 +553,7 @@
 					<option value="median">Median</option>
 					<option value="min">Min</option>
 					<option value="max">Max</option>
-					<option value="stddev">Std Dev</option>
+					<option value="stddev">Std dev</option>
 				</select>
 			</ControlInput>
 		</div>
@@ -610,7 +611,7 @@
 					<option value="median">Median</option>
 					<option value="min">Min</option>
 					<option value="max">Max</option>
-					<option value="stddev">Std Dev</option>
+					<option value="stddev">Std dev</option>
 				</select>
 			</ControlInput>
 		</div>
@@ -637,7 +638,7 @@
 					<div class="tableProcess-label"><span>Output</span></div>
 					<div class="tp-outputs">
 						<div class="tp-output-row">
-							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+							<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 							<ColumnComponent col={xout} />
 						</div>
 						{#each p.args.yIN ?? [] as yId (yId)}
@@ -647,7 +648,7 @@
 								{@const yout = getColumnById(yOutId)}
 								{#if yout}
 									<div class="tp-output-row">
-										<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
+										<span class="tp-output-label">{displayNameById(Number(yId), yId)}</span>
 										<ColumnComponent col={yout} />
 									</div>
 								{/if}
@@ -665,7 +666,7 @@
 					<Table
 						headers={[
 							xIsTime ? 'binned x' : 'binned x (center)',
-							...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
+							...yIds.map((id) => 'binned y (' + displayNameById(Number(id), id) + ')')
 						]}
 						data={[
 							binnedData.bins.slice(previewStart - 1, previewStart + 5).map((x) => {

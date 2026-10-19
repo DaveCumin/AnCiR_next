@@ -6,6 +6,7 @@
 	// IQR, skewness, excess kurtosis. Output as fixed columns (a `variable` name column plus one
 	// column per statistic), tidy long form. Quick-plot draws a histogram of each input column.
 	// Maths is the pure, unit-tested utils/describeStats.js (scipy-matched moments).
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -63,7 +64,7 @@
 
 		const rows = yIds.map((id) => {
 			const col = getColumnById(id);
-			return { variable: col.name ?? String(id), ...describeStats(col.getData() ?? []) };
+			return { variable: displayNameOf(col) || String(id), ...describeStats(col.getData() ?? []) };
 		});
 		// Write the output columns from the func itself (not just the component's recompute), so
 		// doProcess() — used by the MCP engine and the demo generator — bakes real output columns

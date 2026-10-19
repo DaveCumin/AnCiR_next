@@ -303,7 +303,7 @@
 						}
 					}}
 					options={STROKE_STYLES}
-					optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+					optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & dotted']}
 					other={true}
 					placeholder="eg 5, 5"
 				/>

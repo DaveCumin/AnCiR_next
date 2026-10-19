@@ -15,6 +15,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import {
 		LOG_AXIS_FLOOR,
@@ -1092,6 +1093,7 @@
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
@@ -1138,7 +1140,7 @@
 		return theData.plot.data
 			.filter((d) => d.periodData?.x?.length > 0 && d.periodData?.y?.length > 0)
 			.map((d) => ({
-				label: d.y?.name || '',
+				label: displayNameOf(d.y) || '',
 				colour: d.points?.colour || d.line?.colour || 'black',
 				findYAt: (x) => findNearestY(d.periodData.x, d.periodData.y, x)
 			}));
@@ -1435,20 +1437,22 @@
 
 						{#if datum.visiblePeak}
 							<p>
-								<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} h</strong>
+								<strong>Peak period: {datum.visiblePeak.period.toFixed(2)} h</strong>
 								<StoreValueButton
-									label="Peak Period"
+									label="Peak period"
 									getter={() => datum.visiblePeak?.period}
-									defaultName={`periodogram_peak_period_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('periodogram_peak_period', datum.y, {
+										fallback: 'data' + i
+									})}
 									source="Periodogram"
 								/>
 							</p>
 							<p>
-								<strong>Peak Power: {datum.visiblePeak.power.toFixed(2)}</strong>
+								<strong>Peak power: {datum.visiblePeak.power.toFixed(2)}</strong>
 								<StoreValueButton
-									label="Peak Power"
+									label="Peak power"
 									getter={() => datum.visiblePeak?.power}
-									defaultName={`periodogram_peak_power_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('periodogram_peak_power', datum.y, { fallback: 'data' + i })}
 									source="Periodogram"
 								/>
 							</p>
@@ -1471,20 +1475,22 @@
 							{/if}
 						{:else if datum.peak}
 							<p>
-								<strong>Peak Period: {datum.peak.period.toFixed(2)} h</strong>
+								<strong>Peak period: {datum.peak.period.toFixed(2)} h</strong>
 								<StoreValueButton
-									label="Peak Period"
+									label="Peak period"
 									getter={() => datum.peak?.period}
-									defaultName={`periodogram_peak_period_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('periodogram_peak_period', datum.y, {
+										fallback: 'data' + i
+									})}
 									source="Periodogram"
 								/>
 							</p>
 							<p>
-								<strong>Peak Power: {datum.peak.power.toFixed(2)}</strong>
+								<strong>Peak power: {datum.peak.power.toFixed(2)}</strong>
 								<StoreValueButton
-									label="Peak Power"
+									label="Peak power"
 									getter={() => datum.peak?.power}
-									defaultName={`periodogram_peak_power_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('periodogram_peak_power', datum.y, { fallback: 'data' + i })}
 									source="Periodogram"
 								/>
 							</p>
@@ -1598,7 +1604,7 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
-				dataLabel={datum.y.name || ''}
+				dataLabel={displayNameOf(datum.y) || ''}
 				dataColour={datum.line.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (h)'}
 				yLabel={theData.plot.yLabelText}
@@ -1616,7 +1622,7 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
-				dataLabel={datum.y.name || ''}
+				dataLabel={displayNameOf(datum.y) || ''}
 				dataColour={datum.points.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (h)'}
 				yLabel={theData.plot.yLabelText}

@@ -1321,7 +1321,7 @@
 				<ControlInput label="Scale Y-axis">
 					<select bind:value={theData.ylimsOption}>
 						<option value="overall">Overall</option>
-						<option value="byperiod">By Periods</option>
+						<option value="byperiod">By periods</option>
 						<option value="manual">Manual</option>
 					</select>
 				</ControlInput>

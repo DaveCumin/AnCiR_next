@@ -15,7 +15,7 @@
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { core } from '$lib/core/core.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { POINT_SHAPES, POINT_SHAPE_LABELS } from '$lib/components/plotbits/pointShapes.js';
 	import {
 		DASH_ORDER,
@@ -27,9 +27,7 @@
 	} from '$lib/plots/appearanceIdentity.js';
 	import { recordAppearanceEdit } from '$lib/plots/appearanceEdits.js';
 
-	const rows = $derived(
-		appearanceRows(core.seriesAppearance, (id) => getColumnById(id)?.name ?? '')
-	);
+	const rows = $derived(appearanceRows(core.seriesAppearance, (id) => displayNameById(id, '')));
 
 	/** What the row currently draws as, whether from a slot or an edited hex. */
 	function shownColour(row) {

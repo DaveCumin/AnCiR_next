@@ -257,7 +257,7 @@
 		// lie, so they are replaced with a pointer to the "Box colours" section that
 		// actually owns the colours.
 		categoryColoursActive = false,
-		title = 'Box Plot'
+		title = 'Box plot'
 	} = $props();
 
 	let width = $derived(xscale.range()[1] - xscale.range()[0]);
@@ -397,7 +397,7 @@
 								}
 							}}
 							options={['solid', '5, 5', '2, 2', '5, 2']}
-							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & dotted']}
 							other={true}
 							placeholder="eg 5, 5"
 						/>

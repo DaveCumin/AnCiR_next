@@ -16,6 +16,7 @@
 	// ww_pvalue are the optional Watson-Williams metrics (a single value; NaN when
 	// the test is off), like Cosinor's mode-specific ports.
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import {
 		rayleighTest,
@@ -177,7 +178,7 @@
 		if (!small.length) return warnings;
 
 		const describe = small
-			.map(([yId, r]) => `${getColumnById(Number(yId))?.name ?? yId} (n = ${r.n})`)
+			.map(([yId, r]) => `${displayNameById(Number(yId), yId)} (n = ${r.n})`)
 			.join(', ');
 		warnings.push(
 			`Small sample: ${describe}. The Rayleigh p-value uses a series approximation recommended for n ≥ ${RAYLEIGH_MIN_N} (Zar 1999); below that, published critical values are the correct reference.`
@@ -203,7 +204,7 @@
 			const yCol = getColumnById(yId);
 			if (!yCol) continue;
 			groups.push(anglesToRadians(yCol.getData(), unit, period));
-			groupNames.push(yCol.name || String(yId));
+			groupNames.push(displayNameOf(yCol) || String(yId));
 		}
 
 		const result = watsonWilliams(groups, pUpperFromF);
@@ -259,6 +260,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { getColumnById as getColumnByIdLocal } from '$lib/core/Column.svelte';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
@@ -364,7 +366,7 @@
 			.filter((yId) => rayleighData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: getColumnByIdLocal(Number(yId))?.name ?? String(yId),
+				name: displayNameById(Number(yId), String(yId)),
 				...rayleighData.perY[yId]
 			}));
 	});
@@ -444,7 +446,7 @@
 							<StoreValueButton
 								label="R"
 								getter={() => r.R}
-								defaultName={`rayleigh_R_${r.name}`}
+								{...storedValueNames('rayleigh_R', r.yId)}
 								source="RayleighTest"
 							/>
 						</td>
@@ -454,7 +456,7 @@
 							<StoreValueButton
 								label="p"
 								getter={() => r.pValue}
-								defaultName={`rayleigh_p_${r.name}`}
+								{...storedValueNames('rayleigh_p', r.yId)}
 								source="RayleighTest"
 							/>
 						</td>
@@ -465,7 +467,7 @@
 								<StoreValueButton
 									label="Acrophase"
 									getter={() => r.meanValue}
-									defaultName={`rayleigh_acrophase_${r.name}`}
+									{...storedValueNames('rayleigh_acrophase', r.yId)}
 									source="RayleighTest"
 								/>
 							</td>

@@ -147,11 +147,19 @@ function absorbLegacyCopies(name, base, claimed) {
 
 /**
  * Register a holder for `key`. Joins the live entry when there is one;
- * otherwise takes over this key's restored snapshot, then (legacy sessions) a
- * keyless snapshot of the default name, and only then creates a new name.
+ * otherwise takes over this key's restored snapshot, then a snapshot saved under one
+ * of the button's LEGACY default names (`legacyBases`, see below), then (legacy
+ * sessions) a keyless snapshot of the default name, and only then creates a new name.
+ *
+ * Legacy default names (v82.34): a default name that embeds a column name used to
+ * embed its internal name (`groupcmp_ttest_p_joined_483_38`, `cosinor_rmse_cosinory_5_7`)
+ * and now embeds its display name (`groupcmp_ttest_p_amplitude`), so the identity key
+ * changed. A button passes its old default names; an entry saved under
+ * `<owner>|<legacy>` is claimed and RE-KEYED to the new key. Its NAME is kept, so
+ * formulas that use it go on working; only a new value gets the new default name.
  * @returns {string} the entry's name
  */
-export function claimStoredValue({ key, base, getter, source = '', token }) {
+export function claimStoredValue({ key, base, legacyBases = [], getter, source = '', token }) {
 	let hs = holders.get(key);
 	if (!hs) holders.set(key, (hs = new Map()));
 	hs.set(token, { getter, source });
@@ -159,7 +167,8 @@ export function claimStoredValue({ key, base, getter, source = '', token }) {
 	const persistent = isPersistentStoredValueKey(key);
 	const keyed = (extra = {}) => ({ getter, source, ...(persistent ? { key } : {}), ...extra });
 
-	const existing = storedValueNameForKey(key);
+	let existing = storedValueNameForKey(key);
+	if (existing == null && persistent) existing = rekeyLegacyEntry(key, legacyBases);
 	if (existing != null) {
 		const e = core.storedValues[existing];
 		// A saved snapshot of this very key, or the entry its node held while no button
@@ -173,25 +182,55 @@ export function claimStoredValue({ key, base, getter, source = '', token }) {
 	// a metric-port ref, never a live getter.
 	const claimable = (e) => isStaticLeftover(e) && (!persistent || !e.key);
 	let name = null;
-	if (claimable(core.storedValues[base])) name = base;
-	else if (base in core.storedValues) {
-		for (let n = 2; `${base}_${n}` in core.storedValues; n++) {
-			if (claimable(core.storedValues[`${base}_${n}`])) {
-				name = `${base}_${n}`;
-				break;
+	let claimedBase = base;
+	for (const b of [base, ...legacyBases]) {
+		if (claimable(core.storedValues[b])) name = b;
+		else if (b in core.storedValues) {
+			for (let n = 2; `${b}_${n}` in core.storedValues; n++) {
+				if (claimable(core.storedValues[`${b}_${n}`])) {
+					name = `${b}_${n}`;
+					break;
+				}
 			}
+		}
+		if (name != null) {
+			claimedBase = b;
+			break;
 		}
 	}
 	if (name != null) {
 		const claimed = core.storedValues[name];
 		core.storedValues[name] = keyed();
-		if (persistent) absorbLegacyCopies(name, base, claimed);
+		if (persistent) absorbLegacyCopies(name, claimedBase, claimed);
 	} else {
 		name = uniqueStoredValueName(base);
 		core.storedValues[name] = keyed();
 	}
 	nameCache.set(key, name);
 	return name;
+}
+
+/**
+ * An entry saved under `<owner>|<legacy base>` for this key's owner: give it the new key
+ * (its name, which formulas use, stays) and return its name; null when there is none. An
+ * entry a mounted button still holds under the legacy key is left to that button.
+ */
+function rekeyLegacyEntry(key, legacyBases) {
+	const owner = storedValueKeyOwner(key);
+	if (!owner) return null;
+	for (const lb of legacyBases) {
+		if (lb == null || lb === '') continue;
+		const oldKey = `${owner}|${lb}`;
+		if (oldKey === key || holders.get(oldKey)?.size) continue;
+		const name = storedValueNameForKey(oldKey);
+		if (name == null) continue;
+		core.storedValues[name] = { ...core.storedValues[name], key };
+		nameCache.delete(oldKey);
+		retained.delete(oldKey);
+		nameCache.set(key, name);
+		return name;
+	}
+	return null;
 }
 
 /** The anonymous-key entry has no `key` field; find it by the cached name. */

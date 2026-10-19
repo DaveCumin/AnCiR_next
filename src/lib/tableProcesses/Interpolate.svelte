@@ -178,6 +178,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
 	import { onMount, untrack } from 'svelte';
@@ -302,7 +303,7 @@
 	let previewRows = $derived.by(() => {
 		if (!result?.x?.length) return { headers: [], rows: [] };
 		const yIds = Object.keys(result.y_results ?? {});
-		const headers = ['x', ...yIds.map((id) => getColumnById(Number(id))?.name ?? id)];
+		const headers = ['x', ...yIds.map((id) => displayNameById(Number(id), id))];
 		const rows = [];
 		for (let i = previewStart - 1; i < Math.min(previewStart - 1 + 8, result.x.length); i++) {
 			rows.push([

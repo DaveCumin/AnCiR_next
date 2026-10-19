@@ -5,6 +5,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { processNodeWarnings } from '$lib/core/processWarnings.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	import {
@@ -62,7 +63,7 @@
 
 	// Tooltip and accessible name (portLabels.js). The square shows no labels, so the
 	// tooltip leads with the node's name; per-column ports (col_<id>) show the column's name.
-	const colName = (id) => getColumnById(id)?.name;
+	const colName = (id) => displayNameById(id);
 	let nodeName = $derived(getNodeName(node) || node.label || '');
 	// What the port expects or produces (portDescriptions.js), after its name.
 	const env = portEnv(getColumnById);

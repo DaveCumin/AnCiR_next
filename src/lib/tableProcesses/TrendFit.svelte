@@ -1,5 +1,6 @@
 <script module>
 	// @ts-nocheck
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -292,7 +293,7 @@
 			// dropping the offending points.
 			const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
 				xLabel: tCol?.name ? `"${tCol.name}"` : 'x',
-				yLabel: yCol?.name ? `"${yCol.name}"` : 'y'
+				yLabel: displayNameOf(yCol) ? `"${displayNameOf(yCol)}"` : 'y'
 			});
 			if (shouldRefuse(domainIssues)) {
 				domainWarnings.push(...issueMessages(domainIssues));
@@ -391,6 +392,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
@@ -398,6 +400,7 @@
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
@@ -606,8 +609,8 @@
 				if (tt.length === 0) continue;
 
 				const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
-					xLabel: xCol?.name ? `"${xCol.name}"` : 'x',
-					yLabel: yCol?.name ? `"${yCol.name}"` : 'y'
+					xLabel: displayNameOf(xCol) ? `"${displayNameOf(xCol)}"` : 'x',
+					yLabel: displayNameOf(yCol) ? `"${displayNameOf(yCol)}"` : 'y'
 				});
 				if (shouldRefuse(domainIssues)) {
 					domainWarnings.push(...issueMessages(domainIssues));
@@ -684,7 +687,7 @@
 				...domainWarnings,
 				...trendPermutationWarnings(
 					result.y_results,
-					(yId) => `"${getColumnById(Number(yId))?.name ?? yId}"`
+					(yId) => `"${displayNameById(Number(yId), yId)}"`
 				),
 				...fitSampleWarnings(p.args),
 				...(outputXWarning ? [outputXWarning] : [])
@@ -844,7 +847,7 @@
 			...(includePermutation ? ['pValue', 'significant'] : [])
 		];
 		const rows = validEntries.map(([yId, r]) => {
-			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const name = displayNameById(Number(yId), String(yId));
 			const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
 			if (model === 'linear') {
 				row.push(
@@ -1027,14 +1030,14 @@
 				<StoreValueButton
 					label="R²"
 					getter={() => yResult?.fittedData?.rSquared}
-					defaultName={`trend_r2_${yName}`}
+					{...storedValueNames('trend_r2', yId)}
 					source={'Fit trend (' + p.args.model + ')'}
 				/>
 				&ensp;RMSE: {yResult?.fittedData?.rmse?.toFixed(3)}
 				<StoreValueButton
 					label="RMSE"
 					getter={() => yResult?.fittedData?.rmse}
-					defaultName={`trend_rmse_${yName}`}
+					{...storedValueNames('trend_rmse', yId)}
 					source={'Fit trend (' + p.args.model + ')'}
 				/>
 			</p>
@@ -1070,7 +1073,7 @@
 					<StoreValueButton
 						label="Slope"
 						getter={() => yResult?.fittedData?.parameters?.slope}
-						defaultName={`trend_slope_${yName}`}
+						{...storedValueNames('trend_slope', yId)}
 						source="Fit trend (linear)"
 					/>
 				</p>
@@ -1079,7 +1082,7 @@
 					<StoreValueButton
 						label="Intercept"
 						getter={() => yResult?.fittedData?.parameters?.intercept}
-						defaultName={`trend_intercept_${yName}`}
+						{...storedValueNames('trend_intercept', yId)}
 						source="Fit trend (linear)"
 					/>
 				</p>
@@ -1089,7 +1092,7 @@
 					<StoreValueButton
 						label="a"
 						getter={() => yResult?.fittedData?.parameters?.a}
-						defaultName={`trend_a_${yName}`}
+						{...storedValueNames('trend_a', yId)}
 						source="Fit trend (exponential)"
 					/>
 				</p>
@@ -1098,7 +1101,7 @@
 					<StoreValueButton
 						label="b"
 						getter={() => yResult?.fittedData?.parameters?.b}
-						defaultName={`trend_b_${yName}`}
+						{...storedValueNames('trend_b', yId)}
 						source="Fit trend (exponential)"
 					/>
 				</p>
@@ -1108,7 +1111,7 @@
 					<StoreValueButton
 						label="a"
 						getter={() => yResult?.fittedData?.parameters?.a}
-						defaultName={`trend_a_${yName}`}
+						{...storedValueNames('trend_a', yId)}
 						source="Fit trend (logarithmic)"
 					/>
 				</p>
@@ -1117,7 +1120,7 @@
 					<StoreValueButton
 						label="b"
 						getter={() => yResult?.fittedData?.parameters?.b}
-						defaultName={`trend_b_${yName}`}
+						{...storedValueNames('trend_b', yId)}
 						source="Fit trend (logarithmic)"
 					/>
 				</p>
@@ -1128,7 +1131,7 @@
 						<StoreValueButton
 							label={'c' + i}
 							getter={() => yResult?.fittedData?.parameters?.coeffs?.[i]}
-							defaultName={`trend_c${i}_${yName}`}
+							{...storedValueNames(`trend_c${i}`, yId)}
 							source="Fit trend (polynomial)"
 						/>
 					</p>
@@ -1172,7 +1175,7 @@
 					{@const xout = getColumnById(p.args.out.trendx)}
 					<div class="tp-outputs">
 						<div class="tp-output-row">
-							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+							<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 							<ColumnComponent col={xout} />
 						</div>
 						{#each p.args.yIN ?? [] as yId (yId)}
@@ -1182,7 +1185,7 @@
 								{@const yout = getColumnById(yOutId)}
 								{#if yout}
 									{@const yResult = trendData?.y_results?.[yId]}
-									{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+									{@const srcName = displayNameById(Number(yId), yId)}
 									{@const permOutKey = 'permstats_' + yId}
 									{@const permOutId = p.args.out[permOutKey]}
 									{@const permOut = permOutId >= 0 ? getColumnById(permOutId) : null}
@@ -1203,7 +1206,7 @@
 				{:else if p.args.valid}
 					<p>Preview:</p>
 					{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult] (yId)}
-						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+						{@const srcName = displayNameById(Number(yId), yId)}
 						<div class="div-line"></div>
 						<p><strong>{srcName}</strong></p>
 						{@render trendStats(yResult, srcName, yId)}
@@ -1217,7 +1220,7 @@
 							...yIds.map(
 								(id) =>
 									(trendData.outputXData ? 'predicted ' : 'fitted ') +
-									(getColumnById(Number(id))?.name ?? id)
+									displayNameById(Number(id), id)
 							)
 						]}
 						data={[

@@ -14,7 +14,7 @@
 	]);
 
 	export const outlierRemovalMethodOptions = ['iqr', 'zscore'];
-	export const outlierRemovalMethodDisplay = ['IQR', 'Z-Score'];
+	export const outlierRemovalMethodDisplay = ['IQR', 'Z-score'];
 
 	// Outlier detection functions
 	/**
@@ -233,7 +233,7 @@
 		<AttributeSelect
 			bind:value={p.args.method}
 			options={['iqr', 'zscore']}
-			optionsDisplay={['IQR', 'Z-Score']}
+			optionsDisplay={['IQR', 'Z-score']}
 		/>
 	</div>
 	{#if p.args.method === 'iqr'}

@@ -6,6 +6,7 @@
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
@@ -85,7 +86,7 @@
 
 	// Ports name themselves for tooltips and screen readers (portLabels.js).
 	let nodeName = $derived(getNodeName(node) || node.label || '');
-	const colName = (id) => getColumnById(id)?.name;
+	const colName = (id) => displayNameById(id);
 	// What each port expects or produces (portDescriptions.js): the tooltip's second sentence
 	// and, through a hidden element, the port's accessible description.
 	const env = portEnv(getColumnById);
@@ -352,7 +353,7 @@
 			<!-- Contained (ROB-12): a column whose preview throws shows why in this node
 			     rather than unmounting the canvas. -->
 			<ErrorBoundary
-				context={`previewing the column "${col.name}"`}
+				context={`previewing the column "${displayNameOf(col)}"`}
 				title="This preview couldn't be shown."
 			>
 				<div class="node-body-padded"><MiniDataTable column={col} maxRows={5} /></div>

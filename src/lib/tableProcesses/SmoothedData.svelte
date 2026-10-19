@@ -177,6 +177,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
@@ -391,7 +392,7 @@
 			<AttributeSelect
 				bind:value={p.args.smootherType}
 				options={['whittaker', 'moving', 'savitzky', 'loess']}
-				optionsDisplay={['Whittaker', 'Moving Average', 'Savitzky-Golay', 'LOESS']}
+				optionsDisplay={['Whittaker', 'Moving average', 'Savitzky-Golay', 'LOESS']}
 				onChange={() => getSmoothedData()}
 			/>
 		</div>
@@ -487,7 +488,7 @@
 			<div class="section-row">
 				<div class="tp-outputs">
 					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
@@ -497,12 +498,12 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								<div class="tp-output-row">
-									<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
+									<span class="tp-output-label">{displayNameById(Number(yId), yId)}</span>
 									<ColumnComponent col={yout} />
 									{#if p.args.out?.['resid_' + yId] >= 0}
 										<button
 											class="resid-btn"
-											onclick={() => plotResiduals(yId, getColumnById(Number(yId))?.name ?? yId)}
+											onclick={() => plotResiduals(yId, displayNameById(Number(yId), yId))}
 											title="Scatter the residuals (raw − smoothed) against x to see what smoothing removed"
 											>Plot residuals</button
 										>
@@ -522,7 +523,7 @@
 		<Table
 			headers={[
 				'smoothed x',
-				...yIds.map((id) => 'smoothed y (' + (getColumnById(Number(id))?.name ?? id) + ')')
+				...yIds.map((id) => 'smoothed y (' + displayNameById(Number(id), id) + ')')
 			]}
 			data={[
 				xIsTime

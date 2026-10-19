@@ -1,6 +1,6 @@
 /**
  * The correlogram's reported peak: the dominant PERIOD of the series, which is
- * what the Data panel prints ("Peak Lag: … hrs") and what the plot's peak_lag /
+ * what the Data panel prints ("Peak lag: … h") and what the plot's peak_lag /
  * peak_correlation metric ports emit.
  *
  * Neither the trivial lag 0 (always exactly 1) nor a plain maximum over the rest

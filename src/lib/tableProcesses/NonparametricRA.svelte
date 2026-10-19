@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -176,7 +177,7 @@
 		// FIT-8: many empty epochs thin the record IS and IV rest on (IV is now divided by
 		// the valid successive pairs, so it is not biased, but it is noisier).
 		for (const [yId, res] of Object.entries(perY)) {
-			const name = getColumnById(Number(yId))?.name ?? `column ${yId}`;
+			const name = displayNameById(Number(yId), `column ${yId}`);
 			const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
 			if (w) warnings.push(w);
 		}
@@ -227,6 +228,7 @@
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -394,7 +396,7 @@
 			.filter((yId) => npcraData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: getColumnById(Number(yId))?.name ?? String(yId),
+				name: displayNameById(Number(yId), String(yId)),
 				...npcraData.perY[yId]
 			}));
 	});
@@ -468,7 +470,7 @@
 							<StoreValueButton
 								label="IS"
 								getter={() => r.IS}
-								defaultName={`IS_${r.name}`}
+								{...storedValueNames('IS', r.yId)}
 								source="NPCRA"
 							/>
 						</td>
@@ -477,7 +479,7 @@
 							<StoreValueButton
 								label="IV"
 								getter={() => r.IV}
-								defaultName={`IV_${r.name}`}
+								{...storedValueNames('IV', r.yId)}
 								source="NPCRA"
 							/>
 						</td>
@@ -486,7 +488,7 @@
 							<StoreValueButton
 								label="RA"
 								getter={() => r.RA}
-								defaultName={`RA_${r.name}`}
+								{...storedValueNames('RA', r.yId)}
 								source="NPCRA"
 							/>
 						</td>

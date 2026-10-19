@@ -5,6 +5,7 @@
 	// editor for processes/tableprocesses (same component, same target object,
 	// so reactivity keeps both views in sync) and exposes lightweight editors
 	// for data / group / note nodes that don't otherwise have a side panel.
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		core,
 		appState,
@@ -248,7 +249,7 @@
 						{#each g.sourceColumnIds as colId (colId)}
 							{@const col = getColumnById(colId)}
 							<li>
-								<span class="source-name">{col?.name ?? `col ${colId}`}</span>
+								<span class="source-name">{displayNameOf(col) || `col ${colId}`}</span>
 								<button
 									type="button"
 									class="btn-remove"

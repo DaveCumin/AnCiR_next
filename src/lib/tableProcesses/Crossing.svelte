@@ -13,6 +13,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 
 	const displayName = 'Crossing';
@@ -264,12 +265,12 @@
 	let yOptions = $derived(
 		normalizeYInputs(p.args.yIN)
 			.filter((id) => id != null && id !== -1)
-			.map((id) => ({ id, name: getColumnById(id)?.name ?? String(id) }))
+			.map((id) => ({ id, name: displayNameById(id, String(id)) }))
 	);
 	let thresholdOptions = $derived(
 		normalizeYInputs(p.args.thresholdIN)
 			.filter((id) => id != null && id !== -1)
-			.map((id) => ({ id, name: getColumnById(id)?.name ?? String(id) }))
+			.map((id) => ({ id, name: displayNameById(id, String(id)) }))
 	);
 
 	// Recompute when any referenced column's DATA changes, not just the refs.

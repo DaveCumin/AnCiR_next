@@ -1,5 +1,6 @@
 <script module>
 	// @ts-nocheck
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -373,7 +374,7 @@
 				{@const totalRows = Math.max(0, ...groupCols.map((c) => c.values.length))}
 				{#if totalRows > 0}
 					<Table
-						headers={groupCols.map((c) => c.name)}
+						headers={groupCols.map((c) => displayNameOf(c))}
 						data={groupCols.map((c) =>
 							c.values
 								.slice(previewStart - 1, previewStart + 5)

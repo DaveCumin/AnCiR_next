@@ -119,7 +119,7 @@
 				const n = values.length;
 				const m = n > 0 ? values.reduce((a, b) => a + b, 0) / n : 0;
 				const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : 0;
-				return { name: d.label || `Box Plot ${i + 1}`, values, n, mean: m, sd };
+				return { name: d.label || `Box plot ${i + 1}`, values, n, mean: m, sd };
 			});
 		}
 
@@ -247,7 +247,7 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		label = $state('Box Plot');
+		label = $state('Box plot');
 		boxPlot = $state();
 
 		constructor(parent, dataIN) {
@@ -424,7 +424,7 @@
 			this.data.forEach((d, idx) => {
 				const yData = d.y.getData() ?? [];
 				const xRaw = d.x.getData() ?? [];
-				const label = String(d.label || `Box Plot ${idx + 1}`);
+				const label = String(d.label || `Box plot ${idx + 1}`);
 				const lo = new Array(cats.length).fill(Infinity);
 				const hi = new Array(cats.length).fill(-Infinity);
 				for (let i = 0; i < yData.length; i++) {
@@ -512,7 +512,7 @@
 				if (!addedAny) {
 					const hasAnyY = yData.some((v) => !isInvalidValue(v));
 					if (hasAnyY) {
-						allXValues.add(d.label || `Box Plot ${i + 1}`);
+						allXValues.add(d.label || `Box plot ${i + 1}`);
 					}
 				}
 			});
@@ -567,7 +567,7 @@
 						groups.get(cat).push(Number(val));
 					});
 				} else {
-					const label = d.label || `Box Plot ${i + 1}`;
+					const label = d.label || `Box plot ${i + 1}`;
 					const vals = presentValues(yData);
 					if (vals.length > 0) groups.set(label, vals);
 				}
@@ -1150,7 +1150,7 @@
 
 	function xDataForDatum(datum, idx) {
 		if (hasCategoryXData(datum)) return datum.x.getData() ?? [];
-		return new Array((datum.y.getData() ?? []).length).fill(datum.label || `Box Plot ${idx + 1}`);
+		return new Array((datum.y.getData() ?? []).length).fill(datum.label || `Box plot ${idx + 1}`);
 	}
 
 	function getManualCategoryTicks(categories) {

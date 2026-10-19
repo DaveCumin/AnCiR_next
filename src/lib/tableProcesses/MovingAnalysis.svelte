@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
@@ -200,8 +201,7 @@
 		for (let i = 0; i < yEntries.length; i++) {
 			// Name the series only when there are several — a single-input node's
 			// warning reads cleaner without "for <column>" in every sentence.
-			const label =
-				yEntries.length > 1 ? (getColumnById(yEntries[i].yId)?.name ?? `y${i + 1}`) : '';
+			const label = yEntries.length > 1 ? displayNameById(yEntries[i].yId, `y${i + 1}`) : '';
 			warnings.push(
 				...windowSkipMessages(perY[i]?.__skips, label, {
 					polyDegree: argsIN.trendPolyDegree
@@ -495,7 +495,7 @@
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of reused keys inside syncStatColumns(); never read reactively
 		const reusedStale = new Set();
 		for (const yId of activeIds) {
-			const srcName = getColumnById(yId)?.name ?? String(yId);
+			const srcName = getColumnById(yId)?.name ?? String(yId); // stored name, not display: seeds the output column name
 			for (const k of wantedKeys) {
 				const key = `${yId}_${k}`;
 				if (Number(p.args.out[key]) >= 0) continue;
@@ -540,7 +540,7 @@
 
 		// Add missing stat columns for each active Y
 		for (const yId of activeIds) {
-			const srcName = getColumnById(yId)?.name ?? String(yId);
+			const srcName = getColumnById(yId)?.name ?? String(yId); // stored name, not display: seeds the output column name
 			for (const k of wantedKeys) {
 				const key = `${yId}_${k}`;
 				if (p.args.out[key] == null || p.args.out[key] === -1) {
@@ -942,7 +942,7 @@
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
-						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+						{@const srcName = displayNameById(Number(yId), yId)}
 						{#each currentStatKeys as k (k)}
 							{@const outId = p.args.out[`${yId}_${k}`]}
 							{#if outId >= 0}
@@ -965,7 +965,7 @@
 					headers={[
 						xIsTime ? 'window time' : 'window x',
 						...yIds.flatMap((id) =>
-							currentStatKeys.map((k) => `${getColumnById(Number(id))?.name ?? id}: ${k}`)
+							currentStatKeys.map((k) => `${displayNameById(Number(id), id)}: ${k}`)
 						)
 					]}
 					data={[

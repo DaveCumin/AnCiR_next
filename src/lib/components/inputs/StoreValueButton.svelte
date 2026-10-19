@@ -14,7 +14,9 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
-	let { label, getter, defaultName = '', source = '' } = $props();
+	// `legacyNames`: default names older versions gave this value (storedValueNames.js), so a
+	// session saved then keeps its value, under the name it was saved with.
+	let { label, getter, defaultName = '', legacyNames = [], source = '' } = $props();
 
 	// One registry entry per <owner>|<default name>, however many places render this
 	// button (the canvas node and the control panel both mount the node): every
@@ -45,7 +47,14 @@
 	onMount(() => {
 		const base = defaultName || label || 'stored_value';
 		const k = storedValueKey(owner, base);
-		const name = claimStoredValue({ key: k, base, getter, source, token });
+		const name = claimStoredValue({
+			key: k,
+			base,
+			legacyBases: legacyNames ?? [],
+			getter,
+			source,
+			token
+		});
 		anonName = name;
 		key = k;
 	});

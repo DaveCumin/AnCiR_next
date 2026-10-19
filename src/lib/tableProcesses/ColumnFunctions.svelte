@@ -128,6 +128,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
@@ -139,7 +140,7 @@
 		{ value: 'average', label: 'Mean' },
 		{ value: 'min', label: 'Min' },
 		{ value: 'max', label: 'Max' },
-		{ value: 'sd', label: 'Std Dev' },
+		{ value: 'sd', label: 'Std dev' },
 		{ value: 'percentile', label: 'Percentile' }
 	];
 
@@ -273,7 +274,7 @@
 		/>
 
 		{#each p.args.xsIN as xId, i (i)}
-			<span>{getColumnById(xId)?.name ?? '?'}</span>
+			<span>{displayNameById(xId, '?')}</span>
 			<button
 				onclick={() => {
 					p.args.xsIN.splice(i, 1);

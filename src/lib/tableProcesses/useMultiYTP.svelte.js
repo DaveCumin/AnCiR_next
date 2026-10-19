@@ -51,7 +51,7 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 	// `parent.columnRefs` list — still maintained when a parent is present so old
 	// sessions keep working.
 	function makeYColumn(yId) {
-		const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+		const srcName = getColumnById(Number(yId))?.name ?? String(yId); // stored name, not display: seeds the output column name
 		const yCol = new Column({});
 		yCol.name = yColNamePrefix + srcName;
 		pushObj(yCol);

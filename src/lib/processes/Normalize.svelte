@@ -193,10 +193,10 @@
 	let { p = $bindable() } = $props();
 
 	const normalizationTypes = [
-		{ value: 'z-score', label: 'Z-Score' },
-		{ value: 'min-max', label: 'Min-Max' },
+		{ value: 'z-score', label: 'Z-score' },
+		{ value: 'min-max', label: 'Min-max' },
 		{ value: 'robust', label: 'Robust (unscaled MAD)' },
-		{ value: 'unit-vector', label: 'Unit Vector' }
+		{ value: 'unit-vector', label: 'Unit vector' }
 	];
 </script>
 

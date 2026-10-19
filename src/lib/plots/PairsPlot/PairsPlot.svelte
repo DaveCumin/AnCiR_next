@@ -13,6 +13,7 @@
 	// least-squares fit). Diverging colormap for the lower triangle, centred at 0.
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
@@ -106,7 +107,7 @@
 
 		layout = $derived.by(() => {
 			const cols = this.data.map((d) => d.column?.getData?.() ?? []);
-			const names = this.data.map((d) => d.column?.name ?? '');
+			const names = this.data.map((d) => displayNameOf(d.column));
 			return pairsLayout(cols, names, this.method);
 		});
 

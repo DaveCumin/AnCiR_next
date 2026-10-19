@@ -4502,7 +4502,7 @@
 		<div class="dialog-button-container">
 			{#if canConfirmImport()}
 				<button id="confirmImport" class="dialog-button" onclick={confirmImport}
-					>{enspireMultiplatePayload ? 'Proceed Import' : 'Confirm Import'}</button
+					>{enspireMultiplatePayload ? 'Proceed import' : 'Confirm import'}</button
 				>
 			{/if}
 		</div>

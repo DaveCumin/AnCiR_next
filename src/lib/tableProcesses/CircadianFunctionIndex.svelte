@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		normalizeYInputs,
 		migrateLegacyYIN,
@@ -86,7 +87,7 @@
 				anyValid = true;
 				// FIT-8, as NonparametricRA reports it: CFI folds the same IS and IV, so a
 				// record with many empty epochs carries the same caveat.
-				const name = yCol.name ?? `column ${yId}`;
+				const name = displayNameOf(yCol) || `column ${yId}`;
 				const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
 				if (w) warnings.push(w);
 			}
@@ -118,6 +119,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
@@ -243,7 +245,7 @@
 			.filter((yId) => cfiData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: getColumnById(Number(yId))?.name ?? String(yId),
+				name: displayNameById(Number(yId), String(yId)),
 				...cfiData.perY[yId]
 			}));
 	});
@@ -305,7 +307,7 @@
 							<StoreValueButton
 								label="CFI"
 								getter={() => r.CFI}
-								defaultName={`CFI_${r.name}`}
+								{...storedValueNames('CFI', r.yId)}
 								source="CFI"
 							/>
 						</td>

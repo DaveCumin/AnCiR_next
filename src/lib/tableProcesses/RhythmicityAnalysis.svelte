@@ -327,8 +327,10 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { useBinSizeAuto, stopFollowingSampling } from '$lib/tableProcesses/binSizeAuto.svelte.js';
@@ -544,7 +546,7 @@
 				delete p.args.out[oldKey];
 				reusedStale.add(oldKey);
 				p.args.out[key] = colId;
-				const srcName = getColumnById(g.yId)?.name ?? String(g.yId);
+				const srcName = getColumnById(g.yId)?.name ?? String(g.yId); // stored name, not display: seeds the output column name
 				const col = getColumnById(colId);
 				if (col) {
 					col.name =
@@ -583,7 +585,7 @@
 				changed = true;
 			}
 			for (const yId of activeIds) {
-				const srcName = getColumnById(yId)?.name ?? String(yId);
+				const srcName = getColumnById(yId)?.name ?? String(yId); // stored name, not display: seeds the output column name
 				const key = `rhythmicityy_${yId}`;
 				if (p.args.out[key] == null || p.args.out[key] === -1) {
 					const col = new Column({});
@@ -596,7 +598,7 @@
 			}
 		} else {
 			for (const yId of activeIds) {
-				const srcName = getColumnById(yId)?.name ?? String(yId);
+				const srcName = getColumnById(yId)?.name ?? String(yId); // stored name, not display: seeds the output column name
 				for (const k of currentOutputKeys) {
 					const key = `${yId}_${k}`;
 					if (p.args.out[key] == null || p.args.out[key] === -1) {
@@ -706,7 +708,7 @@
 		const headers = ['column', ...currentStatKeys];
 		const rows = [];
 		for (const yId of p.args.yIN ?? []) {
-			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const name = displayNameById(Number(yId), String(yId));
 			const ys = result?.y_results?.[yId];
 			const row = [name];
 			for (const k of currentStatKeys) {
@@ -848,7 +850,7 @@
 						{/if}
 					{/if}
 					{#each p.args.yIN ?? [] as yId (yId)}
-						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+						{@const srcName = displayNameById(Number(yId), yId)}
 						{@const yResult = result?.y_results?.[yId]}
 						<div class="tp-output-block">
 							<p><strong>{srcName}</strong></p>
@@ -886,7 +888,7 @@
 												<StoreValueButton
 													label={k}
 													getter={() => result?.y_results?.[yId]?.stats?.[k]}
-													defaultName={`${p.args.analysis}_${k}_${srcName}`}
+													{...storedValueNames(`${p.args.analysis}_${k}`, yId)}
 													source="Rhythmicity ({p.args.analysis})"
 												/>
 											{/if}

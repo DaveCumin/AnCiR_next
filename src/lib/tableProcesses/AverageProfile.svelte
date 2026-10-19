@@ -145,6 +145,7 @@
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
@@ -313,7 +314,7 @@
 				const dMax = dayCounts.length ? Math.max(...dayCounts) : 0;
 				return {
 					yId,
-					name: getColumnById(Number(yId))?.name ?? String(yId),
+					name: displayNameById(Number(yId), String(yId)),
 					nTotal,
 					days: dMin === dMax ? String(dMax) : `${dMin} to ${dMax}`,
 					filled,

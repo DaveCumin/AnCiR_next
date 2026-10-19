@@ -6,6 +6,7 @@
 // For a list, build one namer per render (`const namer = $derived(columnNamer())`) and call
 // `namer(col)`; for a single column, columnDisplayName(col). Both read core reactively.
 import { core } from './core.svelte.js';
+import { getColumnById } from './Column.svelte';
 import { createColumnNamer } from './outputLabels.js';
 import { applyOp } from './operations.js';
 
@@ -18,6 +19,39 @@ export function columnNamer() {
 export function columnDisplayName(col, namer) {
 	if (!col) return '';
 	return (namer ?? createColumnNamer(core))(col);
+}
+
+/**
+ * The name to SHOW for any column-like value, wherever a column is labelled (plot legends,
+ * series and axis labels, quick plot titles, node rows, result tables, stored-value names):
+ *   - a node output reads its label ("amplitude", "Binned: temperature", "R²"), never its
+ *     internal name (`joined_483_38`), unless someone renamed it;
+ *   - a REFERENCE (a plot's wired series, a `{ refId }` wrapper) reads the referenced column's
+ *     display name, without the `*` that Column.name adds to mark a reference; a name a person
+ *     gave the wrapper itself (customName) still wins; a reference to nothing reads '';
+ *   - a plain stand-in object (`{ name }`, used by tests and stubs) reads its name.
+ * Column.name stays the stored identity (saved, matched by style presets, exported); this is
+ * the one place that turns it into words.
+ */
+export function displayNameOf(col, namer, depth = 0) {
+	if (!col) return '';
+	if (typeof col.isReferencial !== 'function') return col.name ?? '';
+	if (col.isReferencial()) {
+		if (col.customName != null && col.customName !== '') return col.customName;
+		// A cyclic reference chain must not recurse forever.
+		if (depth > 8) return '';
+		return displayNameOf(col.refColumn, namer, depth + 1);
+	}
+	return columnDisplayName(col, namer);
+}
+
+/**
+ * displayNameOf for a column id (a number, or a numeric string from an object key);
+ * `fallback` when there is no such column.
+ */
+export function displayNameById(id, fallback = '', namer) {
+	const col = getColumnById(Number(id));
+	return (col && displayNameOf(col, namer)) || String(fallback ?? '');
 }
 
 /**

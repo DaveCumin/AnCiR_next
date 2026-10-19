@@ -32,6 +32,7 @@
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
@@ -4124,7 +4125,7 @@
 		const port = (ports ?? []).find((p) => p.name === portName);
 		return [
 			(node && (getNodeName(node) || node.label)) || nodeId,
-			port ? portLabel(port, (id) => getColumnById(id)?.name) : portName
+			port ? portLabel(port, (id) => displayNameById(id)) : portName
 		];
 	}
 

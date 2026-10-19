@@ -12,6 +12,7 @@
 	// Diverging colormap centred at 0 (correlation ∈ [-1, +1]): negative → blue, 0 → white,
 	// positive → red.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { correlationGrid } from '$lib/utils/correlationGrid.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
@@ -82,7 +83,7 @@
 		// Compute the correlation matrix from the wired columns' live data.
 		matrix = $derived.by(() => {
 			const cols = this.data.map((d) => d.column?.getData?.() ?? []);
-			const names = this.data.map((d) => d.column?.name ?? '');
+			const names = this.data.map((d) => displayNameOf(d.column));
 			return correlationGrid(cols, names, this.method);
 		});
 

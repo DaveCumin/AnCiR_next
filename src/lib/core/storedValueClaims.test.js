@@ -135,6 +135,77 @@ describe('loading saved sessions', () => {
 		expect(core.tableProcesses[0].args.tokens[0].key).toBe('v');
 	});
 
+	// v82.34: default names read the input's DISPLAY name (`groupcmp_ttest_p_amplitude`), where
+	// they used to embed its internal name (`groupcmp_ttest_p_joined_483_38`). A session saved
+	// before keeps its value: the button names its old default as a legacy name, the saved entry
+	// is claimed and RE-KEYED under the new identity, and its name (what formulas use) stays.
+	it('a snapshot saved under a legacy default name is claimed and re-keyed, name kept', () => {
+		const old = 'tp:2|groupcmp_ttest_p_joined_483_38';
+		const now = 'tp:2|groupcmp_ttest_p_amplitude';
+		core.storedValues.groupcmp_ttest_p_joined_483_38 = {
+			source: 'GroupComparison',
+			key: old,
+			staticValue: 0.01
+		};
+		core.tableProcesses.push({
+			id: 4,
+			name: 'FormulaColumn',
+			args: { tokens: [{ type: 'stored', key: 'groupcmp_ttest_p_joined_483_38' }] }
+		});
+		const n = claimStoredValue({
+			key: now,
+			base: 'groupcmp_ttest_p_amplitude',
+			legacyBases: ['groupcmp_ttest_p_joined_483_38'],
+			getter: () => 0.02,
+			token: {}
+		});
+		expect(n).toBe('groupcmp_ttest_p_joined_483_38');
+		expect(Object.keys(core.storedValues)).toEqual(['groupcmp_ttest_p_joined_483_38']);
+		expect(core.storedValues[n].key).toBe(now);
+		expect(getStoredValue(n)).toBe(0.02);
+		expect(storedValueNameForKey(now)).toBe(n);
+		expect(core.tableProcesses[0].args.tokens[0].key).toBe(n);
+	});
+
+	it('a renamed legacy snapshot keeps the name the user gave it', () => {
+		core.storedValues.p_amp = { source: 'Cosinor', key: 'tp:2|cosinor_rmse_A 1', staticValue: 3 };
+		const n = claimStoredValue({
+			key: 'tp:2|cosinor_rmse_A_1',
+			base: 'cosinor_rmse_A_1',
+			legacyBases: ['cosinor_rmse_A 1'],
+			getter: () => 4,
+			token: {}
+		});
+		expect(n).toBe('p_amp');
+		expect(core.storedValues.p_amp.key).toBe('tp:2|cosinor_rmse_A_1');
+	});
+
+	it('a keyless legacy snapshot is claimed by a legacy default name too', () => {
+		core.storedValues['cosinor_rmse_A 1'] = { source: 'Cosinor', staticValue: 3 };
+		const n = claimStoredValue({
+			key: 'tp:2|cosinor_rmse_A_1',
+			base: 'cosinor_rmse_A_1',
+			legacyBases: ['cosinor_rmse_A 1'],
+			getter: () => 4,
+			token: {}
+		});
+		expect(n).toBe('cosinor_rmse_A 1');
+		expect(core.storedValues[n].key).toBe('tp:2|cosinor_rmse_A_1');
+	});
+
+	it("a legacy name never takes another owner's entry", () => {
+		core.storedValues.v = { source: 'Cosinor', key: 'tp:9|v_old', staticValue: 5 };
+		const n = claimStoredValue({
+			key: 'tp:2|v_new',
+			base: 'v_new',
+			legacyBases: ['v_old'],
+			getter: () => 6,
+			token: {}
+		});
+		expect(n).toBe('v_new');
+		expect(core.storedValues.v.key).toBe('tp:9|v_old');
+	});
+
 	it('a holder unmounting AFTER a session load leaves the restored snapshot alone', () => {
 		const a = {};
 		claimStoredValue({ key: KEY, base: 'x', getter: () => 1, token: a });

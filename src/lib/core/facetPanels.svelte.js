@@ -14,6 +14,7 @@
 // `plot`/`rev`, and it must be called from a deferred task, see `schedulePanelProjection`.
 import { core, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 import { getColumnById } from '$lib/core/Column.svelte';
+import { displayNameById } from '$lib/core/columnLabels.js';
 import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
 import { facetGridCells } from '$lib/core/facetGrid.js';
 import { setByPath } from '$lib/utils/objectPath.js';
@@ -82,7 +83,7 @@ export function facetUnits(gen) {
 			const i = units.length;
 			units.push({
 				key: unitKeyFor('c', ref, nextOrdinal('c', ref)),
-				name: getColumnById(ref)?.name ?? `series ${i + 1}`,
+				name: displayNameById(ref, `series ${i + 1}`),
 				desired: [{ column: ref }],
 				sig: `c${ref}`,
 				index: i,
@@ -105,7 +106,7 @@ export function facetUnits(gen) {
 		}
 		return {
 			key: unitKeyFor('y', yRef, nextOrdinal('y', yRef)),
-			name: getColumnById(yRef)?.name ?? `series ${i + 1}`,
+			name: displayNameById(yRef, `series ${i + 1}`),
 			desired,
 			sig: desired.map((d) => `${d.xRef}:${d.yRef}`).join(','),
 			index: i,

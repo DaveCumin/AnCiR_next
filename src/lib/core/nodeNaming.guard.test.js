@@ -34,8 +34,6 @@ const NOT_EDITORS = {
 	'lib/core/TableProcess.svelte': "names a new analysis's output columns",
 	'lib/components/workflow/WorkflowEditor.svelte': 'names a new tap column and a pasted copy',
 	'lib/components/views/modals/ImportData.svelte': 'names the columns an import creates',
-	'lib/components/iconActions/Setting.svelte':
-		"session load: seeds a plot series wrapper's name from its column",
 	'lib/components/plotbits/overlaySpec.js': 'builds an overlay from an AI or MCP spec',
 	'lib/plots/Actogram/markerRuleActions.js': 'builds a marker rule patch for its operation',
 	'lib/components/plotbits/Overlay.svelte':

@@ -1050,7 +1050,7 @@
 		<CanvasNodeControls />
 	{:else}
 		<div class="control-banner">
-			<p>Control Panel</p>
+			<p>Control panel</p>
 		</div>
 		<p>Select a plot or a node to change its settings here. Alt-click to select several plots.</p>
 	{/if}

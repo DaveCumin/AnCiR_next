@@ -1,5 +1,6 @@
 <script module>
 	// @ts-nocheck
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	// The trend maths lives in ONE place: $lib/utils/trendfit.js. RemoveTrend used
 	// to carry a verbatim copy, which meant fixes landed in only one of them (the
@@ -71,7 +72,7 @@
 		if (validIndices.length < 2) return [];
 		const xCol = args.xColId != -1 ? getColumnById(args.xColId) : null;
 		return checkTrendFitDomain(tt, yy, args.model, args.polyDegree, {
-			xLabel: xCol?.name ?? 'the row index',
+			xLabel: displayNameOf(xCol) || 'the row index',
 			yLabel: 'the input column'
 		});
 	}

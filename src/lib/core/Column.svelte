@@ -16,6 +16,7 @@
 	import { auditTimeColumnParse } from '$lib/utils/time/timeParseAudit.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 
 	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
 	// Returning a fresh integer gives us cheap !== equality for cache invalidation
@@ -125,7 +126,7 @@
 	}
 
 	function doRemoveColumn(columnId) {
-		appState.AYStext = `Are you sure you want to delete ${getColumnById(columnId).name}?`;
+		appState.AYStext = `Are you sure you want to delete ${displayNameOf(getColumnById(columnId))}?`;
 		appState.AYScallback = function handleAYS(option) {
 			if (option === 'Yes') {
 				// One undoable step: undo restores the column, its data and its references.
@@ -311,7 +312,7 @@
 			// UNINITIALIZED symbol in prod that then throws "Cannot convert a Symbol to a
 			// string"). A single-level description is enough for this display-only field.
 			if (this.isReferencial()) {
-				return `refers to ${this.refColumn?.name ?? '?'}`;
+				return `refers to ${displayNameOf(this.refColumn) || '?'}`;
 			}
 			return ''; // Define default provenance for non-referential columns
 		});
@@ -347,6 +348,13 @@
 			return this.customName || 'Unnamed';
 		});
 		customName = $state(null);
+		// The name a person READS (legends, axis and series labels, node rows, result tables):
+		// a node output's label rather than its internal `name` (`joined_483_38` reads
+		// "amplitude"), a reference's target without the `*`. `name` stays the stored identity.
+		// See core/columnLabels.js displayNameOf.
+		get displayName() {
+			return displayNameOf(this);
+		}
 		// Per-column group / replicate label (BioDare2 trace label). Tags the
 		// biological group a data column belongs to so replicates sharing a label
 		// can be aggregated for grouped analysis. Orthogonal to which Group/table

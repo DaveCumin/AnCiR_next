@@ -42,6 +42,7 @@
 	// @ts-nocheck
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { matchesPredicate } from '$lib/tableProcesses/columnSet.js';
 	import { onMount } from 'svelte';
 
@@ -62,7 +63,7 @@
 			const col = getColumnById(id);
 			return {
 				id,
-				name: col?.name ?? `#${id}`,
+				name: displayNameOf(col) || `#${id}`,
 				groupLabel: col?.groupLabel ?? null,
 				selected: matchesPredicate(col, pattern, matchField)
 			};

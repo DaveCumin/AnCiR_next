@@ -116,6 +116,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { onMount, tick, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -663,7 +664,7 @@
 					/>
 				{:else if token.type === 'col'}
 					<span class="chip">
-						{getColumnById(token.id)?.name ?? '(unknown)'}
+						{displayNameById(token.id, '(unknown)')}
 						<button class="chip-remove" onclick={() => removeToken(i)} title="Remove">×</button>
 					</span>
 				{:else if token.type === 'stored'}

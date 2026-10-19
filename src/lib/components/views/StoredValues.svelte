@@ -31,7 +31,7 @@
 </script>
 
 <div class="heading">
-	<p>Stored Values</p>
+	<p>Stored values</p>
 </div>
 
 <div class="stored-list">

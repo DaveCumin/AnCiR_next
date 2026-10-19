@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { migrateLegacyYIN, migrateRenamedOutKey } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
@@ -215,7 +216,7 @@
 				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
 				: fitDoubleLogistic(tt, yy, dlOpts);
 
-			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null, t: tt });
+			fitEntries.push({ label: `"${displayNameOf(yCol)}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -234,7 +235,7 @@
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitResult.fitted[i]),
-						`"${yCol.name}"`
+						`"${displayNameOf(yCol)}"`
 					)
 				);
 			}
@@ -334,6 +335,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
@@ -404,7 +406,7 @@
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(
 		Object.entries(dlData?.y_results ?? {}).map(([yId, result]) => ({
-			name: getColumnById(Number(yId))?.name ?? String(yId),
+			name: displayNameById(Number(yId), String(yId)),
 			result
 		}))
 	);
@@ -629,7 +631,7 @@
 			dlData.phaseRef?.clock ? 'offset_clock_h' : 'offset'
 		];
 		const rows = validEntries.map(([yId, r]) => {
-			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const name = displayNameById(Number(yId), String(yId));
 			const fr = r.fitResult;
 			return [
 				name,
@@ -828,7 +830,7 @@
 					<StoreValueButton
 						label="Period"
 						getter={() => yResult?.fitResult?.parameters?.T}
-						defaultName={`dlog_period_${yName}`}
+						{...storedValueNames('dlog_period', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -838,7 +840,7 @@
 					<StoreValueButton
 						label={`Onset phase (${phaseNote})`}
 						getter={() => dlPhase(yResult?.fitResult?.onsetPhase, yResult?.fitResult)}
-						defaultName={`dlog_onset_${yName}`}
+						{...storedValueNames('dlog_onset', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -848,7 +850,7 @@
 					<StoreValueButton
 						label={`Offset phase (${phaseNote})`}
 						getter={() => dlPhase(yResult?.fitResult?.offsetPhase, yResult?.fitResult)}
-						defaultName={`dlog_offset_${yName}`}
+						{...storedValueNames('dlog_offset', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -857,7 +859,7 @@
 					<StoreValueButton
 						label="Duty cycle"
 						getter={() => yResult?.fitResult?.dutyCycle}
-						defaultName={`dlog_dutycycle_${yName}`}
+						{...storedValueNames('dlog_dutycycle', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -866,7 +868,7 @@
 					<StoreValueButton
 						label="Rise rate"
 						getter={() => yResult?.fitResult?.parameters?.k1}
-						defaultName={`dlog_k1_${yName}`}
+						{...storedValueNames('dlog_k1', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -875,7 +877,7 @@
 					<StoreValueButton
 						label="Fall rate"
 						getter={() => yResult?.fitResult?.parameters?.k2}
-						defaultName={`dlog_k2_${yName}`}
+						{...storedValueNames('dlog_k2', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -884,7 +886,7 @@
 					<StoreValueButton
 						label="Amplitude"
 						getter={() => yResult?.fitResult?.parameters?.A}
-						defaultName={`dlog_amplitude_${yName}`}
+						{...storedValueNames('dlog_amplitude', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -895,7 +897,7 @@
 					<StoreValueButton
 						label="Mesor"
 						getter={() => yResult?.fitResult?.parameters?.M}
-						defaultName={`dlog_mesor_${yName}`}
+						{...storedValueNames('dlog_mesor', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -904,7 +906,7 @@
 					<StoreValueButton
 						label="RMSE"
 						getter={() => yResult?.fitResult?.rmse}
-						defaultName={`dlog_rmse_${yName}`}
+						{...storedValueNames('dlog_rmse', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -913,7 +915,7 @@
 					<StoreValueButton
 						label="R²"
 						getter={() => yResult?.fitResult?.rSquared}
-						defaultName={`dlog_r2_${yName}`}
+						{...storedValueNames('dlog_r2', yId)}
 						source="Double Logistic"
 					/>
 				</p>
@@ -932,7 +934,7 @@
 						<StoreValueButton
 							label="Permutation p"
 							getter={() => yResult?.pValue}
-							defaultName={`dlog_perm_p_${yName}`}
+							{...storedValueNames('dlog_perm_p', yId)}
 							source="Double Logistic (permutation)"
 						/>
 					</p>
@@ -963,7 +965,7 @@
 				{@const xout = getColumnById(p.args.out.dlogx)}
 				<div class="tp-outputs">
 					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
@@ -973,7 +975,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = dlData?.y_results?.[yId]}
-								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								{@const srcName = displayNameById(Number(yId), yId)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
@@ -988,7 +990,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					{@const srcName = displayNameById(Number(yId), yId)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render dlogStats(yResult, srcName, yId)}
@@ -1001,8 +1003,7 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(dlData.outputXData ? 'predicted ' : 'fitted ') +
-								(getColumnById(Number(id))?.name ?? id)
+								(dlData.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
 						)
 					]}
 					data={[

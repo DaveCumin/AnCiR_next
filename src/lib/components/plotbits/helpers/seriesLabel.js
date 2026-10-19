@@ -1,3 +1,5 @@
+import { displayNameOf } from '$lib/core/columnLabels.js';
+
 /**
  * The label to DISPLAY for a plot data series (legend, tooltip, CSV header, the
  * per-series row in the Data tab).
@@ -8,7 +10,7 @@
  * 2". If no y column is wired yet (a blank series), we fall back to the
  * positional "Data N" so the row is still identifiable in the editor.
  *
- * Reactive by construction: reading `datum.label`, `datum.y.name` and
+ * Reactive by construction: reading `datum.label`, the wired column's name and
  * `datum.parentPlot.data` each track their reactive source, so the displayed
  * label follows a rewire or a column rename with no extra bookkeeping.
  *
@@ -23,26 +25,16 @@
  * The name to show for a series' wired column wrapper.
  *
  * A plot series holds a thin REFERENTIAL wrapper (`{ refId }`) around the real
- * column, and `Column.name` marks such a wrapper as a reference by appending
- * `*` to the referenced column's name. That marker is right in column lists,
- * wrong in a legend: the user wired "activity", not "activity*". Session load
- * used to hide this by pre-filling every wrapper's `customName`, but a wrapper
- * rebuilt by any `setPlotInner` op (a wire, a series delete, an overlay edit)
- * starts with no customName and the legend flipped to "activity*" mid-session.
- * So read the referenced column's own name; a name the user gave the wrapper
- * (`customName`) still wins, and a plain `{ name }` stand-in still works.
+ * column. The label is the referenced column's DISPLAY name (displayNameOf):
+ * a node output shows its label ("amplitude"), never its internal name
+ * (`joined_483_38`), and never the `*` Column.name adds to mark a reference.
+ * A name the user gave the wrapper (`customName`) still wins; a wrapper with
+ * nothing behind it (a blank `{ refId: -1 }` slot, or a reference whose column
+ * was deleted) has no name to show; a plain `{ name }` stand-in still works.
  */
 function wiredName(col) {
 	if (!col) return undefined;
-	if (col.customName != null && col.customName !== '') return col.customName;
-	// A real Column tells us whether it is a reference; a referential wrapper
-	// with nothing behind it (a blank `{ refId: -1 }` slot, or a reference whose
-	// column was deleted) has no name to show: `Column.name` would give a bare
-	// "*", which is not a label. Plain stand-ins (tests, stub plots) keep `name`.
-	if (typeof col.isReferencial === 'function' && col.isReferencial()) {
-		return col.refColumn?.name || undefined;
-	}
-	return col.name;
+	return displayNameOf(col) || undefined;
 }
 
 export function seriesDisplayLabel(datum, options = {}) {

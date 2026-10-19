@@ -6,6 +6,7 @@
 	} from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		viewFontScale,
 		viewStyleFor,
@@ -856,6 +857,7 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
@@ -925,7 +927,7 @@
 			.map((d) => {
 				const { x, y } = buildFFTxy(d, showPeriod, 'mag');
 				return {
-					label: d.y?.name || '',
+					label: displayNameOf(d.y) || '',
 					colour: d.line?.colour || d.points?.colour || 'black',
 					findYAt: (xVal) => findNearestY(x, y, xVal)
 				};
@@ -940,7 +942,7 @@
 			.map((d) => {
 				const { x, y } = buildFFTxy(d, showPeriod, 'phase');
 				return {
-					label: d.y?.name ? d.y.name + ' (phase)' : 'Phase',
+					label: displayNameOf(d.y) ? displayNameOf(d.y) + ' (phase)' : 'Phase',
 					colour: d.phaseLine?.colour || d.phasePoints?.colour || 'black',
 					findYAt: (xVal) => findNearestY(x, y, xVal)
 				};
@@ -1226,30 +1228,30 @@
 						{#if datum.visiblePeak}
 							{#if datum.visiblePeak.period != null}
 								<p>
-									<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} h</strong>
+									<strong>Peak period: {datum.visiblePeak.period.toFixed(2)} h</strong>
 									<StoreValueButton
-										label="Peak Period"
+										label="Peak period"
 										getter={() => datum.visiblePeak?.period}
-										defaultName={`fft_peak_period_${datum.y?.name || 'data' + i}`}
+										{...storedValueNames('fft_peak_period', datum.y, { fallback: 'data' + i })}
 										source="FFT"
 									/>
 								</p>
 							{/if}
 							<p>
-								<strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/h</strong>
+								<strong>Peak frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/h</strong>
 								<StoreValueButton
-									label="Peak Frequency"
+									label="Peak frequency"
 									getter={() => datum.visiblePeak?.frequency}
-									defaultName={`fft_peak_frequency_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('fft_peak_frequency', datum.y, { fallback: 'data' + i })}
 									source="FFT"
 								/>
 							</p>
 							<p>
-								<strong>Peak Magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong>
+								<strong>Peak magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong>
 								<StoreValueButton
-									label="Peak Magnitude"
+									label="Peak magnitude"
 									getter={() => datum.visiblePeak?.magnitude}
-									defaultName={`fft_peak_magnitude_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('fft_peak_magnitude', datum.y, { fallback: 'data' + i })}
 									source="FFT"
 								/>
 							</p>
@@ -1265,30 +1267,30 @@
 						{:else if datum.peak}
 							{#if datum.peak.period != null}
 								<p>
-									<strong>Peak Period: {datum.peak.period.toFixed(2)} h</strong>
+									<strong>Peak period: {datum.peak.period.toFixed(2)} h</strong>
 									<StoreValueButton
-										label="Peak Period"
+										label="Peak period"
 										getter={() => datum.peak?.period}
-										defaultName={`fft_peak_period_${datum.y?.name || 'data' + i}`}
+										{...storedValueNames('fft_peak_period', datum.y, { fallback: 'data' + i })}
 										source="FFT"
 									/>
 								</p>
 							{/if}
 							<p>
-								<strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/h</strong>
+								<strong>Peak frequency: {datum.peak.frequency.toFixed(4)} cycles/h</strong>
 								<StoreValueButton
-									label="Peak Frequency"
+									label="Peak frequency"
 									getter={() => datum.peak?.frequency}
-									defaultName={`fft_peak_frequency_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('fft_peak_frequency', datum.y, { fallback: 'data' + i })}
 									source="FFT"
 								/>
 							</p>
 							<p>
-								<strong>Peak Magnitude: {datum.peak.magnitude.toFixed(2)}</strong>
+								<strong>Peak magnitude: {datum.peak.magnitude.toFixed(2)}</strong>
 								<StoreValueButton
-									label="Peak Magnitude"
+									label="Peak magnitude"
 									getter={() => datum.peak?.magnitude}
-									defaultName={`fft_peak_magnitude_${datum.y?.name || 'data' + i}`}
+									{...storedValueNames('fft_peak_magnitude', datum.y, { fallback: 'data' + i })}
 									source="FFT"
 								/>
 							</p>
@@ -1400,7 +1402,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
-					dataLabel={datum.y.name || ''}
+					dataLabel={displayNameOf(datum.y) || ''}
 					dataColour={datum.line.colour}
 					xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
@@ -1416,7 +1418,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
-					dataLabel={datum.y.name || ''}
+					dataLabel={displayNameOf(datum.y) || ''}
 					dataColour={datum.points.colour}
 					xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
@@ -1435,7 +1437,7 @@
 						yoffset={theData.plot.padding.top}
 						xoffset={theData.plot.padding.left}
 						tooltip={true}
-						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
+						dataLabel={displayNameOf(datum.y) ? displayNameOf(datum.y) + ' (phase)' : 'Phase'}
 						dataColour={datum.phaseLine.colour}
 						xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
@@ -1451,7 +1453,7 @@
 						yoffset={theData.plot.padding.top}
 						xoffset={theData.plot.padding.left}
 						tooltip={true}
-						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
+						dataLabel={displayNameOf(datum.y) ? displayNameOf(datum.y) + ' (phase)' : 'Phase'}
 						dataColour={datum.phasePoints.colour}
 						xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}

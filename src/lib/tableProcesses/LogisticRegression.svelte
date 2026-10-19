@@ -9,6 +9,7 @@
 	// McFadden pseudo-R². Output is one row per term (long form), so it composes with a table.
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
@@ -74,7 +75,7 @@
 		}
 
 		const predictorCols = xIds.map((id) => getColumnById(id).getData() ?? []);
-		const names = xIds.map((id) => getColumnById(id).name ?? String(id));
+		const names = xIds.map((id) => displayNameById(id, String(id)));
 		const fit = logisticRegression(y, predictorCols, names);
 
 		if (!fit.coefficients.length) {

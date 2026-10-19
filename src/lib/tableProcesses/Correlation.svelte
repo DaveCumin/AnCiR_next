@@ -12,6 +12,7 @@
 	// assumption-aware auto-selection GroupComparison uses. Maths lives in utils/correlation.js
 	// (pure, Python-parity-checked); this file is wiring + the warnings surface.
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -83,7 +84,7 @@
 		if (yIds.length < 2) return [null, false];
 
 		const columns = yIds.map((id) => getColumnById(id).getData() ?? []);
-		const names = yIds.map((id) => getColumnById(id).name ?? String(id));
+		const names = yIds.map((id) => displayNameById(id, String(id)));
 
 		const { method, warnings } = chooseMethod(argsIN.method ?? 'auto', columns, names);
 		const alpha = Number.isFinite(Number(argsIN.alpha)) ? Number(argsIN.alpha) : 0.05;

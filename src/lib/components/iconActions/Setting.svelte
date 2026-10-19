@@ -617,26 +617,12 @@
 			? jsonData.chainRefs.map((e) => ({ ...e }))
 			: [];
 
-		// Prewarm wrapper-column customName so reading `name` later (e.g. inside
-		// `_safeJson` while building the workflow graph cache key) doesn't enter
-		// the mutating branch of the $derived. Without this, dev-mode trips
-		// state_unsafe_mutation inside `getProcessNodeGraph` and the canvas
-		// silently shows no edges. Mirrors generateDemos.svelte.test.js.
-		for (const plot of core.plots) {
-			const entry = appConsts.plotMap.get(plot.type);
-			const fields = ['x', 'y', 'z', ...(entry?.defaultInputs ?? [])];
-			for (const series of plot.plot?.data ?? []) {
-				for (const f of fields) {
-					const w = series?.[f];
-					if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
-						const real = core.data.find((c) => c.id === w.refId);
-						w.customName =
-							(real ? `${real.name}` : 'col') +
-							(typeof w.refId === 'number' && w.refId >= 0 ? '' : '');
-					}
-				}
-			}
-		}
+		// Plot wrapper columns are NOT given a customName here (v82.34). This used to copy the
+		// referenced column's raw name into every wrapper's customName, a workaround for a
+		// Column.name $derived that mutated state (it no longer does: it is pure). The copy froze
+		// a node output's internal name (`joined_483_38`) as if a person had typed it, so legends
+		// showed it instead of the display name ("amplitude"), and a later rename of the column
+		// never reached the legend. A wrapper's customName is now only ever a person's own name.
 
 		// Orphan column-processes (unconnected, spawned via palette/paste).
 		// Rehydrated as Process instances with parentCol = null so the canvas

@@ -1,4 +1,5 @@
 <script module>
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -327,7 +328,7 @@
 				useFixedPeriod,
 				nHarmonics,
 				Ncurves,
-				label: `"${yCol.name ?? yId}"`
+				label: `"${displayNameOf(yCol) || yId}"`
 			});
 			if (tooFew) {
 				result.validityWarnings.push(tooFew);
@@ -415,7 +416,7 @@
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitted[i]),
-						`"${yCol.name ?? yId}"`,
+						`"${displayNameOf(yCol) || yId}"`,
 						// The F-test p exists only for the fixed-period fit.
 						{ fTest: useFixedPeriod && !!yResult.fixedStats }
 					)
@@ -680,7 +681,7 @@
 		// design matrix was singular) has no convergence flag to read, so the non-finite
 		// R²/RMSE is the observable symptom — and worth a sentence rather than dashes.
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
-			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
+			label: `"${displayNameById(Number(yId), yId)}"`,
 			result: yr?.fittedData ?? null,
 			t: yr?.t
 		}));
@@ -755,7 +756,7 @@
 				);
 			}
 			const rows = validEntries.map(([yId, r]) => {
-				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const name = displayNameById(Number(yId), String(yId));
 				const s = r.fixedStats;
 				const row = [
 					name,
@@ -815,7 +816,7 @@
 				);
 			}
 			const rows = validEntries.map(([yId, r]) => {
-				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const name = displayNameById(Number(yId), String(yId));
 				const row = [name, r.fittedData.rmse, r.fittedData.rSquared, ...permCell(r)];
 				for (let c = 0; c < maxC; c++) {
 					const cd = r.fittedData.parameters?.cosines?.[c];
@@ -842,6 +843,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -888,7 +890,7 @@
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(
 		Object.entries(cosinorData?.y_results ?? {}).map(([yId, result]) => ({
-			name: getColumnById(Number(yId))?.name ?? String(yId),
+			name: displayNameById(Number(yId), String(yId)),
 			result
 		}))
 	);
@@ -901,6 +903,12 @@
 	);
 
 	// Residual diagnostic: spawn a scatterplot of the input x against this Y's residual column.
+	// Stored-value names before v82.34 embedded the OUTPUT column's internal name
+	// (`cosinor_rmse_cosinory_5_7`) on a fitted node; storedValueNames adds the input's.
+	const cosinorLegacyNames = (yId) => [
+		getColumnById(p.args.out?.['cosinory_' + yId])?.name // stored name, not display
+	];
+
 	function plotResiduals(yId, yName) {
 		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
 	}
@@ -1346,7 +1354,7 @@
 				<StoreValueButton
 					label={rmseLabel}
 					getter={() => yResult?.fittedData?.rmse}
-					defaultName={`cosinor_rmse_${yName}`}
+					{...storedValueNames('cosinor_rmse', yId, { legacy: cosinorLegacyNames(yId) })}
 					source="Cosinor"
 				/>
 				{#if p.args.useFixedPeriod && yResult?.fixedStats}
@@ -1355,7 +1363,7 @@
 					<StoreValueButton
 						label="RMSE"
 						getter={() => yResult?.fixedStats?.RMSE_n}
-						defaultName={`cosinor_rmse_n_${yName}`}
+						{...storedValueNames('cosinor_rmse_n', yId, { legacy: cosinorLegacyNames(yId) })}
 						source="Cosinor"
 					/>
 				{/if}
@@ -1374,7 +1382,7 @@
 					<StoreValueButton
 						label="R²"
 						getter={() => yResult?.fittedData?.rSquared}
-						defaultName={`cosinor_r2_${yName}`}
+						{...storedValueNames('cosinor_r2', yId, { legacy: cosinorLegacyNames(yId) })}
 						source="Cosinor"
 					/>
 				</p>
@@ -1394,7 +1402,7 @@
 					<StoreValueButton
 						label="Permutation p"
 						getter={() => yResult?.pValue}
-						defaultName={`cosinor_perm_p_${yName}`}
+						{...storedValueNames('cosinor_perm_p', yId, { legacy: cosinorLegacyNames(yId) })}
 						source="Cosinor (permutation)"
 					/>
 				</p>
@@ -1414,7 +1422,10 @@
 							const c = yResult?.fittedData?.parameters?.cosines?.[i];
 							return c ? (2 * Math.PI) / c.frequency : NaN;
 						}}
-						defaultName={`cosinor_period_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						{...storedValueNames('cosinor_period', yId, {
+							suffix: `${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`,
+							legacy: cosinorLegacyNames(yId)
+						})}
 						source="Cosinor"
 					/>
 				</p>
@@ -1423,7 +1434,10 @@
 					<StoreValueButton
 						label="Amplitude"
 						getter={() => yResult?.fittedData?.parameters?.cosines?.[i]?.amplitude}
-						defaultName={`cosinor_amplitude_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						{...storedValueNames('cosinor_amplitude', yId, {
+							suffix: `${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`,
+							legacy: cosinorLegacyNames(yId)
+						})}
 						source="Cosinor"
 					/>
 				</p>
@@ -1442,7 +1456,10 @@
 								const P = (2 * Math.PI) / c.frequency;
 								return refPhase(wrapToPeriod(-c.phase / c.frequency, P), P);
 							}}
-							defaultName={`cosinor_acrophase_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+							{...storedValueNames('cosinor_acrophase', yId, {
+								suffix: `${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`,
+								legacy: cosinorLegacyNames(yId)
+							})}
 							source="Cosinor"
 						/>
 					</p>
@@ -1452,7 +1469,10 @@
 					<StoreValueButton
 						label="Phase"
 						getter={() => yResult?.fittedData?.parameters?.cosines?.[i]?.phase}
-						defaultName={`cosinor_phase_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						{...storedValueNames('cosinor_phase', yId, {
+							suffix: `${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`,
+							legacy: cosinorLegacyNames(yId)
+						})}
 						source="Cosinor"
 					/>
 				</p>
@@ -1478,7 +1498,7 @@
 					<StoreValueButton
 						label="Mesor"
 						getter={() => yResult?.fixedStats?.M}
-						defaultName={`cosinor_mesor_${yName}`}
+						{...storedValueNames('cosinor_mesor', yId, { legacy: cosinorLegacyNames(yId) })}
 						source="Cosinor (fixed)"
 					/>
 				</p>
@@ -1490,7 +1510,10 @@
 						<StoreValueButton
 							label={`H${h.k} Amplitude`}
 							getter={() => yResult?.fixedStats?.harmonics?.[h.k - 1]?.amplitude}
-							defaultName={`cosinor_amplitude_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
+							{...storedValueNames('cosinor_amplitude', yId, {
+								suffix: `${s.harmonics.length > 1 ? '_H' + h.k : ''}`,
+								legacy: cosinorLegacyNames(yId)
+							})}
 							source="Cosinor (fixed)"
 						/>
 					</p>
@@ -1513,7 +1536,10 @@
 							label={`H${h.k} Acrophase (time of peak, ${phaseNote})`}
 							getter={() =>
 								refPhase(yResult?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs, hPeriod)}
-							defaultName={`cosinor_acrophase_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
+							{...storedValueNames('cosinor_acrophase', yId, {
+								suffix: `${s.harmonics.length > 1 ? '_H' + h.k : ''}`,
+								legacy: cosinorLegacyNames(yId)
+							})}
 							source="Cosinor (fixed)"
 						/>
 					</p>
@@ -1526,7 +1552,9 @@
 						<StoreValueButton
 							label="Overall amplitude"
 							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).amplitude}
-							defaultName={`cosinor_overall_amplitude_${yName}`}
+							{...storedValueNames('cosinor_overall_amplitude', yId, {
+								legacy: cosinorLegacyNames(yId)
+							})}
 							source="Cosinor (fixed)"
 						/>
 					</p>
@@ -1536,7 +1564,7 @@
 						<StoreValueButton
 							label={`Orthophase (time of overall peak, ${phaseNote})`}
 							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).acrophase}
-							defaultName={`cosinor_orthophase_${yName}`}
+							{...storedValueNames('cosinor_orthophase', yId, { legacy: cosinorLegacyNames(yId) })}
 							source="Cosinor (fixed)"
 						/>
 					</p>
@@ -1546,7 +1574,7 @@
 						<StoreValueButton
 							label={`Bathyphase (time of overall trough, ${phaseNote})`}
 							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).bathyphase}
-							defaultName={`cosinor_bathyphase_${yName}`}
+							{...storedValueNames('cosinor_bathyphase', yId, { legacy: cosinorLegacyNames(yId) })}
 							source="Cosinor (fixed)"
 						/>
 					</p>
@@ -1558,7 +1586,7 @@
 					<StoreValueButton
 						label="p-value"
 						getter={() => yResult?.fixedStats?.pF}
-						defaultName={`cosinor_pvalue_${yName}`}
+						{...storedValueNames('cosinor_pvalue', yId, { legacy: cosinorLegacyNames(yId) })}
 						source="Cosinor (fixed)"
 					/>
 				</p>
@@ -1584,7 +1612,7 @@
 				{@const xout = getColumnById(p.args.out.cosinorx)}
 				<div class="tp-outputs">
 					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
@@ -1594,12 +1622,12 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = cosinorData?.y_results?.[yId]}
-								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								{@const srcName = displayNameById(Number(yId), yId)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
 									{#if yResult}
-										{@render cosinorStats(yResult, yout.name, yId)}
+										{@render cosinorStats(yResult, srcName, yId)}
 									{/if}
 								</div>
 							{/if}
@@ -1609,7 +1637,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					{@const srcName = displayNameById(Number(yId), yId)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render cosinorStats(yResult, srcName, yId)}
@@ -1623,7 +1651,7 @@
 						...yIds.map(
 							(id) =>
 								(cosinorData.outputXData ? 'predicted ' : 'fitted ') +
-								(getColumnById(Number(id))?.name ?? id)
+								displayNameById(Number(id), id)
 						)
 					]}
 					data={[

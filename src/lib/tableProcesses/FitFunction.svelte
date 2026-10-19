@@ -1,5 +1,6 @@
 <script module>
 	// @ts-nocheck
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import {
@@ -593,7 +594,7 @@
 	export function fitWarnings(argsIN, result) {
 		const model = argsIN.model ?? 'cosinor';
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
-			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
+			label: `"${displayNameById(Number(yId), yId)}"`,
 			result: yr?.fitResult ?? null,
 			t: yr?.t
 		}));
@@ -628,7 +629,7 @@
 				...permutationValidityWarnings(
 					yr.perm ?? null,
 					yy.map((v, i) => v - fitted[i]),
-					`"${getColumnById(Number(yId))?.name ?? yId}"`,
+					`"${displayNameById(Number(yId), yId)}"`,
 					{ fTest: model === 'cosinor' && !!argsIN.useFixedPeriod }
 				)
 			);
@@ -690,12 +691,14 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
@@ -1229,7 +1232,7 @@
 		if (includePermutation) headers.push('significant');
 
 		const rows = validEntries.map(([yId, r]) => {
-			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const name = displayNameById(Number(yId), String(yId));
 			const fr = r.fitResult;
 			const row = [name, fr.rmse, fr.rSquared];
 			if (model === 'cosinor') {
@@ -1689,14 +1692,14 @@
 				<StoreValueButton
 					label="R²"
 					getter={() => yResult?.fitResult?.rSquared}
-					defaultName={`fit_r2_${yName}`}
+					{...storedValueNames('fit_r2', yId)}
 					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
 				&ensp;{rmseLabel}: {yResult?.fitResult?.rmse?.toFixed(3)}
 				<StoreValueButton
 					label={rmseLabel}
 					getter={() => yResult?.fitResult?.rmse}
-					defaultName={`fit_rmse_${yName}`}
+					{...storedValueNames('fit_rmse', yId)}
 					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
 				{#if yResult?.fitResult?.fixedStats}
@@ -1705,7 +1708,7 @@
 					<StoreValueButton
 						label="RMSE"
 						getter={() => yResult?.fitResult?.fixedStats?.RMSE_n}
-						defaultName={`fit_rmse_n_${yName}`}
+						{...storedValueNames('fit_rmse_n', yId)}
 						source={'Fit waveform model (' + p.args.model + ')'}
 					/>
 				{/if}
@@ -1774,7 +1777,7 @@
 							<StoreValueButton
 								label={`H${i + 1}`}
 								getter={() => h.amplitude}
-								defaultName={`fit_h${i + 1}_${yName}`}
+								{...storedValueNames(`fit_h${i + 1}`, yId)}
 								source="Fit waveform model (cosinor)"
 							/>
 						</p>
@@ -1795,7 +1798,7 @@
 							<StoreValueButton
 								label={`C${i + 1}`}
 								getter={() => c.amplitude}
-								defaultName={`fit_c${i + 1}_${yName}`}
+								{...storedValueNames(`fit_c${i + 1}`, yId)}
 								source="Fit waveform model (cosinor)"
 							/>
 						</p>
@@ -1870,7 +1873,7 @@
 				{@const xout = getColumnById(p.args.out.fitx)}
 				<div class="tp-outputs">
 					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<span class="tp-output-label">{displayNameById(p.args.xIN, 'x')} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
 					{#each p.args.yIN ?? [] as yId (yId)}
@@ -1880,7 +1883,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = fitData?.y_results?.[yId]}
-								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								{@const srcName = displayNameById(Number(yId), yId)}
 								{@const permOutKey = 'permstats_' + yId}
 								{@const permOutId = p.args.out[permOutKey]}
 								{@const permOut = permOutId >= 0 ? getColumnById(permOutId) : null}
@@ -1904,7 +1907,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(fitData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					{@const srcName = displayNameById(Number(yId), yId)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render fitStats(yResult, srcName, yId)}
@@ -1917,8 +1920,7 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(fitData.outputXData ? 'predicted ' : 'fitted ') +
-								(getColumnById(Number(id))?.name ?? id)
+								(fitData.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
 						)
 					]}
 					data={[

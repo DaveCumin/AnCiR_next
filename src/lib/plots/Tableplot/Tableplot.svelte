@@ -1,5 +1,6 @@
 <script module>
 	// @ts-nocheck
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -197,7 +198,7 @@
 				if (!this.showCol[i]) continue;
 				const col = getColumnById(this.columnRefs[i]);
 				if (!col) continue;
-				headers.push(col.name);
+				headers.push(displayNameOf(col));
 				columns.push(col.getData() ?? []);
 			}
 			const maxLen = Math.max(...columns.map((c) => c.length), 0);

@@ -106,6 +106,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
@@ -127,7 +128,7 @@
 	}
 
 	function makeYColumn(yId) {
-		const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+		const srcName = getColumnById(Number(yId))?.name ?? String(yId); // stored name, not display: seeds the output column name
 		const yCol = new Column({});
 		yCol.name = srcName + ' sorted';
 		pushObj(yCol);
@@ -187,7 +188,7 @@
 		(p.args.yIN ?? [])
 			.map(Number)
 			.filter((id) => id >= 0)
-			.map((id) => ({ id, name: getColumnById(id)?.name ?? String(id) }))
+			.map((id) => ({ id, name: displayNameById(id, String(id)) }))
 	);
 
 	// Keep sortOnId valid: default to the first input when unset/removed.
@@ -349,9 +350,7 @@
 								{@const yout = getColumnById(yOutId)}
 								{#if yout}
 									<div class="tp-output-row">
-										<span class="tp-output-label"
-											>{getColumnById(Number(yId))?.name ?? yId} sorted</span
-										>
+										<span class="tp-output-label">{displayNameById(Number(yId), yId)} sorted</span>
 										<ColumnComponent col={yout} />
 									</div>
 								{/if}

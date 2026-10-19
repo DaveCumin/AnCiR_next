@@ -810,6 +810,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { storedValueNames } from '$lib/core/storedValueNames.js';
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { getColumnById as getColumnByIdLocal } from '$lib/core/Column.svelte';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
@@ -1120,8 +1121,8 @@
 	<div class="control-input-horizontal">
 		<ControlInput label="Method">
 			<select bind:value={p.args.method} onchange={doComparison}>
-				<option value="auto">Auto (2 groups: T-test, 3+ groups: ANOVA)</option>
-				<option value="ttest">Welch T-test (exactly 2 groups)</option>
+				<option value="auto">Auto (2 groups: t-test, 3+ groups: ANOVA)</option>
+				<option value="ttest">Welch t-test (exactly 2 groups)</option>
 				<option value="anova">One-way ANOVA (+ Tukey-Kramer post-hoc)</option>
 				<option value="mannwhitney">Mann-Whitney U (exactly 2 groups)</option>
 				<option value="kruskal">Kruskal-Wallis (+ pairwise Mann-Whitney)</option>
@@ -1241,9 +1242,9 @@
 								</p>
 								<p><strong>Family:</strong> {formatValueDisplay(row[1])}</p>
 								<p><strong>Difference/Stat:</strong> {formatValueDisplay(row[4])}</p>
-								<p><strong>Test Statistic:</strong> {formatValueDisplay(row[5])}</p>
-								<p><strong>p Raw:</strong> {formatValueDisplay(row[6])}</p>
-								<p><strong>p Adjusted:</strong> {formatValueDisplay(row[7])}</p>
+								<p><strong>Test statistic:</strong> {formatValueDisplay(row[5])}</p>
+								<p><strong>p raw:</strong> {formatValueDisplay(row[6])}</p>
+								<p><strong>p adjusted:</strong> {formatValueDisplay(row[7])}</p>
 								<p><strong>Significant:</strong> {formatValueDisplay(row[8])}</p>
 								{#if row[9] != null}
 									<p>
@@ -1303,13 +1304,13 @@
 						<StoreValueButton
 							label="p-value"
 							getter={() => res.pValue}
-							defaultName={`groupcmp_ttest_p_${res.columnName || yId}`}
+							{...storedValueNames('groupcmp_ttest_p', yId)}
 							source="GroupComparison"
 						/>
 						<StoreValueButton
 							label="t-stat"
 							getter={() => res.t}
-							defaultName={`groupcmp_ttest_t_${res.columnName || yId}`}
+							{...storedValueNames('groupcmp_ttest_t', yId)}
 							source="GroupComparison"
 						/>
 					</div>

@@ -341,7 +341,7 @@
 		>
 			<!-- Drag handle for moving the window: pointer only, so no role of its own. -->
 			<div class="cp-header" role="presentation" onmousedown={(e) => onMouseDown(e)}>
-				<p>Colour Picker</p>
+				<p>Colour picker</p>
 				<button
 					class="icon"
 					aria-label="Close colour picker"
@@ -477,7 +477,7 @@
 							onclick={() => (showAdvanced = !showAdvanced)}
 							style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 						>
-							{showAdvanced ? 'Hide Advanced' : 'More Options'}
+							{showAdvanced ? 'Hide advanced' : 'More options'}
 						</button>
 					</div>
 
@@ -698,7 +698,7 @@
 								onclick={() => saveColor()}
 								style="padding: 4px 8px; background-color: var(--color-accent); color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 							>
-								Save to Palette
+								Save to palette
 							</button>
 						</div>
 					{/if}
