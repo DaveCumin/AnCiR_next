@@ -329,3 +329,36 @@ describe('widetolong', () => {
 		expect(wide.B).toEqual(B);
 	});
 });
+
+// The category cells hold the name a person sees for each value column (displayNameOf), not
+// its stored name, and the node bakes those labels into its args as `_inputLabels` so the
+// Python and R ports write the same values (tools/ancir_runtime.py `_input_label`).
+describe('widetolong category labels', () => {
+	it('writes the display name of a reference column, not its stored "*" name, and bakes it', () => {
+		mockColumns[1] = { getData: () => [0, 1], type: 'number', name: 'time' };
+		// A reference column: stored name marked with "*", displayed as the referenced column.
+		mockColumns[2] = {
+			getData: () => [10, 20],
+			type: 'number',
+			name: '*light',
+			customName: null,
+			isReferencial: () => true,
+			refColumn: { name: 'light' }
+		};
+		mockColumns[3] = { getData: () => [30, 40], type: 'number', name: 'temp' };
+		const args = { timeIN: 1, valueColIds: [2, 3], out: { time: -1, category: -1, value: -1 } };
+		const [result] = widetolong(args);
+		expect(result.category).toEqual(['light', 'light', 'temp', 'temp']);
+		expect(args._inputLabels).toEqual({ 2: 'light', 3: 'temp' });
+	});
+
+	it('leaves the args alone when the labels have not changed', () => {
+		mockColumns[1] = { getData: () => [0], type: 'number', name: 'time' };
+		mockColumns[2] = { getData: () => [10], type: 'number', name: 'light' };
+		const args = { timeIN: 1, valueColIds: [2], out: { time: -1, category: -1, value: -1 } };
+		widetolong(args);
+		const baked = args._inputLabels;
+		widetolong(args);
+		expect(args._inputLabels).toBe(baked);
+	});
+});

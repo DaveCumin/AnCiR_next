@@ -363,3 +363,47 @@ describe('exported scripts write the names the app shows into node results', () 
 		240_000
 	);
 });
+
+// Wide To Long's `category` cells name each row's value column the way the app shows it, baked
+// as `_inputLabels` (v82.38). The label is injected as a re-saved session carries it; the demo's
+// value columns are plain columns, so a distinct label proves the ports read the baked one.
+function wideToLongSession() {
+	const session = JSON.parse(
+		readFileSync(join(ROOT, 'static', 'sessions', 'demos', 'demo-tp-widetolong.json'), 'utf8')
+	);
+	const tp = session.tableProcesses.find((t) => t.name === 'WideToLong');
+	const [first] = tp.args.valueColIds;
+	tp.args._inputLabels = { [String(first)]: 'Shown name' };
+	const header = session.data.find((c) => c.id === tp.args.out.category)?.name;
+	return { session, header };
+}
+
+describe('exported scripts write Wide To Long categories as the app shows them', () => {
+	it.runIf(HAVE_PYTHON)(
+		'Python: the first category reads the baked label',
+		() => {
+			const { session, header } = wideToLongSession();
+			const { dir, res } = runExport(
+				sessionToPythonFiles(session, PY_RUNTIME),
+				PYTHON,
+				'session.py'
+			);
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			const out = readFileSync(join(dir, 'session_output', 'columns_after_tables.csv'), 'utf8');
+			expect(cellFromCsv(out, header)).toBe('Shown name');
+		},
+		240_000
+	);
+
+	it.runIf(HAVE_R)(
+		'R: the first category reads the baked label',
+		() => {
+			const { session, header } = wideToLongSession();
+			const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME), 'Rscript', 'session.R');
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			const out = readFileSync(join(dir, 'session_output', 'columns_after_analyses.csv'), 'utf8');
+			expect(cellFromCsv(out, header)).toBe('Shown name');
+		},
+		240_000
+	);
+});

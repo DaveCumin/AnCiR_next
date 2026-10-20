@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.37",
+  "generatedFromVersion": "β.82.38",
   "count": 62,
   "nodes": [
     {
@@ -2196,7 +2196,7 @@
           "name": "yIN",
           "kind": "column",
           "cardinality": "many",
-          "description": "Number columns, one or more; each is analysed on its own."
+          "description": "Number columns, one or more; each is analysed on its own. A column with too few rows for the model is skipped with a warning."
         }
       ],
       "params": [
@@ -4215,7 +4215,7 @@
           "name": "category",
           "kind": "column",
           "cardinality": "one",
-          "description": "Name of the column each stacked value came from."
+          "description": "Name of the column each stacked value came from, as the app shows it."
         },
         {
           "name": "value",

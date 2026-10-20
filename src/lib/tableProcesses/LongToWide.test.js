@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockColumns, mockRawDataSet } = vi.hoisted(() => ({
+const { mockColumns, mockRawDataSet, tableProcesses } = vi.hoisted(() => ({
 	mockColumns: {},
-	mockRawDataSet: vi.fn()
+	mockRawDataSet: vi.fn(),
+	tableProcesses: []
 }));
 
 vi.mock('$lib/core/core.svelte', () => ({
-	core: { rawData: { set: mockRawDataSet, get: vi.fn(), has: vi.fn() } },
+	core: { rawData: { set: mockRawDataSet, get: vi.fn(), has: vi.fn() }, tableProcesses },
 	appConsts: { processMap: new Map() },
 	pushObj: vi.fn()
 }));
@@ -28,6 +29,7 @@ import { longtowide, evaluateLongToWide } from './LongToWide.svelte';
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 	mockRawDataSet.mockClear();
+	tableProcesses.length = 0;
 });
 
 describe('longtowide', () => {
@@ -317,5 +319,62 @@ describe('longtowide', () => {
 				expect(v).toBe(original.get(cat + '@' + result.time[idx]));
 			});
 		}
+	});
+});
+
+// Since v82.38 a Wide To Long node writes each value column's DISPLAY name into its category
+// cells (it wrote the stored name before). A Long To Wide fed by that category column keys its
+// outputs by category VALUE (`value_<category>`), so a saved session whose value columns are
+// node outputs would see its categories renamed on load: the component deleted the
+// `value_<stored name>` column (and every wire to it) and made a new one. The key is moved to
+// the new label instead, keeping the column and its wires.
+describe('longtowide after Wide To Long renamed its categories', () => {
+	function setup() {
+		// A Wide To Long value column whose stored name differs from the name a person sees.
+		mockColumns[10] = {
+			getData: () => [1, 2],
+			type: 'number',
+			name: '*temperature',
+			customName: null,
+			isReferencial: () => true,
+			refColumn: { name: 'temperature' }
+		};
+		tableProcesses.push({ name: 'WideToLong', args: { valueColIds: [10], out: { category: 20 } } });
+		mockColumns[20] = { getData: () => ['temperature', 'temperature'], type: 'category' };
+		mockColumns[21] = { getData: () => [0, 1], type: 'number' };
+		mockColumns[22] = { getData: () => [1, 2], type: 'number' };
+		return {
+			categoryIN: 20,
+			timeIN: 21,
+			valueIN: 22,
+			categories: ['*temperature'],
+			out: { time: -1, 'value_*temperature': 31 },
+			preProcesses: []
+		};
+	}
+
+	it('moves value_<stored name> to value_<display name>, keeping the column id', () => {
+		const args = setup();
+		const [result] = longtowide(args);
+		expect(result.value_temperature).toEqual([1, 2]);
+		expect(args.out.value_temperature).toBe(31);
+		expect(args.out).not.toHaveProperty('value_*temperature');
+		expect(args.categories).toEqual(['temperature']);
+	});
+
+	it('leaves a key alone when the new label already has its own column', () => {
+		const args = setup();
+		args.out.value_temperature = 32;
+		longtowide(args);
+		expect(args.out.value_temperature).toBe(32);
+		expect(args.out['value_*temperature']).toBe(31);
+	});
+
+	it('leaves a Long To Wide fed by any other category column alone', () => {
+		const args = setup();
+		tableProcesses[0].args.out.category = 99;
+		longtowide(args);
+		expect(args.out['value_*temperature']).toBe(31);
+		expect(args.out).not.toHaveProperty('value_temperature');
 	});
 });

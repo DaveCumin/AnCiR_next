@@ -301,7 +301,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 	FitFunction: {
 		inputs: {
 			xIN: `${X_TIME_OR_NUMBERS} Periods, phases and rates come out in its units. ${NEED_X}`,
-			yIN: Y_NUMBERS_MANY
+			yIN: `${Y_NUMBERS_MANY} A column with too few rows for the model is skipped with a warning.`
 		},
 		outputs: {
 			fitx: CURVE_X,
@@ -867,7 +867,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			time: 'The time of each stacked row (the input times repeated for every value column).',
-			category: 'Name of the column each stacked value came from.',
+			category: 'Name of the column each stacked value came from, as the app shows it.',
 			value: 'The stacked values. Rows with a blank time or value are left out.'
 		}
 	},

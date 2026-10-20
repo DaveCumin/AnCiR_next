@@ -31,7 +31,9 @@ const LABEL_NODES = {
 	DescribeData: ['yIN', ['variable']],
 	NormalityTest: ['yIN', ['variable']],
 	Correlation: ['yIN', ['var_i', 'var_j']],
-	LogisticRegression: ['xIN', ['term']]
+	LogisticRegression: ['xIN', ['term']],
+	// Wide To Long's `category` cells name the value column each row came from (v82.38).
+	WideToLong: ['valueColIds', ['category']]
 };
 
 class ThrowOnPost {
@@ -86,6 +88,30 @@ describe('node results that hold column names', () => {
 		}
 	});
 
+	it('Wide To Long on a fit residual writes and bakes "Residuals: y" as the category', async () => {
+		await loadAndRun('demo-workflow-stats-regression.json');
+		const normality = core.tableProcesses.find((t) => t.name === 'NormalityTest');
+		const [residId] = inputIds(normality);
+		// The fit that made the residual, for its x.
+		const fit = core.tableProcesses.find((t) => Object.values(t.args?.out ?? {}).includes(residId));
+		const xId = fit.args.xIN;
+		expect(getColumnById(xId)).toBeTruthy();
+		expect(getColumnById(residId).name).toMatch(/^resid_/);
+		const tp = new TableProcess(
+			{
+				name: 'WideToLong',
+				args: { timeIN: xId, valueColIds: [residId], out: { time: -1, category: -1, value: -1 } }
+			},
+			null
+		);
+		core.tableProcesses.push(tp);
+		await tp.doProcess();
+		expect(tp.args._inputLabels).toEqual({ [String(residId)]: 'Residuals: y' });
+		const cats = getColumnById(tp.args.out.category).getData();
+		expect(cats.length).toBeGreaterThan(0);
+		expect(new Set(cats)).toEqual(new Set(['Residuals: y']));
+	});
+
 	it('every such node in every demo bakes its inputs display names and writes them', async () => {
 		const files = readdirSync(DEMOS).filter((f) => f.endsWith('.json') && f !== 'index.json');
 		let checked = 0;
@@ -109,7 +135,8 @@ describe('node results that hold column names', () => {
 				checked++;
 			}
 		}
-		// Describe data, Normality test, Correlation and Logistic regression demos at least.
-		expect(checked).toBeGreaterThanOrEqual(4);
+		// Describe data, Normality test, Correlation, Logistic regression and Wide To Long demos
+		// at least.
+		expect(checked).toBeGreaterThanOrEqual(5);
 	});
 });

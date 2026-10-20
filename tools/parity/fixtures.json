@@ -22191,6 +22191,161 @@
 			"rToleranceWhy": "Nonlinear fit: R reaches the optimum with optim (L-BFGS-B), as for tp-cosinor-free-period."
 		},
 		{
+			"id": "tp-fitfunction-cosinor-free-two-points",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"recordValid": true,
+			"_comment": "Fit waveform model, free-period cosinor, a y with only 2 rows where both x and y have a value: fewer than the 5 a one-curve free-period cosinor (4 parameters) needs. Every language declines the fit (no outputs), the Cosinor node's rule (utils/fitMinPoints.js); it used to put 4 parameters through 2 points.",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 631,
+				"gap": [0, 46],
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": false,
+				"Ncurves": 1,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1,
+					"period": -1,
+					"mesor": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2", "period", "mesor"]
+		},
+		{
+			"id": "tp-fitfunction-cosinor-free-five-points",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"recordValid": true,
+			"_comment": "The other side of the rule: 5 valid rows is parameters + 1 for a one-curve free-period cosinor, so every language fits it.",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 631,
+				"gap": [0, 43],
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": false,
+				"Ncurves": 1,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"outputX": -1,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-fitfunction-rect-too-few-points",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"recordValid": true,
+			"_comment": "Fit waveform model, free-period rectangular wave (6 parameters) on 6 valid rows: declined in every language (needs 7).",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 632,
+				"gap": [0, 42],
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "rectangular",
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2"]
+		},
+		{
+			"id": "tp-fitfunction-dl-too-few-points",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"recordValid": true,
+			"_comment": "Fit waveform model, free-period periodic double logistic (7 parameters) on 7 valid rows: declined in every language (needs 8).",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 633,
+				"gap": [0, 41],
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "doublelogistic",
+				"periodic": true,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2"]
+		},
+		{
 			"id": "pure-lombscargle-sampling-period",
 			"kind": "pureUtil",
 			"jsFn": "lombScarglePeriodogram",

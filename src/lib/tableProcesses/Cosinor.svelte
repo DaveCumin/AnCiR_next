@@ -2,6 +2,7 @@
 	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
+	import { fitTooFewPointsWarning } from '$lib/utils/fitMinPoints.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import {
@@ -201,20 +202,12 @@
 	 * @returns {string|null}
 	 */
 	export function cosinorTooFewPointsWarning(n, { useFixedPeriod, nHarmonics, Ncurves, label }) {
-		const terms = useFixedPeriod
-			? Math.max(1, Number(nHarmonics) || 1)
-			: Math.max(1, Number(Ncurves) || 1);
-		const nParams = useFixedPeriod ? 1 + 2 * terms : 1 + 3 * terms;
-		const needed = nParams + 1;
-		if (n >= needed) return null;
-		const model = useFixedPeriod
-			? `A fixed-period cosinor with ${terms} harmonic${terms > 1 ? 's' : ''}`
-			: `A free-period cosinor with ${terms} curve${terms > 1 ? 's' : ''}`;
-		const have = n === 0 ? 'no rows' : `only ${n} row${n === 1 ? '' : 's'}`;
-		return (
-			`No cosinor fit for ${label}: it has ${have} where both x and y have a value. ` +
-			`${model} estimates ${nParams} parameters, so it needs at least ${needed}. ` +
-			'Check that x and y are the intended columns, and how many of their cells are blank.'
+		// The one rule for every waveform fit (utils/fitMinPoints.js), shared with Fit waveform model.
+		return fitTooFewPointsWarning(
+			n,
+			'cosinor',
+			{ useFixedPeriod: !!useFixedPeriod, nHarmonics, Ncurves },
+			label
 		);
 	}
 

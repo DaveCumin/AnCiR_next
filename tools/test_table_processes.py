@@ -273,6 +273,23 @@ def test_correlation_writes_baked_input_labels():
     assert raw[20] == ['Residuals: y'] and raw[21] == ['noise']
 
 
+def test_widetolong_writes_baked_input_labels_as_categories():
+    # Wide To Long's category cells name each row's value column the way the app shows it.
+    cols, raw = _label_cols(), {}
+    cols[12] = _col(12, 'time', list(range(10)))
+    for cid, name in ((21, 'time_9'), (22, 'value_9')):
+        cols[cid] = rt.Column(id=cid, name=name, type='number', data=cid, raw_data={})
+    args = {'timeIN': 12, 'valueColIds': [10, 11],
+            'out': {'time': 21, 'category': 20, 'value': 22},
+            '_inputLabels': {'10': 'Residuals: y', '11': 'noise'}}
+    rt.tp_widetolong(args, cols, raw, {})
+    assert raw[20] == ['Residuals: y'] * 10 + ['noise'] * 10
+    # Without baked labels (a session saved before v82.38): the stored names, as then.
+    raw = {}
+    rt.tp_widetolong({**args, '_inputLabels': None}, cols, raw, {})
+    assert raw[20] == ['resid_191_15'] * 10 + ['noise'] * 10
+
+
 def test_input_labels_fall_back_to_the_stored_name():
     # A session saved before the app baked labels: the stored name, as the app wrote then.
     cols, raw = _label_cols(), {}

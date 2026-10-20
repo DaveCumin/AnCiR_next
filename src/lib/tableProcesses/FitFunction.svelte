@@ -43,6 +43,7 @@
 	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
+	import { fitTooFewPointsWarning, fitModelParameters } from '$lib/utils/fitMinPoints.js';
 
 	const displayName = 'Fit waveform model';
 	const defaults = new Map([
@@ -404,6 +405,19 @@
 		};
 	}
 
+	/**
+	 * The refusal for a series with fewer valid rows than the model's parameters + 1, or
+	 * null when it can be fitted: the Cosinor node's rule and message (utils/fitMinPoints.js).
+	 */
+	function tooFewPointsWarning(argsIN, n, yId) {
+		return fitTooFewPointsWarning(
+			n,
+			argsIN.model ?? 'cosinor',
+			getModelOptions(argsIN),
+			`"${displayNameById(Number(yId), yId)}"`
+		);
+	}
+
 	async function computeSingleFit(tt, yy, argsIN) {
 		const model = argsIN.model ?? 'cosinor';
 		const options = getModelOptions(argsIN);
@@ -452,7 +466,8 @@
 			t: [],
 			outputXData: null,
 			y_results: {},
-			originTime_ms: null
+			originTime_ms: null,
+			tooFewWarnings: []
 		};
 		let anyValid = false;
 
@@ -482,7 +497,13 @@
 
 			const y = yCol.getData();
 			const { tt, yy } = getValidPairs(t, y);
-			if (tt.length === 0) continue;
+			// Too few rows to estimate the model: say so rather than fitting (the free-period
+			// cosinor put 4 parameters through 2 points) or skipping the series silently.
+			const tooFew = tooFewPointsWarning(argsIN, tt.length, yId);
+			if (tooFew) {
+				result.tooFewWarnings.push(tooFew);
+				continue;
+			}
 
 			const yResult = await buildYResult(tt, yy, argsIN, outputXData);
 			if (!yResult) continue;
@@ -635,6 +656,7 @@
 			);
 		}
 		return [
+			...(result?.tooFewWarnings ?? []),
 			...checkFitResultsFinite(fitEntries, `The ${model} fit`),
 			...freeWarnings,
 			...validity,
@@ -646,7 +668,10 @@
 
 	// Self-contained sample-size check for this node. A fit needs meaningfully
 	// more usable points than it has free parameters before its R² and p-value
-	// mean anything; at n = nParams the model interpolates exactly and R² = 1.
+	// mean anything. At or below the parameter count the series is refused outright
+	// (tooFewPointsWarning, per series), so this only covers the "barely enough" range.
+	// The count is the model's real free-parameter count under its options
+	// (utils/fitMinPoints.js), the same one the refusal uses.
 	function fitSampleWarnings(argsIN) {
 		const warnings = [];
 		const xId = argsIN.xIN;
@@ -663,13 +688,9 @@
 			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
 		}
 		const model = argsIN.model ?? 'cosinor';
-		const nParams = model === 'doublelogistic' ? 6 : model === 'rectangular' ? 5 : 3;
-		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
-		if (nUsable <= nParams) {
-			warnings.push(
-				`Only ${nUsable} usable points for a fit model with ${nParams} free parameters, so the fit is interpolating, not estimating. R² here is meaningless.`
-			);
-		} else if (nUsable < nParams * 3) {
+		const nParams = fitModelParameters(model, getModelOptions(argsIN))?.nParams;
+		if (!nParams || !Number.isFinite(nUsable) || nUsable <= nParams) return warnings;
+		if (nUsable < nParams * 3) {
 			warnings.push(
 				`Small sample: ${nUsable} usable points for ${nParams} free parameters. A nonlinear fit with barely more points than parameters will follow the noise; R² is inflated and the p-value is not trustworthy.`
 			);
@@ -912,7 +933,8 @@
 			originTime_ms,
 			outputXWarning,
 			phaseRef: resolveNodePhaseReference(p.args, xCol),
-			y_results: {}
+			y_results: {},
+			tooFewWarnings: []
 		};
 
 		const activeY = [];
@@ -921,10 +943,14 @@
 			if (!yCol) continue;
 			const y = yCol.getData();
 			const { tt, yy } = getValidPairs(t, y);
-			if (tt.length === 0) continue;
+			// The same refusal as the headless path above.
+			const tooFew = tooFewPointsWarning(p.args, tt.length, yId);
+			if (tooFew) {
+				result.tooFewWarnings.push(tooFew);
+				continue;
+			}
 			activeY.push({ yId, tt, yy });
 		}
-		if (activeY.length === 0) return null;
 
 		const model = p.args.model ?? 'cosinor';
 		let anyValid = false;

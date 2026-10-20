@@ -5,6 +5,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { isMissingCategory } from '$lib/utils/chisquare.js';
+	import { bakeInputLabels } from '$lib/core/columnLabels.js';
 
 	const displayName = 'Wide To Long';
 	const defaults = new Map([
@@ -53,13 +54,18 @@
 		const timeMissing = missingRule(timeCol.type);
 		const result = { time: [], category: [], value: [] };
 
-		for (const colId of valueColIds) {
-			const valueCol = getColumnByIdForTransform(colId);
-			if (!valueCol) return [{}, false];
+		const valueCols = valueColIds.map((colId) => getColumnByIdForTransform(colId));
+		if (valueCols.some((col) => !col)) return [{}, false];
+		// The category of each block is the name a person sees for its value column
+		// ("Binned: temperature"), not the stored one (`binned_412_7`), baked into the args as
+		// `_inputLabels` so the Python and R ports write the same values (core/columnLabels.js).
+		const categoryLabels = bakeInputLabels(argsIN, valueColIds);
 
+		for (let colIdx = 0; colIdx < valueColIds.length; colIdx++) {
+			const valueCol = valueCols[colIdx];
 			const valueData = valueCol.getData();
 			const rowCount = Math.min(timeData.length, valueData.length);
-			const categoryLabel = valueCol.name ?? `column_${colId}`;
+			const categoryLabel = categoryLabels[colIdx];
 			const cellMissing = missingRule(valueCol.type);
 
 			for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {

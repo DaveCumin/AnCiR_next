@@ -3127,12 +3127,44 @@ def cosinor_metrics(fixed_res, free_res, args, phase_ref):
     }
 
 
+def _fit_param_count(model, o):
+    """Free-parameter count of a waveform fit under its options (utils/fitMinPoints.js
+    fitModelParameters): cosinor fixed 1 + 2 per harmonic, free 1 + 3 per curve;
+    rectangular 3 + steepness, period and duty cycle unless fixed; double logistic 4 +
+    k1 and k2 unless fixed + the period when periodic and not fixed. None for another model."""
+    def pos_int(v):
+        try:
+            n = int(float(v))
+        except (TypeError, ValueError):
+            n = 0
+        return max(1, n or 1)
+    if model == 'cosinor':
+        if o.get('useFixedPeriod'):
+            return 1 + 2 * pos_int(o.get('nHarmonics'))
+        return 1 + 3 * pos_int(o.get('Ncurves'))
+    if model == 'rectangular':
+        return 3 + sum(0 if o.get(k) else 1 for k in ('fixKappa', 'fixOmega', 'fixDutyCycle'))
+    if model == 'doublelogistic':
+        periodic = o.get('periodic', True)
+        periodic = True if periodic is None else periodic
+        free_period = bool(periodic) and not o.get('fixPeriod')
+        return (4 + (0 if o.get('fixK1') else 1) + (0 if o.get('fixK2') else 1)
+                + (1 if free_period else 0))
+    return None
+
+
+def _fit_min_points(model, o):
+    """Fewest rows with both x and y a waveform fit can be fitted to: parameters + 1
+    (utils/fitMinPoints.js fitMinPoints, the Cosinor and Fit waveform model rule)."""
+    n = _fit_param_count(model, o)
+    return 0 if n is None else n + 1
+
+
 def _cosinor_min_points(use_fixed, n_harmonics, n_curves):
     """Fewest rows with both x and y a cosinor can be fitted to: parameters + 1.
     Fixed period: 1 + 2 per harmonic; free period: 1 + 3 per curve."""
-    if use_fixed:
-        return 1 + 2 * max(1, int(n_harmonics or 1)) + 1
-    return 1 + 3 * max(1, int(n_curves or 1)) + 1
+    return _fit_min_points('cosinor', {'useFixedPeriod': use_fixed,
+                                       'nHarmonics': n_harmonics, 'Ncurves': n_curves})
 
 
 def tp_cosinor(args, cols, raw_data, _sv):
@@ -4938,8 +4970,9 @@ def tp_widetolong(args, cols, raw_data, _sv):
     """Port of WideToLong.svelte widetolong. One block of rows per value column (in the
     selected order, duplicates and negative ids ignored), its rows to the shorter of the two
     lengths; a row is dropped when its time or its cell is missing by its column's rule
-    (_cell_missing_rule). The category is the value column's name; the time output keeps the
-    time column's type with no text format, the value output the FIRST value column's type."""
+    (_cell_missing_rule). The category is the value column's display name (baked
+    `_inputLabels`, _input_label); the time output keeps the time column's type with no text
+    format, the value output the FIRST value column's type."""
     x_in = args.get('timeIN', args.get('xIN', -1))
     y_ins = []
     for v in _id_list(args.get('valueColIds', args.get('yIN'))):
@@ -4958,7 +4991,9 @@ def tp_widetolong(args, cols, raw_data, _sv):
         y_col = cols[y_id]
         y_data = list(y_col.get_data())
         cell_missing = _cell_missing_rule(y_col.type)
-        label = y_col.name if y_col.name is not None else f'column_{y_id}'
+        # The app writes the value column's DISPLAY name and bakes it as `_inputLabels`
+        # (WideToLong.svelte, core/columnLabels.js bakeInputLabels); else the stored name.
+        label = _input_label(args, cols, y_id)
         for xi, yi in zip(time_data, y_data):
             if time_missing(xi) or cell_missing(yi):
                 continue
@@ -6784,6 +6819,15 @@ def ff_metric_value(key, model, fr, phase_ref):
     return apply_phase_reference(v, phase_ref, per)
 
 
+def _ff_min_points(model, args):
+    """FitFunction.svelte tooFewPointsWarning: the model options as getModelOptions reads
+    them (useFixedPeriod ?? true for the cosinor), then the shared parameters + 1 rule."""
+    o = dict(args)
+    uf = args.get('useFixedPeriod', True)
+    o['useFixedPeriod'] = True if uf is None else uf
+    return _fit_min_points(model, o)
+
+
 def tp_fitfunction(args, cols, raw_data, _sv):
     """Port of FitFunction.svelte: the fit, the output curve (output x from the input's
     minimum time, STAT-19) and the scalar metric ports (phase reference FIT-9; overall
@@ -6813,7 +6857,9 @@ def tp_fitfunction(args, cols, raw_data, _sv):
         idx = _js_valid_pairs(t, y)
         tt = [_js_number(t[i]) for i in idx]
         yy = [_js_number(y[i]) for i in idx]
-        if not tt:
+        # Too few rows for the model (p parameters need p + 1 points): no fit, as the JS
+        # node (tooFewPointsWarning in FitFunction.svelte, utils/fitMinPoints.js).
+        if len(tt) < _ff_min_points(model, args):
             continue
         fit_result = _ff_fit_curve_model(tt, yy, model, args)   # JS computeSingleFit
         if fit_result is None:

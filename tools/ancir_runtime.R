@@ -1416,11 +1416,43 @@ cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
 
 # Port of Cosinor.svelte (matching the Python port): output x from the input's minimum time
 # (fit_time_frame, STAT-19), metrics from cosinor_metrics (FIT-9, FIT-13).
+# Free-parameter count of a waveform fit under its options (utils/fitMinPoints.js
+# fitModelParameters): cosinor fixed 1 + 2 per harmonic, free 1 + 3 per curve; rectangular
+# 3 + steepness, period and duty cycle unless fixed; double logistic 4 + k1 and k2 unless
+# fixed + the period when periodic and not fixed. NULL for another model.
+.fit_param_count <- function(model, o) {
+  pos_int <- function(v) {
+    n <- suppressWarnings(trunc(as.numeric(if (is.null(v)) NA else v)))
+    if (length(n) != 1 || is.na(n) || n == 0) n <- 1
+    max(1, n)
+  }
+  if (identical(model, "cosinor")) {
+    if (isTRUE(o$useFixedPeriod)) return(1 + 2 * pos_int(o$nHarmonics))
+    return(1 + 3 * pos_int(o$Ncurves))
+  }
+  if (identical(model, "rectangular")) {
+    # (!x) in parentheses: R's `!` binds LOWER than `+`, so `3 + !a + !b` is `3 + !(a + !b)`.
+    return(3 + (!isTRUE(o$fixKappa)) + (!isTRUE(o$fixOmega)) + (!isTRUE(o$fixDutyCycle)))
+  }
+  if (identical(model, "doublelogistic")) {
+    free_period <- !identical(o$periodic, FALSE) && !isTRUE(o$fixPeriod)
+    return(4 + (!isTRUE(o$fixK1)) + (!isTRUE(o$fixK2)) + free_period)
+  }
+  NULL
+}
+
+# Fewest rows with both x and y a waveform fit can be fitted to: parameters + 1
+# (utils/fitMinPoints.js fitMinPoints, the Cosinor and Fit waveform model rule).
+.fit_min_points <- function(model, o) {
+  n <- .fit_param_count(model, o)
+  if (is.null(n)) 0 else n + 1
+}
+
 # Fewest rows with both x and y a cosinor can be fitted to: parameters + 1.
 # Fixed period: 1 + 2 per harmonic; free period: 1 + 3 per curve.
 .cosinor_min_points <- function(use_fixed, n_harmonics, n_curves) {
-  if (use_fixed) return(1 + 2 * max(1L, n_harmonics) + 1)
-  1 + 3 * max(1L, n_curves) + 1
+  .fit_min_points("cosinor", list(useFixedPeriod = isTRUE(use_fixed),
+                                  nHarmonics = n_harmonics, Ncurves = n_curves))
 }
 
 tp_cosinor <- function(args, env) {
@@ -1968,8 +2000,9 @@ tp_columnfunctions <- function(args, env) {
 # Port of WideToLong.svelte widetolong (Python: tp_widetolong). One block of rows per value
 # column (selected order, duplicates and negative ids ignored), its rows to the shorter of the
 # two lengths; a row is dropped when its time or its cell is missing by its column's rule. The
-# category is the value column's name; the time output keeps the time column's type with no
-# text format, the value output the FIRST value column's type.
+# category is the value column's display name (baked `_inputLabels`, input_label); the time
+# output keeps the time column's type with no text format, the value output the FIRST value
+# column's type.
 tp_widetolong <- function(args, env) {
   x_in <- if (!is.null(args$timeIN)) args$timeIN else if (!is.null(args$xIN)) args$xIN else -1
   y_ins <- unique(id_list(if (!is.null(args$valueColIds)) args$valueColIds else args$yIN))
@@ -1985,7 +2018,9 @@ tp_widetolong <- function(args, env) {
     if (is.null(y_col)) return(FALSE)
     yd <- as.list(col_data(y_col, env$cols, env$raw_data))
     cell_missing <- .cell_missing_rule(y_col$type)
-    label <- if (is.null(y_col$name)) paste0("column_", y_id) else y_col$name
+    # The app writes the value column's DISPLAY name and bakes it as `_inputLabels`
+    # (WideToLong.svelte, bakeInputLabels); else the stored name.
+    label <- input_label(args, env, y_id)
     for (i in seq_len(min(length(xd), length(yd)))) {
       if (time_missing(xd[[i]]) || cell_missing(yd[[i]])) next
       times[[length(times) + 1]] <- xd[[i]]
@@ -4055,7 +4090,10 @@ tp_fitfunction <- function(args, env) {
     if (is.null(env$cols[[yk]])) next
     pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
     tt <- pr$t; yy <- pr$y
-    if (!length(tt)) next
+    # Too few rows for the model (p parameters need p + 1 points): no fit, as the JS node
+    # (tooFewPointsWarning in FitFunction.svelte; useFixedPeriod ?? true there).
+    if (length(tt) < .fit_min_points(model, modifyList(args, list(
+      useFixedPeriod = !identical(args$useFixedPeriod, FALSE))))) next
     fr <- ff_fit_curve_model(tt, yy, model, args)
     if (is.null(fr)) next
     y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)

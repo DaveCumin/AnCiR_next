@@ -5,6 +5,7 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { isMissingCategory } from '$lib/utils/chisquare.js';
+	import { displayNameById } from '$lib/core/columnLabels.js';
 
 	const displayName = 'Long To Wide';
 
@@ -35,6 +36,47 @@
 		}
 		return categories;
 	}
+	/**
+	 * Follow Wide To Long's category rename (v82.38). Wide To Long writes each value column's
+	 * DISPLAY name into its category cells ("Binned: temperature"); before, it wrote the stored
+	 * name (`binned_412_7`). This node keys its outputs by category value, so in a session saved
+	 * before then whose category input is a Wide To Long `category` output, a renamed category
+	 * would lose its `value_<category>` column (the component deleted it, and every wire to it,
+	 * and made a new one; the headless run wrote nothing). For each value column of that Wide To
+	 * Long whose stored and display names differ, the key (and `categories` entry) moves from
+	 * the stored name to the display name when the display name is a current category, the
+	 * stored name is not, and the display name has no column of its own yet. Mutates argsIN.
+	 * @param {Record<string, any>} argsIN  this node's args
+	 * @param {string[]} categories  the current categories (longToWideCategories)
+	 * @returns {boolean} whether any key moved
+	 */
+	export function followWideToLongRenames(argsIN, categories) {
+		const out = argsIN?.out;
+		if (!out) return false;
+		const categoryIN = Number(argsIN.categoryIN);
+		const producer = (core.tableProcesses ?? []).find(
+			(tp) => tp?.name === 'WideToLong' && Number(tp.args?.out?.category) === categoryIN
+		);
+		if (!producer || !(categoryIN >= 0)) return false;
+		const current = new Set(categories);
+		let moved = false;
+		for (const id of producer.args.valueColIds ?? []) {
+			const stored = getColumnById(Number(id))?.name; // stored name, not display
+			const label = displayNameById(id, '');
+			if (!stored || !label || stored === label) continue;
+			if (!current.has(label) || current.has(stored)) continue;
+			const colId = out['value_' + stored];
+			if (!(colId >= 0) || out['value_' + label] >= 0) continue;
+			out['value_' + label] = colId;
+			delete out['value_' + stored];
+			if (Array.isArray(argsIN.categories)) {
+				argsIN.categories = argsIN.categories.map((c) => (c === stored ? label : c));
+			}
+			moved = true;
+		}
+		return moved;
+	}
+
 	const defaults = new Map([
 		['categoryIN', { val: -1 }],
 		['timeIN', { val: -1 }],
@@ -180,6 +222,7 @@
 
 	export function longtowide(argsIN) {
 		const [evalData, valid] = evaluateLongToWide(argsIN);
+		if (evalData?.categories) followWideToLongRenames(argsIN, evalData.categories);
 		if (valid && evalData) writeLongToWideOutputs(argsIN, evalData);
 		return [evalData?.result ?? {}, valid];
 	}
@@ -418,6 +461,9 @@
 		previewStart = 1;
 		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
 			const categories = longToWideCategories(getColumnById(p.args.categoryIN).getData());
+			// A category Wide To Long renamed keeps its column (and its wires), before the
+			// removal below would delete it as gone.
+			followWideToLongRenames(p.args, categories);
 
 			// Remove output columns for categories that no longer exist
 			const newCatSet = new Set(categories);

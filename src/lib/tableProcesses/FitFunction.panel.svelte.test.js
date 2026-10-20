@@ -152,3 +152,20 @@ describe('Fit waveform model panel: compute failure (ROB-11)', () => {
 		expect(container.textContent).toMatch(/The cosinor fit failed/);
 	});
 });
+
+describe('Fit waveform model panel: too few valid rows', () => {
+	it('refuses a free-period cosinor through 2 points, as the headless path does', async () => {
+		mkCol(
+			2,
+			'sparse',
+			t.map((v, i) => (i < 2 ? v : null))
+		);
+		const p = $state(mkProcess({ useFixedPeriod: false }));
+		render(Node, { props: { p } });
+		await settle();
+		expect(p.args.valid).toBe(false);
+		expect(p.warnings.join(' ')).toMatch(
+			/No cosinor fit for "sparse": it has only 2 rows where both x and y have a value\. A free-period cosinor with 1 curve estimates 4 parameters, so it needs at least 5\./
+		);
+	});
+});
