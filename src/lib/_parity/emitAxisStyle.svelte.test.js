@@ -157,16 +157,8 @@ const CASES = [
 		}
 	},
 	{ name: 'correlogram', demo: 'demo-correlogram-rhythm', plot: 79, zone: 'utc' },
-	{
-		name: 'boxplot',
-		demo: 'demo-tp-groupcomparison',
-		plot: 123,
-		zone: 'utc',
-		// The export draws no significance bars, so none take headroom here either.
-		edit: (p) => {
-			p.plot.showSigBars = false;
-		}
-	},
+	// With its significance bars, which raise the value axis (tools/test_plot_boxplot.py).
+	{ name: 'boxplot', demo: 'demo-tp-groupcomparison', plot: 123, zone: 'utc' },
 	{ name: 'actogram', demo: 'demo-workflow-masking', plot: 62, zone: 'utc' },
 	{
 		name: 'actogramRowsHeatmap',

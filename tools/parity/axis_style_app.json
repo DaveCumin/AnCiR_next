@@ -2955,7 +2955,7 @@
 					"violinBandwidth": null,
 					"violinWidth": 0.8,
 					"violinOpacity": 0.3,
-					"showSigBars": false,
+					"showSigBars": true,
 					"sigMethod": "auto",
 					"sigAlpha": 0.05,
 					"showNs": false,
@@ -2976,7 +2976,9 @@
 							{ "value": 5, "label": "5", "grid": true },
 							{ "value": 10, "label": "10", "grid": true },
 							{ "value": 15, "label": "15", "grid": true },
-							{ "value": 20, "label": "20", "grid": true }
+							{ "value": 20, "label": "20", "grid": true },
+							{ "value": 25, "label": "25", "grid": true },
+							{ "value": 30, "label": "30", "grid": true }
 						],
 						"tickPx": 15,
 						"fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
@@ -2995,7 +2997,7 @@
 						"labelPx": 16
 					}
 				},
-				"domains": { "overlayXScale": [-0.5, 2.5], "overlayYScale": [-0.3187251, 20] },
+				"domains": { "overlayXScale": [-0.5, 2.5], "overlayYScale": [-0.478087649, 30] },
 				"plotSize": [440, 255],
 				"sizes": {
 					"axisLabel": 16,

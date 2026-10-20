@@ -13046,62 +13046,674 @@ def plot_correlogram(plot, columns_index, ax):
         _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
 
 
-def plot_boxplot(plot, columns_index, ax):
-    """One box per series (matplotlib's box: type-7 quartiles, whiskers at 1.5 IQR), on the
-    app's value axis (Boxplotclass.ylims: the data's range rounded out to its leading decade,
-    then kept 4 px clear of a whisker cap) with its ticks, gridlines and type. The app's
-    categorical layout (one box per category per series, violins, significance bars) is not
-    reproduced."""
-    p = plot.get('plot', {})
-    look = plot_look(plot)
-    data = []
-    labels = []
-    for series in p.get('data', []):
-        y_col = _resolve_plot_col(series.get('y'), columns_index)
-        if y_col is None:
+# ---- Boxplot (plots/Boxplot/Boxplot.svelte, plotbits/Box.svelte, plotbits/Violin.svelte) ----
+#
+# The export draws what the app draws, in the app's px: one box per CATEGORY per series on a
+# categorical x axis (category i centred at x = i), dodged side by side when several series
+# share the categories; the jittered points, the violins (Silverman KDE, 128-point grid,
+# trimmed to the data), the significance brackets (the same pairwise tests as the app,
+# GroupComparison's ports below) and the legend. boxplot_layout computes all of it in px from
+# the plot area's top left (y down, as SVG); plot_boxplot converts each mark to data
+# coordinates and draws it in the app's paint order. tools/test_plot_boxplot.py checks every
+# mark against what the app draws (tools/parity/boxplot_app.json).
+
+# Box.svelte / Violin.svelte: no violin below this many points (helpers/violin.js VIOLIN_MIN_N).
+VIOLIN_MIN_N = 5
+# The significance bracket's end ticks drop this many px below its bar (Boxplot.svelte).
+SIG_BAR_TICK_PX = 4
+_BOX_DEFAULTS = {'fillOpacity': 0.3, 'strokeWidth': 2, 'stroke': 'solid', 'draw': True,
+                 'showOutliers': True, 'outlierSize': 3, 'outlierMethod': 'iqr',
+                 'iqrMultiplier': 1.5, 'zThreshold': 3, 'whiskerWidth': 0.5, 'boxWidth': 0.8,
+                 'medianWidth': 2, 'medianColour': '#000000'}
+_BOXPLOT_DEFAULTS = {'showPoints': False, 'pointJitter': 0.35, 'pointSize': 2.5,
+                     'pointOpacity': 0.6, 'pointColour': None, 'showViolin': False,
+                     'showBox': True, 'violinBandwidth': None, 'violinWidth': 0.8,
+                     'violinOpacity': 0.3, 'showSigBars': False, 'sigMethod': 'auto',
+                     'sigAlpha': 0.05, 'showNs': False, 'sigBarThickness': 1,
+                     'sigBarColor': '#000000', 'sigBarFontSize': None, 'sigBarYOffset': 0,
+                     'sigBarSpacing': 1}
+# Boxplot.svelte LEGACY_SIG_BAR_FONT_SIZE: a saved 11 was the old hard-coded size, released to
+# follow the figure.
+_LEGACY_SIG_BAR_FONT_SIZE = 11
+_U32 = 0xFFFFFFFF
+
+
+def _nn_default(saved, key, default):
+    """`saved[key] ?? default` (JS nullish: only None/missing take the default)."""
+    v = (saved or {}).get(key)
+    return default if v is None else v
+
+
+def _js_sum(values):
+    """A left-to-right sum, as JS `reduce((a, b) => a + b, 0)` (Python 3.12's sum() of floats
+    is compensated, so it can differ in the last place)."""
+    s = 0.0
+    for v in values:
+        s += v
+    return s
+
+
+def _js_median(values):
+    """sampleStats.js median: the middle value, or the mean of the middle two."""
+    if not values:
+        return float('nan')
+    srt = sorted(values)
+    mid = len(srt) // 2
+    return (srt[mid - 1] + srt[mid]) / 2 if len(srt) % 2 == 0 else srt[mid]
+
+
+def boxplot_jitter_offset(series_index, category_index, point_index):
+    """helpers/jitter.js jitterOffset: the deterministic offset in [-1, 1) of one point (a
+    32-bit hash of where it sits, mulberry32's finalizer), bit for bit."""
+    def imul(a, b):
+        return ((a & _U32) * (b & _U32)) & _U32
+    h = (imul(series_index + 1, 0x9e3779b9) ^ imul(category_index + 1, 0x85ebca6b) ^
+         imul(point_index + 1, 0xc2b2ae35)) & _U32
+    h = imul(h ^ (h >> 15), h | 1)
+    h = (h ^ ((h + imul(h ^ (h >> 7), h | 61)) & _U32)) & _U32
+    h = (h ^ (h >> 14)) & _U32
+    return (h / 4294967296) * 2 - 1
+
+
+def darken_colour(colour, amount=0.35):
+    """helpers/colourShade.js darkenColour: a #rgb / #rrggbb colour with each channel scaled
+    towards 0 (JS Math.round), anything else unchanged."""
+    if not isinstance(colour, str):
+        return colour
+    m = re.match(r'^#([0-9a-f]{3}|[0-9a-f]{6})$', colour.strip(), re.IGNORECASE)
+    if not m:
+        return colour
+    hx = m.group(1)
+    if len(hx) == 3:
+        hx = ''.join(c * 2 for c in hx)
+    f = 1 - min(1, max(0, amount))
+    return '#' + ''.join(f'{int(math.floor(int(hx[i:i + 2], 16) * f + 0.5)):02x}'
+                         for i in (0, 2, 4))
+
+
+def boxplot_box_stats(values, method='iqr', iqr_multiplier=1.5, z_threshold=3):
+    """Box.svelte calculateBoxPlotStats over a group's present values: type-7 quartiles, the
+    median, and the outliers by the series' rule ('zscore': |z| > threshold on the population
+    SD, OutlierRemoval's detectOutliersZScore; else Tukey fences multiplier x IQR beyond the
+    DRAWN quartiles); the whiskers end at the most extreme non-outliers. None when empty."""
+    vals = list(values)
+    if not vals:
+        return None
+    srt = sorted(vals)
+    q1 = _quantile_type7(srt, 0.25)
+    q2 = _js_median(srt)
+    q3 = _quantile_type7(srt, 0.75)
+    if method == 'zscore':
+        thr = 3 if z_threshold is None else z_threshold
+        mu = kahan_mean(vals)
+        acc = KahanSum()
+        for v in vals:
+            acc.add((v - mu) * (v - mu))
+        sd = math.sqrt(acc.value() / len(vals))
+        mask = [False] * len(vals) if sd == 0 else [abs((v - mu) / sd) > thr for v in vals]
+    else:
+        k = 1.5 if iqr_multiplier is None else iqr_multiplier
+        lo, hi = q1 - k * (q3 - q1), q3 + k * (q3 - q1)
+        mask = [v < lo or v > hi for v in vals]
+    outliers = [v for v, o in zip(vals, mask) if o]
+    inliers = sorted(v for v, o in zip(vals, mask) if not o)
+    return {'q1': q1, 'q2': q2, 'q3': q3,
+            'lowerWhisker': inliers[0] if inliers else srt[0],
+            'upperWhisker': inliers[-1] if inliers else srt[-1],
+            'outliers': outliers, 'min': srt[0], 'max': srt[-1]}
+
+
+def violin_curve(values, bandwidth=None, grid_size=128, min_n=VIOLIN_MIN_N):
+    """helpers/violin.js violinCurve: the group's KDE (kde: Silverman auto unless a positive
+    bandwidth is given, 128 grid points over [min - 3h, max + 3h]) trimmed to the data, the
+    ends interpolated exactly. {'points': [(v, d)], 'max': peak density}, or None below min_n
+    points or for a degenerate group."""
+    cleaned = [float(v) for v in values if v is not None and math.isfinite(float(v))]
+    if len(cleaned) < min_n:
+        return None
+    bw = bandwidth if (bandwidth is not None and _finite(bandwidth) and bandwidth > 0) else None
+    k = kde(cleaned, bandwidth=bw, grid_size=grid_size)
+    xs, ds = k['x'], k['density']
+    if not xs:
+        return None
+    lo, hi = min(cleaned), max(cleaned)
+
+    def at(v):
+        if v <= xs[0]:
+            return ds[0]
+        last = len(xs) - 1
+        if v >= xs[last]:
+            return ds[last]
+        for i in range(1, last + 1):
+            if xs[i] >= v:
+                t = (v - xs[i - 1]) / (xs[i] - xs[i - 1])
+                return ds[i - 1] + t * (ds[i] - ds[i - 1])
+        return ds[last]
+    pts = [(lo, at(lo))] + [(x, d) for x, d in zip(xs, ds) if lo < x < hi] + [(hi, at(hi))]
+    peak = max((d for _, d in pts), default=0)
+    if not peak > 0:
+        return None
+    return {'points': pts, 'max': peak}
+
+
+def violin_outline(curve, x_center, half_width_px, yscale):
+    """helpers/violin.js violinOutline: up the right flank, back down the left, in px."""
+    s = half_width_px / curve['max'] if curve['max'] > 0 else 0
+    right = [(x_center + d * s, yscale(v)) for v, d in curve['points']]
+    left = [(x_center - d * s, yscale(v)) for v, d in reversed(curve['points'])]
+    return right + left
+
+
+def format_sig_label(p_adjusted):
+    """Boxplot.svelte formatSigLabel: stars by the adjusted p, else 'ns'."""
+    if p_adjusted is None:
+        return 'ns'
+    if p_adjusted < 0.001:
+        return '***'
+    if p_adjusted < 0.01:
+        return '**'
+    if p_adjusted < 0.05:
+        return '*'
+    return 'ns'
+
+
+def _boxplot_series_frames(p, columns_index):
+    """Each series as the Boxplot reads it: (index, series, box settings, category cells,
+    value cells, has-category-column). A series with no category column is one category named
+    by its label ('Box plot N' while blank; Boxplot.svelte xDataForDatum)."""
+    out = []
+    for i, s in enumerate(p.get('data', []) or []):
+        y_col = _resolve_plot_col(s.get('y'), columns_index)
+        x_col = _resolve_plot_col(s.get('x'), columns_index)
+        y = list(y_col.get_data()) if y_col is not None else []
+        x = list(x_col.get_data()) if x_col is not None else []
+        has_x = len(x) > 0
+        name = s.get('label') or f'Box plot {i + 1}'
+        out.append({'index': i, 'series': s, 'y_col': y_col,
+                    'box': _with_defaults(s.get('boxPlot'), _BOX_DEFAULTS),
+                    'x': x if has_x else [name] * len(y), 'y': y, 'has_x': has_x,
+                    'name': name})
+    return out
+
+
+def boxplot_categories(frames):
+    """Boxplotclass.uniqueXValues: every category with a present value, over every series (a
+    series without categories contributes its name), as labels, numerically when both read
+    as numbers, else alphabetically."""
+    import functools
+    seen, found = set(), []
+    for f in frames:
+        added = False
+        if f['has_x']:
+            for i, c in enumerate(f['x']):
+                v = f['y'][i] if i < len(f['y']) else None
+                if not _is_missing_category(c) and not _js_invalid(v):
+                    lab = _js_string(c)
+                    added = True
+                    if lab not in seen:
+                        seen.add(lab)
+                        found.append(lab)
+        if not added and any(not _js_invalid(v) for v in f['y']):
+            if f['name'] not in seen:
+                seen.add(f['name'])
+                found.append(f['name'])
+
+    def cmp(a, b):
+        na, nb = _js_number(a), _js_number(b)
+        if not math.isnan(na) and not math.isnan(nb):
+            return (na > nb) - (na < nb)
+        return _category_cmp(a, b)
+    return sorted(found, key=functools.cmp_to_key(cmp))
+
+
+def _boxplot_groups(frame):
+    """Box.svelte groupedStats: the series' present values per category label, in the order
+    the categories first appear."""
+    groups = {}
+    for i, c in enumerate(frame['x']):
+        v = frame['y'][i] if i < len(frame['y']) else None
+        if _is_missing_category(c) or _js_invalid(v):
             continue
-        # Box.svelte presentValues: the house rule, then Number() (a blank or text cell is
-        # missing, numeric text is a number).
-        y = [_js_number(v) for v in y_col.get_data() if not _js_invalid(v)]
-        data.append(y)
-        labels.append(series.get('label') or _display_name(y_col))
-    if data:
-        # matplotlib's defaults are the app's box: type-7 (linear) quartiles and median,
-        # whiskers at the most extreme points within 1.5 IQR of the quartiles.
-        ax.boxplot(data, tick_labels=labels, whis=1.5)
-    # Horizontal lines and bands only (the x axis is categorical); they widen the y axis.
-    ov = _draw_overlays(ax, plot, columns_index)
-    lo, hi = _merge_extent(_extent_of(*data), ov.get('extent', {}).get('y'))
+        groups.setdefault(_js_string(c), []).append(_js_number(v))
+    return groups
+
+
+def _sig_group(name, values):
+    n = len(values)
+    m = _js_sum(values) / n if n > 0 else 0
+    sd = math.sqrt(_js_sum([(v - m) ** 2 for v in values]) / (n - 1)) if n > 1 else 0
+    return {'name': name, 'values': values, 'n': n, 'mean': m, 'sd': sd}
+
+
+def boxplot_sig_groups(frames, categories):
+    """Boxplot.svelte buildSigBarGroups: with a category column anywhere, one group per
+    category (pooled over the series; empty ones dropped); otherwise one per series."""
+    if not any(f['has_x'] for f in frames):
+        return [_sig_group(f['name'], [_js_number(v) for v in f['y'] if not _js_invalid(v)])
+                for f in frames]
+    pooled = {c: [] for c in categories}
+    for f in frames:
+        if not f['has_x']:
+            continue
+        for i, c in enumerate(f['x']):
+            v = f['y'][i] if i < len(f['y']) else None
+            if _is_missing_category(c) or _js_invalid(v):
+                continue
+            lab = _js_string(c)
+            if lab in pooled:
+                pooled[lab].append(_js_number(v))
+    return [g for g in (_sig_group(c, pooled[c]) for c in categories) if g['n'] > 0]
+
+
+def boxplot_sig_stats(groups, method='auto', alpha=0.05):
+    """Boxplot.svelte runSigBarStats (with every pair kept, as its table keeps them): the same
+    tests as Group Comparison. Two groups: Welch's t-test, or Mann-Whitney when the method is
+    non-parametric; more: one-way ANOVA then Tukey-Kramer, or pairwise Mann-Whitney with
+    Holm's adjustment. Returns (pairs, data max)."""
+    if len(groups) < 2:
+        return [], -math.inf
+    data_max = -math.inf
+    for g in groups:
+        for v in g['values']:
+            if v > data_max:
+                data_max = v
+    nonparam = method in ('kruskal', 'mannwhitney')
+    pairs = []
+    if len(groups) == 2:
+        a, b = groups
+        res = _gc_mann_whitney_two_groups(a, b) if nonparam else _gc_welch_t_test(a, b, alpha)
+        if res.get('valid'):
+            pairs = [{'groupA': a['name'], 'groupB': b['name'], 'pValue': res['pValue'],
+                      'pAdjusted': res['pValue'], 'significant': res['pValue'] < alpha}]
+    elif nonparam:
+        pairs = _gc_pairwise_mann_whitney(groups, alpha)
+    else:
+        an = _gc_one_way_anova(groups)
+        if an.get('valid'):
+            pairs = _gc_tukey_kramer_post_hoc(groups, an['msWithin'], an['dfWithin'], alpha)
+    return pairs, data_max
+
+
+def boxplot_bracket_levels(pairs, categories):
+    """Boxplot.svelte assignBracketLevels: shortest spans first (then leftmost), each on the
+    lowest level whose brackets it does not overlap. [{'pair', 'i', 'j', 'level'}]."""
+    entries = []
+    for p in pairs:
+        i = categories.index(p['groupA']) if p['groupA'] in categories else -1
+        j = categories.index(p['groupB']) if p['groupB'] in categories else -1
+        if i >= 0 and j >= 0:
+            entries.append({'pair': p, 'i': min(i, j), 'j': max(i, j), 'level': -1})
+    entries.sort(key=lambda e: (e['j'] - e['i'], e['i']))
+    levels = []
+    for e in entries:
+        lv = 0
+        while True:
+            if lv == len(levels):
+                levels.append([])
+            if not any(not (e['j'] < r[0] or e['i'] > r[1]) for r in levels[lv]):
+                levels[lv].append((e['i'], e['j']))
+                e['level'] = lv
+                break
+            lv += 1
+    return entries
+
+
+def _boxplot_series_colours(plot, frame, n_series):
+    """The stroke and fill a series' boxes are drawn in: the app's (the export's
+    `seriesColours[i].box`), else the saved colour (a saved colour equal to the first palette
+    entry was auto-assigned and is released, BoxClass), else the palette by position; the fill
+    follows the stroke unless one was chosen."""
+    got = _resolved_series_colours(plot, frame['index']).get('box') or {}
+    if isinstance(got.get('colour'), str) and got.get('colour'):
+        return got['colour'], got.get('fill') or got['colour']
+    saved = frame['series'].get('boxPlot') or {}
+    auto = APP_PALETTE[0]
+    colour = saved.get('colour') if isinstance(saved.get('colour'), str) and \
+        saved.get('colour') != auto else None
+    colour = colour or APP_PALETTE[frame['index'] % len(APP_PALETTE)]
+    fill = saved.get('fillColour') if isinstance(saved.get('fillColour'), str) and \
+        saved.get('fillColour') != auto else None
+    return colour, fill or colour
+
+
+def _boxplot_category_colours(plot, frames, categories, monochrome):
+    """The colour of each category's boxes when the plot colours per category: the app's
+    (`seriesColours[0].colourCategories`), else greys by place when monochrome, else each
+    label's default palette slot in the order the categories first appear."""
+    got = _resolved_series_colours(plot, 0).get('colourCategories') or {}
+    labels, colours = got.get('labels'), got.get('colours')
+    if isinstance(labels, list) and isinstance(colours, list) and len(labels) == len(colours):
+        return {str(lab): c for lab, c in zip(labels, colours)}
+    first = list(_boxplot_groups(frames[0]).keys()) if frames else []
+    pal = category_palette_fallback(first, categories, monochrome)
+    return dict(zip(categories, pal))
+
+
+def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
+    """Everything the Boxplot draws, in px from the plot area's top left (y down): the
+    categories, the x and y domains (Boxplotclass.xlims / ylims, the latter with room for the
+    significance brackets), each series' boxes, points and violins (Box.svelte, Violin.svelte),
+    the brackets and the pairwise table behind them, and the legend entries."""
+    p = plot.get('plot', {}) or {}
+    opt = {k: _nn_default(p, k, d) for k, d in _BOXPLOT_DEFAULTS.items()}
+    look = plot_look(plot)
+    mono = look['monochrome']
+    frames = _boxplot_series_frames(p, columns_index)
+    cats = boxplot_categories(frames)
+    n_cats, n_series = len(cats), len(frames)
+    cat_index = {c: i for i, c in enumerate(cats)}
+
+    # Significance pairs: every pair for the table; the bars drop the non-significant unless
+    # "Show ns" is on.
+    groups = boxplot_sig_groups(frames, cats)
+    table, data_max = boxplot_sig_stats(groups, opt['sigMethod'], opt['sigAlpha'])
+    bar_pairs = []
+    if opt['showSigBars']:
+        bar_pairs = table if opt['showNs'] else [q for q in table if q['significant']]
+    levels = boxplot_bracket_levels(bar_pairs, cats) if bar_pairs else []
+
+    # x: the category index, -0.5 .. n - 0.5 (the saved limits win).
+    xin = list(p.get('xlimsIN') or [None, None]) + [None, None]
+    if n_cats == 0:
+        xd = (0.0, 1.0)
+    else:
+        xd = (xin[0] if xin[0] is not None else -0.5,
+              xin[1] if xin[1] is not None else n_cats - 0.5)
+    # y: the data's range (with the overlays'), out to the leading decade, the top raised for
+    # the brackets, both ends kept clear of a whisker cap.
+    lo, hi = math.inf, -math.inf
+    for f in frames:
+        for v in f['y']:
+            if not _js_invalid(v):
+                lo, hi = min(lo, _js_number(v)), max(hi, _js_number(v))
+    if overlay_extent:
+        lo, hi = min(lo, overlay_extent[0]), max(hi, overlay_extent[1])
     yin = list(p.get('ylimsIN') or [None, None]) + [None, None]
-    _, h_px = _axes_px(ax)
-    w_px, _ = _axes_px(ax)
-    if lo is None:
-        yd = (0, 10)
+    if lo == math.inf or hi == -math.inf:
+        yd = (0.0, 10.0)
     else:
         bot = yin[0] if yin[0] is not None else nice_axis_limit(lo, 'floor')
         top = yin[1] if yin[1] is not None else nice_axis_limit(hi, 'ceil')
-        yd = clear_ends(bot, top, lo, hi, 4, h_px, auto_lo=yin[0] is None,
+        if opt['showSigBars'] and yin[1] is None and levels:
+            n_levels = max(e['level'] for e in levels) + 1
+            base = data_max if math.isfinite(data_max) else hi
+            step = (top - bot) * 0.1 * opt['sigBarSpacing']
+            needed = base + step * (n_levels + 1)
+            if needed > top:
+                top = nice_axis_limit(needed, 'ceil')
+        yd = clear_ends(bot, top, lo, hi, 4, plot_h, auto_lo=yin[0] is None,
                         auto_hi=yin[1] is None)
+
+    def xs(v):
+        return (v - xd[0]) / (xd[1] - xd[0]) * plot_w
+
+    def ys(v):
+        return plot_h - (v - yd[0]) / (yd[1] - yd[0]) * plot_h if yd[1] != yd[0] else plot_h
+
+    def half_width(fraction):
+        if n_cats == 0:
+            return 20
+        if n_cats == 1:
+            return max(2, plot_w * 0.2 * fraction / (2 * n_series))
+        return max(2, (plot_w / n_cats) * fraction / (2 * n_series))
+
+    def dodge(frame, half):
+        if not frame['has_x'] or n_series <= 1:
+            return 0
+        return (frame['index'] - (n_series - 1) / 2) * (half * 2)
+
+    category_coloured = (n_series == 1 and n_cats > 1 and frames[0]['has_x'])
+    cat_colours = (_boxplot_category_colours(plot, frames, cats, mono)
+                   if category_coloured else {})
+    boxes, points, violins, legend = [], [], [], []
+    for f in frames:
+        b = f['box']
+        colour, fill = _boxplot_series_colours(plot, f, n_series)
+        f['colour'], f['fill'] = colour, fill
+        if not f['y'] or b['draw'] is False:
+            continue
+        grouped = _boxplot_groups(f)
+        half = half_width(b['boxWidth'])
+        whisker_half = half * b['whiskerWidth']
+        off = dodge(f, half)
+        for cat, values in grouped.items():
+            k = cat_index.get(cat, -1)
+            cx = xs(k) + off
+            cc = cat_colours.get(cat) if category_coloured else None
+            stroke, face = cc or colour, cc or fill
+            if opt['showBox']:
+                st = boxplot_box_stats(values, b['outlierMethod'], b['iqrMultiplier'],
+                                       b['zThreshold'])
+                boxes.append({
+                    'series': f['index'], 'category': cat, 'cx': cx, 'halfWidth': half,
+                    'whiskerHalfWidth': whisker_half, 'stats': st,
+                    'yQ1': ys(st['q1']), 'yQ3': ys(st['q3']), 'yMedian': ys(st['q2']),
+                    'yLowerWhisker': ys(st['lowerWhisker']),
+                    'yUpperWhisker': ys(st['upperWhisker']),
+                    'outliers': ([ys(v) for v in st['outliers']] if b['showOutliers'] else []),
+                    'outlierSize': b['outlierSize'], 'fill': face, 'stroke': stroke,
+                    'strokeWidth': b['strokeWidth'], 'dash': b['stroke'],
+                    'medianStroke': b['medianColour'], 'medianWidth': b['medianWidth']})
+            if opt['showPoints']:
+                pc = opt['pointColour'] or stroke
+                for vi, v in enumerate(values):
+                    points.append({
+                        'series': f['index'], 'category': cat,
+                        'cx': cx + boxplot_jitter_offset(f['index'], k, vi) * half *
+                        opt['pointJitter'],
+                        'cy': ys(v), 'r': opt['pointSize'], 'fill': pc,
+                        'fillOpacity': opt['pointOpacity'], 'stroke': darken_colour(pc, 0.35),
+                        'strokeWidth': 0.8})
+        if opt['showViolin']:
+            vhalf = half_width(opt['violinWidth'])
+            voff = dodge(f, vhalf)
+            for cat, values in grouped.items():
+                curve = violin_curve(values, opt['violinBandwidth'])
+                if curve is None:
+                    continue
+                k = cat_index.get(cat, -1)
+                cc = cat_colours.get(cat) if category_coloured else None
+                vc = cc or colour
+                violins.append({'series': f['index'], 'category': cat,
+                                'points': violin_outline(curve, xs(k) + voff, vhalf, ys),
+                                'fill': vc, 'fillOpacity': opt['violinOpacity'], 'stroke': vc,
+                                'strokeWidth': 1})
+    if not category_coloured:
+        for f in frames:
+            if f['box']['draw'] is False:
+                continue
+            label = f['series'].get('label') or _display_name(f['y_col']) or \
+                f"Data {f['index'] + 1}"
+            legend.append({'label': label, 'colour': f['colour'], 'fill': f['fill']})
+
+    # Brackets: from the data maximum (else the top of the axis), a tenth of the axis per
+    # level, shifted by the saved offset; the label's baseline a third of its size below the
+    # bar, less 2 px.
+    sig_bars = []
+    if opt['showSigBars'] and levels:
+        saved_px = p.get('sigBarFontSize')
+        saved_px = None if (not _style_valid(saved_px, 'number') or
+                            saved_px == _LEGACY_SIG_BAR_FONT_SIZE) else saved_px
+        font_px = saved_px if saved_px is not None else look['px']['sigBar']
+        step = (yd[1] - yd[0]) * 0.1 * opt['sigBarSpacing']
+        base = data_max if math.isfinite(data_max) else yd[1]
+        for e in levels:
+            y = ys(base + step * (e['level'] + 1)) + opt['sigBarYOffset']
+            x1, x2 = xs(e['i']), xs(e['j'])
+            sig_bars.append({'x1': x1, 'x2': x2, 'y': y, 'tick': y + SIG_BAR_TICK_PX,
+                             'stroke': opt['sigBarColor'], 'strokeWidth': opt['sigBarThickness'],
+                             'label': format_sig_label(e['pair']['pAdjusted']),
+                             'labelX': (x1 + x2) / 2, 'labelY': y + font_px / 3 - 2,
+                             'labelPx': font_px, 'level': e['level'], 'i': e['i'],
+                             'j': e['j']})
+    return {'categories': cats, 'x_domain': xd, 'y_domain': yd, 'plot_w': plot_w,
+            'plot_h': plot_h, 'category_coloured': category_coloured, 'boxes': boxes,
+            'points': points, 'violins': violins, 'sig_bars': sig_bars, 'sig_table': table,
+            'sig_levels': levels, 'legend': legend}
+
+
+def _boxplot_legend(ax, items, overlay_legend, legend_json, look):
+    """The Boxplot's legend: each series' swatch as Legend.svelte draws it (a 14 x 12 px box
+    3 px into the 25 px icon, filled opaque, 2 px stroke), then the overlays' entries."""
+    from matplotlib.patches import Patch, Rectangle
+    from matplotlib.legend_handler import HandlerPatch
+
+    class _BoxSwatch(Patch):
+        pass
+
+    def swatch(legend, orig_handle, xdescent, ydescent, width, height, fontsize):
+        return Rectangle((-xdescent + 3 * _PX_TO_PT, -ydescent + height / 2 - 6 * _PX_TO_PT),
+                         14 * _PX_TO_PT, 12 * _PX_TO_PT)
+    handles, labels = [], []
+    for it in items:
+        handles.append(_BoxSwatch(facecolor=_mpl_colour(it['fill'], 'none'),
+                                  edgecolor=_mpl_colour(it['colour'], 'black'),
+                                  linewidth=2 * _PX_TO_PT))
+        labels.append(it['label'])
+    for h, lab in overlay_legend or []:
+        handles.append(h)
+        labels.append(lab)
+    if not handles:
+        return None
+    kw = legend_kwargs(legend_json, look, len(handles))
+    frame = kw.pop('_frame')
+    leg = ax.legend(handles, labels, handler_map={_BoxSwatch: HandlerPatch(patch_func=swatch)},
+                    **kw)
+    style_legend(leg, frame)
+    return leg
+
+
+def plot_boxplot(plot, columns_index, ax):
+    """The Boxplot as the app draws it (boxplot_layout), in its paint order: the overlays'
+    bands, every violin, then per series each category's whiskers, box, median, outlier rings
+    and jittered points, the overlays' lines, the legend and the significance brackets. Marks
+    keep the app's px sizes (strokes and dashes at 0.75 pt to the px, circles their radius);
+    the plot's figure style sets the axes' type and the bracket labels' size. The layout and
+    the artists drawn for it are kept on the axes as `ax._ancir_boxplot`."""
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Rectangle, Polygon
+    from matplotlib.colors import to_rgba
+    p = plot.get('plot', {}) or {}
+    look = plot_look(plot)
+    family = _font_family_list(look['family'])
+    # Horizontal lines and bands only (the x axis is categorical); they widen the y axis.
+    ov = _draw_overlays(ax, plot, columns_index)
+    w_px, h_px = _axes_px(ax)
+    lay = boxplot_layout(plot, columns_index, w_px, h_px, ov.get('extent', {}).get('y'))
+    xd, yd = lay['x_domain'], lay['y_domain']
     if yd[0] == yd[1]:
         yd = (yd[0] - 0.5, yd[1] + 0.5)
+        lay['y_domain'] = yd
+    kx, ky = (xd[1] - xd[0]) / w_px, (yd[1] - yd[0]) / h_px
+
+    def X(px):
+        return xd[0] + px * kx
+
+    def Y(py):
+        return yd[0] + (h_px - py) * ky
+
+    z = [1.0]
+
+    def nz(step=1e-4):
+        z[0] += step
+        return z[0]
+
+    def colour(c, fallback='black'):
+        return _mpl_colour(c, fallback)
+
+    for v in lay['violins']:
+        rgba = to_rgba(colour(v['fill']), v['fillOpacity'])
+        v['artist'] = ax.add_patch(Polygon(
+            [(X(a), Y(b)) for a, b in v['points']], closed=True, facecolor=rgba,
+            edgecolor=colour(v['stroke']), linewidth=v['strokeWidth'] * _PX_TO_PT,
+            joinstyle='miter', zorder=nz(), gid=f"violin-{v['series']}"))
+    z[0] = 1.5
+    by_series = {}
+    for b in lay['boxes']:
+        by_series.setdefault((b['series'], b['category']), {})['box'] = b
+    for pt in lay['points']:
+        by_series.setdefault((pt['series'], pt['category']), {}).setdefault('points', []) \
+            .append(pt)
+    for (s, cat), marks in by_series.items():
+        b = marks.get('box')
+        if b is not None:
+            sw = b['strokeWidth'] * _PX_TO_PT
+            dash = _overlay_dashes(b['dash'], b['strokeWidth'])
+            cx, hw, whw = b['cx'], b['halfWidth'], b['whiskerHalfWidth']
+            sk = colour(b['stroke'])
+            line = dict(color=sk, linewidth=sw, solid_capstyle='butt', dash_capstyle='butt')
+            gid = f'box-{s}-{cat}'
+            art = {}
+            art['lower'] = ax.add_line(Line2D([X(cx)] * 2, [Y(b['yLowerWhisker']), Y(b['yQ1'])],
+                                              linestyle=dash, zorder=nz(), gid=gid, **line))
+            art['lower_cap'] = ax.add_line(Line2D([X(cx - whw), X(cx + whw)],
+                                                  [Y(b['yLowerWhisker'])] * 2, zorder=nz(),
+                                                  gid=gid, **line))
+            art['rect'] = ax.add_patch(Rectangle(
+                (X(cx - hw), Y(b['yQ1'])), 2 * hw * kx, (b['yQ1'] - b['yQ3']) * ky,
+                facecolor=colour(b['fill'], 'none'), edgecolor=sk, linewidth=sw,
+                linestyle=dash, joinstyle='miter', zorder=nz(), gid=gid))
+            art['median'] = ax.add_line(Line2D(
+                [X(cx - hw), X(cx + hw)], [Y(b['yMedian'])] * 2, color=colour(b['medianStroke']),
+                linewidth=b['medianWidth'] * _PX_TO_PT, solid_capstyle='butt', zorder=nz(),
+                gid=gid))
+            art['upper'] = ax.add_line(Line2D([X(cx)] * 2, [Y(b['yQ3']), Y(b['yUpperWhisker'])],
+                                              linestyle=dash, zorder=nz(), gid=gid, **line))
+            art['upper_cap'] = ax.add_line(Line2D([X(cx - whw), X(cx + whw)],
+                                                  [Y(b['yUpperWhisker'])] * 2, zorder=nz(),
+                                                  gid=gid, **line))
+            if b['outliers']:
+                d_pt = 2 * b['outlierSize'] * _PX_TO_PT
+                art['outliers'] = ax.scatter(
+                    [X(cx)] * len(b['outliers']), [Y(v) for v in b['outliers']], s=d_pt ** 2,
+                    marker='o', facecolors='none', edgecolors=sk, linewidths=sw, zorder=nz(),
+                    gid=gid)
+            b['artists'] = art
+        pts = marks.get('points') or []
+        if pts:
+            coll = ax.scatter(
+                [X(q['cx']) for q in pts], [Y(q['cy']) for q in pts],
+                s=[(2 * q['r'] * _PX_TO_PT) ** 2 for q in pts], marker='o',
+                facecolors=[to_rgba(colour(q['fill']), q['fillOpacity']) for q in pts],
+                edgecolors=[colour(q['stroke']) for q in pts],
+                linewidths=[q['strokeWidth'] * _PX_TO_PT for q in pts], zorder=nz(),
+                gid=f'points-{s}-{cat}')
+            for q in pts:
+                q['artist'] = coll
+    # The brackets sit above the legend and are not clipped to the plot area.
+    for k, sb in enumerate(lay['sig_bars']):
+        style = dict(color=colour(sb['stroke']), linewidth=sb['strokeWidth'] * _PX_TO_PT,
+                     solid_capstyle='butt', clip_on=False, zorder=6 + k * 1e-3,
+                     gid=f'sig-bar-{k}')
+        sb['artists'] = [
+            ax.add_line(Line2D([X(sb['x1'])] * 2, [Y(sb['tick']), Y(sb['y'])], **style)),
+            ax.add_line(Line2D([X(sb['x1']), X(sb['x2'])], [Y(sb['y'])] * 2, **style)),
+            ax.add_line(Line2D([X(sb['x2'])] * 2, [Y(sb['y']), Y(sb['tick'])], **style)),
+        ]
+        sb['text'] = ax.text(X(sb['labelX']), Y(sb['labelY']), sb['label'], ha='center',
+                             va='baseline', fontsize=sb['labelPx'] * _PX_TO_PT,
+                             fontfamily=family, color=colour(sb['stroke']), clip_on=False,
+                             zorder=6 + k * 1e-3, gid=f'sig-label-{k}')
     y_axis = p.get('yAxis') or {}
-    n = len(data)
+    x_axis = p.get('xAxis') or {}
+    cats = lay['categories']
+    n = len(cats)
     specs = {
-        'bottom': {'kind': 'category', 'domain': (0.5, n + 0.5) if n else (0, 1),
-                   # Enabled x gridlines sit at each box's centre (the app: at each
-                   # category's centre, Boxplot.svelte getXAxisForManualCategories).
-                   'axis': {**(p.get('xAxis') or {}),
-                            'gridlines': (p.get('xAxis') or {}).get('gridlines') is True},
-                   'ticks': list(range(1, n + 1)),
-                   'format': lambda v: labels[int(v) - 1] if 1 <= int(v) <= n else '',
-                   },
+        # One tick per category at its index (its centre), labelled with it; enabled x
+        # gridlines at each category's centre (getXAxisForManualCategories).
+        'bottom': {'kind': 'category', 'domain': xd,
+                   'axis': {**x_axis, 'gridlines': x_axis.get('gridlines') is True},
+                   'ticks': list(range(n)),
+                   'format': lambda v: cats[int(v)] if 0 <= int(v) < n else ''},
         'left': {'kind': 'linear', 'domain': yd, 'axis': y_axis,
                  'label': y_axis.get('label') or ''},
     }
     _draw_app_axes(ax, None, specs, look)
     leg = p.get('legend') or {}
-    if ov['legend'] and leg.get('show', True):
-        _legend_with_overlays(ax, ov['legend'], legend_json=leg, look=look)
+    lay['legend_artist'] = None
+    if leg.get('show', True) is not False:
+        lay['legend_artist'] = _boxplot_legend(ax, lay['legend'], ov['legend'], leg, look)
+    ax._ancir_boxplot = lay
 
 
 def actogram_row_geometry(plot_h, n_rows, space_between):

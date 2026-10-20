@@ -57,7 +57,7 @@ DOMAIN_KEYS = {
     "periodogram": {"bottom": "overlayXScale", "left": "yScale"},
     "fft": {"bottom": "overlayXScale", "left": "yScale"},
     "correlogram": {"bottom": "overlayXScale", "left": "overlayYScale"},
-    "boxplot": {"left": "overlayYScale"},
+    "boxplot": {"bottom": "overlayXScale", "left": "overlayYScale"},
     "actogram": {},
 }
 
@@ -134,10 +134,6 @@ def test_every_axis_has_the_apps_ticks_and_labels(name):
     for pos, exp in exp_axes.items():
         got = drawn_ticks(case, by_pos, pos)
         want = [(t["value"], t["label"]) for t in exp["ticks"]]
-        if case["plotJSON"]["type"] == "boxplot" and pos == "bottom":
-            # KNOWN GAP: the export draws one box per SERIES (labelled by the series), the
-            # app one per x CATEGORY per series; only the value axis is the app's.
-            continue
         assert [lab for _, lab in got] == [lab for _, lab in want], (name, pos)
         span = (want[-1][0] - want[0][0]) if len(want) > 1 else 1
         assert all(close(g, w, span) for (g, _), (w, _) in zip(got, want)), (name, pos, got, want)
@@ -169,8 +165,8 @@ def test_gridlines_follow_each_axis_setting(name):
 @pytest.mark.parametrize("on", [True, False])
 def test_boxplot_x_gridlines_follow_the_x_axis_setting(on):
     """The app draws enabled x gridlines on its categorical axis at each category's centre
-    (Boxplot.svelte getXAxisForManualCategories, v82.45); the export, which draws one box per
-    SERIES (the known gap above), draws them at each box's centre, and none when off."""
+    (Boxplot.svelte getXAxisForManualCategories, v82.45), category i at x = i; the export
+    draws them there too, and none when off (tools/test_plot_boxplot.py pins the rest)."""
     case = CASES["boxplot"]
     session = json.loads((DEMOS / f"{case['demo']}.json").read_text())
     cols, _raw, errors = run_session(session)
@@ -180,11 +176,12 @@ def test_boxplot_x_gridlines_follow_the_x_axis_setting(on):
     fig, ax = rt.render_plot_figure(plot, cols, auto_pad=False)
     fig.canvas.draw()
     lines = [ln for ln in ax.lines if ln.get_gid() == "gridline-bottom"]
-    n = len(plot["plot"]["data"])
+    n = len(ax._ancir_boxplot["categories"])
     if not on:
         assert lines == []
         return
-    assert sorted(ln.get_xdata()[0] for ln in lines) == list(range(1, n + 1))
+    assert n > 1
+    assert sorted(ln.get_xdata()[0] for ln in lines) == list(range(n))
     for ln in lines:
         # The full plot height (axes fraction 0 to 1), as every other gridline.
         assert tuple(ln.get_ydata()) == (0, 1)
