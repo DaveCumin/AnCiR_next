@@ -186,6 +186,39 @@ test("the prompt lists each plot's restyle paths, with their current values", ()
 	assert.match(p, /usually means "automatic"/);
 });
 
+test('a select with option labels shows each value with its label', () => {
+	// The Boxplot's significance method: `auto` / `kruskal` say little on their own, so the app
+	// sends a plain label per option (plots/Boxplot/sigMethods.js) and the prompt shows both.
+	const p = buildEditPrompt({
+		columns: [],
+		analyses: [],
+		plots: [
+			{
+				id: 4,
+				type: 'boxplot',
+				name: 'Groups',
+				props: [
+					{
+						path: 'plot.sigMethod',
+						label: 'Sig method',
+						input: 'select',
+						options: ['auto', 'kruskal'],
+						optionLabels: [
+							'Parametric (t-test, or ANOVA with Tukey-Kramer)',
+							'Non-parametric (Mann-Whitney)'
+						],
+						value: 'auto'
+					}
+				]
+			}
+		]
+	});
+	assert.match(
+		p,
+		/plot\.sigMethod="auto" \[auto \(Parametric \(t-test, or ANOVA with Tukey-Kramer\)\)\|kruskal \(Non-parametric \(Mann-Whitney\)\)\]/
+	);
+});
+
 test('a restyle round-trips', async () => {
 	stubLLM(JSON.stringify({ changes: [{ plot: 2, set: { 'plot.xLogScale': true } }] }));
 	const res = await worker.fetch(

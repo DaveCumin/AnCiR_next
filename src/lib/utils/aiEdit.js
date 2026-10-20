@@ -324,6 +324,7 @@ export function plotProps(plotWrapper) {
 				label: f.label,
 				input: f.input,
 				...(f.options ? { options: f.options } : {}),
+				...(f.optionLabels ? { optionLabels: f.optionLabels } : {}),
 				...(f.min != null ? { min: f.min } : {}),
 				value: value ?? null
 			};

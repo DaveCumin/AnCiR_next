@@ -13,6 +13,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import Box, {
 		BoxClass,
+		boxFillOpacity,
 		calculateBoxPlotStats,
 		presentValues
 	} from '$lib/components/plotbits/Box.svelte';
@@ -34,6 +35,14 @@
 	import { resolveCssVar } from '$lib/plots/exportStyle.js';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { clearEnds } from '$lib/plots/axisDomain.js';
+	import {
+		SIG_METHODS,
+		SIG_METHOD_VALUES,
+		SIG_METHOD_LABELS,
+		SIG_METHOD_DEFAULT,
+		normaliseSigMethod,
+		isNonParametricSigMethod
+	} from './sigMethods.js';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 	import {
@@ -97,8 +106,9 @@
 
 	// ------ Significance bar helpers ------
 
+	// The test a method runs for this many groups (the methods: ./sigMethods.js).
 	function resolveSigMethod(method, groupCount) {
-		if (method === 'kruskal' || method === 'mannwhitney') {
+		if (isNonParametricSigMethod(method)) {
 			return groupCount === 2 ? 'mannwhitney' : 'kruskal';
 		}
 		return groupCount === 2 ? 'ttest' : 'anova';
@@ -243,7 +253,8 @@
 	}
 
 	class BoxPlotDataClass {
-		static descriptors = {};
+		// The box style (BoxClass, sharedStyle) reads as "Box Fill opacity", "Box Stroke", ...
+		static descriptors = { boxPlot: { label: 'Box' } };
 
 		parentPlot = $state();
 		x = $state();
@@ -287,7 +298,8 @@
 						type: 'boxplot',
 						color: this.boxPlot.colour,
 						fillColor: this.boxPlot.fillColour,
-						fillOpacity: 1
+						// The swatch is the box: same fill, at the same opacity.
+						fillOpacity: boxFillOpacity(this.boxPlot.fillOpacity)
 					}
 				]
 			};
@@ -365,7 +377,9 @@
 				group: 'Sig bars',
 				label: 'Sig method',
 				input: 'select',
-				options: ['auto', 'tukey', 'ttest', 'mannwhitney']
+				// The one list (./sigMethods.js), also behind this plot's own dropdown.
+				options: SIG_METHOD_VALUES,
+				optionLabels: SIG_METHOD_LABELS
 			},
 			sigAlpha: { group: 'Sig bars', label: 'Alpha', step: 0.01 },
 			showNs: { group: 'Sig bars', label: 'Show n.s.' },
@@ -476,7 +490,7 @@
 		violinOpacity = $state(0.3);
 
 		showSigBars = $state(false);
-		sigMethod = $state('auto'); // 'auto' | 'anova' | 'kruskal'
+		sigMethod = $state(SIG_METHOD_DEFAULT); // one of SIG_METHOD_VALUES (./sigMethods.js)
 		sigAlpha = $state(0.05);
 		showNs = $state(false);
 		sigBarThickness = $state(1);
@@ -1056,7 +1070,9 @@
 			chart.violinWidth = json.violinWidth ?? 0.8;
 			chart.violinOpacity = json.violinOpacity ?? 0.3;
 			chart.showSigBars = json.showSigBars ?? false;
-			chart.sigMethod = json.sigMethod ?? 'auto';
+			// An old value (the multi-select panel's 'tukey' / 'ttest' / 'mannwhitney') loads as the
+			// method it always ran; see ./sigMethods.js.
+			chart.sigMethod = normaliseSigMethod(json.sigMethod);
 			chart.sigAlpha = json.sigAlpha ?? 0.05;
 			chart.showNs = json.showNs ?? false;
 			chart.sigBarThickness = json.sigBarThickness ?? 1;
@@ -1397,8 +1413,9 @@
 				</ControlInput>
 				<ControlInput label="Method">
 					<select bind:value={theData.sigMethod}>
-						<option value="auto">Auto (t-test / ANOVA)</option>
-						<option value="kruskal">Kruskal-Wallis / Mann-Whitney</option>
+						{#each SIG_METHODS as m (m.value)}
+							<option value={m.value}>{m.label}</option>
+						{/each}
 					</select>
 				</ControlInput>
 				<ControlInput label="α">
@@ -1409,7 +1426,7 @@
 						<input type="checkbox" bind:checked={theData.showNs} />
 					</ControlInput>
 					<div class="control-input-horizontal">
-						<div class="control-input" style="max-width: 1.5rem;">
+						<div class="control-input control-input-swatch">
 							<p>Bar colour</p>
 							<ColourPicker bind:value={theData.sigBarColor} />
 						</div>

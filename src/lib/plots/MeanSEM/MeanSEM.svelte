@@ -907,7 +907,7 @@
 							</div>
 							{#if datum.showError}
 								<div class="control-input-horizontal">
-									<div class="control-input" style="max-width: 1.5rem;">
+									<div class="control-input control-input-swatch">
 										<p>Col</p>
 										<ColourPicker bind:value={datum.errorColour} />
 									</div>

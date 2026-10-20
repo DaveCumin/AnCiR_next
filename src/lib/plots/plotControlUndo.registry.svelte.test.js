@@ -477,6 +477,16 @@ describe('every plot control panel edit is one exact undo step', () => {
 		}
 	});
 
+	// The Boxplot's per-series box fill opacity (saved on every series, drawn since v82.49) and
+	// its significance method (one shared list, plots/Boxplot/sigMethods.js) are audited above
+	// like every control; this pins that they were found, so a relabel cannot drop them silently.
+	it('boxplot: Fill opacity and the significance Method are audited and one undo step', () => {
+		const box = RESULTS.boxplot ?? {};
+		const find = (want) => Object.entries(box).filter(([k]) => k.includes(want));
+		expect(find('| data | Fill opacity').map(([, v]) => v)).toEqual(['ok']);
+		expect(find('| properties | Method').map(([, v]) => v)).toEqual(['ok']);
+	});
+
 	it('EXCLUSIONS and NO_SAVED_CHANGE only shrink: every entry still applies', () => {
 		const result = (k) => RESULTS[k.split(' | ')[0]]?.[k];
 		const stale = [

@@ -12,6 +12,7 @@
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
 	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
 	import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
+	import { releaseLegacyAutoColours } from '$lib/plots/legacyAutoColours.js';
 	import { migrateLegacyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { migrateDataViews } from '$lib/core/dataViewMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
@@ -315,6 +316,12 @@
 		// A free-period fit saved while following a time x at the old 1 to 48 h keeps that range
 		// (new nodes on a time x start at 1 to 30 h from v82.30; periodRangeAuto.svelte.js).
 		jsonData = migrateLegacyAutoPeriodRange(jsonData).json;
+		// Series colours a session saved before v72.4 (strokes) or v82.49 (box fills) wrote out even
+		// when they were only automatic: the ones that are exactly the old automatic colour for
+		// the series' own place go back to following the palette and the column. The version
+		// is what tells such a colour from a pick (plots/legacyAutoColours.js). After the facet
+		// migration, which may move series.
+		jsonData = releaseLegacyAutoColours(jsonData).json;
 		// Data View plots (removed in v82.0) become the Table the same button opens today: a
 		// "Plot's computed data" Table, or a "Node results" Table on the node's result table
 		// (dataViewMigration.js). Same ids, so layout and reference edges carry over; a view

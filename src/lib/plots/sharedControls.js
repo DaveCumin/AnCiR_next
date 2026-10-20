@@ -3,8 +3,8 @@
 // `getSharedSchema(plot)` walks the keys returned by `plot.plot.toJSON()` and
 // emits a flat list of FieldDescriptor objects (path/label/input/group/...).
 // Each plot class supplies a tiny `static descriptors` override map for the
-// UI metadata reflection can't infer (custom labels, groupings, option lists,
-// step sizes, a lowest allowed value as `min`). Descriptors can also `skip: true` a field that shouldn't appear.
+// UI metadata reflection can't infer (custom labels, groupings, option lists and
+// their labels, step sizes, a lowest allowed value as `min`). Descriptors can also `skip: true` a field that shouldn't appear.
 
 export const WRAPPER_FIELDS = [
 	{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
@@ -49,6 +49,8 @@ function buildScalarField(path, value, defaultLabel, defaultGroup, parentOverrid
 		input: merged.input ?? inferInput(value)
 	};
 	if (merged.options) out.options = merged.options;
+	// Plain words for each option, shown in place of the saved value (same order as `options`).
+	if (merged.optionLabels) out.optionLabels = merged.optionLabels;
 	const group = merged.group ?? defaultGroup;
 	if (group) out.group = group;
 	if (merged.step != null) out.step = merged.step;

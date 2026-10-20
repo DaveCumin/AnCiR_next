@@ -1,5 +1,5 @@
 <script module>
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -47,20 +47,16 @@
 			// Colour follows the COLUMN, not this series' position in this plot, so the
 			// same hive is the same colour in every plot that draws it. An explicit
 			// colour (a saved session, or a user override) always wins.
-			// ADOPTION, narrowly. A saved colour is treated as auto-assigned only when it
-			// is EXACTLY what the old positional rule would have produced for this
-			// series' position — getPaletteColor(index) — and is then released to the
-			// identity map. Anything else is a deliberate choice and kept as an override.
-			//
-			// "Matches any palette entry" was the first rule and was too broad: it also
-			// swallowed a colour someone had deliberately set to a different palette
-			// entry, which is how a series legitimately gets a line and points of
-			// different colours. A test caught that.
-			const autoIndex = parent?.parentPlot?.data?.length ?? 0;
-			this.#explicitColour =
-				typeof dataIN?.colour === 'string' && dataIN.colour !== getPaletteColor(autoIndex)
-					? dataIN.colour
-					: null;
+			// A saved string is a CHOICE and kept: since v72.4 an automatic colour is saved as
+			// null. Sessions saved before that wrote every colour out, and the ones that were only
+			// the automatic colour for the series' own place are released when the session loads,
+			// where its version is known (plots/legacyAutoColours.js). Releasing here, without the
+			// version, compared every series against palette entry 0 (the series list is still
+			// empty while a plot's fromJSON builds it) and swallowed real picks of that colour.
+			// A PointsClass passed in (the plots' fromJSON builds one first) gives its OWN explicit
+			// colour: reading its getter would turn an automatic colour into a pick.
+			const saved = dataIN instanceof PointsClass ? dataIN.#explicitColour : dataIN?.colour;
+			this.#explicitColour = typeof saved === 'string' ? saved : null;
 			this.radius = dataIN?.radius ?? 4;
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.draw = dataIN?.draw ?? true;
@@ -314,7 +310,7 @@
 		</div>
 		{#if pointsData.draw}
 			<div class="control-input-horizontal">
-				<div class="control-input" style="max-width: 1.5rem;">
+				<div class="control-input control-input-swatch">
 					<p style="color:white;">Col</p>
 
 					<ColourPicker bind:value={pointsData.colour} />

@@ -9,7 +9,7 @@
  * (which mounts Box and Violin) and records what it DRAWS, in px from the plot area's top
  * left:
  *   - every box (series, centre, half widths, the y of each whisker end, quartile and median,
- *     the outlier rings, fill, stroke, widths, dashes, median colour);
+ *     the outlier rings, fill and its opacity, stroke, widths, dashes, median colour);
  *   - every jittered point (centre, radius, fill, fill opacity, stroke);
  *   - every violin outline (all its vertices), fill, opacity and stroke;
  *   - every significance bracket (its three lines, the label, its size, colour and place),
@@ -37,6 +37,7 @@ import { Plot } from '$lib/core/Plot.svelte';
 import { exportColumnLabels } from '$lib/core/columnLabels.js';
 import { exportSeriesColours } from '$lib/core/exportSeriesColours.js';
 import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
+import { releaseLegacyAutoColours } from '$lib/plots/legacyAutoColours.js';
 import { applyFigureAppearance } from '$lib/plots/seriesAppearance.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadProcesses } from '$test/processRegistry.js';
@@ -172,6 +173,7 @@ const CASES = [
 				...d.boxPlot,
 				colour: '#123456',
 				fillColour: '#abcdef',
+				fillOpacity: 0.6,
 				strokeWidth: 1,
 				stroke: '5, 5',
 				boxWidth: 0.5,
@@ -401,7 +403,11 @@ function drawn(container, inner, style) {
 
 async function runCase(c) {
 	resetCore();
-	const session = JSON.parse(readFileSync(join(DEMOS, c.demo + '.json'), 'utf8'));
+	// As the app loads a session (Setting.svelte buildSession): the automatic colours an older
+	// version wrote out are released first (plots/legacyAutoColours.js).
+	const session = releaseLegacyAutoColours(
+		JSON.parse(readFileSync(join(DEMOS, c.demo + '.json'), 'utf8'))
+	).json;
 	const plotJSON = structuredClone(session.plots.find((p) => p.id === c.plot));
 	c.edit?.(plotJSON);
 	core.storedValues = session.storedValues ?? {};

@@ -217,7 +217,7 @@
 			/>
 		</div>
 		{#if bgMode === 'custom'}
-			<div class="control-input" style="max-width: 1.5rem;">
+			<div class="control-input control-input-swatch">
 				<p>Colour</p>
 				<ColourPicker bind:value={style.backgroundColour} />
 			</div>

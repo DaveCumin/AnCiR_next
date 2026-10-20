@@ -168,7 +168,9 @@ def test_every_box_is_the_apps(name):
                   "yLowerWhisker", "yUpperWhisker"):
             assert near(g[k], e[k]), (name, k, g[k], e[k])
         assert same_colour(g["fill"], e["fill"]) and same_colour(g["stroke"], e["stroke"])
-        assert e["fillOpacity"] is None  # the app fills a box opaque (no fill-opacity)
+        # The app draws the fill at the series' saved fill opacity (only the fill: the outline,
+        # whiskers, median and rings stay opaque).
+        assert e["fillOpacity"] is not None and float(e["fillOpacity"]) == g["fillOpacity"]
         assert g["strokeWidth"] == e["strokeWidth"] and g["dash"] == e["dash"]
         assert e["whiskerDash"] == e["dash"] and e["capDash"] is None
         assert same_colour(g["medianStroke"], e["medianStroke"])
@@ -186,7 +188,7 @@ def test_every_box_is_the_apps(name):
         assert near(px.x(r.get_x() + r.get_width()), e["cx"] + e["halfWidth"])
         assert near(px.y(r.get_y() + r.get_height()), e["yQ3"])
         assert near(px.y(r.get_y()), e["yQ1"])
-        assert rgba(r.get_facecolor()) == rgba(e["fill"])
+        assert rgba(r.get_facecolor()) == rgba(to_rgba(e["fill"], float(e["fillOpacity"])))
         assert rgba(r.get_edgecolor()) == rgba(e["stroke"])
         assert r.get_linewidth() == pytest.approx(e["strokeWidth"] * 0.75)
         assert dashes(r) == app_dashes(e["dash"], e["strokeWidth"])
@@ -334,8 +336,8 @@ def test_the_legend_is_the_apps(name):
                for t, e in zip(leg.get_texts(), exp))
     for h, e in zip(leg.legend_handles, exp):
         sw = e["swatch"]
-        assert sw["fillOpacity"] == "1"
-        assert rgba(h.get_facecolor()) == rgba(sw["fill"])
+        # The swatch is the box: its fill at the box's fill opacity.
+        assert rgba(h.get_facecolor()) == rgba(to_rgba(sw["fill"], float(sw["fillOpacity"])))
         assert rgba(h.get_edgecolor()) == rgba(sw["stroke"])
         assert h.get_linewidth() == pytest.approx(sw["strokeWidth"] * 0.75)
         assert h.get_width() == pytest.approx(sw["width"] * 0.75)

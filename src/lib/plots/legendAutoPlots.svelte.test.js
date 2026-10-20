@@ -66,6 +66,27 @@ describe('auto legend placement per plot', () => {
 		expect(p.plotwidth).toBeLessThan(p.basePlotWidth);
 	});
 
+	it('boxplot: a second series on Join Data clears the high "Treated" box, inside', async () => {
+		// demo-workflow-join-data with acrophase added beside amplitude, as a user does it:
+		// the Treated acrophase box sits top right, under a top-right legend. Auto must find
+		// the clear spot between the boxes rather than cover it or leave the plot.
+		const p = await loadDemo('demo-workflow-join-data', 'boxplot');
+		const d = p.data[0];
+		const acrophase = core.data.find(
+			(c) =>
+				c.tableProcessGUId === core.data.find((k) => k.id === d.y.refId).tableProcessGUId &&
+				c.id !== d.y.refId &&
+				c.type === 'number'
+		);
+		p.addData({ x: { refId: d.x.refId }, y: { refId: acrophase.id } });
+		expect(p.getLegendItems.length).toBe(2);
+		p.legend.position = 'auto';
+		const auto = p.legendLayout.auto;
+		expect(auto.outside).toBe(false);
+		expect(auto.covered).toBe(0);
+		expect(auto.name).not.toBe('topright');
+	});
+
 	it('histogram: the empty top right is used, inside', async () => {
 		const p = await loadDemo('demo-histogram-normal', 'histogram');
 		p.legend.position = 'auto';

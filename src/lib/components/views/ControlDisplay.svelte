@@ -789,8 +789,8 @@
 										}}
 									>
 										{#if !field.allEqual}<option value="" disabled>(mixed)</option>{/if}
-										{#each field.options as opt (String(opt))}
-											<option value={String(opt)}>{opt}</option>
+										{#each field.options as opt, oi (String(opt))}
+											<option value={String(opt)}>{field.optionLabels?.[oi] ?? opt}</option>
 										{/each}
 									</select>
 								{:else if field.input === 'text'}
@@ -894,8 +894,8 @@
 											}}
 										>
 											{#if !field.allEqual}<option value="" disabled>(mixed)</option>{/if}
-											{#each field.options as opt (String(opt))}
-												<option value={String(opt)}>{opt}</option>
+											{#each field.options as opt, oi (String(opt))}
+												<option value={String(opt)}>{field.optionLabels?.[oi] ?? opt}</option>
 											{/each}
 										</select>
 									{:else if field.input === 'text'}

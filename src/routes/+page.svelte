@@ -1418,6 +1418,21 @@
 		min-width: 0;
 	}
 
+	/* A colour swatch's column: as wide as its label (or the swatch), not a share of the row,
+	   so the controls beside it keep the space. Its label never wraps: the panel breaks words
+	   anywhere (ControlPanel's overflow-wrap), so a column narrower than its label read
+	   "Stro / ke". A swatch that should line up with a two-column row is a plain
+	   .control-input instead. */
+	:global(.control-input.control-input-swatch) {
+		flex: 0 0 auto;
+		width: auto;
+	}
+
+	:global(.control-input-swatch > p),
+	:global(.control-input-swatch > .ci-label) {
+		white-space: nowrap;
+	}
+
 	:global(.control-input-checkbox) {
 		display: flex;
 		flex: 1 1 0;

@@ -1,5 +1,5 @@
 <script module>
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import { colourForCategory, colourForCategoryLabel } from '$lib/plots/seriesColour.js';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import { greyForIndex } from '$lib/plots/seriesAppearance.js';
@@ -23,7 +23,53 @@
 	const boxplotOutlierMethodOptions = [...outlierRemovalMethodOptions];
 	const boxplotOutlierMethodDisplay = [...outlierRemovalMethodDisplay];
 
+	/** The box fill's opacity when none is saved (every session so far saved this). */
+	export const BOX_FILL_OPACITY_DEFAULT = 0.3;
+
+	/**
+	 * The fill opacity a box is drawn with: the saved value clamped to [0, 1]; anything that
+	 * is not a finite number (a hand-edited or corrupt session) draws the default rather than
+	 * an opaque or invisible box.
+	 * @param {unknown} v
+	 */
+	export function boxFillOpacity(v) {
+		const n = typeof v === 'number' ? v : Number.NaN;
+		if (!Number.isFinite(n)) return BOX_FILL_OPACITY_DEFAULT;
+		return Math.min(1, Math.max(0, n));
+	}
+
 	export class BoxClass {
+		// A style object every Boxplot series carries, so it opts ITSELF into the multi-select
+		// panel and the AI editor (sharedControls.js), as LineClass and PointsClass do.
+		static sharedStyle = true;
+		static descriptors = {
+			colour: { input: 'color', label: 'Stroke', group: 'Box' },
+			fillColour: { input: 'color', label: 'Fill', group: 'Box' },
+			fillOpacity: { label: 'Fill opacity', step: 0.05, min: 0, group: 'Box' },
+			strokeWidth: { label: 'Stroke width', step: 0.2, min: 0.1, group: 'Box' },
+			stroke: {
+				input: 'select',
+				options: ['solid', '5, 5', '2, 2', '5, 2'],
+				label: 'Stroke style',
+				group: 'Box'
+			},
+			draw: { label: 'Show', group: 'Box' },
+			boxWidth: { label: 'Box width', step: 0.1, min: 0.1, group: 'Box' },
+			whiskerWidth: { label: 'Whisker width', step: 0.1, min: 0.1, group: 'Box' },
+			medianColour: { input: 'color', label: 'Median colour', group: 'Box' },
+			medianWidth: { label: 'Median width', step: 0.2, min: 0.1, group: 'Box' },
+			showOutliers: { label: 'Show outliers', group: 'Outliers' },
+			outlierSize: { label: 'Outlier size', step: 0.5, min: 1, group: 'Outliers' },
+			outlierMethod: {
+				input: 'select',
+				options: boxplotOutlierMethodOptions,
+				label: 'Outlier method',
+				group: 'Outliers'
+			},
+			iqrMultiplier: { label: 'IQR multiplier', step: 0.1, min: 0.1, group: 'Outliers' },
+			zThreshold: { label: 'Z-score threshold', step: 0.1, min: 1, group: 'Outliers' }
+		};
+
 		// Resolved at READ time, not stored. A series is constructed with y.refId === -1
 		// and wired afterwards, so resolving in the constructor pinned nothing and the
 		// identity map never engaged on the interactive path. `#explicitColour` is null
@@ -50,7 +96,7 @@
 		set fillColour(v) {
 			this.#explicitFill = v;
 		}
-		fillOpacity = $state(0.3);
+		fillOpacity = $state(BOX_FILL_OPACITY_DEFAULT);
 		strokeWidth = $state(2);
 		stroke = $state('solid');
 		draw = $state(true);
@@ -66,33 +112,23 @@
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
-			// Colour follows the COLUMN (see plots/seriesColour.js).
-			// ADOPTION, narrowly. A saved colour is treated as auto-assigned only when it
-			// is EXACTLY what the old positional rule would have produced for this
-			// series' position — getPaletteColor(index) — and is then released to the
-			// identity map. Anything else is a deliberate choice and kept as an override.
-			//
-			// "Matches any palette entry" was the first rule and was too broad: it also
-			// swallowed a colour someone had deliberately set to a different palette
-			// entry, which is how a series legitimately gets a line and points of
-			// different colours. A test caught that.
-			const autoIndex = parent?.parentPlot?.data?.length ?? 0;
-			this.#explicitColour =
-				typeof dataIN?.colour === 'string' && dataIN.colour !== getPaletteColor(autoIndex)
-					? dataIN.colour
-					: null;
-			// Fill follows the STROKE, which is already pinned to the column above.
-			// ADOPTION mirrors the stroke's rule: a saved fill equal to what the old bug
-			// (`palette[0]`, frozen in the constructor pre-wiring) or the old positional
-			// rule would have produced is released to track the column; anything else is
-			// a deliberate override and kept.
-			this.#explicitFill =
-				typeof dataIN?.fillColour === 'string' &&
-				dataIN.fillColour !== getPaletteColor(0) &&
-				dataIN.fillColour !== getPaletteColor(autoIndex)
-					? dataIN.fillColour
-					: null;
-			this.fillOpacity = dataIN?.fillOpacity ?? 0.3;
+			// Colour follows the COLUMN (see plots/seriesColour.js). A saved string is a CHOICE
+			// and kept: since v72.4 an automatic colour is saved as null. Sessions saved before
+			// that wrote every colour out, and the ones that were only the automatic colour for
+			// the series' own place are released when the session loads, where its version is
+			// known (plots/legacyAutoColours.js). Releasing here, without the version, either
+			// swallowed a real pick or (comparing against the wrong place) kept an automatic one.
+			// A BoxClass passed in (BoxClass.fromJSON, then the constructor) gives its OWN
+			// explicit colours: reading its getters would turn an automatic colour into a pick.
+			const own = dataIN instanceof BoxClass;
+			const savedColour = own ? dataIN.#explicitColour : dataIN?.colour;
+			this.#explicitColour = typeof savedColour === 'string' ? savedColour : null;
+			// Fill follows the STROKE unless one was chosen. Saved as null when it follows (from
+			// v82.49); older sessions wrote the RESOLVED fill, and the ones that only followed are
+			// released at load (legacyAutoColours.js) like the stroke.
+			const savedFill = own ? dataIN.#explicitFill : dataIN?.fillColour;
+			this.#explicitFill = typeof savedFill === 'string' ? savedFill : null;
+			this.fillOpacity = dataIN?.fillOpacity ?? BOX_FILL_OPACITY_DEFAULT;
 			this.strokeWidth = dataIN?.strokeWidth ?? 2;
 			this.stroke = dataIN?.stroke ?? 'solid';
 			this.draw = dataIN?.draw ?? true;
@@ -113,7 +149,9 @@
 		toJSON() {
 			return {
 				colour: this.#explicitColour,
-				fillColour: this.fillColour,
+				// null while the fill follows the stroke (as `colour` is null while automatic), so
+				// a reload, an undo or a copy keeps following it.
+				fillColour: this.#explicitFill,
 				fillOpacity: this.fillOpacity,
 				strokeWidth: this.strokeWidth,
 				stroke: this.stroke,
@@ -369,17 +407,26 @@
 			{#if categoryColoursActive}
 				<p class="category-colour-note">Per-category colours are in use; see Box colours below.</p>
 			{:else}
+				<!-- Plain columns, not .control-input-swatch: each swatch heads one of the panel's
+				     two columns, so it lines up with the rows below. -->
 				<div class="control-input-horizontal">
-					<div class="control-input" style="max-width: 1.5rem;">
+					<div class="control-input">
 						<p>Stroke</p>
 						<ColourPicker bind:value={boxPlotData.colour} />
 					</div>
-					<div class="control-input" style="max-width: 1.5rem;">
+					<div class="control-input">
 						<p>Fill</p>
 						<ColourPicker bind:value={boxPlotData.fillColour} />
 					</div>
 				</div>
 			{/if}
+			<!-- Outside the per-category branch: category colours replace the fill COLOUR, but the
+			     boxes are still drawn with this opacity. -->
+			<div class="control-input-horizontal">
+				<ControlInput label="Fill opacity">
+					<NumberWithUnits step="0.05" min={0} max={1} bind:value={boxPlotData.fillOpacity} />
+				</ControlInput>
+			</div>
 			<div class="control-input-horizontal">
 				<ControlInput label="Stroke width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.strokeWidth} />
@@ -419,8 +466,8 @@
 				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input" style="max-width: 1.5rem;">
-					<p>Median</p>
+				<div class="control-input">
+					<p>Median colour</p>
 					<ColourPicker bind:value={boxPlotData.medianColour} />
 				</div>
 				<ControlInput label="Median width">
@@ -516,12 +563,17 @@
 					/>
 
 					<!-- Box -->
+					<!-- The fill is translucent (the saved fillOpacity, 0.3 by default), so a box
+					     filled in its own outline colour still shows its outline, median and
+					     points. Only the FILL is translucent: the outline, whiskers, median and
+					     outlier rings stay opaque. -->
 					<rect
 						x={xCenter - boxHalfWidth}
 						y={yscale(group.q3)}
 						width={boxHalfWidth * 2}
 						height={yscale(group.q1) - yscale(group.q3)}
 						fill={boxFill}
+						fill-opacity={boxFillOpacity(boxPlotData.fillOpacity)}
 						stroke={boxColour}
 						stroke-width={boxPlotData.strokeWidth}
 						stroke-dasharray={boxPlotData.stroke}

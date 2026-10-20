@@ -5834,9 +5834,15 @@ def _as_id(v):
 # lines are cited inline.
 
 def _gc_mean(arr):                                       # JS mean (:36-39)
+    # sampleStats.js mean: `arr.reduce((a, b) => a + b, 0) / n`, a plain left-to-right sum.
+    # Not sum(): from Python 3.12 sum() of floats is compensated (more precise), so it can
+    # differ from the app in the last place.
     if not arr:
         return float('nan')
-    return sum(arr) / len(arr)
+    s = 0.0
+    for x in arr:
+        s += x
+    return s / len(arr)
 
 
 def _gc_sample_variance(arr):                            # JS sampleVariance (:41-47)
@@ -6018,7 +6024,12 @@ def _gc_one_way_anova(groups):                           # JS oneWayAnova (:296-
     if n_total <= k:
         return {'valid': False, 'reason':
                 'ANOVA needs at least one group with more than 1 value.'}
-    grand_mean = sum(g['mean'] * g['n'] for g in usable) / n_total
+    # JS `usable.reduce((acc, g) => acc + g.mean * g.n, 0)`: left to right, not sum() (see
+    # _gc_mean). n_total is a sum of counts (integers), exact either way.
+    weighted = 0.0
+    for g in usable:
+        weighted += g['mean'] * g['n']
+    grand_mean = weighted / n_total
     ss_between = 0.0
     ss_within = 0.0
     for g in usable:
@@ -13078,6 +13089,14 @@ _LEGACY_SIG_BAR_FONT_SIZE = 11
 _U32 = 0xFFFFFFFF
 
 
+def box_fill_opacity(v):
+    """Box.svelte boxFillOpacity: the saved fill opacity clamped to [0, 1]; anything that is not
+    a finite number draws the default (0.3)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+        return _BOX_DEFAULTS['fillOpacity']
+    return min(1.0, max(0.0, float(v)))
+
+
 def _nn_default(saved, key, default):
     """`saved[key] ?? default` (JS nullish: only None/missing take the default)."""
     v = (saved or {}).get(key)
@@ -13317,6 +13336,8 @@ def boxplot_sig_stats(groups, method='auto', alpha=0.05):
         for v in g['values']:
             if v > data_max:
                 data_max = v
+    # plots/Boxplot/sigMethods.js: 'kruskal' (and the old 'mannwhitney') is non-parametric;
+    # 'auto' (and the old 'tukey' / 'ttest' / 'anova', or anything else) is parametric.
     nonparam = method in ('kruskal', 'mannwhitney')
     pairs = []
     if len(groups) == 2:
@@ -13360,19 +13381,20 @@ def boxplot_bracket_levels(pairs, categories):
 
 def _boxplot_series_colours(plot, frame, n_series):
     """The stroke and fill a series' boxes are drawn in: the app's (the export's
-    `seriesColours[i].box`), else the saved colour (a saved colour equal to the first palette
-    entry was auto-assigned and is released, BoxClass), else the palette by position; the fill
-    follows the stroke unless one was chosen."""
+    `seriesColours[i].box`), else the saved colour (a saved colour is a pick, BoxClass; null is
+    automatic), else the palette by position. The fill follows the stroke unless one was
+    chosen; a saved fill that is only what an automatic fill was (palette entry 0, the series'
+    own palette entry, or its stroke) follows too, as plots/legacyAutoColours.js releases it."""
     got = _resolved_series_colours(plot, frame['index']).get('box') or {}
     if isinstance(got.get('colour'), str) and got.get('colour'):
         return got['colour'], got.get('fill') or got['colour']
     saved = frame['series'].get('boxPlot') or {}
-    auto = APP_PALETTE[0]
+    own = APP_PALETTE[frame['index'] % len(APP_PALETTE)]
     colour = saved.get('colour') if isinstance(saved.get('colour'), str) and \
-        saved.get('colour') != auto else None
-    colour = colour or APP_PALETTE[frame['index'] % len(APP_PALETTE)]
-    fill = saved.get('fillColour') if isinstance(saved.get('fillColour'), str) and \
-        saved.get('fillColour') != auto else None
+        saved.get('colour') else own
+    fill = saved.get('fillColour') if isinstance(saved.get('fillColour'), str) else None
+    if fill is not None and fill.lower() in {APP_PALETTE[0].lower(), own.lower(), colour.lower()}:
+        fill = None
     return colour, fill or colour
 
 
@@ -13491,7 +13513,8 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
                     'yLowerWhisker': ys(st['lowerWhisker']),
                     'yUpperWhisker': ys(st['upperWhisker']),
                     'outliers': ([ys(v) for v in st['outliers']] if b['showOutliers'] else []),
-                    'outlierSize': b['outlierSize'], 'fill': face, 'stroke': stroke,
+                    'outlierSize': b['outlierSize'], 'fill': face,
+                    'fillOpacity': box_fill_opacity(b['fillOpacity']), 'stroke': stroke,
                     'strokeWidth': b['strokeWidth'], 'dash': b['stroke'],
                     'medianStroke': b['medianColour'], 'medianWidth': b['medianWidth']})
             if opt['showPoints']:
@@ -13524,7 +13547,8 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
                 continue
             label = f['series'].get('label') or _display_name(f['y_col']) or \
                 f"Data {f['index'] + 1}"
-            legend.append({'label': label, 'colour': f['colour'], 'fill': f['fill']})
+            legend.append({'label': label, 'colour': f['colour'], 'fill': f['fill'],
+                           'fillOpacity': box_fill_opacity(f['box']['fillOpacity'])})
 
     # Brackets: from the data maximum (else the top of the axis), a tenth of the axis per
     # level, shifted by the saved offset; the label's baseline a third of its size below the
@@ -13554,9 +13578,11 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
 
 def _boxplot_legend(ax, items, overlay_legend, legend_json, look):
     """The Boxplot's legend: each series' swatch as Legend.svelte draws it (a 14 x 12 px box
-    3 px into the 25 px icon, filled opaque, 2 px stroke), then the overlays' entries."""
+    3 px into the 25 px icon, filled at the box's fill opacity, 2 px stroke), then the overlays'
+    entries."""
     from matplotlib.patches import Patch, Rectangle
     from matplotlib.legend_handler import HandlerPatch
+    from matplotlib.colors import to_rgba
 
     class _BoxSwatch(Patch):
         pass
@@ -13566,7 +13592,10 @@ def _boxplot_legend(ax, items, overlay_legend, legend_json, look):
                          14 * _PX_TO_PT, 12 * _PX_TO_PT)
     handles, labels = [], []
     for it in items:
-        handles.append(_BoxSwatch(facecolor=_mpl_colour(it['fill'], 'none'),
+        face = _mpl_colour(it['fill'], 'none')
+        if face != 'none':
+            face = to_rgba(face, it.get('fillOpacity', _BOX_DEFAULTS['fillOpacity']))
+        handles.append(_BoxSwatch(facecolor=face,
                                   edgecolor=_mpl_colour(it['colour'], 'black'),
                                   linewidth=2 * _PX_TO_PT))
         labels.append(it['label'])
@@ -13651,7 +13680,11 @@ def plot_boxplot(plot, columns_index, ax):
                                                   gid=gid, **line))
             art['rect'] = ax.add_patch(Rectangle(
                 (X(cx - hw), Y(b['yQ1'])), 2 * hw * kx, (b['yQ1'] - b['yQ3']) * ky,
-                facecolor=colour(b['fill'], 'none'), edgecolor=sk, linewidth=sw,
+                # Only the fill is translucent (Box.svelte): outline, whiskers, median and outlier
+                # rings stay opaque.
+                facecolor=(to_rgba(colour(b['fill']), b['fillOpacity'])
+                           if colour(b['fill'], 'none') != 'none' else 'none'),
+                edgecolor=sk, linewidth=sw,
                 linestyle=dash, joinstyle='miter', zorder=nz(), gid=gid))
             art['median'] = ax.add_line(Line2D(
                 [X(cx - hw), X(cx + hw)], [Y(b['yMedian'])] * 2, color=colour(b['medianStroke']),

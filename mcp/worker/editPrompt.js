@@ -35,7 +35,14 @@ function renderProps(props) {
 	if (!props?.length) return '';
 	const bits = props.map((p) => {
 		const v = JSON.stringify(p.value);
-		return p.options?.length ? `${p.path}=${v} [${p.options.join('|')}]` : `${p.path}=${v}`;
+		if (!p.options?.length) return `${p.path}=${v}`;
+		// A select whose values are not self-explanatory carries a label per option (the app's
+		// own, e.g. the Boxplot's significance method): `value (label)`, so the model can map
+		// "non-parametric" to the value it must write.
+		const opts = p.options.map((o, i) =>
+			Array.isArray(p.optionLabels) && p.optionLabels[i] ? `${o} (${p.optionLabels[i]})` : o
+		);
+		return `${p.path}=${v} [${opts.join('|')}]`;
 	});
 	return `\n      restyle: ${bits.join(', ')}`;
 }
