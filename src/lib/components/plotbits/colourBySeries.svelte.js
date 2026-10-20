@@ -37,7 +37,15 @@ import { displayNameById } from '$lib/core/columnLabels.js';
 import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 import { resolveStyle } from '$lib/plots/figureStyle.js';
 import { ColourEncodingClass, SizeEncodingClass } from './Encoding.svelte';
-import { ColourScaleClass, colourScaleGeometry, autoBarLength } from './ColourScale.svelte';
+import {
+	ColourScaleClass,
+	colourScaleGeometry,
+	autoBarLength,
+	titleRunLength,
+	minBarLength,
+	fitBarTicks,
+	fitScaleTitle
+} from './ColourScale.svelte';
 import { SizeScaleClass, sizeKeyGeometry } from './SizeKey.svelte';
 import {
 	encodingValues,
@@ -63,6 +71,7 @@ import {
 	formatColourValue,
 	nextEncodingId,
 	placeKey,
+	placeBeside,
 	sizeKeyItems,
 	colourKeyReserveW,
 	keyObstacle
@@ -850,8 +859,16 @@ export class EncodingKeyLayout {
 		this.#opts.place || this.#sizeScale?.position === 'right' ? 0 : (this.#sizeScale?.padding ?? 8)
 	);
 
-	/** The bar's length before any legend shortens it: stored, else the plot height's. */
-	length0 = $derived(this.#scale?.barLength ?? autoBarLength(this.#host.basePlotHeight));
+	/** How far the bar's title runs along it (ColourScale.titleRunLength), px. */
+	titleLength = $derived(
+		titleRunLength(this.key?.title, this.fontPx, this.#scale?.orientation !== 'horizontal')
+	);
+
+	/** The bar's length before any legend shortens it: stored, else the plot height's (long
+	 *  enough for its title when the plot is). */
+	length0 = $derived(
+		this.#scale?.barLength ?? autoBarLength(this.#host.basePlotHeight, this.titleLength)
+	);
 	base = $derived(this.geometry(this.length0));
 
 	/** The view's legend inset, which the keys share. */
@@ -864,11 +881,44 @@ export class EncodingKeyLayout {
 		!!this.base && !!this.sizeBase && samePlace(this.#scale.position, this.#sizeScale.position)
 	);
 
+	/** The shortest an automatic bar is made: room for its two end labels (minBarLength). */
+	minLength = $derived(minBarLength(this.fontPx));
+
+	/**
+	 * The shortest an automatic bar is made to leave the size key room UNDER it: long enough
+	 * for its turned title whole (and at least minLength), but never longer than it would be
+	 * anyway.
+	 */
+	comfortLength = $derived(Math.min(this.length0, Math.max(this.minLength, this.titleLength)));
+
+	/**
+	 * The colour bar and the size key share a place but a column of both would squeeze the
+	 * automatic bar under comfortLength: the size key goes BESIDE the bar instead
+	 * (encodingHost.placeBeside), and the bar keeps the column's height. Decided from the plot
+	 * height alone (not the legend's place), because beside the plot it changes the width the
+	 * keys take, which the legend's own placement depends on. A stored bar length, a
+	 * horizontal bar, and a host that places the keys itself keep the column.
+	 */
+	sizeBeside = $derived.by(() => {
+		if (this.#opts.place || !this.sizeSharesBar) return false;
+		if (this.#scale.orientation === 'horizontal' || this.#scale.barLength != null) return false;
+		const column =
+			this.#scale.position === 'right'
+				? this.#host.basePlotHeight
+				: this.#host.basePlotHeight - 2 * this.margin - 2 * this.inset;
+		const after = this.sizeBase.height + 2 * this.sizeInset + this.margin;
+		const besides = this.base.height - this.length0;
+		return column - after < this.comfortLength + besides;
+	});
+
 	/** Room the beside-the-plot keys take from the plot width (independent of the legend). */
 	reserveW = $derived.by(() => {
 		if (this.#opts.reserveW) return this.#opts.reserveW(this);
 		const right = (geom, scale) => (geom && scale.position === 'right' ? geom.width : 0);
-		const w = Math.max(right(this.base, this.#scale), right(this.sizeBase, this.#sizeScale));
+		const bar = right(this.base, this.#scale);
+		const size = right(this.sizeBase, this.#sizeScale);
+		// Side by side beside the plot: both widths and the margin between them.
+		const w = this.sizeBeside && bar > 0 ? bar + this.margin + size : Math.max(bar, size);
 		return colourKeyReserveW(w, this.margin, !!this.#host.hasRightAxisData);
 	});
 
@@ -933,16 +983,37 @@ export class EncodingKeyLayout {
 		const stack = legend ? [legend] : [];
 		const first = placeKey({ ...rest, stack, box: this.base });
 		const length = this.length0;
-		const after = this.sizeSharesBar ? this.sizeBase.height + 2 * this.sizeInset + this.margin : 0;
+		const after =
+			this.sizeSharesBar && !this.sizeBeside
+				? this.sizeBase.height + 2 * this.sizeInset + this.margin
+				: 0;
 		const room = first.maxLength - after;
 		const besides = this.base.height - length;
 		if (vertical && this.#scale.barLength == null && room < length + besides) {
-			const shorter = Math.max(20, room - besides);
+			// Never under minLength (its end labels would crowd), nor longer than it was.
+			const shorter = Math.min(length, Math.max(this.minLength, room - besides));
 			const placed = placeKey({ ...rest, stack, box: this.geometry(shorter) });
 			return { x: placed.x, y: placed.y, length: shorter };
 		}
 		return { x: first.x, y: first.y, length };
 	}
+
+	/**
+	 * What the placed bar shows (ColourScale.svelte draws the same): its tick labels thinned to
+	 * fit its length, and its title shortened when it runs along a bar too short for it.
+	 */
+	shown = $derived.by(() => {
+		const at = this.placement;
+		const key = this.key;
+		if (!at || !key || !this.base) return null;
+		const vertical = this.#scale.orientation !== 'horizontal';
+		const o = { vertical, barLen: at.length, fontSize: this.fontPx };
+		const title =
+			key.title && (this.base.rotateLabel || !vertical)
+				? fitScaleTitle(key.title, at.length, this.fontPx)
+				: key.title;
+		return { ticks: fitBarTicks(key.ticks, o), title };
+	});
 
 	/** The bar as placed, a box for the size key to stack after (its backdrop included). */
 	barPlaced = $derived.by(() => {
@@ -965,6 +1036,15 @@ export class EncodingKeyLayout {
 	sizePlacement = $derived.by(() => {
 		if (!this.sizeBase) return null;
 		if (this.#opts.place) return this.#hostPlaced?.size ?? null;
+		if (this.sizeBeside && this.barPlaced) {
+			return placeBeside({
+				position: this.#sizeScale.position,
+				box: this.sizeBase,
+				beside: this.barPlaced,
+				margin: this.margin,
+				inset: this.sizeInset
+			});
+		}
 		const stack = [this.legendPlaced, this.barPlaced].filter(Boolean);
 		const p = placeKey({
 			...this.#placeArgs(),
@@ -993,6 +1073,18 @@ export class EncodingKeyLayout {
 			this.inset
 		);
 		if (bar) rects.push(bar);
+		if (bar && this.sizeBeside) {
+			const p = placeBeside({
+				position: this.#sizeScale.position,
+				box: this.sizeBase,
+				beside: { x: bar[0], y: bar[1], width: bar[2] - bar[0], height: bar[3] - bar[1] },
+				margin: this.margin,
+				inset: this.sizeInset
+			});
+			const i = this.sizeInset;
+			rects.push([p.x - i, p.y - i, p.x + this.sizeBase.width + i, p.y + this.sizeBase.height + i]);
+			return { rects };
+		}
 		const before =
 			bar && this.sizeSharesBar
 				? [

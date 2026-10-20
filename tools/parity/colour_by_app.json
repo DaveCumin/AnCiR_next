@@ -1049,7 +1049,16 @@
 						"plotArea": { "w": 358.4, "h": 205 },
 						"colour": { "x": 368.4, "y": 0, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "15" },
+								{ "t": 1, "label": "30" }
+							],
+							"title": "outside"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -1456,9 +1465,20 @@
 					"sizeKey": null,
 					"keyLayout": {
 						"plotArea": { "w": 384.6, "h": 205 },
-						"colour": { "x": 394.6, "y": 0, "length": 150 },
+						"colour": { "x": 394.6, "y": 0, "length": 187.2 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.25, "label": "6" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 0.75, "label": "18" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hour of day (Asia/Kolkata)"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -1694,7 +1714,16 @@
 						"plotArea": { "w": 358.4, "h": 205 },
 						"colour": { "x": 368.4, "y": 0, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "2" },
+								{ "t": 0.5, "label": "6" },
+								{ "t": 1, "label": "10" }
+							],
+							"title": "light"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -2024,7 +2053,16 @@
 						"plotArea": { "w": 440, "h": 205 },
 						"colour": { "x": 18, "y": 18, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "≤ 2" },
+								{ "t": 0.5, "label": "4.75" },
+								{ "t": 1, "label": "≥ 7.5" }
+							],
+							"title": "dose"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -2411,7 +2449,16 @@
 						"plotArea": { "w": 377.4, "h": 205 },
 						"colour": { "x": 387.4, "y": 0, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "421" },
+								{ "t": 1, "label": "841" }
+							],
+							"title": "square"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -2741,7 +2788,16 @@
 						"plotArea": { "w": 382.2, "h": 205 },
 						"colour": { "x": 392.2, "y": 0, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "20" },
+								{ "t": 1, "label": "40" }
+							],
+							"title": "ca"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -3440,9 +3496,20 @@
 					"sizeKey": null,
 					"keyLayout": {
 						"plotArea": { "w": 384.6, "h": 205 },
-						"colour": { "x": 394.6, "y": 0, "length": 150 },
+						"colour": { "x": 394.6, "y": 0, "length": 205 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.25, "label": "6" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 0.75, "label": "18" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hour of day (America/New_Yo…"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -3528,9 +3595,18 @@
 					"sizeKey": null,
 					"keyLayout": {
 						"plotArea": { "w": 377.4, "h": 205 },
-						"colour": { "x": 387.4, "y": 0, "length": 150 },
+						"colour": { "x": 387.4, "y": 0, "length": 205 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "73" },
+								{ "t": 0.5, "label": "89" },
+								{ "t": 1, "label": "104" }
+							],
+							"title": "Day of year (America/New_Yo…"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -3616,7 +3692,16 @@
 						"plotArea": { "w": 370.2, "h": 205 },
 						"colour": { "x": 380.2, "y": 0, "length": 150 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "15.6" },
+								{ "t": 1, "label": "31.2" }
+							],
+							"title": "Days since start"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -3700,9 +3785,20 @@
 					"sizeKey": null,
 					"keyLayout": {
 						"plotArea": { "w": 384.6, "h": 205 },
-						"colour": { "x": 394.6, "y": 0, "length": 150 },
+						"colour": { "x": 394.6, "y": 0, "length": 205 },
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.25, "label": "6" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 0.75, "label": "18" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hours since start, wrapped…"
+						}
 					},
 					"key": {
 						"series": 0,
@@ -4023,6 +4119,15 @@
 								{ "r": 10, "label": "90", "noValue": false, "cy": 60.42220510185596 },
 								{ "r": 3, "label": "no value", "noValue": true, "cy": 80.42220510185595 }
 							]
+						},
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "4.5" },
+								{ "t": 1, "label": "9" }
+							],
+							"title": "outside"
 						}
 					},
 					"key": {
@@ -4391,7 +4496,9 @@
 								},
 								{ "r": 14, "label": "≥ 55", "noValue": false, "cy": 70.2484567313166 }
 							]
-						}
+						},
+						"sizeBeside": false,
+						"shown": null
 					},
 					"key": null
 				}
@@ -4686,8 +4793,8 @@
 					},
 					"keyLayout": {
 						"plotArea": { "w": 440, "h": 205 },
-						"colour": { "x": 376.6, "y": 128.42220510185595, "length": 58.57779489814405 },
-						"size": { "x": 350, "y": 18 },
+						"colour": { "x": 376.6, "y": 37, "length": 150 },
+						"size": { "x": 278.6, "y": 102.57779489814405 },
 						"sizeGeometry": {
 							"width": 72,
 							"height": 84.42220510185595,
@@ -4707,6 +4814,17 @@
 								},
 								{ "r": 10, "label": "5.75", "noValue": false, "cy": 74.42220510185595 }
 							]
+						},
+						"sizeBeside": true,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.25, "label": "6" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 0.75, "label": "18" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hour of day (UTC)"
 						}
 					},
 					"key": {
@@ -4727,19 +4845,59 @@
 			]
 		},
 		{
-			"name": "sizeFacets",
+			"name": "sizeKeysBesideRight",
 			"session": {
 				"rawData": {
-					"92": [0, 1, 2, 3],
-					"93": [1, 2, 3, 4],
-					"94": [4, 3, 2, 1],
-					"95": [0, 1, 2, 3],
-					"96": [10, 20, 30, 40]
+					"92": [
+						10, 11.049596835344746, 12.0810481824372, 13.076522253231506, 14.018809236828101,
+						14.89161882363824, 15.679861833158865, 16.369911076561323, 16.949836944286957,
+						17.409613645798245, 17.741292536001176, 17.939139531862114, 17.999734243553032,
+						17.922029106340393, 17.707367490942314, 17.35946047926116, 16.884322706993952,
+						16.29016838227716, 15.587269278001223, 14.787777152831652, 13.905513670931803,
+						12.95573145226693, 11.954850384464976, 10.9201737548894, 9.86958911044836,
+						8.821259016692535, 7.793307062375437, 6.8035045378467025, 5.86896320399977,
+						5.005839463201296, 4.229055046511743, 3.552039045971936, 2.986495751715694,
+						2.5422023075533904, 2.2268396831679933, 2.0458598850855276, 2.002391702084143,
+						2.097186614520333, 2.3286058026948924, 2.692648478858687, 3.1830210530529675,
+						3.791245937041327, 4.506808105324912, 5.317336879485948, 6.208819793161716,
+						7.165844840339536, 8.171866918970766, 9.209493863611844
+					],
+					"93": [
+						20.306072579814895, 20.64556605393396, 21.008475057167846, 21.388525598558246,
+						21.779147343285295, 22.173587200980066, 22.565026073525047, 22.94669674400031,
+						23.312000868704597, 23.654623049686894, 23.968640015696145, 24.2486230240229,
+						24.489731712904106, 24.687797781965465, 24.839397054029323, 24.941908672479446,
+						24.99356041077544, 24.993459310803395, 24.941607120385225, 24.838900263062243,
+						24.687114340675294, 24.48887343666174, 24.247604750755585, 23.967479349368542,
+						23.653340055962797, 23.31061772805061, 22.9452373682287, 22.563515692405023,
+						22.17205192606413, 21.777613716491274, 21.387020133311132, 21.00702378003426,
+						20.64419405467341, 20.304803577626625, 19.99471975026824, 19.71930331898875,
+						19.48331569831418, 19.290836655307878, 19.145193778331453, 19.0489049495128,
+						19.003634815460334, 19.01016600876017, 19.068385617780617, 19.177287138694723,
+						19.334987875974207, 19.538761490534075, 19.785085132833814, 20.069700346095445
+					],
+					"94": [
+						1773511200000, 1773514800000, 1773518400000, 1773522000000, 1773525600000,
+						1773529200000, 1773532800000, 1773536400000, 1773540000000, 1773543600000,
+						1773547200000, 1773550800000, 1773554400000, 1773558000000, 1773561600000,
+						1773565200000, 1773568800000, 1773572400000, 1773576000000, 1773579600000,
+						1773583200000, 1773586800000, 1773590400000, 1773594000000, 1773597600000,
+						1773601200000, 1773604800000, 1773608400000, 1773612000000, 1773615600000,
+						1773619200000, 1773622800000, 1773626400000, 1773630000000, 1773633600000,
+						1773637200000, 1773640800000, 1773644400000, 1773648000000, 1773651600000,
+						1773655200000, 1773658800000, 1773662400000, 1773666000000, 1773669600000,
+						1773673200000, 1773676800000, 1773680400000
+					],
+					"95": [
+						40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+						62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+						84, 85, 86, 87
+					]
 				},
 				"data": [
 					{
 						"id": 92,
-						"name": "x",
+						"name": "air",
 						"data": 92,
 						"type": "number",
 						"tableProcessGUId": "",
@@ -4750,7 +4908,7 @@
 					},
 					{
 						"id": 93,
-						"name": "a",
+						"name": "hive",
 						"data": 93,
 						"type": "number",
 						"tableProcessGUId": "",
@@ -4761,9 +4919,10 @@
 					},
 					{
 						"id": 94,
-						"name": "b",
+						"name": "time",
 						"data": 94,
-						"type": "number",
+						"type": "time",
+						"timeFormat": [],
 						"tableProcessGUId": "",
 						"producerNodeId": null,
 						"producerPort": null,
@@ -4772,19 +4931,8 @@
 					},
 					{
 						"id": 95,
-						"name": "sa",
+						"name": "Binned: relative humidity (%)",
 						"data": 95,
-						"type": "number",
-						"tableProcessGUId": "",
-						"producerNodeId": null,
-						"producerPort": null,
-						"producerArtifactKind": null,
-						"processes": []
-					},
-					{
-						"id": 96,
-						"name": "sb",
-						"data": 96,
 						"type": "number",
 						"tableProcessGUId": "",
 						"producerNodeId": null,
@@ -4796,6 +4944,1141 @@
 				"plots": [
 					{
 						"id": 13,
+						"name": "keys beside right",
+						"x": 350,
+						"y": 150,
+						"width": 400,
+						"height": 220,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 96,
+										"name": "air*",
+										"refId": 92,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 97,
+										"name": "hive*",
+										"refId": 93,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 2,
+										"stroke": "solid",
+										"draw": true,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 98,
+										"name": "time*",
+										"refId": 94,
+										"type": "time",
+										"timeFormat": [],
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									},
+									"sizeBy": {
+										"id": 99,
+										"name": "Binned: relative humidity (%)*",
+										"refId": 95,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"sizeEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"minRadius": 2,
+										"maxRadius": 10,
+										"domainMin": null,
+										"domainMax": null
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							},
+							"sizeScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							}
+						}
+					}
+				],
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": { "13": [{ "line": "#234154", "points": "#234154" }] }
+			},
+			"expected": [
+				{
+					"id": 13,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": {
+								"mode": "value",
+								"domain": { "lo": 40, "hi": 87, "cyclic": false, "period": null },
+								"range": { "rMin": 2, "rMax": 10 },
+								"title": "Binned: relative humidity (%)",
+								"radii": [
+									2, 2.458160530048711, 2.843432148474572, 3.1823983997086356, 3.488583203244183,
+									3.7699822224311363, 4.031788579394531, 4.2776012367243315, 4.510036089868339,
+									4.731065284204421, 4.942219330917398, 5.144714288119699, 5.339535400938207,
+									5.527494141956344, 5.709268313965553, 5.885430984417406, 6.056471832992355,
+									6.222813210704556, 6.384822428760922, 6.542821305698167, 6.697093685307623,
+									6.847891428847029, 6.995439243733445, 7.139938613479483, 7.281571025248925,
+									7.420500642627426, 7.556876535892551, 7.690834556159219, 7.822498920530582,
+									7.951983560923116, 8.079393278253068, 8.204824735249998, 8.328367314645744,
+									8.450103864400067, 8.570111347621937, 8.68846141167282, 8.805220888405755,
+									8.920452235459052, 9.034213926877962, 9.146560799999369, 9.257544364439982,
+									9.36721307812862, 9.475612594579477, 9.58278598498592, 9.6887739381994,
+									9.793614941226824, 9.89734544251693, 10
+								],
+								"drawOrder": [
+									42, 43, 44, 45, 46, 47, 36, 37, 38, 39, 40, 41, 30, 31, 32, 33, 34, 35, 24, 25,
+									26, 27, 28, 29, 18, 19, 20, 21, 22, 23, 12, 13, 14, 15, 16, 17, 6, 7, 8, 9, 10,
+									11, 0, 1, 2, 3, 4, 5
+								]
+							},
+							"active": true,
+							"mode": "hourOfDay",
+							"colormap": "twilight_shifted",
+							"domain": { "lo": 0, "hi": 24, "cyclic": true, "period": 24 },
+							"title": "Hour of day (UTC)",
+							"idx": [
+								48, 50, 53, 56, 58, 61, 0, 2, 5, 8, 10, 13, 16, 18, 21, 24, 26, 29, 32, 34, 37, 40,
+								42, 45, 48, 50, 53, 56, 58, 61, 0, 2, 5, 8, 10, 13, 16, 18, 21, 24, 26, 29, 32, 34,
+								37, 40, 42, 45
+							],
+							"pointColours": [
+								"rgb(175, 82, 82)",
+								"rgb(163, 65, 80)",
+								"rgb(140, 43, 80)",
+								"rgb(111, 28, 78)",
+								"rgb(90, 22, 72)",
+								"rgb(62, 18, 60)",
+								"rgb(50, 19, 58)",
+								"rgb(59, 17, 75)",
+								"rgb(79, 25, 112)",
+								"rgb(91, 47, 148)",
+								"rgb(94, 66, 164)",
+								"rgb(95, 95, 179)",
+								"rgb(99, 122, 187)",
+								"rgb(106, 139, 191)",
+								"rgb(125, 163, 195)",
+								"rgb(155, 185, 200)",
+								"rgb(178, 198, 206)",
+								"rgb(211, 213, 219)",
+								"rgb(226, 217, 224)",
+								"rgb(222, 209, 209)",
+								"rgb(211, 187, 170)",
+								"rgb(203, 159, 131)",
+								"rgb(199, 139, 111)",
+								"rgb(189, 110, 91)",
+								"rgb(175, 82, 82)",
+								"rgb(163, 65, 80)",
+								"rgb(140, 43, 80)",
+								"rgb(111, 28, 78)",
+								"rgb(90, 22, 72)",
+								"rgb(62, 18, 60)",
+								"rgb(50, 19, 58)",
+								"rgb(59, 17, 75)",
+								"rgb(79, 25, 112)",
+								"rgb(91, 47, 148)",
+								"rgb(94, 66, 164)",
+								"rgb(95, 95, 179)",
+								"rgb(99, 122, 187)",
+								"rgb(106, 139, 191)",
+								"rgb(125, 163, 195)",
+								"rgb(155, 185, 200)",
+								"rgb(178, 198, 206)",
+								"rgb(211, 213, 219)",
+								"rgb(226, 217, 224)",
+								"rgb(222, 209, 209)",
+								"rgb(211, 187, 170)",
+								"rgb(203, 159, 131)",
+								"rgb(199, 139, 111)",
+								"rgb(189, 110, 91)"
+							],
+							"segments": [],
+							"legend": {
+								"label": "hive",
+								"elements": [
+									{
+										"type": "line",
+										"color": "#234154",
+										"strokeWidth": 2,
+										"stroke": "solid",
+										"smoother": null
+									},
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": {
+						"series": 0,
+						"title": "Binned: relative humidity (%)",
+						"shape": "circle",
+						"items": [
+							{ "value": 40, "r": 2, "label": "40" },
+							{ "value": 63.5, "r": 7.211102550927978, "label": "63.5" },
+							{ "value": 87, "r": 10, "label": "87" }
+						],
+						"noValue": null
+					},
+					"keyLayout": {
+						"plotArea": { "w": 188.20000000000002, "h": 175 },
+						"colour": { "x": 198.20000000000002, "y": 0, "length": 150 },
+						"size": { "x": 253.60000000000002, "y": 0 },
+						"sizeGeometry": {
+							"width": 86.39999999999999,
+							"height": 98.42220510185595,
+							"colW": 20,
+							"titleH": 44,
+							"titleLines": [
+								{ "text": "Binned:", "y": 0 },
+								{ "text": "relative", "y": 14 },
+								{ "text": "humidity (%)", "y": 28 }
+							],
+							"rows": [
+								{ "r": 2, "label": "40", "noValue": false, "cy": 50 },
+								{
+									"r": 7.211102550927978,
+									"label": "63.5",
+									"noValue": false,
+									"cy": 67.21110255092798
+								},
+								{ "r": 10, "label": "87", "noValue": false, "cy": 88.42220510185595 }
+							]
+						},
+						"sizeBeside": true,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.25, "label": "6" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 0.75, "label": "18" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hour of day (UTC)"
+						}
+					},
+					"key": {
+						"series": 0,
+						"colormap": "twilight_shifted",
+						"domain": { "lo": 0, "hi": 24, "cyclic": true, "period": 24 },
+						"title": "Hour of day (UTC)",
+						"ticks": [
+							{ "t": 0, "label": "0" },
+							{ "t": 0.25, "label": "6" },
+							{ "t": 0.5, "label": "12" },
+							{ "t": 0.75, "label": "18" },
+							{ "t": 1, "label": "24" }
+						],
+						"noValue": null
+					}
+				}
+			]
+		},
+		{
+			"name": "sizeKeysBesideCorner",
+			"session": {
+				"rawData": {
+					"100": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					],
+					"101": [
+						1, 0.9800665778412416, 0.9210609940028851, 0.8253356149096783, 0.6967067093471654,
+						0.5403023058681398, 0.3623577544766736, 0.16996714290024104, -0.029199522301288815,
+						-0.2272020946930871, -0.4161468365471424, -0.5885011172553458, -0.7373937155412454,
+						-0.8568887533689473, -0.9422223406686581, -0.9899924966004454, -0.9982947757947531,
+						-0.9667981925794611, -0.896758416334147, -0.7909677119144168, -0.6536436208636119,
+						-0.4902608213406994, -0.30733286997841935, -0.11215252693505487, 0.0874989834394464,
+						0.28366218546322625, 0.4685166713003771, 0.6346928759426347, 0.7755658785102496,
+						0.8855195169413189, 0.9601702866503661, 0.9965420970232175, 0.9931849187581926,
+						0.9502325919585296, 0.8693974903498253, 0.7539022543433046, 0.6083513145322546,
+						0.43854732757439036, 0.2512598425822557, 0.05395542056264975, -0.14550003380861354,
+						-0.3391548609838345, -0.5192886541166856, -0.6787200473200125, -0.811093014061656,
+						-0.9111302618846769, -0.9748436214041636, -0.9996930420352065
+					],
+					"102": [
+						1773511200000, 1773514800000, 1773518400000, 1773522000000, 1773525600000,
+						1773529200000, 1773532800000, 1773536400000, 1773540000000, 1773543600000,
+						1773547200000, 1773550800000, 1773554400000, 1773558000000, 1773561600000,
+						1773565200000, 1773568800000, 1773572400000, 1773576000000, 1773579600000,
+						1773583200000, 1773586800000, 1773590400000, 1773594000000, 1773597600000,
+						1773601200000, 1773604800000, 1773608400000, 1773612000000, 1773615600000,
+						1773619200000, 1773622800000, 1773626400000, 1773630000000, 1773633600000,
+						1773637200000, 1773640800000, 1773644400000, 1773648000000, 1773651600000,
+						1773655200000, 1773658800000, 1773662400000, 1773666000000, 1773669600000,
+						1773673200000, 1773676800000, 1773680400000
+					],
+					"103": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0,
+						1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8
+					]
+				},
+				"data": [
+					{
+						"id": 100,
+						"name": "x",
+						"data": 100,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 101,
+						"name": "y",
+						"data": 101,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 102,
+						"name": "time",
+						"data": 102,
+						"type": "time",
+						"timeFormat": [],
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 103,
+						"name": "Binned: relative humidity (%)",
+						"data": 103,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 14,
+						"name": "keys beside corner",
+						"x": 350,
+						"y": 150,
+						"width": 360,
+						"height": 150,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 104,
+										"name": "x*",
+										"refId": 100,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 105,
+										"name": "y*",
+										"refId": 101,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 106,
+										"name": "time*",
+										"refId": 102,
+										"type": "time",
+										"timeFormat": [],
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									},
+									"sizeBy": {
+										"id": 107,
+										"name": "Binned: relative humidity (%)*",
+										"refId": 103,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"sizeEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"minRadius": 2,
+										"maxRadius": 10,
+										"domainMin": null,
+										"domainMax": null
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							},
+							"sizeScale": {
+								"show": true,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							}
+						}
+					}
+				],
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": { "14": [{ "line": "#234154", "points": "#234154" }] }
+			},
+			"expected": [
+				{
+					"id": 14,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": {
+								"mode": "value",
+								"domain": { "lo": 0, "hi": 12, "cyclic": false, "period": null },
+								"range": { "rMin": 2, "rMax": 10 },
+								"title": "Binned: relative humidity (%)",
+								"radii": [
+									2, 3.4641016151377544, 4.47213595499958, 5.291502622129181, 6, 6.6332495807108,
+									7.211102550927978, 7.745966692414834, 8.246211251235321, 8.717797887081348,
+									9.16515138991168, 9.591663046625438, 10, 2, 3.4641016151377544, 4.47213595499958,
+									5.291502622129181, 6, 6.6332495807108, 7.211102550927978, 7.745966692414834,
+									8.246211251235321, 8.717797887081348, 9.16515138991168, 9.591663046625438, 10, 2,
+									3.4641016151377544, 4.47213595499958, 5.291502622129181, 6, 6.6332495807108,
+									7.211102550927978, 7.745966692414834, 8.246211251235321, 8.717797887081348,
+									9.16515138991168, 9.591663046625438, 10, 2, 3.4641016151377544, 4.47213595499958,
+									5.291502622129181, 6, 6.6332495807108, 7.211102550927978, 7.745966692414834,
+									8.246211251235321
+								],
+								"drawOrder": [
+									11, 12, 37, 38, 24, 25, 9, 10, 35, 36, 22, 23, 8, 34, 21, 47, 7, 33, 20, 46, 6,
+									31, 32, 18, 19, 44, 45, 5, 30, 16, 17, 42, 43, 3, 4, 29, 15, 41, 2, 28, 13, 14,
+									39, 40, 0, 1, 26, 27
+								]
+							},
+							"active": true,
+							"mode": "hourOfDay",
+							"colormap": "twilight_shifted",
+							"domain": { "lo": 0, "hi": 24, "cyclic": true, "period": 24 },
+							"title": "Hour of day (UTC)",
+							"idx": [
+								48, 50, 53, 56, 58, 61, 0, 2, 5, 8, 10, 13, 16, 18, 21, 24, 26, 29, 32, 34, 37, 40,
+								42, 45, 48, 50, 53, 56, 58, 61, 0, 2, 5, 8, 10, 13, 16, 18, 21, 24, 26, 29, 32, 34,
+								37, 40, 42, 45
+							],
+							"pointColours": [
+								"rgb(175, 82, 82)",
+								"rgb(163, 65, 80)",
+								"rgb(140, 43, 80)",
+								"rgb(111, 28, 78)",
+								"rgb(90, 22, 72)",
+								"rgb(62, 18, 60)",
+								"rgb(50, 19, 58)",
+								"rgb(59, 17, 75)",
+								"rgb(79, 25, 112)",
+								"rgb(91, 47, 148)",
+								"rgb(94, 66, 164)",
+								"rgb(95, 95, 179)",
+								"rgb(99, 122, 187)",
+								"rgb(106, 139, 191)",
+								"rgb(125, 163, 195)",
+								"rgb(155, 185, 200)",
+								"rgb(178, 198, 206)",
+								"rgb(211, 213, 219)",
+								"rgb(226, 217, 224)",
+								"rgb(222, 209, 209)",
+								"rgb(211, 187, 170)",
+								"rgb(203, 159, 131)",
+								"rgb(199, 139, 111)",
+								"rgb(189, 110, 91)",
+								"rgb(175, 82, 82)",
+								"rgb(163, 65, 80)",
+								"rgb(140, 43, 80)",
+								"rgb(111, 28, 78)",
+								"rgb(90, 22, 72)",
+								"rgb(62, 18, 60)",
+								"rgb(50, 19, 58)",
+								"rgb(59, 17, 75)",
+								"rgb(79, 25, 112)",
+								"rgb(91, 47, 148)",
+								"rgb(94, 66, 164)",
+								"rgb(95, 95, 179)",
+								"rgb(99, 122, 187)",
+								"rgb(106, 139, 191)",
+								"rgb(125, 163, 195)",
+								"rgb(155, 185, 200)",
+								"rgb(178, 198, 206)",
+								"rgb(211, 213, 219)",
+								"rgb(226, 217, 224)",
+								"rgb(222, 209, 209)",
+								"rgb(211, 187, 170)",
+								"rgb(203, 159, 131)",
+								"rgb(199, 139, 111)",
+								"rgb(189, 110, 91)"
+							],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": {
+						"series": 0,
+						"title": "Binned: relative humidity (%)",
+						"shape": "circle",
+						"items": [
+							{ "value": 0, "r": 2, "label": "0" },
+							{ "value": 6, "r": 7.211102550927978, "label": "6" },
+							{ "value": 12, "r": 10, "label": "12" }
+						],
+						"noValue": null
+					},
+					"keyLayout": {
+						"plotArea": { "w": 300, "h": 105 },
+						"colour": { "x": 236.6, "y": 18, "length": 69 },
+						"size": { "x": 124.2, "y": 18 },
+						"sizeGeometry": {
+							"width": 86.39999999999999,
+							"height": 98.42220510185595,
+							"colW": 20,
+							"titleH": 44,
+							"titleLines": [
+								{ "text": "Binned:", "y": 0 },
+								{ "text": "relative", "y": 14 },
+								{ "text": "humidity (%)", "y": 28 }
+							],
+							"rows": [
+								{ "r": 2, "label": "0", "noValue": false, "cy": 50 },
+								{ "r": 7.211102550927978, "label": "6", "noValue": false, "cy": 67.21110255092798 },
+								{ "r": 10, "label": "12", "noValue": false, "cy": 88.42220510185595 }
+							]
+						},
+						"sizeBeside": true,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "0" },
+								{ "t": 0.5, "label": "12" },
+								{ "t": 1, "label": "24" }
+							],
+							"title": "Hour of…"
+						}
+					},
+					"key": {
+						"series": 0,
+						"colormap": "twilight_shifted",
+						"domain": { "lo": 0, "hi": 24, "cyclic": true, "period": 24 },
+						"title": "Hour of day (UTC)",
+						"ticks": [
+							{ "t": 0, "label": "0" },
+							{ "t": 0.25, "label": "6" },
+							{ "t": 0.5, "label": "12" },
+							{ "t": 0.75, "label": "18" },
+							{ "t": 1, "label": "24" }
+						],
+						"noValue": null
+					}
+				}
+			]
+		},
+		{
+			"name": "sizeKeysStackedThin",
+			"session": {
+				"rawData": {
+					"108": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+					"109": [3, 1, 4, 1, 5, 9, 2, 6, 5, 3],
+					"110": [10.5, 12, 14, 16, 18, 20, 22, 24, 25, 25.3],
+					"111": [40, 45, 50, 55, 60, 65, 70, 75, 80, 98]
+				},
+				"data": [
+					{
+						"id": 108,
+						"name": "x",
+						"data": 108,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 109,
+						"name": "y",
+						"data": 109,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 110,
+						"name": "air",
+						"data": 110,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 111,
+						"name": "Binned: relative humidity (%)",
+						"data": 111,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 15,
+						"name": "keys stacked thin",
+						"x": 350,
+						"y": 150,
+						"width": 420,
+						"height": 190,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 112,
+										"name": "x*",
+										"refId": 108,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 113,
+										"name": "y*",
+										"refId": 109,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 114,
+										"name": "air*",
+										"refId": 110,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									},
+									"sizeBy": {
+										"id": 115,
+										"name": "Binned: relative humidity (%)*",
+										"refId": 111,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"sizeEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"minRadius": 2,
+										"maxRadius": 10,
+										"domainMin": null,
+										"domainMax": null
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							},
+							"sizeScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							}
+						}
+					}
+				],
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": { "15": [{ "line": "#234154", "points": "#234154" }] }
+			},
+			"expected": [
+				{
+					"id": 15,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": {
+								"mode": "value",
+								"domain": { "lo": 40, "hi": 98, "cyclic": false, "period": null },
+								"range": { "rMin": 2, "rMax": 10 },
+								"title": "Binned: relative humidity (%)",
+								"radii": [
+									2, 3.5036926333463554, 4.533400946081323, 5.369132723903978, 6.091259990828012,
+									6.736416728857233, 7.32496910667841, 7.869627340780415, 8.378955576426225, 10
+								],
+								"drawOrder": [9, 8, 6, 7, 5, 3, 4, 2, 0, 1]
+							},
+							"active": true,
+							"mode": "value",
+							"colormap": "viridis",
+							"domain": { "lo": 10.5, "hi": 25.3, "cyclic": false, "period": null },
+							"title": "air",
+							"idx": [0, 6, 15, 23, 32, 41, 49, 58, 62, 63],
+							"pointColours": [
+								"rgb(69, 4, 87)",
+								"rgb(72, 38, 118)",
+								"rgb(60, 80, 139)",
+								"rgb(45, 113, 142)",
+								"rgb(32, 147, 140)",
+								"rgb(48, 180, 124)",
+								"rgb(108, 206, 90)",
+								"rgb(200, 224, 32)",
+								"rgb(241, 230, 30)",
+								"rgb(250, 231, 35)"
+							],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": {
+						"series": 0,
+						"title": "Binned: relative humidity (%)",
+						"shape": "circle",
+						"items": [
+							{ "value": 40, "r": 2, "label": "40" },
+							{ "value": 69, "r": 7.211102550927978, "label": "69" },
+							{ "value": 98, "r": 10, "label": "98" }
+						],
+						"noValue": null
+					},
+					"keyLayout": {
+						"plotArea": { "w": 263.6, "h": 145 },
+						"colour": { "x": 273.6, "y": 0, "length": 36.57779489814405 },
+						"size": { "x": 273.6, "y": 46.57779489814405 },
+						"sizeGeometry": {
+							"width": 86.39999999999999,
+							"height": 98.42220510185595,
+							"colW": 20,
+							"titleH": 44,
+							"titleLines": [
+								{ "text": "Binned:", "y": 0 },
+								{ "text": "relative", "y": 14 },
+								{ "text": "humidity (%)", "y": 28 }
+							],
+							"rows": [
+								{ "r": 2, "label": "40", "noValue": false, "cy": 50 },
+								{
+									"r": 7.211102550927978,
+									"label": "69",
+									"noValue": false,
+									"cy": 67.21110255092798
+								},
+								{ "r": 10, "label": "98", "noValue": false, "cy": 88.42220510185595 }
+							]
+						},
+						"sizeBeside": false,
+						"shown": {
+							"ticks": [
+								{ "t": 0, "label": "10.5" },
+								{ "t": 1, "label": "25.3" }
+							],
+							"title": "air"
+						}
+					},
+					"key": {
+						"series": 0,
+						"colormap": "viridis",
+						"domain": { "lo": 10.5, "hi": 25.3, "cyclic": false, "period": null },
+						"title": "air",
+						"ticks": [
+							{ "t": 0, "label": "10.5" },
+							{ "t": 0.5, "label": "17.9" },
+							{ "t": 1, "label": "25.3" }
+						],
+						"noValue": null
+					}
+				}
+			]
+		},
+		{
+			"name": "sizeFacets",
+			"session": {
+				"rawData": {
+					"116": [0, 1, 2, 3],
+					"117": [1, 2, 3, 4],
+					"118": [4, 3, 2, 1],
+					"119": [0, 1, 2, 3],
+					"120": [10, 20, 30, 40]
+				},
+				"data": [
+					{
+						"id": 116,
+						"name": "x",
+						"data": 116,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 117,
+						"name": "a",
+						"data": 117,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 118,
+						"name": "b",
+						"data": 118,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 119,
+						"name": "sa",
+						"data": 119,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 120,
+						"name": "sb",
+						"data": 120,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 16,
 						"name": "size facet",
 						"x": 350,
 						"y": 150,
@@ -4837,9 +6120,9 @@
 							"data": [
 								{
 									"x": {
-										"id": 97,
+										"id": 121,
 										"name": "x*",
-										"refId": 92,
+										"refId": 116,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4848,9 +6131,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 98,
+										"id": 122,
 										"name": "a*",
-										"refId": 93,
+										"refId": 117,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4869,9 +6152,9 @@
 									},
 									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
 									"sizeBy": {
-										"id": 101,
+										"id": 125,
 										"name": "sa*",
-										"refId": 95,
+										"refId": 119,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4890,9 +6173,9 @@
 								},
 								{
 									"x": {
-										"id": 99,
+										"id": 123,
 										"name": "x*",
-										"refId": 92,
+										"refId": 116,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4901,9 +6184,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 100,
+										"id": 124,
 										"name": "b*",
-										"refId": 94,
+										"refId": 118,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4922,9 +6205,9 @@
 									},
 									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
 									"sizeBy": {
-										"id": 102,
+										"id": 126,
 										"name": "sb*",
-										"refId": 96,
+										"refId": 120,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -4975,7 +6258,7 @@
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
-					"13": [
+					"16": [
 						{ "line": "#234154", "points": "#234154" },
 						{ "line": "#BE796B", "points": "#BE796B" }
 					]
@@ -4983,7 +6266,7 @@
 			},
 			"expected": [
 				{
-					"id": 13,
+					"id": 16,
 					"series": [
 						{
 							"resolved": { "line": "#234154", "points": "#234154" },
@@ -5063,7 +6346,9 @@
 								},
 								{ "r": 10, "label": "40", "noValue": false, "cy": 60.42220510185596 }
 							]
-						}
+						},
+						"sizeBeside": false,
+						"shown": null
 					},
 					"key": null
 				}
@@ -5072,12 +6357,12 @@
 		{
 			"name": "resolvedColours",
 			"session": {
-				"rawData": { "103": [0, 1, 2, 3, 4], "104": [1, 2, 1, 2, 1], "105": [2, 3, 2, 3, 2] },
+				"rawData": { "127": [0, 1, 2, 3, 4], "128": [1, 2, 1, 2, 1], "129": [2, 3, 2, 3, 2] },
 				"data": [
 					{
-						"id": 103,
+						"id": 127,
 						"name": "x",
-						"data": 103,
+						"data": 127,
 						"type": "number",
 						"tableProcessGUId": "",
 						"producerNodeId": null,
@@ -5086,9 +6371,9 @@
 						"processes": []
 					},
 					{
-						"id": 104,
+						"id": 128,
 						"name": "hive A",
-						"data": 104,
+						"data": 128,
 						"type": "number",
 						"tableProcessGUId": "",
 						"producerNodeId": null,
@@ -5097,9 +6382,9 @@
 						"processes": []
 					},
 					{
-						"id": 105,
+						"id": 129,
 						"name": "hive B",
-						"data": 105,
+						"data": 129,
 						"type": "number",
 						"tableProcessGUId": "",
 						"producerNodeId": null,
@@ -5110,7 +6395,7 @@
 				],
 				"plots": [
 					{
-						"id": 14,
+						"id": 17,
 						"name": "both hives",
 						"x": 350,
 						"y": 150,
@@ -5152,9 +6437,9 @@
 							"data": [
 								{
 									"x": {
-										"id": 106,
+										"id": 130,
 										"name": "x*",
-										"refId": 103,
+										"refId": 127,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5163,9 +6448,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 107,
+										"id": 131,
 										"name": "hive A*",
-										"refId": 104,
+										"refId": 128,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5186,9 +6471,9 @@
 								},
 								{
 									"x": {
-										"id": 108,
+										"id": 132,
 										"name": "x*",
-										"refId": 103,
+										"refId": 127,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5197,9 +6482,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 109,
+										"id": 133,
 										"name": "hive B*",
-										"refId": 105,
+										"refId": 129,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5236,7 +6521,7 @@
 						}
 					},
 					{
-						"id": 15,
+						"id": 18,
 						"name": "hive B alone",
 						"x": 350,
 						"y": 150,
@@ -5278,9 +6563,9 @@
 							"data": [
 								{
 									"x": {
-										"id": 110,
+										"id": 134,
 										"name": "x*",
-										"refId": 103,
+										"refId": 127,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5289,9 +6574,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 111,
+										"id": 135,
 										"name": "hive B*",
-										"refId": 105,
+										"refId": 129,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -5331,16 +6616,16 @@
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
-					"14": [
+					"17": [
 						{ "line": "#234154", "points": "#234154" },
 						{ "line": "#BE796B", "points": "#BE796B" }
 					],
-					"15": [{ "line": "#BE796B", "points": "#BE796B" }]
+					"18": [{ "line": "#BE796B", "points": "#BE796B" }]
 				}
 			},
 			"expected": [
 				{
-					"id": 14,
+					"id": 17,
 					"series": [
 						{
 							"resolved": { "line": "#234154", "points": "#234154" },
@@ -5398,12 +6683,14 @@
 						"plotArea": { "w": 440, "h": 205 },
 						"colour": null,
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": null
 					},
 					"key": null
 				},
 				{
-					"id": 15,
+					"id": 18,
 					"series": [
 						{
 							"resolved": { "line": "#BE796B", "points": "#BE796B" },
@@ -5436,7 +6723,9 @@
 						"plotArea": { "w": 440, "h": 205 },
 						"colour": null,
 						"size": null,
-						"sizeGeometry": null
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": null
 					},
 					"key": null
 				}

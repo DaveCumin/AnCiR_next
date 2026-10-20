@@ -229,8 +229,22 @@ def check_key(ax, exp):
     axis = cax.yaxis if vertical else cax.xaxis
     ticks = [(round(float(t), 9), lab.get_text()) for t, lab in
              zip(axis.get_ticklocs(), axis.get_ticklabels())]
-    assert ticks == [(round(t["t"], 9), t["label"]) for t in key["ticks"]]
-    assert axis.get_label().get_text() == key["title"]
+    # The app's ticks and title, as a bar of the drawn length shows them (thinned so no two
+    # labels crowd, a title along the bar shortened to it: ColourScale.svelte, v82.45). This
+    # test draws at its own figure size; test_plot_size_by pins the app's own lengths.
+    font_px = axis.get_ticklabels()[0].get_fontsize() / 0.75
+    p = cax.get_position()
+    fig_w, fig_h = cax.figure.get_size_inches() * 96
+    # (+1e-6: the axes fraction round-trips the drawn length a hair short of it.)
+    length = (p.height * fig_h if vertical else p.width * fig_w) + 1e-6
+    full = [(t["t"], t["label"]) for t in key["ticks"]]
+    shown = rt.fit_colour_key_ticks(full, vertical, length, font_px)
+    assert ticks == [(round(t, 9), lab) for t, lab in shown]
+    assert ticks[0][1] == full[0][1] and ticks[-1][1] == full[-1][1]
+    title = key["title"]
+    want_title = (rt.fit_colour_key_title(title, length, font_px)
+                  if title and (not vertical or len(title) > 2) else title)
+    assert axis.get_label().get_text() == (want_title or "")
     # The bar's colours are the 64 bucket colours of the map the app draws.
     # (The colorbar's drawn cells, low end first.)
     got = [rgb255(c) for c in cax._colorbar.solids.get_facecolors()]

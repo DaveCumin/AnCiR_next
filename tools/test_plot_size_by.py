@@ -224,13 +224,105 @@ def test_the_plot_area_is_the_apps_after_the_keys_take_their_room(name, plot_ind
     assert (w, h) == pytest.approx((area["w"], area["h"]), abs=1e-6)
 
 
-def test_a_shared_corner_shortens_the_bar_and_stacks_the_key_above_it():
+def test_a_shared_corner_too_short_for_a_column_puts_the_size_key_beside_the_bar():
+    """sizeTimeCorner (bottom right): a column of both would squeeze the bar under its title,
+    so the size key sits on the bar's left, level with its bottom, and the bar keeps its
+    length (v82.45; it was shortened, its title running past it)."""
     _fig, ax, _plot, exp, _session = render("sizeTimeCorner")
-    bar = exp["keyLayout"]["colour"]
-    size = exp["keyLayout"]["size"]
-    geom = exp["keyLayout"]["sizeGeometry"]
+    kl = exp["keyLayout"]
+    bar, size, geom = kl["colour"], kl["size"], kl["sizeGeometry"]
+    assert kl["sizeBeside"] is True
+    assert bar["length"] == 150
+    inset = 8
+    assert size["x"] + geom["width"] + inset <= bar["x"] - inset
+    # Level with the bar's key at the bottom (the bar and its "no value" entry).
+    cax = colour_key_axes(ax)
+    font_px = cax.yaxis.get_ticklabels()[0].get_fontsize() / 0.75
+    key = exp["key"]
+    bar_geom = rt.colour_key_geometry(True, 10, bar["length"], font_px,
+                                      [t["label"] for t in key["ticks"]], key["title"],
+                                      key["noValue"]["label"] if key["noValue"] else None)
+    assert size["y"] + geom["height"] == pytest.approx(bar["y"] + bar_geom["height"], abs=1e-9)
+
+
+def test_the_keys_stack_when_the_column_fits_and_the_bar_thins_its_labels():
+    """sizeKeysStackedThin: a short colour title, so the column fits: the size key under the
+    bar, the bar shortened to the room left (never under its minimum) and its three labels
+    thinned to the two ends."""
+    _fig, ax, _plot, exp, _session = render("sizeKeysStackedThin")
+    kl = exp["keyLayout"]
+    assert kl["sizeBeside"] is False
+    bar, size = kl["colour"], kl["size"]
     assert bar["length"] < 150
-    assert size["y"] + geom["height"] <= bar["y"]
+    cax = colour_key_axes(ax)
+    font_px = cax.yaxis.get_ticklabels()[0].get_fontsize() / 0.75
+    assert bar["length"] >= rt.colour_key_min_length(font_px) - 1e-9
+    assert size["y"] >= bar["y"] + bar["length"]
+    assert [t["label"] for t in kl["shown"]["ticks"]] == [
+        exp["key"]["ticks"][0]["label"], exp["key"]["ticks"][-1]["label"]]
+
+
+@pytest.mark.parametrize("name", ["sizeKeysBesideRight", "sizeKeysBesideCorner"])
+def test_a_small_plot_puts_the_keys_side_by_side(name):
+    """Beside the plot the size key is on the bar's right (both widths come off the plot
+    area); in a right corner on its left; level with its top either way."""
+    _fig, ax, plot, exp, _session = render(name)
+    kl = exp["keyLayout"]
+    assert kl["sizeBeside"] is True
+    bar, size, geom = kl["colour"], kl["size"], kl["sizeGeometry"]
+    cax = colour_key_axes(ax)
+    kax = size_key_axes(ax)
+    bx, by, bw, bh = px_rect(ax, cax)
+    sx, sy, sw, sh = px_rect(ax, kax)
+    position = plot["plot"]["colourScale"]["position"]
+    if position == "right":
+        assert sx > bx + bw
+        assert sy == pytest.approx(by, abs=1e-6)
+    else:
+        assert sx + sw < bx
+        assert sy == pytest.approx(by, abs=1e-6)
+
+
+def _text_extent_px(ax, text):
+    """A drawn text's window extent as (x0, y0, x1, y1) in px, y UP."""
+    r = ax.figure.canvas.get_renderer()
+    b = text.get_window_extent(renderer=r)
+    k = 96 / ax.figure.dpi
+    return b.x0 * k, b.y0 * k, b.x1 * k, b.y1 * k
+
+
+@pytest.mark.parametrize("name,plot_index", PLOTS)
+def test_the_colour_bar_shows_the_apps_ticks_and_title(name, plot_index):
+    """At the app's own size: exactly the tick labels and the title the app's bar shows."""
+    _fig, ax, _plot, exp, _session = render(name, plot_index)
+    cax = colour_key_axes(ax)
+    if exp["key"] is None or cax is None:
+        return
+    shown = exp["keyLayout"]["shown"]
+    axis = cax.yaxis
+    got = [(round(float(t), 9), lab.get_text()) for t, lab in
+           zip(axis.get_ticklocs(), axis.get_ticklabels())]
+    assert got == [(round(t["t"], 9), t["label"]) for t in shown["ticks"]]
+    assert axis.get_label().get_text() == (shown["title"] or "")
+
+
+@pytest.mark.parametrize("name,plot_index", PLOTS)
+def test_no_two_bar_labels_overlap_and_the_title_stays_by_the_bar(name, plot_index):
+    """Measured on the drawn figure (matplotlib's own text extents): no two tick labels of the
+    bar overlap, and the turned title runs no further than the bar's own length."""
+    fig, ax, _plot, exp, _session = render(name, plot_index)
+    cax = colour_key_axes(ax)
+    if exp["key"] is None or cax is None:
+        return
+    labels = [t for t in cax.yaxis.get_ticklabels() if t.get_text()]
+    spans = sorted((_text_extent_px(ax, t)[1], _text_extent_px(ax, t)[3]) for t in labels)
+    for (_a0, a1), (b0, _b1) in zip(spans, spans[1:]):
+        assert b0 >= a1, (name, spans)
+    title = cax.yaxis.get_label()
+    if title.get_text() and title.get_rotation() == 90:
+        _x0, y0, _x1, y1 = _text_extent_px(ax, title)
+        _cx0, cy0, _cx1, cy1 = _text_extent_px(ax, cax.patch)
+        assert y0 >= cy0 - 0.5 and y1 <= cy1 + 0.5, (name, (y0, y1), (cy0, cy1))
 
 
 # ---- the runtime's rules are the app's -------------------------------------------------

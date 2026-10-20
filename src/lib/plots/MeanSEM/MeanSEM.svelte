@@ -10,6 +10,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import AxisLabelInput from '$lib/components/plotbits/AxisLabelInput.svelte';
+	import { commitAxisEdit } from '$lib/plots/axisEdits.js';
 	import { scaleLinear } from 'd3-scale';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { clearEnds } from '$lib/plots/axisDomain.js';
@@ -694,10 +695,13 @@
 		return categories.map((_, i) => i);
 	}
 
+	// The bottom axis's stand-in: one tick per category, at its index (the category's centre).
+	// Gridlines follow the plot's own x axis setting, so an enabled one draws a vertical line
+	// at each category's centre.
 	function getXAxisForManualCategories(axisData, categories) {
 		return {
 			label: axisData.label,
-			gridlines: false,
+			gridlines: axisData.gridlines === true,
 			nticks: categories.length,
 			manualTicks: getManualCategoryTicks(categories)
 		};
@@ -810,6 +814,17 @@
 				<ControlInput label="Label">
 					<AxisLabelInput axisData={theData.xAxis} />
 				</ControlInput>
+				<!-- The same Grid switch as every other axis (Axis.svelte): one vertical line at
+				     each category's centre. -->
+				<label class="control-input-checkbox">
+					<input
+						type="checkbox"
+						data-testid="x-axis-gridlines"
+						checked={theData.xAxis.gridlines}
+						onchange={(e) => commitAxisEdit(theData.xAxis, 'gridlines', e.currentTarget.checked)}
+					/>
+					<span class="ci-label">Grid</span>
+				</label>
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'overlays'}

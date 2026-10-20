@@ -137,9 +137,110 @@
 		};
 	}
 
-	/** The bar's automatic length: the plot's extent, between 30 and 150 px. */
-	export function autoBarLength(extent) {
-		return Math.max(30, Math.min(extent, 150));
+	/** Space kept between two neighbouring tick labels along the bar, px. */
+	export const TICK_LABEL_SPACE = 2;
+	/** A character's estimated width, in em (as colourScaleGeometry estimates text). */
+	const CHAR_EM = 0.6;
+
+	/**
+	 * Where a tick's label runs along the bar: [from, to] in px from the bar's LOW end. A label
+	 * at an end sits inside the bar's length (flush with that end); any other is centred on its
+	 * tick. Along a vertical bar a label takes one em; along a horizontal one its estimated
+	 * width.
+	 * @param {number} t the tick's place along the bar, 0 (low) to 1 (high)
+	 * @param {string} label
+	 * @param {{vertical: boolean, barLen: number, fontSize: number}} o
+	 * @returns {[number, number]}
+	 */
+	export function tickLabelSpan(t, label, { vertical, barLen, fontSize }) {
+		const at = t * barLen;
+		const ext = vertical ? fontSize : String(label ?? '').length * fontSize * CHAR_EM;
+		if (t <= 0) return [at, at + ext];
+		if (t >= 1) return [at - ext, at];
+		return [at - ext / 2, at + ext / 2];
+	}
+
+	/** Whether no two neighbouring labels of `ticks` (ascending t) come within TICK_LABEL_SPACE. */
+	function ticksFit(ticks, o) {
+		for (let i = 1; i < ticks.length; i++) {
+			const a = tickLabelSpan(ticks[i - 1].t, ticks[i - 1].label, o);
+			const b = tickLabelSpan(ticks[i].t, ticks[i].label, o);
+			if (b[0] - a[1] < TICK_LABEL_SPACE) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * The ticks a bar of this length can label without two labels crowding: all of them when
+	 * they fit, else every second one (both ends kept, so hour of day reads 0, 12, 24), every
+	 * fourth, ..., and at last the two ends alone. The ends are what a reader needs most (the
+	 * range), so they always stay: on a bar too short even for them (only a stored length
+	 * under minBarLength can be) they are drawn anyway.
+	 * @param {{t: number, label: string}[]} ticks low end first
+	 * @param {{vertical: boolean, barLen: number, fontSize: number}} o
+	 */
+	export function fitBarTicks(ticks, o) {
+		const n = ticks?.length ?? 0;
+		if (n <= 2 || ticksFit(ticks, o)) return ticks;
+		for (let stride = 2; stride < n - 1; stride *= 2) {
+			if ((n - 1) % stride !== 0) continue;
+			const kept = ticks.filter((_, i) => i % stride === 0);
+			if (ticksFit(kept, o)) return kept;
+		}
+		return [ticks[0], ticks[n - 1]];
+	}
+
+	/**
+	 * A title as it fits along `room` px: whole when it does, else shortened to whole
+	 * characters and an ellipsis (the component keeps the whole title as the text's tooltip),
+	 * and empty when not even one character and the ellipsis fit.
+	 * @param {string|null} title
+	 * @param {number} room px
+	 * @param {number} fontSize
+	 */
+	export function fitScaleTitle(title, room, fontSize) {
+		const s = String(title ?? '');
+		const charW = fontSize * CHAR_EM;
+		if (s.length * charW <= room) return s;
+		const keep = Math.floor(room / charW) - 1;
+		return keep >= 1 ? s.slice(0, keep).trimEnd() + '\u2026' : '';
+	}
+
+	/**
+	 * The shortest an automatic bar is made (when a legend or the size key shares its place):
+	 * room for both end labels (one em each and TICK_LABEL_SPACE between), and never under
+	 * 30 px. Below it the size key goes beside the bar instead of under it
+	 * (EncodingKeyLayout.sizeBeside).
+	 * @param {number} fontSize
+	 */
+	export function minBarLength(fontSize) {
+		return Math.max(30, 2 * fontSize + TICK_LABEL_SPACE);
+	}
+
+	/**
+	 * How far a title runs ALONG the bar, px: a vertical bar's turned title (longer than two
+	 * characters, colourScaleGeometry.rotateLabel) and a horizontal bar's title under it; 0 for
+	 * an upright one- or two-character title beside a vertical bar, which runs across it.
+	 * @param {string|null} label
+	 * @param {number} fontSize
+	 * @param {boolean} vertical
+	 */
+	export function titleRunLength(label, fontSize, vertical) {
+		if (!label) return 0;
+		const s = String(label);
+		if (vertical && s.length <= 2) return 0;
+		return s.length * fontSize * CHAR_EM;
+	}
+
+	/**
+	 * The bar's automatic length: the plot's extent, between 30 and 150 px, or longer than 150
+	 * (still within the extent) when its title runs further, so a title fits whole wherever
+	 * the plot is long enough for it.
+	 * @param {number} extent
+	 * @param {number} [titleLen] titleRunLength
+	 */
+	export function autoBarLength(extent, titleLen = 0) {
+		return Math.max(30, Math.min(extent, Math.max(150, titleLen)));
 	}
 
 	/**
@@ -245,7 +346,11 @@
 
 	const vertical = $derived(scaleData?.orientation !== 'horizontal');
 	const thickness = $derived(scaleData?.barThickness ?? 10);
-	const barLen = $derived(length ?? scaleData?.barLength ?? autoBarLength(vertical ? boxH : boxW));
+	const barLen = $derived(
+		length ??
+			scaleData?.barLength ??
+			autoBarLength(vertical ? boxH : boxW, titleRunLength(label, fontSize, vertical))
+	);
 
 	const stops = $derived(gradientStops(colormap));
 	// Low end first, as `t` runs. The default three are the domain's ends and middle.
@@ -268,6 +373,15 @@
 	);
 	const tickTextW = $derived(geom.tickTextW);
 	const rotateLabel = $derived(geom.rotateLabel);
+	// What a bar of this length can show: its labels thinned so none crowd (fitBarTicks), and a
+	// title that runs along the bar (turned beside a vertical bar, under a horizontal one)
+	// shortened to the bar's length, the whole title kept as its tooltip. The geometry above is
+	// the full set's, so the room a host reserved does not change with the bar's length.
+	const shownTicks = $derived(fitBarTicks(tickItems, { vertical, barLen, fontSize }));
+	const shownLabel = $derived(
+		label && (rotateLabel || !vertical) ? fitScaleTitle(label, barLen, fontSize) : label
+	);
+	const labelShortened = $derived(!!label && shownLabel !== label);
 
 	/** The whole key's footprint, used for placement and for the backdrop. */
 	const dims = $derived({ width: geom.width, height: geom.height });
@@ -371,7 +485,7 @@
 				<rect x={0} y={0} width={thickness} height={barLen} fill={'url(#' + gradId + ')'} />
 				<!-- Top to bottom, so the DOM order matches the reading order: a vertical
 				     bar runs high at the top. -->
-				{#each tickItems.slice().reverse() as tick, i (i)}
+				{#each shownTicks.slice().reverse() as tick, i (i)}
 					<text
 						class="colour-scale-tick"
 						x={thickness + gap}
@@ -394,7 +508,8 @@
 						text-anchor="middle"
 						font-size={fontSize}
 						font-family={resolved.fontFamily}
-						fill="black">{label}</text
+						fill="black"
+						>{shownLabel}{#if labelShortened}<title>{label}</title>{/if}</text
 					>
 				{:else if label}
 					<text
@@ -409,7 +524,7 @@
 				{/if}
 			{:else}
 				<rect x={0} y={0} width={barLen} height={thickness} fill={'url(#' + gradId + ')'} />
-				{#each tickItems as tick, i (i)}
+				{#each shownTicks as tick, i (i)}
 					<text
 						class="colour-scale-tick"
 						x={tickAlong(tick.t)}
@@ -434,7 +549,8 @@
 						dominant-baseline="hanging"
 						font-size={fontSize}
 						font-family={resolved.fontFamily}
-						fill="black">{label}</text
+						fill="black"
+						>{shownLabel}{#if labelShortened}<title>{label}</title>{/if}</text
 					>
 				{/if}
 			{/if}

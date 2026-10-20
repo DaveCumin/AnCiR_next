@@ -89,11 +89,12 @@ function col(values, type = 'number', name = 'c', extra = {}) {
 function scatter(
 	name,
 	series,
-	{ legend = false, colourScale = null, sizeScale = null, style = null } = {}
+	{ legend = false, colourScale = null, sizeScale = null, style = null, size = null } = {}
 ) {
 	const plot = new Plot({
 		type: 'scatterplot',
 		name,
+		...(size ?? {}),
 		plot: {
 			data: series.map((s) => ({
 				x: { refId: s.x },
@@ -229,7 +230,11 @@ function drawnByApp(p) {
 			plotArea: { w: inner.plotwidth, h: inner.plotheight },
 			colour: keys.placement,
 			size: keys.sizePlacement,
-			sizeGeometry: keys.sizeBase
+			sizeGeometry: keys.sizeBase,
+			// Side by side (a column of both would squeeze the bar), and what the placed bar
+			// shows: its tick labels thinned to its length, its title shortened to it (v82.45).
+			sizeBeside: keys.sizeBeside,
+			shown: keys.shown
 		},
 		key: key
 			? {
@@ -475,6 +480,74 @@ const CASES = {
 			],
 			{ colourScale: { position: 'bottomright' }, sizeScale: { position: 'bottomright' } }
 		);
+	},
+	// ---- Small plots: the keys sharing a place (v82.45) ----
+	/** Hour of day and a long size title beside a small plot: a column of both would squeeze
+	 *  the bar under its title, so the size key goes beside the bar (both widths reserved). */
+	sizeKeysBesideRight() {
+		const t = Array.from({ length: 48 }, (_, i) => T0 + i * 3600000);
+		const x = col(
+			t.map((_, i) => 10 + 8 * Math.sin(i / 7.6)),
+			'number',
+			'air'
+		);
+		const y = col(
+			t.map((_, i) => 22 + 3 * Math.sin(i / 7.6 - 0.6)),
+			'number',
+			'hive'
+		);
+		const time = col(t, 'time', 'time');
+		const h = col(
+			t.map((_, i) => 40 + i),
+			'number',
+			'Binned: relative humidity (%)'
+		);
+		scatter(
+			'keys beside right',
+			[{ x, y, line: { draw: true, strokeWidth: 2 }, colour: { refId: time }, size: { refId: h } }],
+			{ size: { width: 400, height: 220 } }
+		);
+	},
+	/** The same in a smaller plot's top right corner: the size key on the bar's left; the bar
+	 *  short enough that its labels thin to 0, 12, 24 and its title is shortened. */
+	sizeKeysBesideCorner() {
+		const t = Array.from({ length: 48 }, (_, i) => T0 + i * 3600000);
+		const x = col(
+			t.map((_, i) => i),
+			'number',
+			'x'
+		);
+		const y = col(
+			t.map((_, i) => Math.cos(i / 5)),
+			'number',
+			'y'
+		);
+		const time = col(t, 'time', 'time');
+		const h = col(
+			t.map((_, i) => i % 13),
+			'number',
+			'Binned: relative humidity (%)'
+		);
+		scatter('keys beside corner', [{ x, y, colour: { refId: time }, size: { refId: h } }], {
+			size: { width: 360, height: 150 },
+			colourScale: { position: 'topright' },
+			sizeScale: { position: 'topright' }
+		});
+	},
+	/** A short colour title: the column still fits, so the keys stack (the size key under the
+	 *  bar), the bar shortened to the room left and its three labels thinned to the ends. */
+	sizeKeysStackedThin() {
+		const x = col([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'number', 'x');
+		const y = col([3, 1, 4, 1, 5, 9, 2, 6, 5, 3], 'number', 'y');
+		const c = col([10.5, 12, 14, 16, 18, 20, 22, 24, 25, 25.3], 'number', 'air');
+		const h = col(
+			[40, 45, 50, 55, 60, 65, 70, 75, 80, 98],
+			'number',
+			'Binned: relative humidity (%)'
+		);
+		scatter('keys stacked thin', [{ x, y, colour: { refId: c }, size: { refId: h } }], {
+			size: { width: 420, height: 190 }
+		});
 	},
 	/** Facets: the panels share one size range over every sized series of the mode. */
 	sizeFacets() {

@@ -357,6 +357,31 @@ export function placeColourKey({ legend = null, ...o }) {
 	return placeKey({ ...o, stack: legend ? [legend] : [] });
 }
 
+/**
+ * A key placed BESIDE the box before it rather than after it in its column: the colour bar and
+ * the size key sharing a place go side by side when a column of both would squeeze an
+ * automatic bar under its comfortable length (EncodingKeyLayout.sizeBeside). Beside the plot
+ * and in a left corner it goes on the box's right; in a right corner on its left (into the
+ * plot, away from the edge). Level with the box's top, or its bottom in a bottom corner.
+ * @param {object} o
+ * @param {string} o.position the shared position ('right' or a corner)
+ * @param {{width: number, height: number}} o.box the key's footprint
+ * @param {{x: number, y: number, width: number, height: number}} o.beside the box before it,
+ *   its backdrop included
+ * @param {number} o.margin the gap between them
+ * @param {number} [o.inset] this key's backdrop (its padding), 0 beside the plot
+ * @returns {{x: number, y: number}} the key itself (not its backdrop), plot-area px
+ */
+export function placeBeside({ position, box, beside, margin, inset = 0 }) {
+	const w = box.width + 2 * inset;
+	const h = box.height + 2 * inset;
+	const toLeft = position === 'topright' || position === 'bottomright';
+	const bottom = position === 'bottomright' || position === 'bottomleft';
+	const x = toLeft ? beside.x - margin - w : beside.x + beside.width + margin;
+	const y = bottom ? beside.y + beside.height - h : beside.y;
+	return { x: x + inset, y: y + inset };
+}
+
 /** placeKey's inside positions, for a backdrop of `width` x `height`. */
 function placeBackdrop({ position, width, height, plotW, plotH, margin, stack, custom }) {
 	if (position === 'custom') {

@@ -22,7 +22,11 @@ import ColourScale, {
 	ColourScaleClass,
 	gradientStops,
 	scaleTickValues,
-	formatScaleValue
+	formatScaleValue,
+	fitBarTicks,
+	fitScaleTitle,
+	minBarLength,
+	TICK_LABEL_SPACE
 } from './ColourScale.svelte';
 import { LegendClass } from './Legend.svelte';
 import { colormapRGB } from '$lib/components/plotbits/colormaps.js';
@@ -233,4 +237,155 @@ describe('ColourScale rendering', () => {
 		expect(container.querySelector('.control-component')).not.toBeNull();
 		expect(container.textContent).toContain('Colour scale');
 	});
+});
+
+// ---- a short bar (v82.45): thinned tick labels, the title kept within the key ------------
+//
+// On a small plot whose colour bar shares its place with the size key, the automatic bar is
+// shortened to fit; at 20 px its 0/6/12/18/24 labels sat on top of one another and its turned
+// title ran far past both ends of the bar (and over the legend and the size key).
+
+const HOURS = [0, 6, 12, 18, 24].map((h) => ({ t: h / 24, label: String(h) }));
+
+/** A drawn tick label's extent along the bar, px from the bar's LOW end (as the app
+ *  estimates text: 0.6 em per character across, 1 em tall). */
+function drawnSpans(c, { vertical, barLen, fontSize }) {
+	return [...c.querySelectorAll('text.colour-scale-tick')]
+		.map((t) => {
+			const label = t.textContent;
+			if (vertical) {
+				const y = Number(t.getAttribute('y'));
+				const base = t.getAttribute('dominant-baseline');
+				const top = base === 'hanging' ? y : base === 'central' ? y - fontSize / 2 : y - fontSize;
+				return [barLen - top - fontSize, barLen - top];
+			}
+			const x = Number(t.getAttribute('x'));
+			const w = label.length * fontSize * 0.6;
+			const anchor = t.getAttribute('text-anchor');
+			const left = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2;
+			return [left, left + w];
+		})
+		.sort((a, b) => a[0] - b[0]);
+}
+
+function expectNoLabelOverlap(spans) {
+	for (let i = 1; i < spans.length; i++) {
+		expect(spans[i][0] - spans[i - 1][1], JSON.stringify(spans)).toBeGreaterThanOrEqual(
+			TICK_LABEL_SPACE
+		);
+	}
+}
+
+describe('fitBarTicks', () => {
+	const o = (barLen, vertical = true, fontSize = 12) => ({ vertical, barLen, fontSize });
+
+	it('keeps every tick on a bar long enough for all of them', () => {
+		expect(fitBarTicks(HOURS, o(150))).toEqual(HOURS);
+	});
+
+	it('hour of day: 0, 12, 24 before dropping to the ends', () => {
+		// The end labels sit inside the bar's ends and the others are centred on their ticks, so
+		// with 12 px labels and 2 px between: five need the end-to-quarter gap
+		// L/4 - 6 - 12 >= 2 (L >= 80); three need L/2 - 6 - 12 >= 2 (L >= 40).
+		expect(fitBarTicks(HOURS, o(80)).map((t) => t.label)).toEqual(['0', '6', '12', '18', '24']);
+		expect(fitBarTicks(HOURS, o(79)).map((t) => t.label)).toEqual(['0', '12', '24']);
+		expect(fitBarTicks(HOURS, o(40)).map((t) => t.label)).toEqual(['0', '12', '24']);
+		expect(fitBarTicks(HOURS, o(39)).map((t) => t.label)).toEqual(['0', '24']);
+	});
+
+	it('three value ticks drop the middle one; the ends always stay', () => {
+		const three = [
+			{ t: 0, label: '0' },
+			{ t: 0.5, label: '50' },
+			{ t: 1, label: '100' }
+		];
+		expect(fitBarTicks(three, o(40))).toEqual(three);
+		expect(fitBarTicks(three, o(39)).map((t) => t.label)).toEqual(['0', '100']);
+		// Shorter than the ends need (only a stored length can be): the ends anyway.
+		expect(fitBarTicks(three, o(10)).map((t) => t.label)).toEqual(['0', '100']);
+	});
+
+	it('a horizontal bar thins by the labels’ widths', () => {
+		const wide = [
+			{ t: 0, label: '10.5' },
+			{ t: 0.5, label: '17.9' },
+			{ t: 1, label: '25.3' }
+		];
+		// Each label 4 x 7.2 = 28.8 px: all three need 2 x 28.8 + 28.8 + 4 = 90.4 px.
+		expect(fitBarTicks(wide, o(100, false))).toEqual(wide);
+		expect(fitBarTicks(wide, o(80, false)).map((t) => t.label)).toEqual(['10.5', '25.3']);
+	});
+
+	it('a single tick is kept', () => {
+		expect(fitBarTicks([{ t: 0.5, label: '7' }], o(5))).toEqual([{ t: 0.5, label: '7' }]);
+	});
+});
+
+describe('fitScaleTitle', () => {
+	it('keeps a title that fits, shortens one that does not (with an ellipsis)', () => {
+		expect(fitScaleTitle('Hour of day (UTC)', 150, 12)).toBe('Hour of day (UTC)');
+		const short = fitScaleTitle('Hour of day (UTC)', 60, 12);
+		expect(short.endsWith('…')).toBe(true);
+		expect(short.length * 12 * 0.6).toBeLessThanOrEqual(60);
+		expect('Hour of day (UTC)'.startsWith(short.slice(0, -1))).toBe(true);
+	});
+
+	it('no room for even one letter and the ellipsis: no title', () => {
+		expect(fitScaleTitle('Hour of day (UTC)', 10, 12)).toBe('');
+	});
+});
+
+describe('minBarLength', () => {
+	it('is long enough for both end labels, and never under 30 px', () => {
+		expect(minBarLength(8)).toBe(30);
+		expect(minBarLength(20)).toBe(2 * 20 + TICK_LABEL_SPACE);
+		const ends = [
+			{ t: 0, label: '0' },
+			{ t: 1, label: '24' }
+		];
+		for (const fs of [6, 11.3, 16, 24])
+			expect(fitBarTicks(ends, { vertical: true, barLen: minBarLength(fs), fontSize: fs })).toEqual(
+				ends
+			);
+	});
+});
+
+describe.each([
+	['vertical', 'vertical'],
+	['horizontal', 'horizontal']
+])('a %s bar on both sides of the thinning threshold', (_name, orientation) => {
+	const vertical = orientation === 'vertical';
+	// Not 12: a saved 12 is the legacy default and reads as "follow the figure".
+	const fontSize = 13;
+	for (const barLen of vertical ? [150, 86, 85, 43, 42, 30] : [250, 100, 60]) {
+		it(`${barLen} px: no two tick labels overlap; the title stays within the key`, () => {
+			const c = draw({
+				scaleData: new ColourScaleClass({ show: true, orientation, fontSize }),
+				ticks: HOURS,
+				label: 'Hour of day (Pacific/Auckland)',
+				length: barLen
+			});
+			const spans = drawnSpans(c, { vertical, barLen, fontSize });
+			expect(spans.length).toBeGreaterThanOrEqual(2);
+			expectNoLabelOverlap(spans);
+			// Both ends are always labelled.
+			const texts = tickTexts(c);
+			expect(texts).toContain('0');
+			expect(texts).toContain('24');
+			// Thinned no further than it must be (13 px type: five labels need 86 px, three 43).
+			const want = vertical
+				? { 150: 5, 86: 5, 85: 3, 43: 3, 42: 2, 30: 2 }[barLen]
+				: { 250: 5, 100: 3, 60: 3 }[barLen];
+			expect(texts.length).toBe(want);
+			const title = c.querySelector('text.colour-scale-label');
+			const shown = title.firstChild?.nodeType === 3 ? title.firstChild.nodeValue : '';
+			expect(shown.length * fontSize * 0.6).toBeLessThanOrEqual(barLen);
+			if (shown !== 'Hour of day (Pacific/Auckland)') {
+				// Shortened: the whole title is the text's tooltip.
+				expect(title.querySelector('title')?.textContent).toBe('Hour of day (Pacific/Auckland)');
+			} else {
+				expect(title.querySelector('title')).toBeNull();
+			}
+		});
+	}
 });

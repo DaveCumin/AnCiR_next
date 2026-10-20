@@ -166,6 +166,30 @@ def test_gridlines_follow_each_axis_setting(name):
             assert ln.axes is ax
 
 
+@pytest.mark.parametrize("on", [True, False])
+def test_boxplot_x_gridlines_follow_the_x_axis_setting(on):
+    """The app draws enabled x gridlines on its categorical axis at each category's centre
+    (Boxplot.svelte getXAxisForManualCategories, v82.45); the export, which draws one box per
+    SERIES (the known gap above), draws them at each box's centre, and none when off."""
+    case = CASES["boxplot"]
+    session = json.loads((DEMOS / f"{case['demo']}.json").read_text())
+    cols, _raw, errors = run_session(session)
+    assert not errors, errors
+    plot = copy.deepcopy(case["plotJSON"])
+    plot["plot"]["xAxis"] = {**(plot["plot"].get("xAxis") or {}), "gridlines": on}
+    fig, ax = rt.render_plot_figure(plot, cols, auto_pad=False)
+    fig.canvas.draw()
+    lines = [ln for ln in ax.lines if ln.get_gid() == "gridline-bottom"]
+    n = len(plot["plot"]["data"])
+    if not on:
+        assert lines == []
+        return
+    assert sorted(ln.get_xdata()[0] for ln in lines) == list(range(1, n + 1))
+    for ln in lines:
+        # The full plot height (axes fraction 0 to 1), as every other gridline.
+        assert tuple(ln.get_ydata()) == (0, 1)
+
+
 @pytest.mark.parametrize("name", CASE_NAMES)
 def test_axis_domains_are_the_apps(name):
     _fig, _ax, by_pos, case = render(name)

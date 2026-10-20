@@ -476,7 +476,9 @@
 				if (!base) return null;
 				if (fixed != null) return fixed;
 				const besides = base.height - keys.length0;
-				return Math.max(20, Math.min(keys.length0, room - besides - under));
+				// Never under the bar's minimum (its end labels would crowd; ColourScale
+				// minBarLength), nor longer than it would be.
+				return Math.min(keys.length0, Math.max(keys.minLength, room - besides - under));
 			};
 			const barH = (length) => (base ? (keys.geometry(length)?.height ?? base.height) : 0);
 			const at = (x, y, length) => ({

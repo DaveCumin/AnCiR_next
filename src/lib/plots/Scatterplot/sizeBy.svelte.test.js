@@ -35,6 +35,7 @@ import {
 	COLOUR_BUCKETS
 } from '$lib/components/plotbits/encodings.js';
 import { sizeKeyGeometry } from '$lib/components/plotbits/SizeKey.svelte';
+import { minBarLength, TICK_LABEL_SPACE } from '$lib/components/plotbits/ColourScale.svelte';
 import {
 	applyEncodingWire,
 	clearEncodingPort,
@@ -379,6 +380,191 @@ describe('the keys never overlap', () => {
 		);
 		expect(circles).toEqual(g.rows.map((r) => r.r));
 		expect(c.querySelector('g.size-key-novalue')).not.toBeNull();
+	});
+});
+
+describe('small plots: the colour bar and the size key sharing a place (v82.45)', () => {
+	// The hysteresis demo's keys on a small plot: an hour-of-day bar (five labels, a long
+	// title) and a size key with a long, wrapped title, sharing a place. Stacked, the bar was
+	// shortened to 20 px: its five labels sat on one another and its turned title ran past
+	// both ends (over the legend and the size key). Now the bar is never made shorter than
+	// minBarLength; when stacking would squeeze it under its title's length the size key goes
+	// BESIDE it instead (sizeBeside); labels thin to fit; a title still too long is shortened.
+	const overlap = (a, b) =>
+		a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+	function hysteresis({ width, height, place, legend = null }) {
+		const n = 48;
+		const xs = Array.from({ length: n }, (_, i) => i);
+		const { wrapper, s, d } = mkPlot(
+			xs,
+			xs.map((i) => Math.sin(i / 6)),
+			xs.map((i) => 40 + i),
+			{ width, height }
+		);
+		d.enableColourBy();
+		d.colourBy.refId = mkCol(
+			xs.map((i) => T0 + i * H),
+			'time',
+			'time'
+		);
+		core.data.find((c) => c.id === d.sizeBy.refId).customName = 'Binned: relative humidity (%)';
+		s.legend.show = !!legend;
+		if (legend) s.legend.position = legend;
+		s.colourScale.position = place;
+		s.sizeScale.position = place;
+		flushSync();
+		return { wrapper, s, d };
+	}
+
+	/** The bar and the size key as drawn, backdrops included, in plot-area px. */
+	function boxes(s) {
+		const k = s.encodingKeys;
+		const g = k.geometry(k.placement.length);
+		const sg = k.sizeBase;
+		return {
+			bar: {
+				x: k.placement.x - k.inset,
+				y: k.placement.y - k.inset,
+				width: g.width + 2 * k.inset,
+				height: g.height + 2 * k.inset
+			},
+			size: {
+				x: k.sizePlacement.x - k.sizeInset,
+				y: k.sizePlacement.y - k.sizeInset,
+				width: sg.width + 2 * k.sizeInset,
+				height: sg.height + 2 * k.sizeInset
+			}
+		};
+	}
+
+	/** The drawn tick labels' spans along the bar (1 em each), px from the bar's low end. */
+	function tickSpans(container, length, fs) {
+		return [...container.querySelectorAll('g.colour-scale text.colour-scale-tick')]
+			.map((t) => {
+				const y = Number(t.getAttribute('y'));
+				const base = t.getAttribute('dominant-baseline');
+				const top = base === 'hanging' ? y : base === 'central' ? y - fs / 2 : y - fs;
+				return [length - top - fs, length - top];
+			})
+			.sort((a, b) => a[0] - b[0]);
+	}
+
+	const SIZES = [
+		[600, 400],
+		[520, 300],
+		[460, 260],
+		[400, 220],
+		[360, 180]
+	];
+	const PLACES = ['right', 'topright', 'bottomleft'];
+	const LEGENDS = [null, 'outsideright', 'topright'];
+	for (const [width, height] of SIZES) {
+		for (const place of PLACES) {
+			for (const legend of LEGENDS) {
+				it(`${width}x${height}, keys ${place}, legend ${legend ?? 'off'}`, () => {
+					const { wrapper, s } = hysteresis({ width, height, place, legend });
+					const k = s.encodingKeys;
+					const fs = k.fontPx;
+					const c = draw(wrapper);
+					const length = k.placement.length;
+					// The bar is never shorter than its two end labels need.
+					expect(length).toBeGreaterThanOrEqual(minBarLength(fs) - 1e-9);
+					// No two tick labels overlap; both ends are labelled.
+					const spans = tickSpans(c, length, fs);
+					for (let i = 1; i < spans.length; i++)
+						expect(spans[i][0] - spans[i - 1][1]).toBeGreaterThanOrEqual(TICK_LABEL_SPACE);
+					const texts = [...c.querySelectorAll('g.colour-scale text.colour-scale-tick')].map(
+						(t) => t.textContent
+					);
+					expect(texts).toContain('0');
+					expect(texts).toContain('24');
+					// The turned title stays within the bar's length.
+					const title = c.querySelector('g.colour-scale text.colour-scale-label');
+					const shown = title.firstChild?.nodeValue ?? '';
+					expect(shown.length * fs * 0.6).toBeLessThanOrEqual(length + 1e-9);
+					// Without a legend in its way the title is never shortened because the size
+					// key took the bar's room (the size key goes beside the bar instead): either
+					// it is whole, or the bar is as long as it is with no size key at all.
+					if (!legend && shown !== k.key.title) {
+						s.sizeScale.show = false;
+						flushSync();
+						const alone = k.placement.length;
+						s.sizeScale.show = true;
+						flushSync();
+						expect(length).toBeGreaterThanOrEqual(alone - 1e-9);
+					}
+					// The keys never overlap each other, and stay within the figure.
+					const b = boxes(s);
+					expect(overlap(b.bar, b.size), JSON.stringify(b)).toBe(false);
+					for (const box of [b.bar, b.size]) {
+						expect(box.x + box.width).toBeLessThanOrEqual(s.basePlotWidth + s.padding.right + 1);
+						expect(box.x).toBeGreaterThanOrEqual(-1e-9);
+						expect(box.y).toBeGreaterThanOrEqual(-1e-9);
+						if (place === 'right') expect(box.x).toBeGreaterThanOrEqual(s.plotwidth);
+					}
+				});
+			}
+		}
+	}
+
+	it('stacked on a roomy plot, beside on a small one (both sides of the threshold)', () => {
+		const roomy = hysteresis({ width: 600, height: 400, place: 'right' }).s;
+		expect(roomy.encodingKeys.sizeBeside).toBe(false);
+		const rb = boxes(roomy);
+		expect(rb.size.y).toBeGreaterThanOrEqual(rb.bar.y + rb.bar.height);
+		cleanup();
+		const small = hysteresis({ width: 400, height: 220, place: 'right' }).s;
+		expect(small.encodingKeys.sizeBeside).toBe(true);
+		const sb = boxes(small);
+		expect(sb.size.x).toBeGreaterThanOrEqual(sb.bar.x + sb.bar.width);
+		expect(sb.size.y).toBeCloseTo(sb.bar.y, 9);
+		// Beside the plot both keys' widths (and the margin between them) come off the plot.
+		expect(small.basePlotWidth - small.plotwidth).toBeGreaterThanOrEqual(
+			sb.bar.width + small.encodingKeys.margin + sb.size.width
+		);
+		// In a right corner the size key sits on the bar's left, level with its top.
+		cleanup();
+		const corner = hysteresis({ width: 400, height: 220, place: 'topright' }).s;
+		expect(corner.encodingKeys.sizeBeside).toBe(true);
+		const cb = boxes(corner);
+		expect(cb.size.x + cb.size.width).toBeLessThanOrEqual(cb.bar.x);
+		expect(cb.size.y).toBeCloseTo(cb.bar.y, 9);
+	});
+
+	it('a tall legend above the keys: the bar stops at its minimum, its ends still apart', () => {
+		const { wrapper, s } = hysteresis({
+			width: 380,
+			height: 170,
+			place: 'right',
+			legend: 'outsideright'
+		});
+		for (let i = 0; i < 5; i++) {
+			s.addData({
+				x: { refId: s.data[0].x.refId },
+				y: { refId: mkCol([1, 2, 3], 'number', `series ${i}`) }
+			});
+		}
+		flushSync();
+		const k = s.encodingKeys;
+		const lp = k.legendPlaced;
+		// The room left under the legend is less than the bar's minimum ...
+		expect(s.plotheight - (lp.y + lp.height + k.margin)).toBeLessThan(k.minLength);
+		// ... so the bar is the minimum (not squeezed under it), and its ends do not crowd.
+		expect(k.placement.length).toBeCloseTo(minBarLength(k.fontPx), 9);
+		const c = draw(wrapper);
+		const texts = [...c.querySelectorAll('g.colour-scale text.colour-scale-tick')].map(
+			(t) => t.textContent
+		);
+		expect(texts).toEqual(['24', '0']);
+	});
+
+	it('a stored bar length is kept: the keys stack as before', () => {
+		const { s } = hysteresis({ width: 400, height: 220, place: 'right' });
+		s.colourScale.barLength = 60;
+		flushSync();
+		expect(s.encodingKeys.sizeBeside).toBe(false);
+		expect(s.encodingKeys.placement.length).toBe(60);
 	});
 });
 

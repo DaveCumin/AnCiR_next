@@ -14,6 +14,7 @@ import {
 	colourBarTicks,
 	formatColourValue,
 	placeColourKey,
+	placeBeside,
 	colourKeyReserveW,
 	colourKeyObstacle
 } from './encodingHost.js';
@@ -129,5 +130,30 @@ describe('placing the bar', () => {
 	it('is an obstacle for an auto legend only when inside', () => {
 		expect(colourKeyObstacle('right', box, 400, 300, 10)).toBeNull();
 		expect(colourKeyObstacle('topleft', box, 400, 300, 10, {}, 8)).toEqual([10, 10, 66, 126]);
+	});
+});
+
+describe('placeBeside (keys side by side, v82.45)', () => {
+	const beside = { x: 100, y: 40, width: 50, height: 120 };
+	const box = { width: 80, height: 60 };
+	it('beside the plot and in a left corner: on the right, level with the top', () => {
+		for (const position of ['right', 'topleft'])
+			expect(placeBeside({ position, box, beside, margin: 10 })).toEqual({ x: 160, y: 40 });
+	});
+	it('in a right corner: on the left, into the plot', () => {
+		expect(placeBeside({ position: 'topright', box, beside, margin: 10 })).toEqual({
+			x: 10,
+			y: 40
+		});
+	});
+	it('in a bottom corner: level with the bottom; the inset is the key’s backdrop', () => {
+		expect(placeBeside({ position: 'bottomright', box, beside, margin: 10, inset: 8 })).toEqual({
+			x: 100 - 10 - (80 + 16) + 8,
+			y: 40 + 120 - (60 + 16) + 8
+		});
+		expect(placeBeside({ position: 'bottomleft', box, beside, margin: 10, inset: 8 })).toEqual({
+			x: 160 + 8,
+			y: 40 + 120 - 76 + 8
+		});
 	});
 });

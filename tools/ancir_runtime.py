@@ -10890,19 +10890,11 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
     args = dict(plot_w=ax_w, plot_h=ax_h, margin=margin, has_right_axis=has_right_axis,
                 padding_right=padding_right)
     bar_box = None
+    beside = False
     if colour_on:
-        vertical = cs.get('orientation') != 'horizontal'
-        thickness = cs.get('barThickness') or 10
-        fixed = cs.get('barLength')
-        fixed = fixed if isinstance(fixed, (int, float)) and not isinstance(fixed, bool) else None
-        length0 = fixed if fixed is not None else max(30, min(ax_h, 150))
-        font_px = _colour_key_font_px(cs, look)
-        labels = [lab for _, lab in key['ticks']]
-        nv = key['no_value']['label'] if key['no_value'] else None
-
-        def geom(length):
-            return colour_key_geometry(vertical, thickness, length, font_px, labels,
-                                       key['title'], nv)
+        plan = _colour_key_plan(ax_h, key, cs, look)
+        vertical, fixed, length0 = plan['vertical'], plan['fixed'], plan['length0']
+        geom = plan['geom']
         c_pos = cs.get('position') or 'right'
         c_inset = _key_inset(cs)
         custom = {'customX': cs.get('customX'), 'customY': cs.get('customY')}
@@ -10911,10 +10903,12 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
                                   inset=c_inset, **args)
         length = length0
         shares = size_on and c_pos == s_pos and c_pos != 'custom'
-        after = size_geom['height'] + 2 * s_inset + margin if shares else 0
+        beside = shares and _keys_side_by_side(ax_h, plan, base, size_geom, c_pos, c_inset,
+                                               s_inset, margin)
+        after = size_geom['height'] + 2 * s_inset + margin if shares and not beside else 0
         besides = base['height'] - length0
         if vertical and fixed is None and max_len - after < length0 + besides:
-            length = max(20, max_len - after - besides)
+            length = min(length0, max(plan['min_len'], max_len - after - besides))
             g = geom(length)
             x, y, _ = place_key(c_pos, g['width'], g['height'], custom=custom, inset=c_inset,
                                 **args)
@@ -10924,12 +10918,64 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
                    'h': g['height'] + 2 * c_inset, 'outside': c_pos == 'right',
                    'corner': None if c_pos in ('right', 'custom') else c_pos}
     if size_on:
-        x, y, _ = place_key(s_pos, size_geom['width'], size_geom['height'],
-                            stack=[bar_box] if bar_box else [],
-                            custom={'customX': ss.get('customX'), 'customY': ss.get('customY')},
-                            inset=s_inset, **args)
+        if beside and bar_box:
+            x, y = place_beside(s_pos, size_geom['width'], size_geom['height'], bar_box,
+                                margin, inset=s_inset)
+        else:
+            x, y, _ = place_key(s_pos, size_geom['width'], size_geom['height'],
+                                stack=[bar_box] if bar_box else [],
+                                custom={'customX': ss.get('customX'),
+                                        'customY': ss.get('customY')},
+                                inset=s_inset, **args)
         out['size'] = {'x': x, 'y': y, 'geom': size_geom, 'position': s_pos, 'inset': s_inset}
+    out['beside'] = beside
     return out
+
+
+def _colour_key_plan(ax_h, key, cs, look):
+    """EncodingKeyLayout's bar before placement: orientation, a stored length (or None), the
+    automatic length (long enough for the title where the plot is), the minimum, the
+    comfortable minimum, and the geometry at a length."""
+    vertical = cs.get('orientation') != 'horizontal'
+    thickness = cs.get('barThickness') or 10
+    fixed = cs.get('barLength')
+    fixed = fixed if isinstance(fixed, (int, float)) and not isinstance(fixed, bool) else None
+    font_px = _colour_key_font_px(cs, look)
+    title_len = colour_key_title_run(key['title'], font_px, vertical)
+    length0 = fixed if fixed is not None else colour_key_auto_length(ax_h, title_len)
+    min_len = colour_key_min_length(font_px)
+    labels = [lab for _, lab in key['ticks']]
+    nv = key['no_value']['label'] if key['no_value'] else None
+
+    def geom(length):
+        return colour_key_geometry(vertical, thickness, length, font_px, labels, key['title'],
+                                   nv)
+    return {'vertical': vertical, 'fixed': fixed, 'length0': length0, 'min_len': min_len,
+            'comfort': min(length0, max(min_len, title_len)), 'geom': geom,
+            'font_px': font_px}
+
+
+def _keys_side_by_side(ax_h, plan, base, size_geom, position, c_inset, s_inset, margin):
+    """EncodingKeyLayout.sizeBeside: a column of the bar and the size key would squeeze an
+    automatic vertical bar under its comfortable length (decided on the plot height alone)."""
+    if not plan['vertical'] or plan['fixed'] is not None:
+        return False
+    column = ax_h if position == 'right' else ax_h - 2 * margin - 2 * c_inset
+    after = size_geom['height'] + 2 * s_inset + margin
+    besides = base['height'] - plan['length0']
+    return column - after < plan['comfort'] + besides
+
+
+def place_beside(position, box_w, box_h, beside, margin, inset=0):
+    """encodingHost.js placeBeside: (x, y) of a key beside the box before it ({'x', 'y', 'w',
+    'h'}, its backdrop included): on its right beside the plot and in a left corner, on its
+    left in a right corner; level with its top, or its bottom in a bottom corner."""
+    w, h = box_w + 2 * inset, box_h + 2 * inset
+    to_left = position in ('topright', 'bottomright')
+    bottom = position in ('bottomright', 'bottomleft')
+    x = beside['x'] - margin - w if to_left else beside['x'] + beside['w'] + margin
+    y = beside['y'] + beside['h'] - h if bottom else beside['y']
+    return x + inset, y + inset
 
 
 def _key_backdrop(ax, x, y, w, h, scale_json, look, gid):
@@ -10946,7 +10992,9 @@ def _key_backdrop(ax, x, y, w, h, scale_json, look, gid):
     ax.add_patch(FancyBboxPatch(
         (x / ax_w, 1 - (y + h) / ax_h), w / ax_w, h / ax_h,
         boxstyle=f'round,pad=0,rounding_size={3 / ax_w}', mutation_aspect=ax_w / ax_h,
-        transform=ax.transAxes, zorder=4.9, gid=gid,
+        # Not clipped to the plot area: a key taller than a small plot's corner runs past it
+        # in the app too (its <g> is not clipped), backdrop and all.
+        transform=ax.transAxes, zorder=4.9, gid=gid, clip_on=False,
         facecolor=_css_colour(scale.get('backgroundColor'), (1, 1, 1, 0.9)),
         edgecolor=(_css_colour(scale.get('borderColor'), _LEGEND_BORDER_DEFAULT)
                    if show_box else 'none'),
@@ -10991,6 +11039,82 @@ def _draw_size_key(ax, size_key, scale_json, at, look=None):
                  clip_on=False)
     return kax
 
+# ColourScale.svelte TICK_LABEL_SPACE: px kept between two neighbouring tick labels.
+COLOUR_KEY_TICK_LABEL_SPACE = 2
+
+
+def colour_key_tick_span(t, label, vertical, bar_len, font_px):
+    """ColourScale.svelte tickLabelSpan: where a tick's label runs along the bar, (from, to)
+    px from the bar's LOW end; an end label inside the bar's length, any other centred; one
+    em along a vertical bar, its estimated width (0.6 em a character) along a horizontal."""
+    at = t * bar_len
+    ext = font_px if vertical else len(str(label)) * font_px * 0.6
+    if t <= 0:
+        return at, at + ext
+    if t >= 1:
+        return at - ext, at
+    return at - ext / 2, at + ext / 2
+
+
+def _colour_key_ticks_fit(ticks, vertical, bar_len, font_px):
+    for (t0, l0), (t1, l1) in zip(ticks, ticks[1:]):
+        a = colour_key_tick_span(t0, l0, vertical, bar_len, font_px)
+        b = colour_key_tick_span(t1, l1, vertical, bar_len, font_px)
+        if b[0] - a[1] < COLOUR_KEY_TICK_LABEL_SPACE:
+            return False
+    return True
+
+
+def fit_colour_key_ticks(ticks, vertical, bar_len, font_px):
+    """ColourScale.svelte fitBarTicks: the ticks [(t, label)] (low first) a bar of this length
+    labels without two labels crowding: all, else every second (ends kept: hour of day reads
+    0, 12, 24), every fourth, ..., else the two ends (kept even when they crowd)."""
+    ticks = list(ticks)
+    n = len(ticks)
+    if n <= 2 or _colour_key_ticks_fit(ticks, vertical, bar_len, font_px):
+        return ticks
+    stride = 2
+    while stride < n - 1:
+        if (n - 1) % stride == 0:
+            kept = ticks[::stride]
+            if _colour_key_ticks_fit(kept, vertical, bar_len, font_px):
+                return kept
+        stride *= 2
+    return [ticks[0], ticks[-1]]
+
+
+def fit_colour_key_title(title, room, font_px):
+    """ColourScale.svelte fitScaleTitle: the title whole when it fits along `room` px, else
+    whole characters and an ellipsis, else nothing."""
+    s_ = str(title or '')
+    char_w = font_px * 0.6
+    if len(s_) * char_w <= room:
+        return s_
+    keep = math.floor(room / char_w) - 1
+    return s_[:keep].rstrip() + '\u2026' if keep >= 1 else ''
+
+
+def colour_key_min_length(font_px):
+    """ColourScale.svelte minBarLength: room for both end labels, never under 30 px."""
+    return max(30, 2 * font_px + COLOUR_KEY_TICK_LABEL_SPACE)
+
+
+def colour_key_title_run(label, font_px, vertical):
+    """ColourScale.svelte titleRunLength: how far the title runs along the bar, px (0 for an
+    upright one- or two-character title beside a vertical bar)."""
+    if not label:
+        return 0
+    if vertical and len(str(label)) <= 2:
+        return 0
+    return len(str(label)) * font_px * 0.6
+
+
+def colour_key_auto_length(extent, title_len=0):
+    """ColourScale.svelte autoBarLength: the extent between 30 and 150 px, or longer (within
+    the extent) for a title that runs further."""
+    return max(30, min(extent, max(150, title_len)))
+
+
 def colour_key_geometry(vertical, thickness, bar_len, font_px, tick_labels, label=None,
                         no_value_label=None):
     """ColourScale.svelte colourScaleGeometry: the key's footprint in px (bar, ticks, title
@@ -11033,15 +11157,22 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
     vertical = scale.get('orientation') != 'horizontal'
     ax_w, ax_h = _axes_px(ax)
     thickness = scale.get('barThickness') or 10
-    length = scale.get('barLength')
-    if not isinstance(length, (int, float)) or isinstance(length, bool):
-        length = max(30, min(ax_h if vertical else ax_w, 150))
-    if at is not None:
-        length = at['length']
     margin = 10
     font_px = _colour_key_font_px(scale, look)
     font_pt = font_px * _PX_TO_PT
+    length = scale.get('barLength')
+    if not isinstance(length, (int, float)) or isinstance(length, bool):
+        length = colour_key_auto_length(ax_h if vertical else ax_w,
+                                        colour_key_title_run(key['title'], font_px, vertical))
+    if at is not None:
+        length = at['length']
     labels = [lab for _, lab in key['ticks']]
+    # What a bar of this length shows (ColourScale.svelte): its labels thinned so none crowd,
+    # a title that runs along it shortened to its length. The geometry is the full set's.
+    shown_ticks = fit_colour_key_ticks(key['ticks'], vertical, length, font_px)
+    title = key['title']
+    shown_title = (fit_colour_key_title(title, length, font_px)
+                   if title and (not vertical or len(str(title)) > 2) else title)
     geom = colour_key_geometry(vertical, thickness, length, font_px, labels, key['title'],
                                key['no_value']['label'] if key['no_value'] else None)
     position = scale.get('position') or 'right'
@@ -11083,13 +11214,13 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
                             cmap=ListedColormap([tuple(v / 255 for v in c)
                                                  for c in key['palette']]))
     cbar = fig.colorbar(sm, cax=cax, orientation='vertical' if vertical else 'horizontal')
-    cbar.set_ticks([t for t, _ in key['ticks']], labels=labels)
+    cbar.set_ticks([t for t, _ in shown_ticks], labels=[lab for _, lab in shown_ticks])
     family = _font_family_list((look or resolve_figure_style(None))['family'])
     gap_pt = 5 * _PX_TO_PT  # ColourScale TICK_GAP
     cbar.ax.tick_params(labelsize=font_pt, length=0, pad=gap_pt if vertical else 3 * _PX_TO_PT)
     cbar.outline.set_visible(False)
     axis = cax.yaxis if vertical else cax.xaxis
-    for (t, _), lab in zip(key['ticks'], axis.get_ticklabels()):
+    for (t, _), lab in zip(shown_ticks, axis.get_ticklabels()):
         lab.set_fontfamily(family)
         edge = 'low' if t <= 0 else 'high' if t >= 1 else 'mid'
         if vertical:
@@ -11097,8 +11228,8 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
         else:
             lab.set_ha({'low': 'left', 'high': 'right', 'mid': 'center'}[edge])
             lab.set_va('top')
-    if key['title']:
-        cbar.set_label(key['title'], fontsize=font_pt, fontfamily=family)
+    if shown_title:
+        cbar.set_label(shown_title, fontsize=font_pt, fontfamily=family)
         lab = axis.get_label()
         if vertical:
             tick_w = max([len(t) for t in labels] + [1]) * font_px * 0.6
@@ -12254,29 +12385,29 @@ def _reserve_colour_key_room(ax, ax_right, key, scale_json, look, has_right_axis
     take the wider one's width, a 10 px margin (and another past a right axis) from the plot
     area."""
     scale = scale_json or {}
-    widths = [0]
-    if key is not None and scale.get('show', True) is not False and \
-            (scale.get('position') or 'right') == 'right':
-        vertical = scale.get('orientation') != 'horizontal'
-        w_px, h_px = _axes_px(ax)
-        length = scale.get('barLength')
-        if not _style_valid(length, 'number'):
-            length = max(30, min(h_px if vertical else w_px, 150))
-        fpx = _colour_key_font_px(scale, look)
-        geom = colour_key_geometry(vertical, scale.get('barThickness') or 10, length, fpx,
-                                   [lab for _, lab in key['ticks']], key['title'],
-                                   key['no_value']['label'] if key['no_value'] else None)
-        widths.append(geom['width'])
+    w_px, h_px = _axes_px(ax)
+    bar_w = size_w = 0
+    plan = base = size_geom = None
+    if key is not None and scale.get('show', True) is not False:
+        plan = _colour_key_plan(h_px, key, scale, look)
+        base = plan['geom'](plan['length0'])
+        if (scale.get('position') or 'right') == 'right':
+            bar_w = base['width']
     ss = size_json or {}
-    if size_key is not None and ss.get('show', True) is not False and \
-            (ss.get('position') or 'right') == 'right':
+    if size_key is not None and ss.get('show', True) is not False:
         spacing = ss.get('itemSpacing')
-        widths.append(size_key_geometry(
+        size_geom = size_key_geometry(
             size_key['items'], size_key['no_value'], size_key['title'], _key_font_px(ss, look),
-            spacing if isinstance(spacing, (int, float)) else 4)['width'])
-    if max(widths) <= 0:
+            spacing if isinstance(spacing, (int, float)) else 4)
+        if (ss.get('position') or 'right') == 'right':
+            size_w = size_geom['width']
+    # Side by side beside the plot (EncodingKeyLayout.sizeBeside): both widths and the margin.
+    beside = bar_w > 0 and size_w > 0 and _keys_side_by_side(
+        h_px, plan, base, size_geom, 'right', 0, 0, 10)
+    width = bar_w + 10 + size_w if beside else max(bar_w, size_w)
+    if width <= 0:
         return
-    reserve = max(widths) + 10 + (10 if has_right_axis else 0)
+    reserve = width + 10 + (10 if has_right_axis else 0)
     for a in (ax, ax_right):
         if a is None:
             continue
@@ -12699,7 +12830,10 @@ def plot_boxplot(plot, columns_index, ax):
     n = len(data)
     specs = {
         'bottom': {'kind': 'category', 'domain': (0.5, n + 0.5) if n else (0, 1),
-                   'axis': {**(p.get('xAxis') or {}), 'gridlines': False},
+                   # Enabled x gridlines sit at each box's centre (the app: at each
+                   # category's centre, Boxplot.svelte getXAxisForManualCategories).
+                   'axis': {**(p.get('xAxis') or {}),
+                            'gridlines': (p.get('xAxis') or {}).get('gridlines') is True},
                    'ticks': list(range(1, n + 1)),
                    'format': lambda v: labels[int(v) - 1] if 1 <= int(v) <= n else '',
                    },
