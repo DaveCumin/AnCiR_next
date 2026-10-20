@@ -147,13 +147,17 @@ describe('modes offered per column', () => {
 	it('time columns get the clock modes; plain numbers get value, wrapped hours and days since start', () => {
 		const modes = (c) => encodingModesFor(c).map((m) => m.mode);
 		expect(modes({ type: 'time' })).toEqual(['hourOfDay', 'dayOfYear', 'daysSinceStart']);
-		expect(modes({ type: 'number', originTime_ms: 0 })).toEqual(ENCODING_MODES);
-		expect(modes({ type: 'bin', originTime_ms: 5 })).toEqual(ENCODING_MODES);
+		const clock = ['value', 'hourOfDay', 'dayOfYear', 'daysSinceStart'];
+		expect(modes({ type: 'number', originTime_ms: 0 })).toEqual(clock);
+		expect(modes({ type: 'bin', originTime_ms: 5 })).toEqual(clock);
+		// Category (v1.1) last for a plain number column: numbers as labels.
 		expect(encodingModesFor({ type: 'number' })).toEqual([
 			{ mode: 'value', warning: null },
 			{ mode: 'hourOfDay', warning: WRAPPED_HOURS_WARNING },
-			{ mode: 'daysSinceStart', warning: null }
+			{ mode: 'daysSinceStart', warning: null },
+			{ mode: 'category', warning: null }
 		]);
+		expect(ENCODING_MODES).toEqual([...clock, 'category']);
 		expect(isCyclicMode('hourOfDay')).toBe(true);
 		expect(isCyclicMode('value')).toBe(false);
 	});

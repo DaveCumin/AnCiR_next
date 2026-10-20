@@ -944,6 +944,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -1304,6 +1305,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "Asia/Kolkata" },
 				"columnLabels": {},
 				"seriesColours": { "1": [{ "line": "#234154", "points": "#234154" }] }
@@ -1668,6 +1670,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "2": [{ "line": "#aa3311", "points": "#234154" }] }
@@ -1976,6 +1979,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -2319,6 +2323,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -2723,6 +2728,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -3417,6 +3423,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "America/New_York" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -4032,6 +4039,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "10": [{ "line": "#234154", "points": "#234154" }] }
@@ -4379,6 +4387,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -4708,6 +4717,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "12": [{ "line": "#234154", "points": "#234154" }] }
@@ -5102,6 +5112,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "13": [{ "line": "#234154", "points": "#234154" }] }
@@ -5526,6 +5537,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "14": [{ "line": "#234154", "points": "#234154" }] }
@@ -5901,6 +5913,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": { "15": [{ "line": "#234154", "points": "#234154" }] }
@@ -6255,6 +6268,7 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
@@ -6355,9 +6369,13 @@
 			]
 		},
 		{
-			"name": "resolvedColours",
+			"name": "categoryPoints",
 			"session": {
-				"rawData": { "127": [0, 1, 2, 3, 4], "128": [1, 2, 1, 2, 1], "129": [2, 3, 2, 3, 2] },
+				"rawData": {
+					"127": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+					"128": [3, 1, 4, 1, null, 9, 2, 6, 5, 3],
+					"129": ["wt", "ko", "", "het", "ko", "wt", null, "het", "ko", "wt"]
+				},
 				"data": [
 					{
 						"id": 127,
@@ -6372,7 +6390,7 @@
 					},
 					{
 						"id": 128,
-						"name": "hive A",
+						"name": "hive",
 						"data": 128,
 						"type": "number",
 						"tableProcessGUId": "",
@@ -6383,9 +6401,9 @@
 					},
 					{
 						"id": 129,
-						"name": "hive B",
+						"name": "genotype",
 						"data": 129,
-						"type": "number",
+						"type": "category",
 						"tableProcessGUId": "",
 						"producerNodeId": null,
 						"producerPort": null,
@@ -6396,7 +6414,7 @@
 				"plots": [
 					{
 						"id": 17,
-						"name": "both hives",
+						"name": "category points",
 						"x": 350,
 						"y": 150,
 						"width": 500,
@@ -6449,8 +6467,1625 @@
 									},
 									"y": {
 										"id": 131,
-										"name": "hive A*",
+										"name": "hive*",
 										"refId": 128,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 2,
+										"stroke": "solid",
+										"draw": true,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 3, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 132,
+										"name": "genotype*",
+										"refId": 129,
+										"type": "category",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": true
+									}
+								}
+							],
+							"legend": {
+								"show": true,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							}
+						}
+					}
+				],
+				"categoryColours": {
+					"het": { "hex": "#7a1f5c" },
+					"wt": { "slot": 0 },
+					"ko": { "slot": 1 }
+				},
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": {
+					"17": [
+						{
+							"line": "#234154",
+							"points": "#234154",
+							"colourCategories": {
+								"labels": ["het", "ko", "wt"],
+								"colours": ["#7a1f5c", "#BE796B", "#234154"]
+							}
+						}
+					]
+				}
+			},
+			"expected": [
+				{
+					"id": 17,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": null,
+							"active": true,
+							"mode": "category",
+							"colormap": null,
+							"domain": {
+								"lo": null,
+								"hi": null,
+								"cyclic": false,
+								"period": null,
+								"categories": ["het", "ko", "wt"],
+								"firstSeen": ["wt", "ko", "het"]
+							},
+							"title": "genotype",
+							"idx": [2, 1, -1, 0, 1, 2, -1, 0, 1, 2],
+							"pointColours": [
+								"#234154",
+								"#BE796B",
+								"#234154",
+								"#7a1f5c",
+								null,
+								"#234154",
+								"#234154",
+								"#7a1f5c",
+								"#BE796B",
+								"#234154"
+							],
+							"segments": [
+								[2, 3, "#234154"],
+								[6, 7, "#234154"],
+								[7, 8, "#7a1f5c"],
+								[1, 2, "#BE796B"],
+								[8, 9, "#BE796B"],
+								[0, 1, "#234154"],
+								[5, 6, "#234154"]
+							],
+							"legend": {
+								"label": "hive",
+								"elements": [
+									{
+										"type": "line",
+										"color": "rgb(140, 140, 140)",
+										"strokeWidth": 2,
+										"stroke": "solid",
+										"smoother": null
+									},
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 3, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": null,
+					"keyLayout": {
+						"plotArea": { "w": 358.4, "h": 205 },
+						"colour": { "x": 368.4, "y": 0, "length": 57 },
+						"size": null,
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": { "ticks": [], "title": "genotype" }
+					},
+					"key": {
+						"series": 0,
+						"colormap": null,
+						"domain": {
+							"lo": null,
+							"hi": null,
+							"cyclic": false,
+							"period": null,
+							"categories": ["het", "ko", "wt"],
+							"firstSeen": ["wt", "ko", "het"]
+						},
+						"title": "genotype",
+						"ticks": [],
+						"noValue": { "colour": "#234154", "label": "no value" },
+						"categorical": true,
+						"categories": [
+							{ "label": "het", "colour": "#7a1f5c" },
+							{ "label": "ko", "colour": "#BE796B" },
+							{ "label": "wt", "colour": "#234154" }
+						],
+						"geometry": {
+							"width": 71.6,
+							"height": 73,
+							"swatch": 10,
+							"rowH": 12,
+							"step": 15,
+							"titleH": 16,
+							"natural": 57,
+							"perColumn": 4,
+							"columns": 1,
+							"titleLines": [{ "text": "genotype", "y": 0 }],
+							"rows": [
+								{ "label": "het", "colour": "#7a1f5c", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "ko", "colour": "#BE796B", "noValue": false, "x": 0, "y": 31 },
+								{ "label": "wt", "colour": "#234154", "noValue": false, "x": 0, "y": 46 },
+								{ "label": "no value", "colour": "#234154", "noValue": true, "x": 0, "y": 61 }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "categoryNumbers",
+			"session": {
+				"rawData": {
+					"133": [0, 1, 2, 3, 4, 5, 6, 7],
+					"134": [2, 4, 3, 5, 4, 6, 5, 7],
+					"135": [3, 1, 2, 10, 3, 1, 2, 10],
+					"136": [5, 10, 15, 20, 25, 30, 35, 40]
+				},
+				"data": [
+					{
+						"id": 133,
+						"name": "x",
+						"data": 133,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 134,
+						"name": "y",
+						"data": 134,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 135,
+						"name": "colony",
+						"data": 135,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 136,
+						"name": "count",
+						"data": 136,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 18,
+						"name": "category numbers",
+						"x": 350,
+						"y": 150,
+						"width": 500,
+						"height": 250,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 137,
+										"name": "x*",
+										"refId": 133,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 138,
+										"name": "y*",
+										"refId": 134,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "star", "draw": true },
+									"colourBy": {
+										"id": 139,
+										"name": "colony*",
+										"refId": 135,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "category",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									},
+									"sizeBy": {
+										"id": 140,
+										"name": "count*",
+										"refId": 136,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"sizeEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"minRadius": 2,
+										"maxRadius": 10,
+										"domainMin": null,
+										"domainMax": null
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							},
+							"sizeScale": {
+								"show": true,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							}
+						}
+					}
+				],
+				"categoryColours": {
+					"1": { "slot": 1 },
+					"2": { "slot": 2 },
+					"3": { "slot": 0 },
+					"10": { "slot": 3 }
+				},
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": {
+					"18": [
+						{
+							"line": "#234154",
+							"points": "#234154",
+							"colourCategories": {
+								"labels": ["1", "2", "3", "10"],
+								"colours": ["#BE796B", "#3E7295", "#234154", "#EDADAD"]
+							}
+						}
+					]
+				}
+			},
+			"expected": [
+				{
+					"id": 18,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": {
+								"mode": "value",
+								"domain": { "lo": 5, "hi": 40, "cyclic": false, "period": null },
+								"range": { "rMin": 2, "rMax": 10 },
+								"title": "count",
+								"radii": [
+									2, 4.20883424647321, 5.606119105813881, 6.718843437888483, 7.671840904055744,
+									8.518886580500327, 9.289010404005062, 10
+								],
+								"drawOrder": [7, 6, 5, 4, 3, 2, 1, 0]
+							},
+							"active": true,
+							"mode": "category",
+							"colormap": null,
+							"domain": {
+								"lo": null,
+								"hi": null,
+								"cyclic": false,
+								"period": null,
+								"categories": ["1", "2", "3", "10"],
+								"firstSeen": ["3", "1", "2", "10"]
+							},
+							"title": "colony",
+							"idx": [2, 0, 1, 3, 2, 0, 1, 3],
+							"pointColours": [
+								"#234154",
+								"#BE796B",
+								"#3E7295",
+								"#EDADAD",
+								"#234154",
+								"#BE796B",
+								"#3E7295",
+								"#EDADAD"
+							],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "star" }
+								]
+							}
+						}
+					],
+					"sizeKey": {
+						"series": 0,
+						"title": "count",
+						"shape": "star",
+						"items": [
+							{ "value": 5, "r": 2, "label": "5" },
+							{ "value": 22.5, "r": 7.211102550927978, "label": "22.5" },
+							{ "value": 40, "r": 10, "label": "40" }
+						],
+						"noValue": null
+					},
+					"keyLayout": {
+						"plotArea": { "w": 440, "h": 205 },
+						"colour": { "x": 362.4, "y": 18, "length": 56.57779489814405 },
+						"size": { "x": 367.2, "y": 102 },
+						"sizeGeometry": {
+							"width": 54.8,
+							"height": 70.42220510185595,
+							"colW": 20,
+							"titleH": 16,
+							"titleLines": [{ "text": "count", "y": 0 }],
+							"rows": [
+								{ "r": 2, "label": "5", "noValue": false, "cy": 22 },
+								{
+									"r": 7.211102550927978,
+									"label": "22.5",
+									"noValue": false,
+									"cy": 39.211102550927976
+								},
+								{ "r": 10, "label": "40", "noValue": false, "cy": 60.42220510185596 }
+							]
+						},
+						"sizeBeside": false,
+						"shown": { "ticks": [], "title": "colony" }
+					},
+					"key": {
+						"series": 0,
+						"colormap": null,
+						"domain": {
+							"lo": null,
+							"hi": null,
+							"cyclic": false,
+							"period": null,
+							"categories": ["1", "2", "3", "10"],
+							"firstSeen": ["3", "1", "2", "10"]
+						},
+						"title": "colony",
+						"ticks": [],
+						"noValue": null,
+						"categorical": true,
+						"categories": [
+							{ "label": "1", "colour": "#BE796B" },
+							{ "label": "2", "colour": "#3E7295" },
+							{ "label": "3", "colour": "#234154" },
+							{ "label": "10", "colour": "#EDADAD" }
+						],
+						"geometry": {
+							"width": 59.599999999999994,
+							"height": 58,
+							"swatch": 10,
+							"rowH": 12,
+							"step": 15,
+							"titleH": 16,
+							"natural": 57,
+							"perColumn": 3,
+							"columns": 2,
+							"titleLines": [{ "text": "colony", "y": 0 }],
+							"rows": [
+								{ "label": "1", "colour": "#BE796B", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "2", "colour": "#3E7295", "noValue": false, "x": 0, "y": 31 },
+								{ "label": "3", "colour": "#234154", "noValue": false, "x": 0, "y": 46 },
+								{ "label": "10", "colour": "#EDADAD", "noValue": false, "x": 31.2, "y": 16 }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "categoryMonochrome",
+			"session": {
+				"rawData": {
+					"141": [0, 1, 2, 3, 4, 5],
+					"142": [1, 3, 2, 4, 3, 5],
+					"143": ["c", "a", "b", "a", "c", "b"]
+				},
+				"data": [
+					{
+						"id": 141,
+						"name": "x",
+						"data": 141,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 142,
+						"name": "y",
+						"data": 142,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 143,
+						"name": "site",
+						"data": 143,
+						"type": "text",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 19,
+						"name": "category mono",
+						"x": 350,
+						"y": 150,
+						"width": 500,
+						"height": 250,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": true,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 144,
+										"name": "x*",
+										"refId": 141,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 145,
+										"name": "y*",
+										"refId": 142,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 146,
+										"name": "site*",
+										"refId": 143,
+										"type": "text",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							}
+						}
+					}
+				],
+				"categoryColours": { "c": { "slot": 0 }, "a": { "slot": 1 }, "b": { "slot": 2 } },
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": {
+					"19": [
+						{
+							"line": "#234154",
+							"points": "#234154",
+							"colourCategories": {
+								"labels": ["a", "b", "c"],
+								"colours": ["#222222", "#666666", "#aaaaaa"]
+							}
+						}
+					]
+				}
+			},
+			"expected": [
+				{
+					"id": 19,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": null,
+							"active": true,
+							"mode": "category",
+							"colormap": null,
+							"domain": {
+								"lo": null,
+								"hi": null,
+								"cyclic": false,
+								"period": null,
+								"categories": ["a", "b", "c"],
+								"firstSeen": ["c", "a", "b"]
+							},
+							"title": "site",
+							"idx": [2, 0, 1, 0, 2, 1],
+							"pointColours": ["#aaaaaa", "#222222", "#666666", "#222222", "#aaaaaa", "#666666"],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": null,
+					"keyLayout": {
+						"plotArea": { "w": 401.2, "h": 205 },
+						"colour": { "x": 411.2, "y": 0, "length": 42 },
+						"size": null,
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": { "ticks": [], "title": "site" }
+					},
+					"key": {
+						"series": 0,
+						"colormap": null,
+						"domain": {
+							"lo": null,
+							"hi": null,
+							"cyclic": false,
+							"period": null,
+							"categories": ["a", "b", "c"],
+							"firstSeen": ["c", "a", "b"]
+						},
+						"title": "site",
+						"ticks": [],
+						"noValue": null,
+						"categorical": true,
+						"categories": [
+							{ "label": "a", "colour": "#222222" },
+							{ "label": "b", "colour": "#666666" },
+							{ "label": "c", "colour": "#aaaaaa" }
+						],
+						"geometry": {
+							"width": 28.799999999999997,
+							"height": 58,
+							"swatch": 10,
+							"rowH": 12,
+							"step": 15,
+							"titleH": 16,
+							"natural": 42,
+							"perColumn": 3,
+							"columns": 1,
+							"titleLines": [{ "text": "site", "y": 0 }],
+							"rows": [
+								{ "label": "a", "colour": "#222222", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "b", "colour": "#666666", "noValue": false, "x": 0, "y": 31 },
+								{ "label": "c", "colour": "#aaaaaa", "noValue": false, "x": 0, "y": 46 }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "categoryRefused",
+			"session": {
+				"rawData": {
+					"147": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+					"148": [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+					"149": [
+						"g0",
+						"g1",
+						"g2",
+						"g3",
+						"g4",
+						"g5",
+						"g6",
+						"g7",
+						"g8",
+						"g9",
+						"g0",
+						"g1",
+						"g2",
+						"g3",
+						"g4",
+						"g5",
+						"g6",
+						"g7",
+						"g8",
+						"g9"
+					]
+				},
+				"data": [
+					{
+						"id": 147,
+						"name": "x",
+						"data": 147,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 148,
+						"name": "y",
+						"data": 148,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 149,
+						"name": "group",
+						"data": 149,
+						"type": "category",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 20,
+						"name": "category refused",
+						"x": 350,
+						"y": 150,
+						"width": 500,
+						"height": 250,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 150,
+										"name": "x*",
+										"refId": 147,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 151,
+										"name": "y*",
+										"refId": 148,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 152,
+										"name": "group*",
+										"refId": 149,
+										"type": "category",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							}
+						}
+					}
+				],
+				"categoryColours": {},
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": {
+					"20": [
+						{ "line": "#234154", "points": "#234154", "colourCategories": { "refused": true } }
+					]
+				}
+			},
+			"expected": [
+				{
+					"id": 20,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": null,
+							"active": false,
+							"mode": "category",
+							"colormap": null,
+							"domain": null,
+							"title": null,
+							"idx": null,
+							"pointColours": [
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154",
+								"#234154"
+							],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [{ "type": "points", "color": "#234154", "size": 4, "shape": "circle" }]
+							},
+							"refusal": "This column has 10 categories; Colour by can show at most 9, one per palette colour. Nothing is coloured: pick a column with fewer categories."
+						}
+					],
+					"sizeKey": null,
+					"keyLayout": {
+						"plotArea": { "w": 440, "h": 205 },
+						"colour": null,
+						"size": null,
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": null
+					},
+					"key": null
+				}
+			]
+		},
+		{
+			"name": "categoryWrap",
+			"session": {
+				"rawData": {
+					"153": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26
+					],
+					"154": [
+						0, 0.8414709848078965, 0.9092974268256817, 0.1411200080598672, -0.7568024953079282,
+						-0.9589242746631385, -0.27941549819892586, 0.6569865987187891, 0.9893582466233818,
+						0.4121184852417566, -0.5440211108893698, -0.9999902065507035, -0.5365729180004349,
+						0.4201670368266409, 0.9906073556948704, 0.6502878401571168, -0.2879033166650653,
+						-0.9613974918795568, -0.7509872467716762, 0.14987720966295234, 0.9129452507276277,
+						0.8366556385360561, -0.008851309290403876, -0.8462204041751706, -0.9055783620066238,
+						-0.13235175009777303, 0.7625584504796028
+					],
+					"155": [
+						"hive A",
+						"hive B",
+						"hive C",
+						"hive D",
+						"hive E",
+						"hive F",
+						"hive G",
+						"hive H",
+						"hive I",
+						"hive A",
+						"hive B",
+						"hive C",
+						"hive D",
+						"hive E",
+						"hive F",
+						"hive G",
+						"hive H",
+						"hive I",
+						"hive A",
+						"hive B",
+						"hive C",
+						"hive D",
+						"hive E",
+						"hive F",
+						"hive G",
+						"hive H",
+						"hive I"
+					]
+				},
+				"data": [
+					{
+						"id": 153,
+						"name": "x",
+						"data": 153,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 154,
+						"name": "y",
+						"data": 154,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 155,
+						"name": "hive",
+						"data": 155,
+						"type": "category",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 21,
+						"name": "category wrap",
+						"x": 350,
+						"y": 150,
+						"width": 420,
+						"height": 160,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 156,
+										"name": "x*",
+										"refId": 153,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 157,
+										"name": "y*",
+										"refId": 154,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"label": "",
+									"yAxis": "left",
+									"line": {
+										"colour": null,
+										"strokeWidth": 3,
+										"stroke": "solid",
+										"draw": false,
+										"joinGaps": false
+									},
+									"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
+									"colourBy": {
+										"id": 158,
+										"name": "hive*",
+										"refId": 155,
+										"type": "category",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"colourEncoding": {
+										"id": 1,
+										"mode": "auto",
+										"colormap": "auto",
+										"domainMin": null,
+										"domainMax": null,
+										"colourLine": false
+									}
+								}
+							],
+							"legend": {
+								"show": false,
+								"position": "topright",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null
+							},
+							"overlays": [],
+							"colourScale": {
+								"show": true,
+								"position": "right",
+								"customX": 0.02,
+								"customY": 0.02,
+								"orientation": "vertical",
+								"backgroundColor": "rgba(255, 255, 255, 0.9)",
+								"borderColor": "var(--color-lightness-25)",
+								"borderWidth": 1,
+								"padding": 8,
+								"itemSpacing": 4,
+								"fontSize": null,
+								"barLength": null,
+								"barThickness": 10
+							}
+						}
+					}
+				],
+				"categoryColours": {
+					"hive A": { "slot": 0 },
+					"hive B": { "slot": 1 },
+					"hive C": { "slot": 2 },
+					"hive D": { "slot": 3 },
+					"hive E": { "slot": 4 },
+					"hive F": { "slot": 5 },
+					"hive G": { "slot": 6 },
+					"hive H": { "slot": 7 },
+					"hive I": { "slot": 8 }
+				},
+				"appState": { "displayTimezone": "utc" },
+				"columnLabels": {},
+				"seriesColours": {
+					"21": [
+						{
+							"line": "#234154",
+							"points": "#234154",
+							"colourCategories": {
+								"labels": [
+									"hive A",
+									"hive B",
+									"hive C",
+									"hive D",
+									"hive E",
+									"hive F",
+									"hive G",
+									"hive H",
+									"hive I"
+								],
+								"colours": [
+									"#234154",
+									"#BE796B",
+									"#3E7295",
+									"#EDADAD",
+									"#A6ACD5",
+									"#83422A",
+									"#6B9FD5",
+									"#4A1E0E",
+									"#fbe67280"
+								]
+							}
+						}
+					]
+				}
+			},
+			"expected": [
+				{
+					"id": 21,
+					"series": [
+						{
+							"resolved": { "line": "#234154", "points": "#234154" },
+							"size": null,
+							"active": true,
+							"mode": "category",
+							"colormap": null,
+							"domain": {
+								"lo": null,
+								"hi": null,
+								"cyclic": false,
+								"period": null,
+								"categories": [
+									"hive A",
+									"hive B",
+									"hive C",
+									"hive D",
+									"hive E",
+									"hive F",
+									"hive G",
+									"hive H",
+									"hive I"
+								],
+								"firstSeen": [
+									"hive A",
+									"hive B",
+									"hive C",
+									"hive D",
+									"hive E",
+									"hive F",
+									"hive G",
+									"hive H",
+									"hive I"
+								]
+							},
+							"title": "hive",
+							"idx": [
+								0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8
+							],
+							"pointColours": [
+								"#234154",
+								"#BE796B",
+								"#3E7295",
+								"#EDADAD",
+								"#A6ACD5",
+								"#83422A",
+								"#6B9FD5",
+								"#4A1E0E",
+								"#fbe67280",
+								"#234154",
+								"#BE796B",
+								"#3E7295",
+								"#EDADAD",
+								"#A6ACD5",
+								"#83422A",
+								"#6B9FD5",
+								"#4A1E0E",
+								"#fbe67280",
+								"#234154",
+								"#BE796B",
+								"#3E7295",
+								"#EDADAD",
+								"#A6ACD5",
+								"#83422A",
+								"#6B9FD5",
+								"#4A1E0E",
+								"#fbe67280"
+							],
+							"segments": [],
+							"legend": {
+								"label": "y",
+								"elements": [
+									{ "type": "points", "color": "rgb(140, 140, 140)", "size": 4, "shape": "circle" }
+								]
+							}
+						}
+					],
+					"sizeKey": null,
+					"keyLayout": {
+						"plotArea": { "w": 225.60000000000002, "h": 115 },
+						"colour": { "x": 235.60000000000002, "y": 0, "length": 99 },
+						"size": null,
+						"sizeGeometry": null,
+						"sizeBeside": false,
+						"shown": { "ticks": [], "title": "hive" }
+					},
+					"key": {
+						"series": 0,
+						"colormap": null,
+						"domain": {
+							"lo": null,
+							"hi": null,
+							"cyclic": false,
+							"period": null,
+							"categories": [
+								"hive A",
+								"hive B",
+								"hive C",
+								"hive D",
+								"hive E",
+								"hive F",
+								"hive G",
+								"hive H",
+								"hive I"
+							],
+							"firstSeen": [
+								"hive A",
+								"hive B",
+								"hive C",
+								"hive D",
+								"hive E",
+								"hive F",
+								"hive G",
+								"hive H",
+								"hive I"
+							]
+						},
+						"title": "hive",
+						"ticks": [],
+						"noValue": null,
+						"categorical": true,
+						"categories": [
+							{ "label": "hive A", "colour": "#234154" },
+							{ "label": "hive B", "colour": "#BE796B" },
+							{ "label": "hive C", "colour": "#3E7295" },
+							{ "label": "hive D", "colour": "#EDADAD" },
+							{ "label": "hive E", "colour": "#A6ACD5" },
+							{ "label": "hive F", "colour": "#83422A" },
+							{ "label": "hive G", "colour": "#6B9FD5" },
+							{ "label": "hive H", "colour": "#4A1E0E" },
+							{ "label": "hive I", "colour": "#fbe67280" }
+						],
+						"geometry": {
+							"width": 124.39999999999999,
+							"height": 103,
+							"swatch": 10,
+							"rowH": 12,
+							"step": 15,
+							"titleH": 16,
+							"natural": 132,
+							"perColumn": 6,
+							"columns": 2,
+							"titleLines": [{ "text": "hive", "y": 0 }],
+							"rows": [
+								{ "label": "hive A", "colour": "#234154", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "hive B", "colour": "#BE796B", "noValue": false, "x": 0, "y": 31 },
+								{ "label": "hive C", "colour": "#3E7295", "noValue": false, "x": 0, "y": 46 },
+								{ "label": "hive D", "colour": "#EDADAD", "noValue": false, "x": 0, "y": 61 },
+								{ "label": "hive E", "colour": "#A6ACD5", "noValue": false, "x": 0, "y": 76 },
+								{ "label": "hive F", "colour": "#83422A", "noValue": false, "x": 0, "y": 91 },
+								{
+									"label": "hive G",
+									"colour": "#6B9FD5",
+									"noValue": false,
+									"x": 67.19999999999999,
+									"y": 16
+								},
+								{
+									"label": "hive H",
+									"colour": "#4A1E0E",
+									"noValue": false,
+									"x": 67.19999999999999,
+									"y": 31
+								},
+								{
+									"label": "hive I",
+									"colour": "#fbe67280",
+									"noValue": false,
+									"x": 67.19999999999999,
+									"y": 46
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "resolvedColours",
+			"session": {
+				"rawData": { "159": [0, 1, 2, 3, 4], "160": [1, 2, 1, 2, 1], "161": [2, 3, 2, 3, 2] },
+				"data": [
+					{
+						"id": 159,
+						"name": "x",
+						"data": 159,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 160,
+						"name": "hive A",
+						"data": 160,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					},
+					{
+						"id": 161,
+						"name": "hive B",
+						"data": 161,
+						"type": "number",
+						"tableProcessGUId": "",
+						"producerNodeId": null,
+						"producerPort": null,
+						"producerArtifactKind": null,
+						"processes": []
+					}
+				],
+				"plots": [
+					{
+						"id": 22,
+						"name": "both hives",
+						"x": 350,
+						"y": 150,
+						"width": 500,
+						"height": 250,
+						"type": "scatterplot",
+						"selected": false,
+						"facet": false,
+						"facetRows": 0,
+						"setRefs": {},
+						"metricOut": {},
+						"sourceNodeId": null,
+						"style": {
+							"fontFamily": "sans",
+							"fontSize": "custom",
+							"fontSizePt": 12,
+							"widthPreset": "custom",
+							"widthMm": null,
+							"exportDpi": 300,
+							"palette": null,
+							"monochrome": false,
+							"varyMarkers": false,
+							"backgroundColour": "transparent",
+							"legendBox": true,
+							"roleScale": { "tick": 0.9375, "legend": 0.75, "sigBar": 0.6875 }
+						},
+						"plot": {
+							"xlimsIN": [null, null],
+							"xLogScale": false,
+							"xTickFormat": "",
+							"ylimsLeftIN": [null, null],
+							"ylimsRightIN": [null, null],
+							"yLogScaleLeft": false,
+							"yLogScaleRight": false,
+							"padding": { "top": 15, "right": 30, "bottom": 30, "left": 30 },
+							"xAxis": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisLeft": { "label": "", "gridlines": true, "nticks": 5, "manualTicks": null },
+							"yAxisRight": { "label": "", "gridlines": false, "nticks": 5, "manualTicks": null },
+							"data": [
+								{
+									"x": {
+										"id": 162,
+										"name": "x*",
+										"refId": 159,
+										"type": "number",
+										"tableProcessGUId": "",
+										"producerNodeId": null,
+										"producerPort": null,
+										"producerArtifactKind": null,
+										"processes": []
+									},
+									"y": {
+										"id": 163,
+										"name": "hive A*",
+										"refId": 160,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -6471,9 +8106,9 @@
 								},
 								{
 									"x": {
-										"id": 132,
+										"id": 164,
 										"name": "x*",
-										"refId": 127,
+										"refId": 159,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -6482,9 +8117,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 133,
+										"id": 165,
 										"name": "hive B*",
-										"refId": 129,
+										"refId": 161,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -6521,7 +8156,7 @@
 						}
 					},
 					{
-						"id": 18,
+						"id": 23,
 						"name": "hive B alone",
 						"x": 350,
 						"y": 150,
@@ -6563,9 +8198,9 @@
 							"data": [
 								{
 									"x": {
-										"id": 134,
+										"id": 166,
 										"name": "x*",
-										"refId": 127,
+										"refId": 159,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -6574,9 +8209,9 @@
 										"processes": []
 									},
 									"y": {
-										"id": 135,
+										"id": 167,
 										"name": "hive B*",
-										"refId": 129,
+										"refId": 161,
 										"type": "number",
 										"tableProcessGUId": "",
 										"producerNodeId": null,
@@ -6613,19 +8248,20 @@
 						}
 					}
 				],
+				"categoryColours": {},
 				"appState": { "displayTimezone": "utc" },
 				"columnLabels": {},
 				"seriesColours": {
-					"17": [
+					"22": [
 						{ "line": "#234154", "points": "#234154" },
 						{ "line": "#BE796B", "points": "#BE796B" }
 					],
-					"18": [{ "line": "#BE796B", "points": "#BE796B" }]
+					"23": [{ "line": "#BE796B", "points": "#BE796B" }]
 				}
 			},
 			"expected": [
 				{
-					"id": 17,
+					"id": 22,
 					"series": [
 						{
 							"resolved": { "line": "#234154", "points": "#234154" },
@@ -6690,7 +8326,7 @@
 					"key": null
 				},
 				{
-					"id": 18,
+					"id": 23,
 					"series": [
 						{
 							"resolved": { "line": "#BE796B", "points": "#BE796B" },

@@ -46,6 +46,7 @@
 		ensureUniqueEncodingIds,
 		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
+	import { encodedCsvCell } from '$lib/components/plotbits/encodingHost.js';
 	import { markerPaths } from '$lib/components/plotbits/markerPaths.js';
 
 	export const QQPlot_defaultDataInputs = ['column'];
@@ -131,7 +132,7 @@
 				elements: [
 					{
 						type: 'points',
-						color: this.colourActive ? COLOUR_BY_SWATCH : this.colour,
+						color: this.colourActive && !this.colourRefusal ? COLOUR_BY_SWATCH : this.colour,
 						shape: 'circle',
 						size: 4
 					}
@@ -443,7 +444,7 @@
 						q.band.lo[i],
 						q.band.hi[i]
 					];
-					if (coloured) row.push(cv && Number.isFinite(cv[i]) ? cv[i] : '');
+					if (coloured) row.push(cv ? encodedCsvCell(cv[i]) : '');
 					if (sized) row.push(sv && Number.isFinite(sv[i]) ? sv[i] : '');
 					rows.push(row);
 				}
@@ -734,6 +735,7 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				categories={theData.colourKey?.categorical ? theData.colourKey.categories : null}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>

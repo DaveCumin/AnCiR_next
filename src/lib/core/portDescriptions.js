@@ -1111,7 +1111,7 @@ export const OVERLAY_CHANNEL_DESCRIPTIONS = {
 };
 // A series' colour-by port, `enc<id>_colour` (components/plotbits/encodingHost.js).
 export const COLOUR_BY_DESCRIPTION =
-	'Column that colours this series’ points: a number by its value, a time by its hour of day (or day of year, or days since start; set in the panel). Rows with no value keep the series colour.';
+	'Column that colours this series’ points: a number by its value, a time by its hour of day, text by category as box plots do (set in the panel). Rows with no value keep the series colour.';
 // A series' size-by port, `enc<id>_size`.
 export const SIZE_BY_DESCRIPTION =
 	'Column that sizes this series’ points, the area growing with the value between the smallest and largest point size: a number by its value, a time by days since start (or day of year; set in the panel). Rows with no value keep the series’ point size.';

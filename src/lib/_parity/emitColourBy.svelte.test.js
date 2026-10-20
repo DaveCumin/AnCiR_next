@@ -11,7 +11,10 @@
  * app's colormap stop tables and 64 bucket colours per map. Size by (phase 3) adds, per sized
  * series, every drawn point's exact radius and the order the points are drawn in (largest
  * layer first), and per plot the size key (entries, "no value", title, shape) and where the
- * two keys are placed (tools/test_plot_size_by.py).
+ * two keys are placed (tools/test_plot_size_by.py). Category mode (v1.1) adds cases whose
+ * colours are the session's category colours (a user-pinned one among them), the category key
+ * (its entries, colours and geometry, wrapped into columns on a small plot), monochrome greys
+ * and the palette cap's refusal (tools/test_plot_colour_by_category.py).
  *
  * tools/test_plot_colour_by.py runs the same sessions through the Python runtime and checks
  * the exported figure draws exactly these colours. The fixture is COMMITTED
@@ -32,6 +35,7 @@ import { loadPlots } from '$test/plotRegistry.js';
 import { exportColumnLabels } from '$lib/core/columnLabels.js';
 import { exportSeriesColours } from '$lib/core/exportSeriesColours.js';
 import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
+import { pinAllCategoryColours, setCategoryColour } from '$lib/plots/seriesColour.js';
 import { COLORMAPS } from '$lib/components/plotbits/colormaps.js';
 import { bucketColours, COLOUR_BUCKETS } from '$lib/components/plotbits/encodings.js';
 import { colouredLineSegments, isValidXY } from '$lib/components/plotbits/colouredLine.js';
@@ -70,6 +74,7 @@ function resetCore() {
 	core.storedValues = {};
 	core.rawData = new Map();
 	core.seriesAppearance = {};
+	core.categoryColours = {};
 	appState.displayTimezone = 'utc';
 }
 
@@ -138,7 +143,8 @@ function drawnByApp(p) {
 		const xs = d.xData;
 		const ys = d.yData;
 		const n = Math.min(xs.length, ys.length);
-		const active = d.colourActive;
+		// A refused Category series (too many categories) colours nothing: inactive here.
+		const active = d.colourActive && d.colourIdx != null;
 		const idx = active ? [...d.colourIdx] : null;
 		const palette = active ? d.colourPalette : null;
 		const bucketOf = (i) => (idx && i < idx.length ? idx[i] : -1);
@@ -206,7 +212,8 @@ function drawnByApp(p) {
 			idx,
 			pointColours,
 			segments,
-			legend: d.getLegendItem()
+			legend: d.getLegendItem(),
+			...(d.colourRefusal ? { refusal: d.colourRefusal } : {})
 		};
 	});
 	const key = inner.colourKey;
@@ -243,7 +250,15 @@ function drawnByApp(p) {
 					domain: key.domain,
 					title: key.title,
 					ticks: key.ticks,
-					noValue: key.noValue
+					noValue: key.noValue,
+					// Category (v1.1): the named swatches, and the key as laid out.
+					...(key.categorical
+						? {
+								categorical: true,
+								categories: key.categories,
+								geometry: keys.placement ? keys.geometry(keys.placement.length) : null
+							}
+						: {})
 				}
 			: null
 	};
@@ -253,6 +268,7 @@ function snapshot(name, zone) {
 	flushSync();
 	// The app shell pins every wired column's appearance in one effect; the export sees that.
 	pinAllSeriesAppearance(core.plots);
+	pinAllCategoryColours(core.plots);
 	flushSync();
 	const saved = JSON.parse(outputCoreAsJson());
 	return {
@@ -261,6 +277,8 @@ function snapshot(name, zone) {
 			rawData: saved.rawData,
 			data: saved.data,
 			plots: saved.plots,
+			// The session's category colours (Category mode reads them; a user's pin among them).
+			categoryColours: saved.categoryColours,
 			appState: { displayTimezone: zone },
 			columnLabels: exportColumnLabels(),
 			seriesColours: exportSeriesColours()
@@ -562,6 +580,102 @@ const CASES = {
 		]);
 		p.facet = true;
 	},
+	// ---- Category (v1.1) ----
+	/** A text column: missing cells (no value), a colour the user pinned, the line coloured
+	 *  too with a y gap, the legend on; the categories claim slots by first appearance. */
+	categoryPoints() {
+		const x = col([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'number', 'x');
+		const y = col([3, 1, 4, 1, null, 9, 2, 6, 5, 3], 'number', 'hive');
+		const c = col(
+			['wt', 'ko', '', 'het', 'ko', 'wt', null, 'het', 'ko', 'wt'],
+			'category',
+			'genotype'
+		);
+		setCategoryColour('het', '#7a1f5c');
+		scatter(
+			'category points',
+			[
+				{
+					x,
+					y,
+					line: { draw: true, strokeWidth: 2 },
+					points: { radius: 3 },
+					colour: { refId: c, colourLine: true }
+				}
+			],
+			{ legend: true }
+		);
+	},
+	/** Numbers read as categories (an id column), with a size key sharing the top right
+	 *  corner with the category key, stars. */
+	categoryNumbers() {
+		const x = col([0, 1, 2, 3, 4, 5, 6, 7], 'number', 'x');
+		const y = col([2, 4, 3, 5, 4, 6, 5, 7], 'number', 'y');
+		const id = col([3, 1, 2, 10, 3, 1, 2, 10], 'number', 'colony');
+		const s = col([5, 10, 15, 20, 25, 30, 35, 40], 'number', 'count');
+		scatter(
+			'category numbers',
+			[
+				{
+					x,
+					y,
+					points: { shape: 'star', radius: 4 },
+					colour: { refId: id, mode: 'category' },
+					size: { refId: s }
+				}
+			],
+			{ colourScale: { position: 'topright' }, sizeScale: { position: 'topright' } }
+		);
+	},
+	/** Monochrome: the Boxplot's greys by key order. */
+	categoryMonochrome() {
+		const x = col([0, 1, 2, 3, 4, 5], 'number', 'x');
+		const y = col([1, 3, 2, 4, 3, 5], 'number', 'y');
+		const c = col(['c', 'a', 'b', 'a', 'c', 'b'], 'text', 'site');
+		scatter('category mono', [{ x, y, colour: { refId: c } }], { style: { monochrome: true } });
+	},
+	/** One category more than the palette has colours: nothing coloured, no key. */
+	categoryRefused() {
+		const n = appState.appColours.length + 1;
+		const x = col(
+			Array.from({ length: 2 * n }, (_, i) => i),
+			'number',
+			'x'
+		);
+		const y = col(
+			Array.from({ length: 2 * n }, (_, i) => i % 4),
+			'number',
+			'y'
+		);
+		const c = col(
+			Array.from({ length: 2 * n }, (_, i) => `g${i % n}`),
+			'category',
+			'group'
+		);
+		scatter('category refused', [{ x, y, colour: { refId: c } }]);
+	},
+	/** Every palette colour in a small plot: the key wraps into columns beside it. */
+	categoryWrap() {
+		const n = appState.appColours.length;
+		const x = col(
+			Array.from({ length: 3 * n }, (_, i) => i),
+			'number',
+			'x'
+		);
+		const y = col(
+			Array.from({ length: 3 * n }, (_, i) => Math.sin(i)),
+			'number',
+			'y'
+		);
+		const c = col(
+			Array.from({ length: 3 * n }, (_, i) => `hive ${String.fromCharCode(65 + (i % n))}`),
+			'category',
+			'hive'
+		);
+		scatter('category wrap', [{ x, y, colour: { refId: c } }], {
+			size: { width: 420, height: 160 }
+		});
+	},
 	/** Series with no saved colour: the app's colour is the column's pinned colour, not the
 	 *  series' position (the second plot's only series is the first plot's second). */
 	resolvedColours() {
@@ -650,7 +764,9 @@ describe('colour by: the app side of the Python export fixture', () => {
 
 	it('every case colours something, and the resolved-colour case differs from position', () => {
 		const fx = buildFixture();
-		for (const c of fx.cases.filter((k) => k.name !== 'resolvedColours')) {
+		for (const c of fx.cases.filter(
+			(k) => k.name !== 'resolvedColours' && k.name !== 'categoryRefused'
+		)) {
 			expect(
 				c.expected.some((p) => p.series.some((s) => s.active || s.size)),
 				c.name
@@ -671,5 +787,29 @@ describe('colour by: the app side of the Python export fixture', () => {
 		// is not the palette's first entry (what a positional palette gives plot 2).
 		expect(alone.series[0].resolved.line).toBe(both.series[1].resolved.line);
 		expect(alone.series[0].resolved.line).not.toBe(appState.appColours[0]);
+	});
+
+	it('the Category cases: session colours, a pinned colour, refusal and wrapping', () => {
+		const fx = buildFixture();
+		const at = (name) => fx.cases.find((k) => k.name === name);
+		const pts = at('categoryPoints');
+		const key = pts.expected[0].key;
+		expect(key.categorical).toBe(true);
+		expect(key.categories.map((k) => k.label)).toEqual(['het', 'ko', 'wt']);
+		expect(key.categories[0].colour).toBe('#7a1f5c');
+		// The export carries the drawn colours for the runtime.
+		const entry = pts.session.seriesColours[pts.session.plots[0].id][0];
+		expect(entry.colourCategories).toEqual({
+			labels: ['het', 'ko', 'wt'],
+			colours: key.categories.map((k) => k.colour)
+		});
+		const refused = at('categoryRefused');
+		expect(refused.expected[0].key).toBeNull();
+		expect(refused.expected[0].series[0].idx).toBeNull();
+		expect(refused.session.seriesColours[refused.session.plots[0].id][0].colourCategories).toEqual({
+			refused: true
+		});
+		const wrap = at('categoryWrap').expected[0].key.geometry;
+		expect(wrap.columns).toBeGreaterThan(1);
 	});
 });

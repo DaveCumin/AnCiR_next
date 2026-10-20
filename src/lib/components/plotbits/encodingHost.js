@@ -212,6 +212,8 @@ export function colourBarTitle(mode, { columnName = '', zone = 'utc', wrapped = 
 
 /** A colour value as the tooltip and the colour bar print it. */
 export function formatColourValue(v, mode) {
+	// Category: the label itself (null is no value).
+	if (mode === 'category') return v == null ? 'no value' : String(v);
 	if (!Number.isFinite(v)) return 'no value';
 	if (mode === 'hourOfDay') {
 		const totalMin = Math.round(v * 60) % (24 * 60);
@@ -222,6 +224,15 @@ export function formatColourValue(v, mode) {
 	if (mode === 'dayOfYear') return String(Math.round(v));
 	if (v === 0) return '0';
 	return String(Number(v.toPrecision(3)));
+}
+
+/**
+ * A CSV cell for an encoded value: the number, a category's label, or blank for no value.
+ * @param {any} v
+ */
+export function encodedCsvCell(v) {
+	if (typeof v === 'string') return v;
+	return Number.isFinite(v) ? v : '';
 }
 
 /**

@@ -9,7 +9,9 @@
 	// (plots/seriesAppearance.js) and would write a grey into it.
 	import {
 		ENCODING_MODES,
+		SIZE_ENCODING_MODES,
 		isCyclicMode,
+		isCategoryMode,
 		DEFAULT_MIN_RADIUS,
 		DEFAULT_MAX_RADIUS,
 		MIN_RADIUS_FLOOR
@@ -18,8 +20,8 @@
 	import { AUTO } from './encodingHost.js';
 
 	const MODES = [AUTO, ...ENCODING_MODES];
-	// Size has no Hour of day (plan 3.7: a cyclic quantity has no "bigger").
-	const SIZE_MODES = [AUTO, ...ENCODING_MODES.filter((m) => !isCyclicMode(m))];
+	// Size has no Hour of day and no Category (plan 3.7: neither has a "bigger").
+	const SIZE_MODES = [AUTO, ...SIZE_ENCODING_MODES];
 
 	/** A finite number, else null (an automatic end). Number(null) is 0, hence the guard. */
 	function numberOrNullIn(v) {
@@ -196,6 +198,7 @@
 		)
 	);
 	const cyclic = $derived(isCyclicMode(mode));
+	const categorical = $derived(isCategoryMode(mode));
 	const mapOptions = $derived(['auto', ...Object.keys(colormapChoices({ cyclic }))]);
 	const mapLabels = $derived(
 		mapOptions.map((k) =>
@@ -238,17 +241,19 @@
 						optionsDisplay={modeLabels}
 					/>
 				</div>
-				<div class="control-input">
-					<p>Colours</p>
-					<AttributeSelect
-						bind:value={
-							() => (mapOptions.includes(enc.colormap) ? enc.colormap : 'auto'),
-							(v) => (enc.colormap = v)
-						}
-						options={mapOptions}
-						optionsDisplay={mapLabels}
-					/>
-				</div>
+				{#if !categorical}
+					<div class="control-input">
+						<p>Colours</p>
+						<AttributeSelect
+							bind:value={
+								() => (mapOptions.includes(enc.colormap) ? enc.colormap : 'auto'),
+								(v) => (enc.colormap = v)
+							}
+							options={mapOptions}
+							optionsDisplay={mapLabels}
+						/>
+					</div>
+				{/if}
 			</div>
 
 			{#if datum.colourLineCapable}
@@ -268,7 +273,14 @@
 				{/if}
 			{/if}
 
-			{#if !cyclic}
+			{#if datum.colourRefusal}
+				<p class="colour-by-note colour-by-warning" role="status">{datum.colourRefusal}</p>
+			{:else if categorical}
+				<p class="colour-by-note">
+					Each category takes its session colour, the same as in box plots; change them under
+					Category colours.
+				</p>
+			{:else if !cyclic}
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits

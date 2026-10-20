@@ -3,6 +3,11 @@
 exports[`MCP catalogue (generated schema) > the scatterplot entry of session-schema.generated.json 1`] = `
 {
   "displayName": "Scatterplot",
+  "encodings": {
+    "colour": true,
+    "lines": true,
+    "size": true,
+  },
   "inputs": [
     "x",
     "y",

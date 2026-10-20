@@ -628,3 +628,109 @@ for (const [host, demo, type, [series, field]] of [
 		await shot(svg, `e2e-size-${type}`);
 	});
 }
+
+// ---- v1.1: Category mode --------------------------------------------------------------------
+// The ANOVA demo draws the same `measure` by `condition` as a Mean +/- SEM plot and a box plot.
+// Colouring the means by `condition` (a category column) must give each group mean the colour
+// its box has, list the categories in a key beside the plot, and leave the box plot's colours
+// alone; a number column read as Category with more distinct values than palette colours is
+// refused, with the reason in the panel and nothing coloured.
+
+test('Category: group means take their box’s colour, with a category key', async ({ page }) => {
+	await load(page, 'demo-workflow-stats-anova');
+	const ids = await page.evaluate(() => {
+		const m = window.__core.plots.find((q) => q.type === 'meansem');
+		const b = window.__core.plots.find((q) => q.type === 'boxplot');
+		return { mean: m.id, box: b.id, cond: m.plot.data[0].x.refId, measure: m.plot.data[0].y.refId };
+	});
+	const { svg, before } = await colourFirstSeries(page, ids.mean);
+	await wireColumn(page, ids.mean, ids.cond);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 2);
+	const state = await page.evaluate(
+		({ mean }) => {
+			const d = window.__core.plots.find((q) => q.id === mean).plot.data[0];
+			return {
+				mode: d.colourMode,
+				categories: d.colourDomain.categories,
+				palette: d.colourPalette,
+				pins: JSON.parse(JSON.stringify(window.__core.categoryColours))
+			};
+		},
+		{ mean: ids.mean }
+	);
+	expect(state.mode).toBe('category');
+	expect(state.categories.length).toBeGreaterThan(1);
+	// The app shell pinned every category (a box plot reads the same pins).
+	for (const c of state.categories) expect(state.pins[c]).toBeTruthy();
+	// Each group mean in its category's colour, one path per category.
+	const fills = await svg
+		.locator('path[data-colour-bucket]')
+		.evaluateAll((ps) => ps.map((p) => p.getAttribute('fill')));
+	expect(new Set(fills)).toEqual(new Set(state.palette));
+	// The box plot of the same column draws its boxes in exactly those colours.
+	const boxSvg = page.locator(`svg[id="plot${ids.box}"]`);
+	await boxSvg.scrollIntoViewIfNeeded();
+	const boxFills = await boxSvg.evaluate((el) =>
+		[...el.querySelectorAll('rect')]
+			.filter(
+				(r) => r.getAttribute('stroke') && r.getAttribute('fill') === r.getAttribute('stroke')
+			)
+			.sort((a, b) => Number(a.getAttribute('x')) - Number(b.getAttribute('x')))
+			.map((r) => r.getAttribute('fill'))
+	);
+	expect(boxFills).toEqual(state.palette);
+	// The key: a named swatch per category, beside the plot, clear of the legend, inside.
+	await svg.scrollIntoViewIfNeeded();
+	const key = svg.locator('.colour-scale');
+	await expect(key.locator('.colour-scale-category')).toHaveCount(state.categories.length);
+	expect(
+		(await key.locator('.colour-scale-category').allTextContents()).map((t) => t.trim())
+	).toEqual(state.categories);
+	await barClear(svg);
+	await shot(svg, 'e2e-category-meansem');
+	await shot(boxSvg, 'e2e-category-boxplot');
+
+	// The panel: no colour map or range for categories; the category pickers on the Data tab.
+	await openData(page, svg);
+	const panel = page.locator('.colour-by').first();
+	await expect(panel).toContainText('Each category takes its session colour');
+	await expect(panel.getByText('Colours', { exact: true })).toHaveCount(0);
+	await expect(page.getByText('Category colours', { exact: true })).toHaveCount(1);
+});
+
+test('Category: too many categories is refused, nothing coloured', async ({ page }) => {
+	// A Q-Q sample read as categories: every value its own, more than the palette has colours.
+	await load(page, 'demo-qqplot-normality');
+	const ids = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.type === 'qqplot');
+		return { id: p.id, col: p.plot.data[0].column.refId };
+	});
+	const { svg } = await colourFirstSeries(page, ids.id);
+	await wireColumn(page, ids.id, ids.col);
+	await expect(svg.locator('path[data-colour-bucket]').first()).toBeAttached();
+	await openData(page, svg);
+	const readAs = page.locator('.colour-by select').first();
+	const before = await page.evaluate(() => window.__history.undoStack.length);
+	// Focus first, as a user's click does (the panel's undo recorder starts a gesture there).
+	await readAs.focus();
+	await readAs.selectOption('category');
+	await page.waitForTimeout(600);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	const panel = page.locator('.colour-by').first();
+	await expect(panel).toContainText('Nothing is coloured');
+	await expect(svg.locator('path[data-colour-bucket]')).toHaveCount(0);
+	await expect(svg.locator('.colour-scale')).toHaveCount(0);
+	await shot(svg, 'e2e-category-refused');
+	// Undo puts the colours back (the mode change is undoable).
+	await page.keyboard.press('Escape');
+	await svg.click({ position: { x: 5, y: 5 } });
+	await page.keyboard.press('ControlOrMeta+z');
+	await page.waitForTimeout(800);
+	expect(
+		await page.evaluate(
+			(pid) => window.__core.plots.find((q) => q.id === pid).plot.data[0].colourEncoding.mode,
+			ids.id
+		)
+	).toBe('auto');
+	expect(await svg.locator('path[data-colour-bucket]').count()).toBeGreaterThan(1);
+});

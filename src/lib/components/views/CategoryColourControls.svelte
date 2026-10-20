@@ -1,5 +1,6 @@
 <!--
-	Per-category colour controls for a category-coloured boxplot.
+	Per-category colour controls for a category-coloured boxplot, and for a plot whose series
+	are coloured by a category column (Colour by, Category mode: the same session colours).
 
 	A boxplot with ONE series and a categorical x column draws one box per unique x
 	VALUE, each in its own colour from core.categoryColours (see plots/seriesColour.js
@@ -13,8 +14,9 @@
 	every figure that draws it), not a property of one figure.
 
 	Reads are pure (colourForCategoryLabel); writes happen only in the picker's event
-	handlers via setCategoryColour, never during render — see the state_unsafe_mutation
-	note in plots/appearanceIdentity.js.
+	handlers via setCategoryColour, never during render (see the state_unsafe_mutation
+	note in plots/appearanceIdentity.js), each recorded as one undo step
+	(plots/appearanceEdits.js recordCategoryColourEdit; a drag on one row is one step).
 -->
 <script>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -23,16 +25,18 @@
 		colourForCategoryLabel,
 		setCategoryColour
 	} from '$lib/plots/seriesColour.js';
+	import { recordCategoryColourEdit } from '$lib/plots/appearanceEdits.js';
 
 	let { plot } = $props();
 
 	const labels = $derived(categoryColourLabels(plot));
+	const title = $derived(plot?.type === 'boxplot' ? 'Box colours' : 'Category colours');
 </script>
 
 {#if labels.length > 0}
 	<div class="control-component">
 		<div class="control-component-title">
-			<p>Box colours</p>
+			<p>{title}</p>
 		</div>
 		<div class="category-colour-grid">
 			{#each labels as label, i (label)}
@@ -40,7 +44,10 @@
 					<ColourPicker
 						bind:value={
 							() => colourForCategoryLabel(label) ?? getPaletteColor(i),
-							(v) => setCategoryColour(label, v)
+							(v) =>
+								recordCategoryColourEdit(() => setCategoryColour(label, v), {
+									coalesceKey: `category-colour:${label}`
+								})
 						}
 					/>
 					<p class="category-colour-label" title={label}>{label}</p>

@@ -200,7 +200,7 @@
 				elements: [
 					{
 						type: 'points',
-						color: this.colourActive ? COLOUR_BY_SWATCH : this.colour,
+						color: this.colourActive && !this.colourRefusal ? COLOUR_BY_SWATCH : this.colour,
 						size: this.radius,
 						shape: this.shape
 					}
@@ -408,7 +408,10 @@
 		encodingKeys = new EncodingKeyLayout(this, {
 			positions: ['right'],
 			reserveW: () => this.colourStripReserveW,
-			place: (keys) => this.colourKeyPlace(keys)
+			place: (keys) => this.colourKeyPlace(keys),
+			// A category key's rows fit the strip beside the ring (colourKeyPlace's own room),
+			// so the strip width reserved already counts any columns they wrap into.
+			categoryRoom: () => this.basePlotHeight * RING_RADIUS
 		});
 		get colourScale() {
 			return this.encodingKeys.scale;
@@ -467,7 +470,7 @@
 			const corner = this.legendCorner;
 			const box = this.legendLayout.box;
 			const out = this.legendLayout.outsidePlacement;
-			const fixed = this.colourScale.barLength;
+			const fixed = keys.storedLength;
 			// The size key's share of the block's height (it sits under the bar, M apart).
 			const under = sizeBox ? sizeBox.height + (base ? M : 0) : 0;
 			// The bar's length for `room` px of height for the whole block (bar, "no value", and
@@ -1073,6 +1076,7 @@
 			<!-- The colour bar of Colour by (a series' Data settings); always beside the clock. -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				categories={theData.colourKey?.categorical ? theData.colourKey.categories : null}
 				figureStyle={theData.parentBox?.style}
 				positions={theData.encodingKeys.positions}
 				which="controls"

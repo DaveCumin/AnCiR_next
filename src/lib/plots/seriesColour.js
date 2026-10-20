@@ -19,6 +19,7 @@
 // every appearance lookup needs and neither map owns.
 import { core, appState } from '$lib/core/core.svelte';
 import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+import { greyForIndex } from './seriesAppearance.js';
 
 /** Column id a plot series is bound to, or null when it is not wired yet. */
 export function seriesColumnId(parent) {
@@ -102,6 +103,98 @@ export function colourForCategory(label, fallbackIndex = 0) {
 }
 
 /**
+ * The slot colourForCategory would claim for each label, in order, WITHOUT writing: a pinned
+ * label keeps its pin; an unpinned one takes its fallback slot, or the next slot free of every
+ * pin and of the slots claimed before it in this list. Pinning the same labels in the same
+ * order (pinCategoryColours) writes exactly these, so a plot can draw the colours on its first
+ * frame (a render must not write core, see state_unsafe_mutation above) and they do not change
+ * when the pins land.
+ *
+ * @param {string[]} labels in the order they claim slots (first appearance, as the Boxplot)
+ * @returns {Map<string, string>} label to colour
+ */
+export function proposedCategoryColours(labels) {
+	const out = new Map();
+	const taken = new Set();
+	for (const entry of Object.values(catMap())) {
+		const norm = normaliseEntry(entry);
+		if (norm && norm.slot != null) taken.add(norm.slot);
+	}
+	const size = Math.max(1, (appState.appColours ?? []).length);
+	labels.forEach((label, i) => {
+		const key = String(label);
+		const pinned = colourForCategoryLabel(key);
+		if (pinned) {
+			out.set(key, pinned);
+			return;
+		}
+		let slot = ((i % size) + size) % size;
+		for (let k = 0; k < size && taken.has(slot); k++) slot = (slot + 1) % size;
+		taken.add(slot);
+		out.set(key, getPaletteColor(slot));
+	});
+	return out;
+}
+
+/**
+ * Pin each label's colour (colourForCategory), in the order given, so every figure drawing
+ * the label afterwards reads the same colour. Writes core: call from an effect or an event
+ * handler, never while rendering. Returns how many labels were newly pinned.
+ * @param {string[]} labels in the order they claim slots
+ */
+export function pinCategoryColours(labels) {
+	let n = 0;
+	labels.forEach((label, i) => {
+		if (colourForCategoryLabel(String(label))) return;
+		colourForCategory(label, i);
+		n++;
+	});
+	return n;
+}
+
+/**
+ * Pin the colour of every category a plot draws through Colour by (Category mode), in each
+ * series' first-appearance order, so the next figure to draw the label (a box plot, another
+ * coloured plot) reads the same colour. Called from the app shell's effect beside
+ * pinAllSeriesAppearance; idempotent, so it settles. Returns how many labels were pinned.
+ * @param {any[]} plots core.plots
+ */
+export function pinAllCategoryColours(plots) {
+	let n = 0;
+	for (const plot of plots ?? []) {
+		for (const d of plot?.plot?.data ?? []) {
+			const order = d?.colourCategoryPinOrder ?? null;
+			if (order) n += pinCategoryColours(order);
+		}
+	}
+	return n;
+}
+
+/**
+ * How many categories Colour by can colour (decision 4): one per palette colour, so no two
+ * categories ever share a colour. Beyond it the panel refuses rather than colouring some.
+ */
+export function categoryCap() {
+	return Math.max(1, (appState.appColours ?? []).length);
+}
+
+/**
+ * The colour of each category as a plot draws it: `categories` in the Boxplot's order (the
+ * key's order), each its session colour (pinned, else proposedCategoryColours over
+ * `firstSeen`). Monochrome draws evenly spaced greys by place in that order, exactly as a
+ * monochrome Boxplot draws its boxes (Box.svelte: greyForIndex(index, count)).
+ * @param {string[]} categories the Boxplot's order
+ * @param {string[]} firstSeen the order they claim palette slots in
+ * @param {boolean} [monochrome]
+ * @returns {string[]} one colour per category
+ */
+export function categoryPalette(categories, firstSeen, monochrome = false) {
+	if (monochrome) return categories.map((_, i) => greyForIndex(i, categories.length));
+	const colours = proposedCategoryColours(firstSeen);
+	return categories.map((c) => colours.get(String(c)) ?? getPaletteColor(0));
+}
+
+/**
  * Record a colour the USER chose for a category.
  *
  * Stored through `normaliseEntry`, so a hex that is in the current palette is kept as a
@@ -132,8 +225,8 @@ export function setCategoryColour(label, colour) {
  * @returns {string[]}
  */
 export function categoryColourLabels(plotWrapper) {
-	if (plotWrapper?.type !== 'boxplot') return [];
 	if (plotWrapper?.style?.monochrome === true) return [];
+	if (plotWrapper?.type !== 'boxplot') return colourByCategoryLabels(plotWrapper?.plot);
 	const inner = plotWrapper.plot;
 	const data = inner?.data;
 	if (!Array.isArray(data) || data.length !== 1) return [];
@@ -142,6 +235,28 @@ export function categoryColourLabels(plotWrapper) {
 	const xData = data[0]?.x?.getData?.() ?? [];
 	if (xData.length === 0) return [];
 	return labels.map(String);
+}
+
+/**
+ * The categories a plot colours its marks by (Colour by, Category mode), in key order, over
+ * every series doing so and not refused (too many categories); [] for none. The same session
+ * colours as a Boxplot's boxes, so the same pickers edit them.
+ * @param {any} inner a plot's inner (its `data` series built on EncodedSeries)
+ * @returns {string[]}
+ */
+export function colourByCategoryLabels(inner) {
+	const out = [];
+	const seen = new Set();
+	for (const d of inner?.data ?? []) {
+		const cats = d?.colourCategoryShown ?? null;
+		if (!cats) continue;
+		for (const c of cats) {
+			if (seen.has(c)) continue;
+			seen.add(c);
+			out.push(c);
+		}
+	}
+	return out;
 }
 
 /** Forget a pinned category colour. */

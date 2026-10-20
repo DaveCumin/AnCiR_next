@@ -50,6 +50,21 @@ describe('resolved series colours reach the script', () => {
 		expect('seriesColours' in s.plots[1]).toBe(false);
 	});
 
+	it('a Category series carries its categories and the colours the app draws them in', () => {
+		const s = session('categoryPoints');
+		const [file] = sessionToPythonFiles(s, PY_RUNTIME);
+		const [plot] = embeddedPlots(file.text);
+		const want = s.seriesColours[s.plots[0].id][0].colourCategories;
+		expect(plot.seriesColours[0].colourCategories).toEqual(want);
+		expect(want.labels).toEqual(['het', 'ko', 'wt']);
+		expect(want.colours[0]).toBe('#7a1f5c');
+		const refused = session('categoryRefused');
+		const [rf] = sessionToPythonFiles(refused, PY_RUNTIME);
+		expect(embeddedPlots(rf.text)[0].seriesColours[0].colourCategories).toEqual({
+			refused: true
+		});
+	});
+
 	it('a session without seriesColours exports exactly as before', () => {
 		const s = session('valueLines');
 		delete s.seriesColours;
@@ -70,7 +85,14 @@ describe.runIf(existsSync(PYTHON))('a coloured export runs (tools/.venv)', () =>
 		'sizeAndColour',
 		'sizeManual',
 		'sizeTimeCorner',
-		'sizeFacets'
+		'sizeFacets',
+		// Category (v1.1): the session's category colours, the key wrapped into columns, the
+		// greys of monochrome, and the palette cap's refusal.
+		'categoryPoints',
+		'categoryNumbers',
+		'categoryMonochrome',
+		'categoryRefused',
+		'categoryWrap'
 	]) {
 		it(`${name}: the script runs and writes every plot without a plot error`, () => {
 			const dir = mkdtempSync(join(tmpdir(), 'ancir-colourby-'));

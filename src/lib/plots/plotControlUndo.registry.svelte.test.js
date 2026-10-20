@@ -361,6 +361,40 @@ describe('every plot control panel edit is one exact undo step', () => {
 			expect(keys).toContain(want);
 	}, 240000);
 
+	// Colour by in Category mode (v1.1): the panel drops the colour map and the range (each
+	// category has its session colour) and the key is a list; what is left is audited the same.
+	it('scatterplot with Colour by on a category column (Category mode)', async () => {
+		const prepare = (plot) => {
+			const c = mkCol(
+				'c',
+				Array.from({ length: N }, (_, i) => `g${i % 5}`)
+			);
+			const col = core.data.find((k) => k.id === c);
+			col.type = 'category';
+			const d = plot.plot.data[0];
+			d.line.draw = true;
+			d.enableColourBy();
+			d.colourBy.refId = c;
+		};
+		const results = await auditType('scatterplot', prepare);
+		const failures = Object.fromEntries(
+			Object.entries(results).filter(
+				([k, v]) => v !== 'ok' && !(k in EXCLUSIONS) && !(k in NO_SAVED_CHANGE)
+			)
+		);
+		expect(failures).toEqual({});
+		const keys = Object.keys(results).join('\n');
+		for (const want of [
+			'Colour points by a column',
+			'Read as',
+			'Colour the line by the same column'
+		])
+			expect(keys).toContain(want);
+		// No colour map and no bar width for categories.
+		expect(keys).not.toContain('Colours');
+		expect(keys).not.toContain('Bar width');
+	}, 240000);
+
 	// Colour by on the phase 2 hosts (Q-Q, Mean +/- SEM, Circular phase): the same shared
 	// panel and colour bar, audited on each, since each host wires them in itself.
 	for (const [type, extra] of [

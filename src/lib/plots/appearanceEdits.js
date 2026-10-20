@@ -31,3 +31,23 @@ export function recordAppearanceEdit(mutate, { coalesceKey } = {}) {
 	const op = { kind: 'setAppearanceMaps', series: after };
 	return applyOp(coalesceKey ? { kind: 'batch', ops: [op], coalesceKey } : op);
 }
+
+/**
+ * Run `mutate()` (writes onto core.categoryColours, e.g. setCategoryColour) and record what it
+ * changed as one `setAppearanceMaps` step, as recordAppearanceEdit does for the column map: a
+ * category colour picked for a box plot or a Colour by key is undoable. The pinning effect
+ * (pinAllCategoryColours) writes the same map and never records.
+ *
+ * @param {() => void} mutate
+ * @param {{ coalesceKey?: string }} [opts]
+ * @returns the inverse operation, or null when nothing changed
+ */
+export function recordCategoryColourEdit(mutate, { coalesceKey } = {}) {
+	const before = clone(core.categoryColours);
+	mutate();
+	const after = clone(core.categoryColours);
+	if (JSON.stringify(before) === JSON.stringify(after)) return null;
+	core.categoryColours = before;
+	const op = { kind: 'setAppearanceMaps', categories: after };
+	return applyOp(coalesceKey ? { kind: 'batch', ops: [op], coalesceKey } : op);
+}

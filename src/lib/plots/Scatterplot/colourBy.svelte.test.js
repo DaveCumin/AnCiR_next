@@ -601,7 +601,7 @@ describe('the AI editor and the multi-select panel', () => {
 		const props = Object.fromEntries(plotProps(plot).map((p) => [p.path, p]));
 		expect(props['plot.data[0].colourEncoding.mode']).toMatchObject({
 			value: 'auto',
-			options: ['auto', 'value', 'hourOfDay', 'dayOfYear', 'daysSinceStart']
+			options: ['auto', 'value', 'hourOfDay', 'dayOfYear', 'daysSinceStart', 'category']
 		});
 		expect(props['plot.data[0].colourEncoding.colormap'].options).toContain('twilight_shifted');
 		expect(props['plot.data[0].colourEncoding.domainMin']).toMatchObject({

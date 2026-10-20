@@ -65,6 +65,7 @@
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
 	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
 	import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
+	import { pinAllCategoryColours } from '$lib/plots/seriesColour.js';
 	import StartScreen from '$lib/components/views/StartScreen.svelte';
 	import { startOverlayState } from '$lib/start/startVisibility.js';
 	import { queueHelpHint } from '$lib/core/helpHint.svelte.js';
@@ -119,6 +120,11 @@
 	// settles rather than thrashing.
 	$effect(() => {
 		pinAllSeriesAppearance(core.plots);
+	});
+	// The same for the categories a plot colours by (Colour by, Category mode): each label
+	// pins the colour it is drawn in, so a box plot of the same column draws it alike.
+	$effect(() => {
+		pinAllCategoryColours(core.plots);
 	});
 
 	$effect(() => {

@@ -40,6 +40,7 @@
 		ensureUniqueEncodingIds,
 		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
+	import { encodedCsvCell } from '$lib/components/plotbits/encodingHost.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	// Tab keys derive from these headers lower-cased (controlTabsCoverage.test.js):
@@ -174,7 +175,7 @@
 			if (this.points.draw) {
 				item.elements.push({
 					type: 'points',
-					color: this.colourActive ? COLOUR_BY_SWATCH : this.points.colour,
+					color: this.colourActive && !this.colourRefusal ? COLOUR_BY_SWATCH : this.points.colour,
 					size: this.points.radius,
 					shape: this.points.shape
 				});
@@ -903,7 +904,7 @@
 				// Colour by: the value each point is coloured by (plan 3.9), e.g. its hour of day.
 				if (datum.colourActive) {
 					headers.push(`c_${label}`);
-					columns.push(datum.colourEncoded.values.map((v) => (Number.isFinite(v) ? v : '')));
+					columns.push(datum.colourEncoded.values.map(encodedCsvCell));
 				}
 				// Size by: the value each point is sized by (plan 3.9).
 				if (datum.sizeActive) {
@@ -1213,6 +1214,7 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				categories={theData.colourKey?.categorical ? theData.colourKey.categories : null}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>

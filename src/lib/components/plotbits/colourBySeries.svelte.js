@@ -40,6 +40,7 @@ import { ColourEncodingClass, SizeEncodingClass } from './Encoding.svelte';
 import {
 	ColourScaleClass,
 	colourScaleGeometry,
+	categoryKeyGeometry,
 	autoBarLength,
 	titleRunLength,
 	minBarLength,
@@ -53,6 +54,9 @@ import {
 	colourBuckets,
 	bucketColours,
 	groupEncodingValue,
+	groupCategory,
+	categoryIndices,
+	isCategoryMode,
 	sizeRange,
 	sizeRadii,
 	NO_VALUE,
@@ -60,6 +64,7 @@ import {
 	SIZE_BUCKETS
 } from './encodings.js';
 import { colouredLineSegments } from './colouredLine.js';
+import { categoryCap, categoryPalette } from '$lib/plots/seriesColour.js';
 import {
 	ENCODING_FIELDS,
 	ENCODING_CHANNELS,
@@ -171,12 +176,14 @@ export class EncodingChannel {
 		const enc = this.encoded;
 		if (!enc) return null;
 		const rowValues = enc.values;
+		// A category's "no value" is null (its values are labels), every other mode's NaN.
+		const none = isCategoryMode(this.mode) ? null : NaN;
 		const groups = this.#series.markGroups;
 		if (groups) {
 			const mode = this.mode;
 			return groups.map((rows) =>
 				groupEncodingValue(
-					rows.map((r) => (r < rowValues.length ? rowValues[r] : NaN)),
+					rows.map((r) => (r < rowValues.length ? rowValues[r] : none)),
 					mode
 				)
 			);
@@ -186,11 +193,27 @@ export class EncodingChannel {
 			const out = new Array(rows.length);
 			for (let k = 0; k < rows.length; k++) {
 				const r = rows[k];
-				out[k] = r < rowValues.length ? rowValues[r] : NaN;
+				out[k] = r < rowValues.length ? rowValues[r] : none;
 			}
 			return out;
 		}
 		return rowValues;
+	});
+	/**
+	 * Category, a mark per GROUP (Mean +/- SEM): how many groups mix categories. Such a group's
+	 * mean belongs to no single category, so it is drawn as "no value" and the panel says so
+	 * (encodings.groupCategory).
+	 */
+	mixedCount = $derived.by(() => {
+		const enc = this.encoded;
+		const groups = this.#series.markGroups;
+		if (!enc || !groups || !isCategoryMode(this.mode)) return 0;
+		const rowValues = enc.values;
+		let n = 0;
+		for (const rows of groups) {
+			if (groupCategory(rows.map((r) => (r < rowValues.length ? rowValues[r] : null))).mixed) n++;
+		}
+		return n;
 	});
 	/** The range over every series (and facet panel) sharing this column and mode. */
 	autoDomain = $derived(
@@ -421,30 +444,89 @@ export class EncodedSeries {
 		return this.#channels.colour.lengthNote;
 	}
 
-	/** The colour bucket of each MARK (NO_VALUE where it has no value). */
-	colourIdx = $derived(
-		this.colourActive ? colourBuckets(this.colourMarkValues, this.colourDomain) : null
-	);
+	// ---- Category (colour-by plan v1.1) ----
+	/** Coloured by Category: each label its session colour (core.categoryColours). */
+	colourCategorical = $derived(this.colourActive && isCategoryMode(this.colourMode));
+	/**
+	 * Why Category colouring is refused, or null: more categories (over every series and panel
+	 * sharing the key) than the palette has colours (decision 4). Then NO mark is coloured (no
+	 * partial colouring): every mark keeps the series colour, no key is drawn, the panel says
+	 * why.
+	 */
+	colourRefusal = $derived.by(() => {
+		if (!this.colourCategorical) return null;
+		const n = this.colourDomain?.categories?.length ?? 0;
+		const cap = categoryCap();
+		return n > cap
+			? `This column has ${n} categories; Colour by can show at most ${cap}, one per palette colour. Nothing is coloured: pick a column with fewer categories.`
+			: null;
+	});
+	/** Groups (Mean +/- SEM) whose rows mix categories: drawn as "no value". */
+	get colourMixedCount() {
+		return this.colourCategorical && !this.colourRefusal ? this.#channels.colour.mixedCount : 0;
+	}
+
+	/**
+	 * The colour bucket of each MARK (NO_VALUE where it has no value); for Category, the
+	 * category's place in the key; null while off or refused.
+	 */
+	colourIdx = $derived.by(() => {
+		if (!this.colourActive) return null;
+		if (this.colourCategorical) {
+			return this.colourRefusal
+				? null
+				: categoryIndices(this.colourMarkValues, this.colourDomain.categories);
+		}
+		return colourBuckets(this.colourMarkValues, this.colourDomain);
+	});
 	colourMonochrome = $derived(this.parentPlot?.parentBox?.style?.monochrome === true);
-	/** The map as chosen (before monochrome), and the map drawn. */
+	/** The map as chosen (before monochrome), and the map drawn (none for Category). */
 	colourMapBase = $derived(
-		this.colourMode ? effectiveColormap(this.colourEncoding?.colormap, this.colourMode) : null
+		this.colourMode && !isCategoryMode(this.colourMode)
+			? effectiveColormap(this.colourEncoding?.colormap, this.colourMode)
+			: null
 	);
 	colourMap = $derived(
-		this.colourMode
+		this.colourMode && !isCategoryMode(this.colourMode)
 			? effectiveColormap(this.colourEncoding?.colormap, this.colourMode, this.colourMonochrome)
 			: null
 	);
-	colourPalette = $derived(this.colourMap ? bucketColours(this.colourMap) : null);
+	/**
+	 * The colours drawn: the K bucket colours of the map, or for Category one colour per
+	 * category in key order (the Boxplot's: seriesColour.categoryPalette; greys when
+	 * monochrome, as a monochrome Boxplot draws).
+	 */
+	colourPalette = $derived.by(() => {
+		if (this.colourCategorical) {
+			if (this.colourRefusal) return null;
+			const d = this.colourDomain;
+			return categoryPalette(d.categories, d.firstSeen, this.colourMonochrome);
+		}
+		return this.colourMap ? bucketColours(this.colourMap) : null;
+	});
+	/**
+	 * The categories this series draws in their colours (key order), or null: on, Category,
+	 * not refused, and some mark (points or the line) coloured. The app shell pins them
+	 * (pinAllCategoryColours) and the Data tab offers their colour pickers.
+	 */
+	colourCategoryShown = $derived(
+		this.colourCategorical && !this.colourRefusal && (this.drawsPoints || this.colourLineActive)
+			? this.colourDomain.categories
+			: null
+	);
+	/** The order those categories claim palette slots in (first appearance, as the Boxplot). */
+	get colourCategoryPinOrder() {
+		return this.colourCategoryShown ? this.colourDomain.firstSeen : null;
+	}
 	/** Drawn marks with no colour value: drawn in the series colour. */
 	colourNoValueCount = $derived.by(() => {
-		if (!this.colourActive) return 0;
+		if (!this.colourActive || !this.colourIdx) return 0;
 		const idx = this.colourIdx;
 		return this.#channels.colour.noValueCount((k) => k >= idx.length || idx[k] === NO_VALUE);
 	});
 	/** What a point renderer draws with (Points' `colourBy` prop), or null for one path. */
 	colourRender = $derived.by(() => {
-		if (!this.colourActive || !this.drawsPoints) return null;
+		if (!this.colourActive || !this.drawsPoints || !this.colourIdx) return null;
 		return this.#colourSpec(this.colourPointColour);
 	});
 	/** Whether this series can colour its line (it draws one, and its plot colours lines). */
@@ -456,7 +538,10 @@ export class EncodedSeries {
 	 * series' "Colour the line too" is on.
 	 */
 	colourLineActive = $derived(
-		this.colourActive && this.colourLineCapable && this.colourEncoding?.colourLine === true
+		this.colourActive &&
+			!this.colourRefusal &&
+			this.colourLineCapable &&
+			this.colourEncoding?.colourLine === true
 	);
 	/** What Line draws with (its `colourBy` prop), or null for one line-coloured path. */
 	colourLineRender = $derived.by(() => {
@@ -468,7 +553,7 @@ export class EncodedSeries {
 		if (!this.colourLineActive) return 0;
 		const { x, y } = this.colourLineXY;
 		const { groups } = colouredLineSegments(x, y, this.colourIdx, {
-			K: COLOUR_BUCKETS,
+			K: this.colourPalette?.length ?? COLOUR_BUCKETS,
 			joinGaps: this.line.joinGaps
 		});
 		return groups[0].length / 2;
@@ -754,7 +839,14 @@ export class EncodingKeyLayout {
 	 */
 	key = $derived.by(() => {
 		const data = this.#host.data ?? [];
-		const colours = (d) => d?.colourActive && (d.drawsPoints || d.colourLineActive);
+		// A refused series (too many categories) colours nothing, so it has no key.
+		// A Category series whose marks carry no category (every group mixed, every cell blank)
+		// colours nothing either: a key of "no value" alone would name nothing.
+		const colours = (d) =>
+			d?.colourActive &&
+			!d.colourRefusal &&
+			!(d.colourCategorical && !d.colourDomain?.categories?.length) &&
+			(d.drawsPoints || d.colourLineActive);
 		const series = data.find(colours);
 		if (!series) return null;
 		const domain = series.colourDomain;
@@ -770,6 +862,22 @@ export class EncodingKeyLayout {
 			: noValueLine
 				? noValueLine.line.colour
 				: null;
+		const noValue = noValueColour ? { colour: noValueColour, label: 'no value' } : null;
+		if (series.colourCategorical) {
+			// Category (v1.1): a named swatch per category, in the Boxplot's order and colours.
+			const palette = series.colourPalette;
+			return {
+				series,
+				categorical: true,
+				colormap: null,
+				domain,
+				title: series.colourTitle,
+				ticks: [],
+				categories: domain.categories.map((label, i) => ({ label, colour: palette[i] })),
+				noValue,
+				sameAs: (d) => sig(d) === mine
+			};
+		}
 		return {
 			series,
 			colormap: series.colourMap,
@@ -779,10 +887,20 @@ export class EncodingKeyLayout {
 				manualLo: enc.domainMin != null,
 				manualHi: enc.domainMax != null
 			}),
-			noValue: noValueColour ? { colour: noValueColour, label: 'no value' } : null,
+			noValue,
 			sameAs: (d) => sig(d) === mine
 		};
 	});
+
+	/** The colour key is a list of categories (Category mode), not a bar. */
+	categorical = $derived(this.key?.categorical === true);
+	/**
+	 * The key runs top to bottom: a vertical bar, or a category list (always: its layout is a
+	 * column of names).
+	 */
+	vertical = $derived(this.categorical || this.#scale?.orientation !== 'horizontal');
+	/** The bar's stored length (null: automatic). A category key sizes itself. */
+	storedLength = $derived(this.categorical ? null : (this.#scale?.barLength ?? null));
 
 	/**
 	 * The size key's content (plan 3.7): the first series whose points are sized, or null.
@@ -823,10 +941,23 @@ export class EncodingKeyLayout {
 		this.#sizeScale?.fontSize ?? resolveStyle(this.#host.viewStyle).sizes.legend
 	);
 
-	/** The bar's geometry at a length (ColourScale.colourScaleGeometry), or null. */
+	/**
+	 * The bar's geometry at a length (ColourScale.colourScaleGeometry), or null. A category key's
+	 * at `length` px of room for its rows (ColourScale.categoryKeyGeometry: they wrap into
+	 * columns when one does not fit).
+	 */
 	geometry(length) {
 		const key = this.key;
 		if (!key || !this.#scale?.show) return null;
+		if (key.categorical) {
+			return categoryKeyGeometry({
+				items: key.categories,
+				noValue: key.noValue,
+				title: key.title,
+				fontSize: this.fontPx,
+				length
+			});
+		}
 		return colourScaleGeometry({
 			vertical: this.#scale.orientation !== 'horizontal',
 			thickness: this.#scale.barThickness ?? 10,
@@ -859,16 +990,50 @@ export class EncodingKeyLayout {
 		this.#opts.place || this.#sizeScale?.position === 'right' ? 0 : (this.#sizeScale?.padding ?? 8)
 	);
 
-	/** How far the bar's title runs along it (ColourScale.titleRunLength), px. */
+	/** How far the bar's title runs along it (ColourScale.titleRunLength), px; 0 for a
+	 *  category key (its title sits across the top). */
 	titleLength = $derived(
-		titleRunLength(this.key?.title, this.fontPx, this.#scale?.orientation !== 'horizontal')
+		this.categorical ? 0 : titleRunLength(this.key?.title, this.fontPx, this.vertical)
 	);
 
-	/** The bar's length before any legend shortens it: stored, else the plot height's (long
-	 *  enough for its title when the plot is). */
-	length0 = $derived(
-		this.#scale?.barLength ?? autoBarLength(this.#host.basePlotHeight, this.titleLength)
-	);
+	/**
+	 * The bar's length before any legend shortens it: stored, else the plot height's (long
+	 * enough for its title when the plot is). A category key's room for its rows: one column of
+	 * them, or the plot's height when they do not fit in it (then they wrap into columns, and
+	 * the room beside the plot is reserved for every column).
+	 */
+	length0 = $derived.by(() => {
+		if (this.categorical) {
+			const natural = categoryKeyGeometry({
+				items: this.key.categories,
+				noValue: this.key.noValue,
+				title: null,
+				fontSize: this.fontPx
+			}).natural;
+			// Beside the plot under a legend placed outside on the right (its box does not depend
+			// on where it goes), the room starts below it, so every column the rows wrap into is
+			// counted in the room reserved beside the plot.
+			const legendBox = this.#host.legendLayout?.box;
+			const under =
+				this.#host.legend?.position === 'outsideright' && legendBox
+					? legendBox.height + this.margin
+					: 0;
+			const room = this.#opts.categoryRoom
+				? this.#opts.categoryRoom(this)
+				: this.#scale?.position === 'right'
+					? this.#host.basePlotHeight - under
+					: this.#host.basePlotHeight - 2 * this.margin - 2 * this.inset;
+			// Less the title's height over the rows (the room is for the whole key).
+			const titleH = categoryKeyGeometry({
+				items: this.key.categories,
+				noValue: this.key.noValue,
+				title: this.key.title,
+				fontSize: this.fontPx
+			}).titleH;
+			return Math.max(this.minLength, Math.min(natural, room - titleH));
+		}
+		return this.storedLength ?? autoBarLength(this.#host.basePlotHeight, this.titleLength);
+	});
 	base = $derived(this.geometry(this.length0));
 
 	/** The view's legend inset, which the keys share. */
@@ -881,8 +1046,15 @@ export class EncodingKeyLayout {
 		!!this.base && !!this.sizeBase && samePlace(this.#scale.position, this.#sizeScale.position)
 	);
 
-	/** The shortest an automatic bar is made: room for its two end labels (minBarLength). */
-	minLength = $derived(minBarLength(this.fontPx));
+	/**
+	 * The shortest an automatic bar is made: room for its two end labels (minBarLength). A
+	 * category key's: one row.
+	 */
+	minLength = $derived(
+		this.categorical
+			? categoryKeyGeometry({ items: [], title: null, fontSize: this.fontPx }).rowH
+			: minBarLength(this.fontPx)
+	);
 
 	/**
 	 * The shortest an automatic bar is made to leave the size key room UNDER it: long enough
@@ -901,7 +1073,7 @@ export class EncodingKeyLayout {
 	 */
 	sizeBeside = $derived.by(() => {
 		if (this.#opts.place || !this.sizeSharesBar) return false;
-		if (this.#scale.orientation === 'horizontal' || this.#scale.barLength != null) return false;
+		if (!this.vertical || this.storedLength != null) return false;
 		const column =
 			this.#scale.position === 'right'
 				? this.#host.basePlotHeight
@@ -962,7 +1134,7 @@ export class EncodingKeyLayout {
 	placement = $derived.by(() => {
 		if (!this.base) return null;
 		if (this.#opts.place) return this.#hostPlaced;
-		const vertical = this.#scale.orientation !== 'horizontal';
+		const vertical = this.vertical;
 		const args = {
 			...this.#placeArgs(),
 			position: this.#scale.position,
@@ -978,7 +1150,7 @@ export class EncodingKeyLayout {
 	 * legend (the room is for the whole key: the bar plus its "no value" entry, and the size
 	 * key under it when they share the place).
 	 */
-	fitVertical(args, vertical = this.#scale.orientation !== 'horizontal') {
+	fitVertical(args, vertical = this.vertical) {
 		const { legend = null, ...rest } = args;
 		const stack = legend ? [legend] : [];
 		const first = placeKey({ ...rest, stack, box: this.base });
@@ -989,7 +1161,7 @@ export class EncodingKeyLayout {
 				: 0;
 		const room = first.maxLength - after;
 		const besides = this.base.height - length;
-		if (vertical && this.#scale.barLength == null && room < length + besides) {
+		if (vertical && this.storedLength == null && room < length + besides) {
 			// Never under minLength (its end labels would crowd), nor longer than it was.
 			const shorter = Math.min(length, Math.max(this.minLength, room - besides));
 			const placed = placeKey({ ...rest, stack, box: this.geometry(shorter) });
@@ -1006,7 +1178,8 @@ export class EncodingKeyLayout {
 		const at = this.placement;
 		const key = this.key;
 		if (!at || !key || !this.base) return null;
-		const vertical = this.#scale.orientation !== 'horizontal';
+		if (key.categorical) return { ticks: [], title: key.title };
+		const vertical = this.vertical;
 		const o = { vertical, barLen: at.length, fontSize: this.fontPx };
 		const title =
 			key.title && (this.base.rotateLabel || !vertical)
@@ -1142,6 +1315,7 @@ export class EncodingKeyLayout {
 			label: key.title,
 			ticks: key.ticks,
 			noValue: key.noValue,
+			categories: key.categorical ? key.categories : null,
 			idPrefix: 'colourby-' + String(host.parentBox?.id ?? 'plot').replace(/[^\w-]/g, '_'),
 			placement: { x: at.x, y: at.y },
 			length: at.length,

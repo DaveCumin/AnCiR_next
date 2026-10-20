@@ -24,6 +24,7 @@
  */
 import { clockHourOfDay } from '$lib/utils/phaseReference.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
+import { isMissingCategory } from '$lib/utils/chisquare.js';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 import { colormapRGB } from './colormaps.js';
 
@@ -38,19 +39,45 @@ const MS_PER_DAY = 86400000;
 const HOURS_PER_DAY = 24;
 
 /** The modes, in the order a control lists them. */
-export const ENCODING_MODES = Object.freeze(['value', 'hourOfDay', 'dayOfYear', 'daysSinceStart']);
+export const ENCODING_MODES = Object.freeze([
+	'value',
+	'hourOfDay',
+	'dayOfYear',
+	'daysSinceStart',
+	'category'
+]);
 
 /** UI words for each mode (plan 3.3). */
 export const ENCODING_MODE_LABELS = Object.freeze({
 	value: 'Value',
 	hourOfDay: 'Hour of day',
 	dayOfYear: 'Day of year',
-	daysSinceStart: 'Days since start'
+	daysSinceStart: 'Days since start',
+	category: 'Category'
 });
 
 /** A mode whose values wrap (Hour of day, period 24 h): its domain is fixed and cyclic. */
 export function isCyclicMode(mode) {
 	return mode === 'hourOfDay';
+}
+
+/**
+ * Category (colour-by plan v1.1): each distinct value is its own colour, the one the Boxplot
+ * gives that category (core.categoryColours, plots/seriesColour.js). Colour only: a category
+ * has no "bigger", so Size by never offers it.
+ */
+export function isCategoryMode(mode) {
+	return mode === 'category';
+}
+
+/** The modes Size by can read a column as: neither cyclic nor categorical (plan 3.7). */
+export const SIZE_ENCODING_MODES = Object.freeze(
+	ENCODING_MODES.filter((m) => !isCyclicMode(m) && !isCategoryMode(m))
+);
+
+/** A column whose cells are labels (text or category), not numbers. */
+export function isCategoricalColumn(column) {
+	return column?.type === 'category' || column?.type === 'text';
 }
 
 /**
@@ -94,22 +121,33 @@ export function dayOfYear(ms, zone = 'utc') {
 /**
  * The modes a column can be coloured by, each with a warning when the mode reads the column
  * in a way the user should know about.
+ *
+ * Category (v1.1): the only mode of a text or category column, and offered LAST for a number
+ * column without a clock (numbers as labels: a colony or animal id, as the Boxplot already
+ * reads a number x column). Never for a time or clock column (every instant would be its own
+ * category). `{ categories: false }` leaves it out (Size by).
  * @param {{type?: string, originTime_ms?: number|null}} column
+ * @param {{categories?: boolean}} [o]
  * @returns {{mode: string, warning: string|null}[]}
  */
-export function encodingModesFor(column) {
+export function encodingModesFor(column, { categories = true } = {}) {
 	const type = column?.type;
 	const origin = column?.originTime_ms ?? NaN;
+	if (categories && isCategoricalColumn(column)) return [{ mode: 'category', warning: null }];
 	if (type === 'time') {
 		return ['hourOfDay', 'dayOfYear', 'daysSinceStart'].map((mode) => ({ mode, warning: null }));
 	}
 	if (hasClock(type, origin)) {
-		return ENCODING_MODES.map((mode) => ({ mode, warning: null }));
+		return ['value', 'hourOfDay', 'dayOfYear', 'daysSinceStart'].map((mode) => ({
+			mode,
+			warning: null
+		}));
 	}
 	return [
 		{ mode: 'value', warning: null },
 		{ mode: 'hourOfDay', warning: WRAPPED_HOURS_WARNING },
-		{ mode: 'daysSinceStart', warning: null }
+		{ mode: 'daysSinceStart', warning: null },
+		...(categories ? [{ mode: 'category', warning: null }] : [])
 	];
 }
 
@@ -130,11 +168,13 @@ export const NO_DATE_WARNING = 'Day of year needs a time column (or hours from a
  *   clock.
  * - daysSinceStart: days after the column's earliest valid value. A number column (and a
  *   bin column) counts hours, the app's unit for a numeric time axis.
+ * - category: the cell's LABEL, `String(v)` as the Boxplot keys a category, or null for a
+ *   missing cell (isMissingCategory); these values are strings, not numbers.
  *
  * @param {string} mode one of ENCODING_MODES
  * @param {ArrayLike<any>} values the column's cells
  * @param {{type?: string, originTime_ms?: number|null, zone?: string}} [opts]
- * @returns {{values: number[], warning: string|null}}
+ * @returns {{values: any[], warning: string|null}}
  */
 export function encodingValues(mode, values, opts = {}) {
 	const type = opts.type ?? 'number';
@@ -143,6 +183,11 @@ export function encodingValues(mode, values, opts = {}) {
 	const n = values?.length ?? 0;
 	const out = new Array(n);
 	let warning = null;
+
+	if (mode === 'category') {
+		for (let i = 0; i < n; i++) out[i] = categoryLabel(values[i]);
+		return { values: out, warning };
+	}
 
 	if (mode === 'hourOfDay') {
 		if (hasClock(type, origin)) {
@@ -187,11 +232,14 @@ export function encodingValues(mode, values, opts = {}) {
  * given (pass all series, or all facet panels, to share one scale), with `domainIN`
  * overriding either end when it holds a finite number (null leaves that end automatic).
  *
- * @param {ArrayLike<number>[]} valueArrays encoded values (from encodingValues)
+ * Category: the categories (categoryDomain); a manual range does not apply.
+ *
+ * @param {ArrayLike<any>[]} valueArrays encoded values (from encodingValues)
  * @param {{mode?: string, domainIN?: (number|null|undefined)[]|null}} [opts]
- * @returns {{lo: number, hi: number, cyclic: boolean, period: number|null}}
+ * @returns {{lo: number, hi: number, cyclic: boolean, period: number|null, categories?: string[], firstSeen?: string[]}}
  */
 export function encodingDomain(valueArrays, opts = {}) {
+	if (isCategoryMode(opts.mode)) return categoryDomain(valueArrays);
 	if (isCyclicMode(opts.mode))
 		return { lo: 0, hi: HOURS_PER_DAY, cyclic: true, period: HOURS_PER_DAY };
 	let lo = Infinity;
@@ -273,6 +321,89 @@ export function bucketColours(colormap, K = COLOUR_BUCKETS) {
 	return Array.from({ length: K }, (_, b) => colormapRGB(colormap, (b + 0.5) / K));
 }
 
+// ---- Category (colour-by plan v1.1) ----------------------------------------------------
+//
+// A category is its LABEL (String of the cell), exactly as the Boxplot keys its boxes, so a
+// label has one colour everywhere: core.categoryColours (plots/seriesColour.js). The colours
+// themselves are resolved there (categoryPalette); these rules are pure.
+
+/** A cell's category label, or null for a missing one (blank, null, NaN: isMissingCategory). */
+export function categoryLabel(v) {
+	return isMissingCategory(v) ? null : String(v);
+}
+
+/**
+ * The order the Boxplot lists categories in (Boxplotclass.uniqueXValues): numerically when
+ * both labels read as numbers, else by localeCompare.
+ * @param {string} a
+ * @param {string} b
+ */
+export function compareCategories(a, b) {
+	const sa = String(a);
+	const sb = String(b);
+	if (!isNaN(+sa) && !isNaN(+sb)) return +sa - +sb;
+	return sa.localeCompare(sb);
+}
+
+/**
+ * The categories a colour scale spans: every label of every array (pass all series, or all
+ * facet panels, so they share one key), `categories` in the Boxplot's order (the key and the
+ * monochrome greys), `firstSeen` in order of first appearance (the order a label claims a
+ * palette slot in, as the Boxplot claims them: plots/seriesColour.js colourForCategory).
+ * @param {ArrayLike<any>[]} labelArrays encoded labels (null: no value)
+ */
+export function categoryDomain(labelArrays) {
+	const seen = new Set();
+	const firstSeen = [];
+	for (const arr of labelArrays ?? []) {
+		const n = arr?.length ?? 0;
+		for (let i = 0; i < n; i++) {
+			const v = arr[i];
+			if (v == null || seen.has(v)) continue;
+			seen.add(v);
+			firstSeen.push(v);
+		}
+	}
+	const categories = firstSeen.slice().sort(compareCategories);
+	return { lo: NaN, hi: NaN, cyclic: false, period: null, categories, firstSeen };
+}
+
+/**
+ * The category index of every mark (its place in `categories`), or NO_VALUE where it has no
+ * label (or a label outside the list).
+ * @param {ArrayLike<any>} labels
+ * @param {string[]} categories
+ * @returns {Int16Array}
+ */
+export function categoryIndices(labels, categories) {
+	const at = new Map(categories.map((c, i) => [c, i]));
+	const n = labels?.length ?? 0;
+	const out = new Int16Array(n);
+	for (let i = 0; i < n; i++) {
+		const v = labels[i];
+		out[i] = v != null && at.has(v) ? /** @type {number} */ (at.get(v)) : NO_VALUE;
+	}
+	return out;
+}
+
+/**
+ * The category of a GROUP of rows (Mean +/- SEM): the label every row with a label shares, or
+ * null when no row has one. A group whose rows carry DIFFERENT labels is `mixed`: its mean is
+ * of no single category, so it is drawn as "no value" (in the series colour) and counted.
+ * @param {ArrayLike<any>} labels
+ * @returns {{label: string|null, mixed: boolean}}
+ */
+export function groupCategory(labels) {
+	let label = null;
+	for (let i = 0; i < (labels?.length ?? 0); i++) {
+		const v = labels[i];
+		if (v == null) continue;
+		if (label == null) label = v;
+		else if (v !== label) return { label: null, mixed: true };
+	}
+	return { label, mixed: false };
+}
+
 /**
  * The circular mean of values on a cycle of `period` (hours of day: 24), in [0, period), or
  * NaN when there is no value or the values cancel out (no mean direction). 23:00 and 01:00
@@ -301,11 +432,13 @@ export function circularMean(values, period = HOURS_PER_DAY) {
 
 /**
  * The encoded value of a group of rows (plan 3.12, for plots that draw one mark per group):
- * the circular mean for a cyclic mode, else the arithmetic mean; NaN when no row has a value.
+ * the circular mean for a cyclic mode, the shared label for Category (null when the rows are
+ * mixed or unlabelled: groupCategory), else the arithmetic mean; NaN when no row has a value.
  * @param {ArrayLike<number>} values the group's encoded values
  * @param {string} mode
  */
 export function groupEncodingValue(values, mode) {
+	if (isCategoryMode(mode)) return groupCategory(values).label;
 	if (isCyclicMode(mode)) return circularMean(values, HOURS_PER_DAY);
 	let sum = 0;
 	let n = 0;
@@ -343,7 +476,7 @@ export const MIN_RADIUS_FLOOR = 1;
  * @returns {{mode: string, warning: string|null}[]}
  */
 export function sizeModesFor(column) {
-	return encodingModesFor(column).filter((m) => !isCyclicMode(m.mode));
+	return encodingModesFor(column, { categories: false }).filter((m) => !isCyclicMode(m.mode));
 }
 
 /**

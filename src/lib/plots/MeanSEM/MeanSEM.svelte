@@ -31,7 +31,8 @@
 		ensureUniqueEncodingIds,
 		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
-	import { isCyclicMode } from '$lib/components/plotbits/encodings.js';
+	import { encodedCsvCell } from '$lib/components/plotbits/encodingHost.js';
+	import { isCyclicMode, isCategoryMode } from '$lib/components/plotbits/encodings.js';
 
 	/**
 	 * Round a value outward to a "nice" axis limit (shared with Boxplot).
@@ -140,6 +141,16 @@
 		}
 		get colourSummaryNote() {
 			if (!this.colourActive) return null;
+			// Category (v1.1): a group mean takes its rows' category only when they share one.
+			// A mean over rows of several categories belongs to none of them, so it keeps the
+			// series colour rather than borrowing the most common one (which would label a
+			// mixed mean as a single category without saying so).
+			if (isCategoryMode(this.colourMode)) {
+				const mixed = this.colourMixedCount;
+				return mixed > 0
+					? `Each group mean takes its rows’ category. ${mixed} ${mixed === 1 ? 'group mixes' : 'groups mix'} categories and ${mixed === 1 ? 'keeps' : 'keep'} the series colour.`
+					: 'Each group mean takes its rows’ category; a group mixing categories keeps the series colour.';
+			}
 			return isCyclicMode(this.colourMode)
 				? 'Each group mean is coloured by the circular mean of its rows’ hours of day.'
 				: 'Each group mean is coloured by the mean of its rows’ colour values.';
@@ -164,7 +175,7 @@
 			if (this.points.draw) {
 				elements.push({
 					type: 'points',
-					color: this.colourActive ? COLOUR_BY_SWATCH : this.points.colour,
+					color: this.colourActive && !this.colourRefusal ? COLOUR_BY_SWATCH : this.points.colour,
 					shape: this.points.shape,
 					size: this.points.radius
 				});
@@ -565,7 +576,7 @@
 					const row = multiSeries ? [label, 'colour'] : ['colour'];
 					categories.forEach((cat) => {
 						const v = byGroup.get(String(cat));
-						row.push(Number.isFinite(v) ? v : '');
+						row.push(encodedCsvCell(v));
 					});
 					rows.push(row);
 				}
@@ -736,6 +747,7 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				categories={theData.colourKey?.categorical ? theData.colourKey.categories : null}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>

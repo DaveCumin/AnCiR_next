@@ -218,6 +218,21 @@ def colour_key_axes(ax):
     return keys[0] if keys else None
 
 
+def check_category_key(cax, key):
+    """A category key (Category mode, v1.1): one swatch per category in the app's colour and
+    order, then "no value", each named, the title on top. (Drawn at this test's own figure
+    size; test_plot_colour_by_category.py pins the app's own geometry and place.)"""
+    swatches = [p for p in cax.patches if p.get_gid() in ("colour-key-category",
+                                                         "colour-key-novalue")]
+    want = [(c["label"], c["colour"]) for c in key["categories"]]
+    if key["noValue"]:
+        want.append((key["noValue"]["label"], key["noValue"]["colour"]))
+    assert [rgb255(p.get_facecolor()) for p in swatches] == [rgb255(c) for _l, c in want]
+    texts = [t.get_text() for t in cax.texts]
+    assert texts[:len(want)] == [lab for lab, _c in want]
+    assert " ".join(texts[len(want):]) == key["title"]
+
+
 def check_key(ax, exp):
     key = exp["key"]
     cax = colour_key_axes(ax)
@@ -225,6 +240,9 @@ def check_key(ax, exp):
         assert cax is None
         return None
     assert cax is not None
+    if key.get("categorical"):
+        check_category_key(cax, key)
+        return cax
     vertical = cax.get_position().height > cax.get_position().width
     axis = cax.yaxis if vertical else cax.xaxis
     ticks = [(round(float(t), 9), lab.get_text()) for t, lab in
@@ -289,6 +307,15 @@ def check_legend(ax, exp):
             assert h.get_marker() in (None, "None", "none", "")
 
 
+def _palette_of(s):
+    """The app's colour per category (key order), read back from its drawn points."""
+    out = {}
+    for b, c in zip(s["idx"], s["pointColours"]):
+        if b is not None and b >= 0 and c is not None:
+            out[b] = c
+    return out
+
+
 # ---- the colour tables -------------------------------------------------------------------
 
 def test_runtime_colormaps_are_the_apps_tables():
@@ -346,6 +373,9 @@ def test_the_runtime_derives_the_apps_mode_range_and_buckets(name, plot_index):
     session = copy.deepcopy(case["session"])
     cols, _raw, _errors = run_session(session)
     plot = session["plots"][plot_index]
+    colours = (session.get("seriesColours") or {}).get(str(plot["id"]))
+    if colours:
+        plot["seriesColours"] = colours
     encs = rt.scatter_colour_encodings(plot, cols, zone=session["appState"]["displayTimezone"])
     for enc, s in zip(encs, case["expected"][plot_index]["series"]):
         if not s["active"]:
@@ -354,6 +384,12 @@ def test_the_runtime_derives_the_apps_mode_range_and_buckets(name, plot_index):
         assert enc["mode"] == s["mode"]
         assert enc["colormap"] == s["colormap"]
         assert enc["title"] == s["title"]
+        assert enc["idx"] == s["idx"]
+        if s["mode"] == "category":
+            assert enc["categories"] == s["domain"]["categories"]
+            for b, c in _palette_of(s).items():
+                assert rgb255(enc["palette"][b]) == rgb255(c)
+            continue
         assert enc["domain"]["lo"] == s["domain"]["lo"]
         assert enc["domain"]["hi"] == s["domain"]["hi"]
         assert enc["domain"]["cyclic"] == s["domain"]["cyclic"]

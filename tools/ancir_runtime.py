@@ -9095,7 +9095,13 @@ DEFAULT_COLORMAP = 'viridis'
 DEFAULT_CYCLIC_COLORMAP = 'twilight_shifted'
 # Scatterplot.svelte COLOUR_BY_SWATCH: the legend swatch of a series coloured by a column.
 COLOUR_BY_SWATCH = 'rgb(140, 140, 140)'
-COLOUR_ENCODING_MODES = ('value', 'hourOfDay', 'dayOfYear', 'daysSinceStart')
+COLOUR_ENCODING_MODES = ('value', 'hourOfDay', 'dayOfYear', 'daysSinceStart', 'category')
+# The modes of a column with a clock (time, or hours from a time origin), no Category.
+_CLOCK_ENCODING_MODES = ('value', 'hourOfDay', 'dayOfYear', 'daysSinceStart')
+# The app's default palette (core.svelte.js appState.appColours): Category's colours and its
+# cap when the export carries none (the app's resolved colours are always used when present).
+APP_PALETTE = ('#234154', '#BE796B', '#3E7295', '#EDADAD', '#A6ACD5', '#83422A', '#6B9FD5',
+               '#4A1E0E', '#fbe67280')
 WRAPPED_HOURS_WARNING = ('This column has no clock time, so hour of day is its hours since '
                          'start, wrapped at 24 h.')
 NO_DATE_WARNING = 'Day of year needs a time column (or hours from a time origin).'
@@ -9153,13 +9159,17 @@ def _has_clock(col_type, origin_ms):
     return col_type == 'time' or (origin_ms is not None and math.isfinite(origin_ms))
 
 
-def encoding_modes_for(col_type, origin_ms=None):
-    """encodings.js encodingModesFor: the modes a column can be coloured by."""
+def encoding_modes_for(col_type, origin_ms=None, categories=True):
+    """encodings.js encodingModesFor: the modes a column can be coloured by. Category is the
+    only mode of a text or category column and the last of a plain number column (never a
+    time or clock column); `categories=False` leaves it out (Size by)."""
+    if categories and col_type in ('category', 'text'):
+        return ['category']
     if col_type == 'time':
         return ['hourOfDay', 'dayOfYear', 'daysSinceStart']
     if _has_clock(col_type, origin_ms):
-        return list(COLOUR_ENCODING_MODES)
-    return ['value', 'hourOfDay', 'daysSinceStart']
+        return list(_CLOCK_ENCODING_MODES)
+    return ['value', 'hourOfDay', 'daysSinceStart'] + (['category'] if categories else [])
 
 
 def effective_colour_mode(stored, col_type, origin_ms=None):
@@ -9223,6 +9233,8 @@ def encoding_values(mode, values, col_type='number', origin_ms=None, zone='utc')
     """encodings.js encodingValues: (the value each row is coloured by, warning). NaN is no
     value."""
     values = list(values or [])
+    if mode == 'category':
+        return [category_label(v) for v in values], None
     if mode == 'hourOfDay':
         if _has_clock(col_type, origin_ms):
             return [clock_hour_of_day(_colour_clock_ms(v, col_type, origin_ms), zone)
@@ -9245,6 +9257,70 @@ def encoding_values(mode, values, col_type='number', origin_ms=None, zone='utc')
     return [_colour_cell_number(v) for v in values], None
 
 
+def category_label(v):
+    """encodings.js categoryLabel: a cell's label (JS String(v)), or None when missing."""
+    return None if _is_missing_category(v) else _js_string(v)
+
+
+def _category_cmp(a, b):
+    """encodings.js compareCategories (the Boxplot's order): numerically when both labels
+    read as numbers, else alphabetically (localeCompare, approximated case-insensitively)."""
+    def num(x):
+        if '_' in str(x):
+            return None
+        try:
+            v = float(str(x).strip()) if str(x).strip() != '' else 0.0
+        except ValueError:
+            return None
+        return None if math.isnan(v) else v
+    na, nb = num(a), num(b)
+    if na is not None and nb is not None:
+        return (na > nb) - (na < nb)
+    ka, kb = (str(a).casefold(), str(a)), (str(b).casefold(), str(b))
+    return (ka > kb) - (ka < kb)
+
+
+def category_domain(label_arrays):
+    """encodings.js categoryDomain: {'categories' (the Boxplot's order), 'first_seen'} over
+    every array, plus the numeric domain's keys (NaN) so the rest of the code reads it."""
+    import functools
+    seen, first = set(), []
+    for arr in label_arrays or []:
+        for v in arr or []:
+            if v is None or v in seen:
+                continue
+            seen.add(v)
+            first.append(v)
+    cats = sorted(first, key=functools.cmp_to_key(_category_cmp))
+    return {'lo': _NAN, 'hi': _NAN, 'cyclic': False, 'period': None, 'categories': cats,
+            'first_seen': first}
+
+
+def category_indices(labels, categories):
+    """encodings.js categoryIndices: each label's place in `categories`, -1 for none."""
+    at = {c: i for i, c in enumerate(categories)}
+    return [at.get(v, NO_COLOUR_VALUE) if v is not None else NO_COLOUR_VALUE for v in labels]
+
+
+def grey_for_index(i, n):
+    """seriesAppearance.js greyForIndex: an evenly spaced grey from #222222 to #aaaaaa."""
+    count = max(1, n)
+    t = 0 if count == 1 else min(1, max(0, i / (count - 1)))
+    v = _js_round(0x22 + (0xaa - 0x22) * t)
+    return '#' + f'{v:02x}' * 3
+
+
+def category_palette_fallback(first_seen, categories, monochrome=False):
+    """seriesColour.js categoryPalette with no pins (an export without the app's resolved
+    colours): each label in first-appearance order claims the next default palette slot; in
+    monochrome, the Boxplot's greys by key order."""
+    if monochrome:
+        return [grey_for_index(i, len(categories)) for i in range(len(categories))]
+    size = len(APP_PALETTE)
+    slot = {c: APP_PALETTE[i % size] for i, c in enumerate(first_seen)}
+    return [slot.get(c, APP_PALETTE[0]) for c in categories]
+
+
 def _number_or_none(v):
     """Encoding.svelte numberOrNullIn: a finite number, else None (an automatic end)."""
     if v is None or v == '' or isinstance(v, bool):
@@ -9259,7 +9335,9 @@ def _number_or_none(v):
 def encoding_domain(value_arrays, mode=None, domain_in=None):
     """encodings.js encodingDomain: {'lo', 'hi', 'cyclic', 'period'}. Hour of day is fixed
     at [0, 24) and wraps; otherwise the finite min and max over EVERY array given, a manual
-    end overriding either."""
+    end overriding either. Category: its categories (category_domain)."""
+    if mode == 'category':
+        return category_domain(value_arrays)
     if is_cyclic_mode(mode):
         return {'lo': 0, 'hi': _HOURS_PER_DAY, 'cyclic': True, 'period': _HOURS_PER_DAY}
     lo, hi = math.inf, -math.inf
@@ -9368,6 +9446,8 @@ def _js_to_precision_number(v, p):
 
 def format_colour_value(v, mode):
     """encodingHost.js formatColourValue: a colour value as the colour bar prints it."""
+    if mode == 'category':
+        return 'no value' if v is None else str(v)
     if not (isinstance(v, (int, float)) and math.isfinite(v)):
         return 'no value'
     if mode == 'hourOfDay':
@@ -9443,7 +9523,8 @@ MIN_RADIUS_FLOOR = 1
 
 def size_modes_for(col_type, origin_ms=None):
     """encodings.js sizeModesFor: the colour modes without Hour of day."""
-    return [m for m in encoding_modes_for(col_type, origin_ms) if not is_cyclic_mode(m)]
+    return [m for m in encoding_modes_for(col_type, origin_ms, categories=False)
+            if not is_cyclic_mode(m)]
 
 
 def effective_size_mode(stored, col_type, origin_ms=None):
@@ -9762,7 +9843,10 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
     valid = [_js_plot_valid(x[i]) and _js_plot_valid(y[i]) for i in range(n)]
     rows = [i for i in range(n) if valid[i]]
     idx = list((colour_by or {}).get('idx') or [])
-    palette = [tuple(v / 255 for v in c) for c in ((colour_by or {}).get('palette') or [])]
+    # Bucket colours are (r, g, b) 0..255; Category's are the app's CSS colours (hex, with
+    # alpha for a translucent palette entry).
+    palette = [tuple(v / 255 for v in c) if isinstance(c, (tuple, list)) else _mpl_colour(c)
+               for c in ((colour_by or {}).get('palette') or [])]
     coloured = colour_by is not None and bool(palette)
     coloured_line = coloured and bool(colour_by.get('line'))
 
@@ -10657,7 +10741,14 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
       way; on a faceted plot (`facet`), every coloured series of that mode, so all panels
       share one scale (Scatterplotclass.colourDomainFor). A manual end overrides.
     - The map is resolved at draw time; monochrome (the figure's `style.monochrome`) swaps
-      it for its grey twin without touching the saved map."""
+      it for its grey twin without touching the saved map.
+    - Category (v1.1): each row's label; the categories over the same series as the range;
+      their colours are the APP's (the export's `seriesColours[i].colourCategories`: the
+      session's category colours, pinned palette slots or the user's own, greys when
+      monochrome), so a label has the colour its box has in the app. Without them (a session
+      not exported from the app) the default palette by first appearance. More categories
+      than palette colours, or the app's `refused`, colour nothing (None: the series is drawn
+      plain and has no key), as the app refuses."""
     zone = DISPLAY_TIMEZONE if zone is None else zone
     p = plot.get('plot', {}) or {}
     data = p.get('data', []) or []
@@ -10677,6 +10768,15 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
         origin = None if col.type == 'time' else _scatter_x_origin_ms(col)
         mode = effective_colour_mode(enc.get('mode'), col.type, origin)
         values, warning = encoding_values(mode, col.get_data() or [], col.type, origin, zone)
+        if mode == 'category':
+            out.append({
+                'ref': ref, 'mode': mode, 'values': values, 'warning': None,
+                'colormap': None, 'palette': None, 'domain_in': [None, None],
+                'line': enc.get('colourLine') is True, 'monochrome': monochrome,
+                'resolved': _resolved_series_colours(plot, len(out)).get('colourCategories'),
+                'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone),
+            })
+            continue
         cmap = effective_colormap(enc.get('colormap'), mode, monochrome)
         out.append({
             'ref': ref, 'mode': mode, 'values': values, 'warning': warning,
@@ -10693,8 +10793,37 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
         arrays = [o['values'] for o in out
                   if o is not None and o['mode'] == e['mode'] and (facet or o['ref'] == e['ref'])]
         e['domain'] = encoding_domain(arrays, mode=e['mode'], domain_in=e['domain_in'])
+        if e['mode'] == 'category':
+            _resolve_category_colours(e)
+            continue
         e['idx'] = colour_buckets(e['values'], e['domain'])
-    return out
+    return [None if (e is not None and e.get('refused')) else e for e in out]
+
+
+def _resolve_category_colours(e):
+    """A Category encoding's categories, colours and per-row index (in place): the app's
+    (`resolved`: {'labels', 'colours'} or {'refused': True}) when the export carries them,
+    else the categories found here and the default palette (category_palette_fallback),
+    refused past its length."""
+    resolved = e.get('resolved') or {}
+    dom = e['domain']
+    if resolved.get('refused'):
+        e['refused'] = True
+        return
+    labels = resolved.get('labels')
+    colours = resolved.get('colours')
+    if isinstance(labels, list) and isinstance(colours, list) and len(labels) == len(colours):
+        cats, palette = [str(c) for c in labels], list(colours)
+    else:
+        cats = dom['categories']
+        if len(cats) > len(APP_PALETTE):
+            e['refused'] = True
+            return
+        palette = category_palette_fallback(dom['first_seen'], cats, e['monochrome'])
+    e['domain'] = {**dom, 'categories': cats}
+    e['categories'] = cats
+    e['palette'] = palette
+    e['idx'] = category_indices(e['values'], cats)
 
 
 def _colour_drawn_by(series, enc):
@@ -10719,6 +10848,8 @@ def scatter_colour_key(plot, columns_index, encodings, xy=None):
     e = encodings[first]
 
     def sig(o):
+        if o['mode'] == 'category':
+            return (o['ref'], o['mode'], tuple(o['categories']))
         return (o['ref'], o['mode'], o['colormap'], repr(o['domain']['lo']),
                 repr(o['domain']['hi']), o['domain']['cyclic'])
 
@@ -10753,6 +10884,13 @@ def scatter_colour_key(plot, columns_index, encodings, xy=None):
         colour = ((data[hit].get(part) or {}).get('colour')
                   or _resolved_series_colours(plot, hit).get(part) or f'C{hit}')
         no_value = {'colour': colour, 'label': 'no value'}
+    if e['mode'] == 'category':
+        # Category (v1.1): a named swatch per category, in the app's order and colours.
+        return {
+            'series': first, 'categorical': True, 'colormap': None, 'palette': e['palette'],
+            'domain': e['domain'], 'title': e['title'], 'ticks': [],
+            'categories': list(zip(e['categories'], e['palette'])), 'no_value': no_value,
+        }
     return {
         'series': first, 'colormap': e['colormap'], 'palette': e['palette'],
         'domain': e['domain'], 'title': e['title'],
@@ -10935,7 +11073,10 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
 def _colour_key_plan(ax_h, key, cs, look):
     """EncodingKeyLayout's bar before placement: orientation, a stored length (or None), the
     automatic length (long enough for the title where the plot is), the minimum, the
-    comfortable minimum, and the geometry at a length."""
+    comfortable minimum, and the geometry at a length. A category key (Category mode): its
+    room for its rows instead (category_key_plan)."""
+    if key.get('categorical'):
+        return category_key_plan(ax_h, key, cs, look)
     vertical = cs.get('orientation') != 'horizontal'
     thickness = cs.get('barThickness') or 10
     fixed = cs.get('barLength')
@@ -10953,6 +11094,79 @@ def _colour_key_plan(ax_h, key, cs, look):
     return {'vertical': vertical, 'fixed': fixed, 'length0': length0, 'min_len': min_len,
             'comfort': min(length0, max(min_len, title_len)), 'geom': geom,
             'font_px': font_px}
+
+
+# ColourScale.svelte: the category key's row and column gaps, swatch-to-name gap and title.
+CATEGORY_ROW_GAP = 3
+CATEGORY_COLUMN_GAP = 10
+CATEGORY_LABEL_GAP = 4
+_CATEGORY_TITLE_GAP = 4
+_CATEGORY_TITLE_LINE_GAP = 2
+_CATEGORY_TITLE_MIN_CHARS = 14
+
+
+def category_key_geometry(items, no_value, title, font_px, length=None):
+    """ColourScale.svelte categoryKeyGeometry: the category key's footprint in px. `items`
+    [(label, colour)] in key order, then "no value"; the rows wrap into columns (top to
+    bottom, then left to right) when `length` px of room does not hold them in one; the title
+    on top, wrapped at the rows' width (14 characters at least)."""
+    entries = [(str(lab), col, False) for lab, col in items]
+    if no_value:
+        entries.append((no_value.get('label') or 'no value', no_value['colour'], True))
+    swatch = max(6, _js_round(font_px * 0.8))
+    row_h = max(swatch, font_px)
+    step = row_h + CATEGORY_ROW_GAP
+    n = max(1, len(entries))
+    if length is not None and math.isfinite(length):
+        fit = max(1, math.floor((length + CATEGORY_ROW_GAP) / step))
+    else:
+        fit = n
+    per_col = min(n, fit)
+    columns = max(1, math.ceil(len(entries) / per_col))
+    char_w = font_px * 0.6
+    col_ws = []
+    for c in range(columns):
+        names = [len(e[0]) for e in entries[c * per_col:(c + 1) * per_col]]
+        col_ws.append(swatch + CATEGORY_LABEL_GAP + max([0] + names) * char_w)
+    entries_w = sum(col_ws) + (columns - 1) * CATEGORY_COLUMN_GAP
+    max_chars = max(_CATEGORY_TITLE_MIN_CHARS, math.floor(entries_w / char_w))
+    lines = wrap_key_title(title, max_chars) if title else []
+    title_lines = [(text, k * (font_px + _CATEGORY_TITLE_LINE_GAP))
+                   for k, text in enumerate(lines)]
+    title_h = (len(lines) * font_px + (len(lines) - 1) * _CATEGORY_TITLE_LINE_GAP
+               + _CATEGORY_TITLE_GAP) if lines else 0
+    rows, x = [], 0
+    for c in range(columns):
+        for r, (lab, col, nv) in enumerate(entries[c * per_col:(c + 1) * per_col]):
+            rows.append({'label': lab, 'colour': col, 'no_value': nv, 'x': x,
+                         'y': title_h + r * step})
+        x += col_ws[c] + CATEGORY_COLUMN_GAP
+    title_w = max([0] + [len(t) * char_w for t in lines])
+    return {'width': max(entries_w, title_w), 'height': title_h + per_col * step - CATEGORY_ROW_GAP,
+            'swatch': swatch, 'row_h': row_h, 'step': step, 'title_h': title_h,
+            'natural': n * step - CATEGORY_ROW_GAP, 'per_column': per_col, 'columns': columns,
+            'title_lines': title_lines, 'rows': rows}
+
+
+def category_key_plan(ax_h, key, cs, look):
+    """EncodingKeyLayout for a category key: always vertical, no stored length; the room
+    for its rows is one column of them, or the plot's height (less a corner's margins and
+    backdrop, and the title) when they do not fit, never under one row."""
+    font_px = _colour_key_font_px(cs, look)
+    items = key['categories']
+    nv = key['no_value']
+    plain = category_key_geometry(items, nv, None, font_px)
+    titled = category_key_geometry(items, nv, key['title'], font_px)
+    min_len = plain['row_h']
+    position = cs.get('position') or 'right'
+    room = ax_h if position == 'right' else ax_h - 2 * 10 - 2 * _key_inset(cs)
+    length0 = max(min_len, min(plain['natural'], room - titled['title_h']))
+
+    def geom(length):
+        return category_key_geometry(items, nv, key['title'], font_px, length)
+    return {'vertical': True, 'fixed': None, 'length0': length0, 'min_len': min_len,
+            'comfort': min(length0, min_len), 'geom': geom, 'font_px': font_px,
+            'categorical': True}
 
 
 def _keys_side_by_side(ax_h, plan, base, size_geom, position, c_inset, s_inset, margin):
@@ -11038,6 +11252,48 @@ def _draw_size_key(ax, size_key, scale_json, at, look=None):
         kax.text(0, ty, text, va='top', ha='left', fontsize=font_pt, fontfamily=family,
                  clip_on=False)
     return kax
+
+def _draw_category_key(ax, key, scale_json, at, look=None):
+    """The category key (ColourScale.svelte, Category mode) at the app's placement `at`
+    (encoding_key_layout): an inset axes (gid 'colour-key') exactly the key's px footprint, a
+    square swatch per category in its colour (gid 'colour-key-category', 'colour-key-novalue'
+    for "no value") with its name to the right, the title on top; on the key's backdrop when
+    it sits over the data."""
+    from matplotlib.patches import Rectangle
+    if at is None:
+        return None
+    scale = scale_json or {}
+    ax_w, ax_h = _axes_px(ax)
+    font_px = _colour_key_font_px(scale, look)
+    g = category_key_geometry(key['categories'], key['no_value'], key['title'], font_px,
+                              at['length'])
+    font_pt = font_px * _PX_TO_PT
+    family = _font_family_list((look or resolve_figure_style(None))['family'])
+    pad = _key_inset(scale)
+    if pad:
+        _key_backdrop(ax, at['x'] - pad, at['y'] - pad, g['width'] + 2 * pad,
+                      g['height'] + 2 * pad, scale, look, 'colour-key-backdrop')
+    w = max(g['width'], 1e-6)
+    h = max(g['height'], 1e-6)
+    kax = ax.inset_axes([at['x'] / ax_w, 1 - (at['y'] + h) / ax_h, w / ax_w, h / ax_h])
+    kax.set_gid('colour-key')
+    kax.set_xlim(0, w)
+    kax.set_ylim(h, 0)  # px, y down, as the SVG
+    kax.set_axis_off()
+    kax.patch.set_alpha(0)
+    sw = g['swatch']
+    for row in g['rows']:
+        kax.add_patch(Rectangle(
+            (row['x'], row['y'] + (g['row_h'] - sw) / 2), sw, sw, linewidth=0,
+            edgecolor='none', facecolor=_mpl_colour(row['colour']), clip_on=False,
+            gid='colour-key-novalue' if row['no_value'] else 'colour-key-category'))
+        kax.text(row['x'] + sw + CATEGORY_LABEL_GAP, row['y'] + g['row_h'] / 2, row['label'],
+                 va='center', ha='left', fontsize=font_pt, fontfamily=family, clip_on=False)
+    for text, ty in g['title_lines']:
+        kax.text(0, ty, text, va='top', ha='left', fontsize=font_pt, fontfamily=family,
+                 clip_on=False)
+    return kax
+
 
 # ColourScale.svelte TICK_LABEL_SPACE: px kept between two neighbouring tick labels.
 COLOUR_KEY_TICK_LABEL_SPACE = 2
@@ -11153,6 +11409,8 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
     scale = scale_json or {}
     if key is None or scale.get('show', True) is False:
         return None
+    if key.get('categorical'):
+        return _draw_category_key(ax, key, scale, at, look)
     fig = ax.figure
     vertical = scale.get('orientation') != 'horizontal'
     ax_w, ax_h = _axes_px(ax)

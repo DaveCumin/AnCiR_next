@@ -23,6 +23,7 @@
 	// real domain the plot normalises against.
 	import { LegendClass, LEGEND_MARGIN, cornerFraction } from './Legend.svelte';
 	import { colormapRGB } from '$lib/components/plotbits/colormaps.js';
+	import { wrapKeyTitle } from './SizeKey.svelte';
 
 	/** How many stops the SVG gradient is built from. Enough that the eye cannot
 	 *  find the joins in any of the shipped ramps, cheap enough to inline. */
@@ -134,6 +135,108 @@
 			noValueY: vertical
 				? barLen + NO_VALUE_GAP
 				: thickness + 3 + fontSize + labelGap + NO_VALUE_GAP
+		};
+	}
+
+	// ---- The CATEGORY key (Colour by, Category mode; colour-by plan v1.1) ----
+	//
+	// A category has no position on a ramp, so its key is a list: one swatch per category in
+	// its colour, named, in the Boxplot's order, then "no value" when a mark had none. It takes
+	// the colour bar's place (same class, same placement, same stacking with the legend and the
+	// size key). `length` is the room for its rows: when they do not fit in one column they
+	// wrap into more, filled top to bottom then left to right (reading order), each column as
+	// wide as its longest name. The title sits on top, wrapped as the size key's is.
+
+	/** Gap between two rows, and between two columns, of the category key, px. */
+	export const CATEGORY_ROW_GAP = 3;
+	export const CATEGORY_COLUMN_GAP = 10;
+	/** Gap between a swatch and its name, px. */
+	export const CATEGORY_LABEL_GAP = 4;
+	const CATEGORY_TITLE_GAP = 4;
+	const CATEGORY_TITLE_LINE_GAP = 2;
+	const CATEGORY_TITLE_MIN_CHARS = 14;
+
+	/**
+	 * The category key's geometry, shared by the component and the host (placement, reserved
+	 * room) and ported one for one by the Python export (ancir_runtime.category_key_geometry).
+	 * Pure. Text widths are estimated at 0.6 em a character, as the bar's are.
+	 *
+	 * @param {object} o
+	 * @param {{label: string, colour: string}[]} o.items the categories, in key order
+	 * @param {{label?: string, colour: string}|null} [o.noValue]
+	 * @param {string|null} [o.title]
+	 * @param {number} o.fontSize
+	 * @param {number|null} [o.length] the room for the rows' height, px (null: one column)
+	 * @returns {{width: number, height: number, swatch: number, rowH: number, step: number,
+	 *   titleH: number, natural: number, perColumn: number, columns: number,
+	 *   titleLines: {text: string, y: number}[],
+	 *   rows: {label: string, colour: string, noValue: boolean, x: number, y: number}[]}}
+	 */
+	export function categoryKeyGeometry({
+		items,
+		noValue = null,
+		title = null,
+		fontSize,
+		length = null
+	}) {
+		const entries = [
+			...(items ?? []).map((it) => ({
+				label: String(it.label),
+				colour: it.colour,
+				noValue: false
+			})),
+			...(noValue
+				? [{ label: noValue.label ?? 'no value', colour: noValue.colour, noValue: true }]
+				: [])
+		];
+		const swatch = Math.max(6, Math.round(fontSize * 0.8));
+		const rowH = Math.max(swatch, fontSize);
+		const step = rowH + CATEGORY_ROW_GAP;
+		const n = Math.max(1, entries.length);
+		const fit =
+			length != null && Number.isFinite(length)
+				? Math.max(1, Math.floor((length + CATEGORY_ROW_GAP) / step))
+				: n;
+		const perColumn = Math.min(n, fit);
+		const columns = Math.max(1, Math.ceil(entries.length / perColumn));
+		const charW = fontSize * CHAR_EM;
+		const colWs = [];
+		for (let c = 0; c < columns; c++) {
+			const names = entries.slice(c * perColumn, (c + 1) * perColumn).map((e) => e.label.length);
+			colWs.push(swatch + CATEGORY_LABEL_GAP + Math.max(0, ...names) * charW);
+		}
+		const entriesW = colWs.reduce((a, w) => a + w, 0) + (columns - 1) * CATEGORY_COLUMN_GAP;
+		const maxChars = Math.max(CATEGORY_TITLE_MIN_CHARS, Math.floor(entriesW / charW));
+		const lines = title ? wrapKeyTitle(title, maxChars) : [];
+		const titleLines = lines.map((text, k) => ({
+			text,
+			y: k * (fontSize + CATEGORY_TITLE_LINE_GAP)
+		}));
+		const titleH = lines.length
+			? lines.length * fontSize + (lines.length - 1) * CATEGORY_TITLE_LINE_GAP + CATEGORY_TITLE_GAP
+			: 0;
+		const rows = [];
+		let x = 0;
+		for (let c = 0; c < columns; c++) {
+			entries.slice(c * perColumn, (c + 1) * perColumn).forEach((e, r) => {
+				rows.push({ ...e, x, y: titleH + r * step });
+			});
+			x += colWs[c] + CATEGORY_COLUMN_GAP;
+		}
+		const titleW = Math.max(0, ...lines.map((l) => l.length * charW));
+		return {
+			width: Math.max(entriesW, titleW),
+			height: titleH + perColumn * step - CATEGORY_ROW_GAP,
+			swatch,
+			rowH,
+			step,
+			titleH,
+			// The rows' height in ONE column, and the least room a row needs.
+			natural: n * step - CATEGORY_ROW_GAP,
+			perColumn,
+			columns,
+			titleLines,
+			rows
 		};
 	}
 
@@ -324,6 +427,10 @@
 		// Draw the backdrop box: null decides by position (over the data: yes; beside: no). A
 		// host that always places the key outside its marks passes false.
 		backdrop = null,
+		// Category mode (Colour by, v1.1): `[{ label, colour }]` in key order. The key is then a
+		// list of named swatches (categoryKeyGeometry), `length` the room for its rows, and the
+		// bar's own settings (layout, bar width and length) do not apply. null draws the bar.
+		categories = null,
 		which = 'plot'
 	} = $props();
 
@@ -383,8 +490,24 @@
 	);
 	const labelShortened = $derived(!!label && shownLabel !== label);
 
+	const catGeom = $derived(
+		categories
+			? categoryKeyGeometry({
+					items: categories,
+					noValue,
+					title: label,
+					fontSize,
+					length: length ?? null
+				})
+			: null
+	);
+
 	/** The whole key's footprint, used for placement and for the backdrop. */
-	const dims = $derived({ width: geom.width, height: geom.height });
+	const dims = $derived(
+		catGeom
+			? { width: catGeom.width, height: catGeom.height }
+			: { width: geom.width, height: geom.height }
+	);
 
 	const pos = $derived.by(() => {
 		if (placement) return placement;
@@ -481,7 +604,43 @@
 				/>
 			{/if}
 
-			{#if vertical}
+			{#if catGeom}
+				<!-- Category: one named swatch per category, then "no value" (in the series colour). -->
+				{#each catGeom.titleLines as line, i (i)}
+					<text
+						class="colour-scale-label"
+						x={0}
+						y={line.y}
+						dominant-baseline="hanging"
+						font-size={fontSize}
+						font-family={resolved.fontFamily}
+						fill="black">{line.text}</text
+					>
+				{/each}
+				{#each catGeom.rows as row, i (i)}
+					<g
+						class={row.noValue ? 'colour-scale-novalue' : 'colour-scale-category'}
+						transform="translate({row.x}, {row.y})"
+					>
+						<rect
+							x={0}
+							y={(catGeom.rowH - catGeom.swatch) / 2}
+							width={catGeom.swatch}
+							height={catGeom.swatch}
+							fill={row.colour}
+							stroke="none"
+						/>
+						<text
+							x={catGeom.swatch + CATEGORY_LABEL_GAP}
+							y={catGeom.rowH / 2}
+							dominant-baseline="central"
+							font-size={fontSize}
+							font-family={resolved.fontFamily}
+							fill="black">{row.label}</text
+						>
+					</g>
+				{/each}
+			{:else if vertical}
 				<rect x={0} y={0} width={thickness} height={barLen} fill={'url(#' + gradId + ')'} />
 				<!-- Top to bottom, so the DOM order matches the reading order: a vertical
 				     bar runs high at the top. -->
@@ -554,7 +713,7 @@
 					>
 				{/if}
 			{/if}
-			{#if noValue}
+			{#if noValue && !catGeom}
 				<!-- The marks with no colour value are drawn in their series colour: say so. -->
 				<g class="colour-scale-novalue" transform="translate(0, {geom.noValueY})">
 					<rect
@@ -582,7 +741,7 @@
 {#snippet scaleControls()}
 	<div class="control-component">
 		<div class="control-component-title">
-			<p>Colour scale</p>
+			<p>{categories ? 'Colour key' : 'Colour scale'}</p>
 			<button
 				class="icon"
 				title="Show the colour scale"
@@ -609,14 +768,16 @@
 						/>
 					</div>
 				{/if}
-				<div class="control-input">
-					<p>Layout</p>
-					<AttributeSelect
-						bind:value={scaleData.orientation}
-						options={['vertical', 'horizontal']}
-						optionsDisplay={['Vertical', 'Horizontal']}
-					/>
-				</div>
+				{#if !categories}
+					<div class="control-input">
+						<p>Layout</p>
+						<AttributeSelect
+							bind:value={scaleData.orientation}
+							options={['vertical', 'horizontal']}
+							optionsDisplay={['Vertical', 'Horizontal']}
+						/>
+					</div>
+				{/if}
 			</div>
 
 			<div class="control-input-horizontal">
@@ -637,9 +798,11 @@
 						onInput={() => (scaleData.fontSize = sizeInput)}
 					/>
 				</ControlInput>
-				<ControlInput label="Bar width">
-					<NumberWithUnits bind:value={scaleData.barThickness} min={2} max={40} />
-				</ControlInput>
+				{#if !categories}
+					<ControlInput label="Bar width">
+						<NumberWithUnits bind:value={scaleData.barThickness} min={2} max={40} />
+					</ControlInput>
+				{/if}
 			</div>
 		{/if}
 	</div>
