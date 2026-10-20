@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 114,
+  "count": 116,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -393,6 +393,22 @@
       "keywords": "workflow: joining and stacking datasets three uses of join data. a weather station (hourly) and a field logger (every 15 min) on one time column: every row kept, sorted by time, same-named columns sharing one column, the rest blank on the other dataset's rows, and bin data averaging each hour. a hive temperature that shares a name but not a meaning, set to its own column. and, with no time wired, two groups' per-animal results stacked one after the other, with the source column as the group for group comparison and a boxplot. workflows joindata binneddata groupcomparison tableplot boxplot"
     },
     {
+      "id": "workflow-colour-by-hysteresis",
+      "name": "Workflow: a hysteresis loop coloured by hour of day",
+      "family": "Workflows",
+      "description": "Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.",
+      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day.",
+      "group": "Rhythm & circadian",
+      "url": "sessions/demos/demo-workflow-colour-by-hysteresis.json",
+      "kind": "workflow",
+      "showcases": [
+        "JoinData",
+        "BinnedData",
+        "scatterplot"
+      ],
+      "keywords": "workflow: a hysteresis loop coloured by hour of day hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. a logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. synthetic data. workflows joindata binneddata scatterplot"
+    },
+    {
       "id": "dataset-testdata",
       "name": "Test data",
       "family": "Sources",
@@ -701,6 +717,18 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "joining and stacking datasets put two datasets in one set of columns: by time, or stacked. data only: 14 columns × 192 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-colour-by-hysteresis",
+      "name": "A hysteresis loop coloured by hour of day",
+      "family": "Sources",
+      "description": "A hysteresis loop: hive against air temperature, coloured by hour of day. Data only: 4 columns × 360 rows, no analysis.",
+      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day.",
+      "group": "Rhythm & circadian",
+      "url": "sessions/demos/a-hysteresis-loop-coloured-by-hour-of-day.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "a hysteresis loop coloured by hour of day a hysteresis loop: hive against air temperature, coloured by hour of day. data only: 4 columns × 360 rows, no analysis. sources"
     },
     {
       "id": "tp-blankcolumn",

@@ -418,7 +418,8 @@ describe('save and load', () => {
 			mode: 'auto',
 			colormap: 'auto',
 			domainMin: null,
-			domainMax: null
+			domainMax: null,
+			colourLine: false
 		});
 		// Wired to a column that does not exist: on, but nothing coloured.
 		expect(odd.colourActive).toBe(false);
@@ -640,4 +641,314 @@ describe('copy and paste', () => {
 		// The original is untouched.
 		expect(plot.plot.data[0].colourBy.refId).toBe(c);
 	});
+});
+
+// ---- Phase 1c: coloured lines (plan 3.6; rules in components/plotbits/colouredLine.js) ----
+describe('coloured lines', () => {
+	/** A plot with series 0's line drawn (points too unless `points: false`), coloured by cs. */
+	function linePlot(xs, ys, cs, { colourLine = true, points = true, ctype = 'number' } = {}) {
+		const p = mkPlot(xs, ys, cs, { ctype });
+		p.d.line.draw = true;
+		p.d.line.strokeWidth = 2;
+		p.d.points.draw = points;
+		if (cs) p.d.colourEncoding.colourLine = colourLine;
+		flushSync();
+		return p;
+	}
+	/** Each coloured line path: { key, stroke, segs: [[rowStart, rowEnd], ...] }. */
+	function linePaths(container, s, xs) {
+		const px = xs.map((x) => s.XScale(x));
+		const row = (v) => {
+			let best = 0;
+			for (let i = 1; i < px.length; i++)
+				if (Math.abs(px[i] - v) < Math.abs(px[best] - v)) best = i;
+			return best;
+		};
+		return [...container.querySelectorAll('path[data-line-colour-bucket]')].map((p) => ({
+			el: p,
+			key: p.getAttribute('data-line-colour-bucket'),
+			stroke: p.getAttribute('stroke'),
+			segs: [...p.getAttribute('d').matchAll(/M([-\d.e]+) [-\d.e]+L([-\d.e]+) [-\d.e]+/g)].map(
+				(m) => [row(Number(m[1])), row(Number(m[2]))]
+			)
+		}));
+	}
+	const allSegs = (paths) =>
+		paths.flatMap((p) => p.segs.map((sg) => [...sg, p.key])).sort((a, b) => a[0] - b[0]);
+
+	it('off by default: the line keeps the series colour as one plain path', () => {
+		const xs = [0, 1, 2, 3];
+		const { wrapper, d } = linePlot(xs, [1, 2, 3, 4], [0, 1, 2, 3], { colourLine: false });
+		expect(d.colourEncoding.colourLine).toBe(false);
+		expect(d.colourLineRender).toBeNull();
+		const c = draw(wrapper);
+		expect(c.querySelectorAll('path[data-line-colour-bucket]').length).toBe(0);
+		const plain = [...c.querySelectorAll('path')].filter(
+			(p) => p.getAttribute('fill') === 'none' && p.getAttribute('stroke') === d.line.colour
+		);
+		expect(plain.length).toBe(1);
+		// The points are still coloured.
+		expect(c.querySelectorAll('path[data-colour-bucket]').length).toBeGreaterThan(1);
+	});
+
+	it('each segment takes its starting row’s colour, grouped one path per bucket', () => {
+		// Range [0, 64]: row i is in bucket i * 8 (the last clamps to 63).
+		const cs = [0, 8, 16, 24, 32, 40, 48, 56, 64];
+		const xs = cs.map((_, i) => i);
+		const { wrapper, s, d } = linePlot(
+			xs,
+			xs.map((i) => i % 3),
+			cs
+		);
+		const paths = linePaths(draw(wrapper), s, xs);
+		expect(paths.length).toBe(8); // 8 segments, 8 distinct starting buckets
+		for (const p of paths) {
+			expect(p.segs.length).toBe(1);
+			const [start] = p.segs[0];
+			expect(p.key).toBe(`b${d.colourIdx[start]}`);
+			expect(p.stroke).toBe(VIRIDIS[d.colourIdx[start]]);
+		}
+		// Bucket order (decision 9).
+		expect(paths.map((p) => p.key)).toEqual(['b0', 'b8', 'b16', 'b24', 'b32', 'b40', 'b48', 'b56']);
+	});
+
+	it('the midnight segment is drawn in the colour of the hour it starts at', () => {
+		const H = 3600000;
+		const t0 = Date.UTC(2026, 0, 10);
+		const times = [22.5, 23.5, 24.5, 25.5].map((h) => t0 + h * H);
+		const xs = [0, 1, 2, 3];
+		const { wrapper, s } = linePlot(xs, [0, 1, 0, 1], times, { ctype: 'time' });
+		const tw = bucketColours('twilight_shifted');
+		const segs = allSegs(linePaths(draw(wrapper), s, xs));
+		expect(segs).toEqual([
+			[0, 1, 'b60'],
+			[1, 2, 'b62'], // 23:30 -> 00:30: 23:30's colour
+			[2, 3, 'b1']
+		]);
+		const stroke = [...document.querySelectorAll('path[data-line-colour-bucket="b62"]')][0];
+		expect(stroke.getAttribute('stroke')).toBe(tw[62]);
+	});
+
+	it('gaps break the coloured line exactly where the plain line breaks', () => {
+		const xs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+		const ys = [1, 2, 3, 4, 5, null, 7, 8, NaN]; // a gap at row 5, a trailing gap
+		const cs = xs.map((i) => i);
+		const { wrapper, s, d } = linePlot(xs, ys, cs);
+		let segs = allSegs(linePaths(draw(wrapper), s, xs)).map(([a, b]) => `${a}-${b}`);
+		expect(segs).toEqual(['0-1', '1-2', '2-3', '3-4', '6-7']);
+		cleanup();
+		// The plain line on the same data has the same break (two subpaths, none touching 5).
+		d.colourEncoding.colourLine = false;
+		flushSync();
+		const plain = [...draw(wrapper).querySelectorAll('path')].find(
+			(p) => p.getAttribute('fill') === 'none' && p.getAttribute('stroke') === d.line.colour
+		);
+		expect(plain.getAttribute('d').match(/M/g).length).toBe(2);
+		cleanup();
+		// Join gaps: bridged 4 -> 6 in row 4's colour.
+		d.colourEncoding.colourLine = true;
+		d.line.joinGaps = true;
+		flushSync();
+		segs = allSegs(linePaths(draw(wrapper), s, xs));
+		expect(segs.map(([a, b]) => `${a}-${b}`)).toEqual(['0-1', '1-2', '2-3', '3-4', '4-6', '6-7']);
+		expect(segs.find(([a]) => a === 4)[2]).toBe(`b${d.colourIdx[4]}`);
+	});
+
+	it('a missing x breaks it too', () => {
+		const xs = [0, 1, null, 3, 4];
+		const { wrapper, s } = linePlot(xs, [1, 2, 3, 4, 5], [0, 1, 2, 3, 4]);
+		const segs = allSegs(linePaths(draw(wrapper), s, [0, 1, 2, 3, 4]));
+		expect(segs.map(([a, b]) => `${a}-${b}`)).toEqual(['0-1', '3-4']);
+	});
+
+	it('segments starting at a row with no colour value are in the line colour, and the bar says so', () => {
+		const xs = [0, 1, 2, 3, 4, 5];
+		// Row 1 null, rows 4 and 5 past the end of the colour column.
+		const { wrapper, s, d } = linePlot(xs, [1, 2, 3, 4, 5, 6], [0, null, 10, 20], {
+			points: false
+		});
+		expect(d.colourLineNoValueCount).toBe(2); // 1-2 and 4-5 (3-4 starts at row 3: valued)
+		const c = draw(wrapper);
+		const paths = linePaths(c, s, xs);
+		expect(paths[0].key).toBe('none');
+		expect(paths[0].stroke).toBe(d.line.colour);
+		expect(paths[0].segs).toEqual([
+			[1, 2],
+			[4, 5]
+		]);
+		// Points hidden: the key still shows (for the line), with its "no value" entry.
+		expect(c.querySelector('.colour-scale')).not.toBeNull();
+		expect(c.querySelector('.colour-scale-novalue')?.textContent).toContain('no value');
+	});
+
+	it('is solid with round caps and joins even when the series line is dashed', () => {
+		const xs = [0, 1, 2];
+		const { wrapper, d, s } = linePlot(xs, [0, 1, 0], [0, 1, 2]);
+		d.line.stroke = '5, 5';
+		d.line.strokeWidth = 12;
+		flushSync();
+		const paths = linePaths(draw(wrapper), s, xs);
+		expect(paths.length).toBe(2);
+		for (const p of paths) {
+			expect(p.el.getAttribute('stroke-linecap')).toBe('round');
+			expect(p.el.getAttribute('stroke-linejoin')).toBe('round');
+			expect(p.el.getAttribute('stroke-width')).toBe('12');
+			expect(p.el.getAttribute('style') ?? '').not.toContain('dasharray');
+			expect(p.el.getAttribute('stroke-dasharray')).toBeNull();
+		}
+		// The dash is kept for when colouring is off.
+		expect(d.line.stroke).toBe('5, 5');
+		// The legend swatch: grey and solid, like a coloured point's swatch.
+		const item = d.getLegendItem();
+		const lineEl = item.elements.find((e) => e.type === 'line');
+		expect(lineEl).toMatchObject({ color: 'rgb(140, 140, 140)', stroke: 'solid' });
+		d.colourEncoding.colourLine = false;
+		flushSync();
+		expect(d.getLegendItem().elements.find((e) => e.type === 'line')).toMatchObject({
+			color: d.line.colour,
+			stroke: '5, 5'
+		});
+	});
+
+	it('switching Colour by on with points hidden colours the line (the only mark)', () => {
+		const { d } = mkPlot([0, 1], [1, 2], null);
+		d.line.draw = true;
+		d.points.draw = false;
+		d.enableColourBy();
+		expect(d.colourEncoding.colourLine).toBe(true);
+		d.disableColourBy();
+		d.points.draw = true;
+		d.enableColourBy();
+		expect(d.colourEncoding.colourLine).toBe(false);
+	});
+
+	it('the line tooltip names the colour value of the nearest row', () => {
+		const H = 3600000;
+		const t0 = Date.UTC(2026, 0, 10);
+		const xs = [0, 1];
+		const { wrapper, s } = linePlot(xs, [1, 2], [t0 + 14.5 * H, t0 + 15 * H], {
+			ctype: 'time',
+			points: false
+		});
+		const c = draw(wrapper);
+		const path = c.querySelector('path[data-line-colour-bucket]');
+		let detail = null;
+		c.addEventListener('tooltip', (e) => (detail = e.detail));
+		const ev = new MouseEvent('mousemove', { bubbles: true });
+		Object.defineProperty(ev, 'offsetX', { value: s.XScale(0) + s.padding.left });
+		Object.defineProperty(ev, 'offsetY', { value: s.YScaleLeft(1) + s.padding.top });
+		path.dispatchEvent(ev);
+		expect(detail?.content).toContain('Hour of day (UTC):</span> 14:30');
+	});
+
+	it('save and load keep the setting; a file from phase 1b loads with it off', () => {
+		const { s } = linePlot([0, 1, 2], [1, 2, 3], [3, 4, 5]);
+		const json = JSON.parse(JSON.stringify(s));
+		expect(json.data[0].colourEncoding.colourLine).toBe(true);
+		const back = Scatterplotclass.fromJSON(s.parentBox, json);
+		expect(back.data[0].colourEncoding.colourLine).toBe(true);
+		expect(back.data[0].colourLineActive).toBe(true);
+		expect(JSON.parse(JSON.stringify(back))).toEqual(json);
+		delete json.data[0].colourEncoding.colourLine;
+		expect(Scatterplotclass.fromJSON(s.parentBox, json).data[0].colourEncoding.colourLine).toBe(
+			false
+		);
+	});
+
+	it('monochrome draws the line in greys too', () => {
+		const xs = [0, 1, 2, 3];
+		const { wrapper, s } = linePlot(xs, [0, 1, 0, 1], [0, 5, 10, 15]);
+		wrapper.style = { monochrome: true };
+		flushSync();
+		const strokes = linePaths(draw(wrapper), s, xs).map((p) => p.stroke.match(/\d+/g).map(Number));
+		expect(strokes.length).toBe(3);
+		for (const [r, g, b] of strokes) expect(r === g && g === b).toBe(true);
+	});
+
+	it('facet panels inherit the setting from the generator', () => {
+		const x = mkCol([0, 1, 2], 'number', 'x');
+		const ya = mkCol([1, 2, 3], 'number', 'a');
+		const yb = mkCol([3, 2, 1], 'number', 'b');
+		const c = mkCol([0, 1, 2], 'number', 'c');
+		core.plots.push(
+			new Plot({
+				type: 'scatterplot',
+				name: 'f',
+				plot: {
+					data: [
+						{ x: { refId: x }, y: { refId: ya }, line: { draw: true } },
+						{ x: { refId: x }, y: { refId: yb }, line: { draw: true } }
+					]
+				}
+			})
+		);
+		const gen = core.plots[0];
+		for (const d of gen.plot.data) {
+			d.enableColourBy();
+			d.colourBy.refId = c;
+			d.colourEncoding.colourLine = true;
+		}
+		gen.facet = true;
+		const panels = panelsFor(gen);
+		for (const p of panels) projectPanel(p);
+		for (const p of panels) expect(p.plot.data[0].colourLineActive).toBe(true);
+		gen.plot.data[0].colourEncoding.colourLine = false;
+		projectPanel(panels[0]);
+		expect(panels[0].plot.data[0].colourLineActive).toBe(false);
+	});
+
+	it('the AI editor and the multi-select panel offer "colour the line too"', async () => {
+		const { plotProps } = await import('$lib/utils/aiEdit.js');
+		const x = mkCol([0, 1, 2], 'number', 'x');
+		const y = mkCol([1, 2, 3], 'number', 'y');
+		const c = mkCol([5, 6, 7], 'number', 'temp');
+		core.plots.push(
+			new Plot({
+				type: 'scatterplot',
+				name: 'sc',
+				plot: { data: [{ x: { refId: x }, y: { refId: y } }] }
+			})
+		);
+		const plot = core.plots[0];
+		plot.plot.data[0].enableColourBy();
+		plot.plot.data[0].colourBy.refId = c;
+		const props = Object.fromEntries(plotProps(plot).map((p) => [p.path, p]));
+		expect(props['plot.data[0].colourEncoding.colourLine']).toMatchObject({
+			input: 'boolean',
+			value: false
+		});
+	});
+
+	it('200k rows: at most 65 line paths, and the render time is measured', () => {
+		const n = 200_000;
+		const xs = new Array(n);
+		const ys = new Array(n);
+		const cs = new Array(n);
+		for (let i = 0; i < n; i++) {
+			xs[i] = i;
+			ys[i] = i % 5003 === 0 ? null : Math.sin(i / 1000);
+			cs[i] = i % 997 === 0 ? null : (i * 7919) % 1000;
+		}
+		const plain = linePlot(xs, ys, null, { points: false });
+		let t = performance.now();
+		draw(plain.wrapper);
+		const plainMs = performance.now() - t;
+		cleanup();
+		const coloured = linePlot(xs, ys, cs, { points: false });
+		t = performance.now();
+		const c1 = draw(coloured.wrapper);
+		const colouredMs = performance.now() - t;
+		const paths = c1.querySelectorAll('path[data-line-colour-bucket]');
+		expect(paths.length).toBe(K + 1);
+		expect(paths[0].getAttribute('data-line-colour-bucket')).toBe('none');
+		const segments = [...paths].reduce((m, p) => m + p.getAttribute('d').match(/M/g).length, 0);
+		// n - 1 joins, less two per gap row (rows 0, 5003, ... 195117: 40 rows; row 0 costs one).
+		expect(segments).toBe(n - 1 - (2 * 40 - 1));
+		// PERF_LOG=1 prints the timings (the test setup swallows console output).
+		if (process.env.PERF_LOG)
+			process.stderr.write(
+				`coloured line, 200k rows: plain ${plainMs.toFixed(0)} ms, coloured ${colouredMs.toFixed(0)} ms\n`
+			);
+		expect(colouredMs).toBeLessThan(Math.max(5000, plainMs * 6));
+	}, 60000);
 });

@@ -337,6 +337,8 @@ describe('every plot control panel edit is one exact undo step', () => {
 				Array.from({ length: N }, (_, i) => i % 7)
 			);
 			const d = plot.plot.data[0];
+			// The line drawn too, so "Colour the line too" (phase 1c) is audited.
+			d.line.draw = true;
 			d.enableColourBy();
 			d.colourBy.refId = c;
 		};
@@ -349,7 +351,13 @@ describe('every plot control panel edit is one exact undo step', () => {
 		expect(failures).toEqual({});
 		// Not vacuous: the colour-by controls were found and recorded.
 		const keys = Object.keys(results).join('\n');
-		for (const want of ['Colour points by a column', 'Read as', 'Colours', 'Bar width'])
+		for (const want of [
+			'Colour points by a column',
+			'Read as',
+			'Colours',
+			'Bar width',
+			'Colour the line by the same column'
+		])
 			expect(keys).toContain(want);
 	}, 240000);
 

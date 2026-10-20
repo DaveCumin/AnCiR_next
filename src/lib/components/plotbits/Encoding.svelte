@@ -32,7 +32,8 @@
 				group: 'Colour by'
 			},
 			domainMin: { input: 'number', label: 'range min', group: 'Colour by' },
-			domainMax: { input: 'number', label: 'range max', group: 'Colour by' }
+			domainMax: { input: 'number', label: 'range max', group: 'Colour by' },
+			colourLine: { input: 'boolean', label: 'colour the line too', group: 'Colour by' }
 		};
 
 		/** Stable per plot: names the canvas port `enc<id>_colour`. */
@@ -44,6 +45,12 @@
 		/** Manual range ends; null keeps that end at the data's (decision 8). */
 		domainMin = $state(null);
 		domainMax = $state(null);
+		/**
+		 * Colour the series' LINE by the same column too (plan 3.6, phase 1c). Off by default
+		 * (decision 5: the line keeps the series colour). Each segment takes its starting row's
+		 * colour and is drawn solid (components/plotbits/colouredLine.js).
+		 */
+		colourLine = $state(false);
 
 		constructor(json = {}) {
 			this.id = Number.isInteger(json?.id) && json.id > 0 ? json.id : 1;
@@ -51,6 +58,7 @@
 			this.colormap = json?.colormap === AUTO || COLORMAPS[json?.colormap] ? json.colormap : AUTO;
 			this.domainMin = numberOrNullIn(json?.domainMin);
 			this.domainMax = numberOrNullIn(json?.domainMax);
+			this.colourLine = json?.colourLine === true;
 		}
 
 		/** The manual range as encodings.encodingDomain takes it. */
@@ -64,7 +72,8 @@
 				mode: this.mode,
 				colormap: this.colormap,
 				domainMin: this.domainMin,
-				domainMax: this.domainMax
+				domainMax: this.domainMax,
+				colourLine: this.colourLine
 			};
 		}
 
@@ -165,6 +174,23 @@
 				</div>
 			</div>
 
+			{#if datum.line?.draw}
+				<!-- Plan 3.6 (phase 1c): the line keeps the series colour unless this is on. -->
+				<label class="control-input-checkbox colour-line-row">
+					<input
+						type="checkbox"
+						aria-label="Colour the line by the same column"
+						bind:checked={enc.colourLine}
+					/>
+					<span class="ci-label">Colour the line too</span>
+				</label>
+				{#if enc.colourLine && datum.line.stroke !== 'solid'}
+					<p class="colour-by-note">
+						The line is drawn solid while coloured; its dash returns when this is off.
+					</p>
+				{/if}
+			{/if}
+
 			{#if !cyclic}
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
@@ -216,11 +242,18 @@
 			{#if datum.colourLengthNote}
 				<p class="colour-by-note colour-by-warning" role="status">{datum.colourLengthNote}</p>
 			{/if}
-			{#if datum.colourNoValueCount > 0}
+			{#if datum.points?.draw && datum.colourNoValueCount > 0}
 				<p class="colour-by-note" role="status">
 					{datum.colourNoValueCount}
 					{datum.colourNoValueCount === 1 ? 'point has' : 'points have'} no colour value; drawn in the
 					series colour.
+				</p>
+			{/if}
+			{#if datum.colourLineNoValueCount > 0}
+				<p class="colour-by-note" role="status">
+					{datum.colourLineNoValueCount}
+					{datum.colourLineNoValueCount === 1 ? 'line segment starts' : 'line segments start'} at a row
+					with no colour value; drawn in the series colour.
 				</p>
 			{/if}
 			{#if datum.colourMonochrome}
@@ -241,6 +274,9 @@
 	.colour-by-switch {
 		margin: 0;
 		cursor: pointer;
+	}
+	.colour-line-row {
+		margin-top: var(--space-2);
 	}
 	.colour-by-column {
 		margin: var(--space-1) 0;

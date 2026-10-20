@@ -2377,8 +2377,144 @@ const WORKFLOWS = [
 		build: buildJoinDataWorkflow,
 		// Bigger tables than the standard grid size, so their first rows tell the story.
 		layoutPlots: placeJoinDataPlots
+	},
+	{
+		id: 'colour-by-hysteresis',
+		summary: 'A hysteresis loop: hive against air temperature, coloured by hour of day.',
+		name: 'Workflow: a hysteresis loop coloured by hour of day',
+		family: 'Workflows',
+		group: 'Rhythm & circadian',
+		description:
+			'Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.',
+		showcases: ['JoinData', 'BinnedData', 'scatterplot'],
+		build: buildColourByHysteresisWorkflow
 	}
 ];
+
+/**
+ * Colour by on a hysteresis loop (colour-by plan 2026-10-20, use case 1; phase 1c). Synthetic,
+ * seeded: hourly air temperature (weather station) and a hive logger every 15 min whose
+ * temperature follows the air 3 h late, damped, so hive against air is a loop each day. The
+ * logger is off for 6 h on day 3, so Bin Data leaves those hours blank and the line breaks.
+ * Size by humidity (plan item 10) joins this demo in phase 3.
+ */
+async function buildColourByHysteresisWorkflow() {
+	const rng = mulberry32(2610);
+	const H = 3600000;
+	const T0 = Date.UTC(2024, 0, 15);
+	const DAYS = 4;
+	const HOURS = DAYS * 24;
+	const iso = (ms) => new Date(ms).toISOString();
+	const r2 = (v) => Math.round(v * 100) / 100;
+	const airAt = (h) => 18 + 7 * Math.sin((2 * Math.PI * (h - 9)) / 24);
+	const OUTAGE = [2 * 24 + 10, 2 * 24 + 16]; // day 3, 10:00 to 16:00 UTC
+
+	const group = (name, cols) => {
+		const id = createGroup({ name });
+		for (const c of cols) absorbColumnIntoGroup(c, id);
+		return id;
+	};
+	const tp = async (name, args, displayName) => {
+		const node = new TableProcess({ name, args }, null);
+		if (displayName) node.displayName = displayName;
+		pushObj(node);
+		await node.doProcess();
+		return node;
+	};
+
+	const wTime = mkCol(
+		'time',
+		seq(HOURS, (i) => iso(T0 + i * H)),
+		'time'
+	);
+	const wTemp = mkCol(
+		'number',
+		seq(HOURS, (i) => r2(airAt(i) + normal(rng, 0, 0.25))),
+		'air temperature'
+	);
+	group('weather station', [wTime, wTemp]);
+
+	// The logger, every 15 min (7 min past), minus the outage rows.
+	const hHours = seq(HOURS * 4, (i) => (7 + 15 * i) / 60).filter(
+		(h) => h < OUTAGE[0] || h >= OUTAGE[1]
+	);
+	const hTime = mkCol(
+		'time',
+		hHours.map((h) => iso(T0 + Math.round(h * H))),
+		'time'
+	);
+	const hTemp = mkCol(
+		'number',
+		hHours.map((h) => r2(25 + 0.45 * (airAt(h - 3) - 18) + normal(rng, 0, 0.12))),
+		'hive temperature'
+	);
+	group('hive logger', [hTime, hTemp]);
+
+	const join = await tp(
+		'JoinData',
+		{
+			aTimeIN: wTime,
+			aValuesIN: [wTemp],
+			bTimeIN: hTime,
+			bValuesIN: [hTemp],
+			pairing: {},
+			shiftB: 0,
+			sourceColumn: null,
+			out: { jointime: -1, [`joined_${wTemp}`]: -1, [`joined_${hTemp}`]: -1 }
+		},
+		'Join by time'
+	);
+	const jo = join.args.out;
+	const bin = await tp(
+		'BinnedData',
+		{
+			xIN: jo.jointime,
+			yIN: [jo[`joined_${wTemp}`], jo[`joined_${hTemp}`]],
+			binMode: 'uniform',
+			binSize: 1,
+			binStart: 0,
+			stepSize: 1,
+			diffStep: false,
+			cuts: [],
+			aggFunction: 'mean',
+			out: { binnedx: -1 }
+		},
+		'Bin Data (1 h)'
+	);
+	const bo = bin.args.out;
+	const bTime = bo.binnedx;
+	const bAir = bo[`binnedy_${jo[`joined_${wTemp}`]}`];
+	const bHive = bo[`binnedy_${jo[`joined_${hTemp}`]}`];
+
+	// The loop: points and line, both coloured by the hour of day of the binned time.
+	const loop = new Plot({ name: 'Hive against air, coloured by hour of day', type: 'scatterplot' });
+	loop.plot.addData({
+		x: { refId: bAir },
+		y: { refId: bHive },
+		label: 'Hive',
+		line: { draw: true, strokeWidth: 2, stroke: 'solid' },
+		points: { draw: true, radius: 3, shape: 'circle' }
+	});
+	const d = loop.plot.data[0];
+	d.enableColourBy();
+	d.colourBy.refId = bTime;
+	d.colourEncoding.colourLine = true;
+	setAxisLabels(loop, { x: 'Air temperature (°C)', y: 'Hive temperature (°C)' });
+	// Clear of the marks: every fixed corner of either plot has data in it.
+	loop.plot.legend.position = 'auto';
+	pushObj(loop);
+
+	// The same hours against time, so the lag and the outage are visible.
+	const overTime = scatterPlot(
+		'Air and hive over time',
+		[
+			{ x: bTime, y: bAir, label: 'Air', kind: 'line' },
+			{ x: bTime, y: bHive, label: 'Hive', kind: 'line' }
+		],
+		{ x: 'Time', y: 'Temperature (°C)' }
+	);
+	overTime.plot.legend.position = 'auto';
+}
 
 /**
  * Workspace positions and sizes for the Join Data showcase (plots found by name): the two time

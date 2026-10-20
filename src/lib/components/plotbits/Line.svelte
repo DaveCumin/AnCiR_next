@@ -107,6 +107,7 @@
 
 <script>
 	import { quadtree } from 'd3-quadtree';
+	import { colouredLineSegments, colouredLinePaths } from './colouredLine.js';
 	import {
 		buildAggregatedContent,
 		computeTooltipPosition,
@@ -140,7 +141,13 @@
 		orientation = 'vertical',
 		// `which="rules"` only: prepended to the clip-path id so it is unique in the document
 		// (an overlay passes its plot and overlay ids; see plotbits/overlayDisplay.js).
-		clipPrefix = ''
+		clipPrefix = '',
+		// Colour the line by the series' colour-by column (colour-by plan 2026-10-20, section
+		// 3.6; rules in colouredLine.js). null draws ONE path in the line colour, as before.
+		// Otherwise the same shape Points takes: { idx, colours, noValueColour, values, label,
+		// format }. Each segment takes its STARTING row's bucket; one path per non-empty bucket,
+		// "no value" (in `noValueColour`) first; solid, with round caps and joins.
+		colourBy = null
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -162,7 +169,7 @@
 		const oy = yoffset;
 		const joinGaps = ld.joinGaps;
 
-		const points = xv.map((xVal, i) => ({ x: xVal, y: yv[i] }));
+		const points = xv.map((xVal, i) => ({ x: xVal, y: yv[i], i }));
 		const isValid = (d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y);
 
 		// Valid points drive the "< 2 points → no line" guard and the hover quadtree
@@ -184,6 +191,19 @@
 				.x((d) => sx(d.x) + ox)
 				.y((d) => sy(d.y) + oy)
 				.addAll(validData);
+		}
+
+		// Coloured by a column: segments grouped by their starting row's colour bucket, with
+		// the same gap rule as the plain line below (colouredLine.js).
+		const cb = colourBy;
+		if (cb?.idx && cb?.colours) {
+			const K = cb.colours.length;
+			const { groups } = colouredLineSegments(xv, yv, cb.idx, { K, joinGaps });
+			return colouredLinePaths(groups, xv, yv, sx, sy).map(({ group, d }) => ({
+				key: group === 0 ? 'none' : `b${group - 1}`,
+				stroke: group === 0 ? (cb.noValueColour ?? ld.colour) : cb.colours[group - 1],
+				d
+			}));
 		}
 
 		// Default: break the path at missing (NaN) values so gaps are left rather
@@ -228,11 +248,25 @@
 					}
 				];
 
+		// A coloured line names the colour value of the nearest row, as coloured points do.
+		const cb = colourBy;
+		const extra =
+			cb?.values && cb.label
+				? [
+						{
+							label: cb.label,
+							value: cb.format
+								? cb.format(cb.values[closest.i])
+								: String(cb.values[closest.i] ?? 'no value')
+						}
+					]
+				: [];
 		const content = buildAggregatedContent({
 			xLabel: xLabel || 'x',
 			xValue: closest.x,
 			xtype,
-			series
+			series,
+			extra
 		});
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(e.clientX, e.clientY);
@@ -369,16 +403,37 @@
 			<rect x={xoffset} y={yoffset} {width} {height} />
 		</clipPath>
 		<g clip-path="url(#{clipKey})">
-			<path
-				d={theline}
-				fill="none"
-				stroke={lineData.colour}
-				stroke-width={lineData.strokeWidth}
-				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke}; pointer-events: visibleStroke;"
-				role={tooltip ? 'presentation' : undefined}
-				onmousemove={tooltip ? handleHover : undefined}
-				onmouseleave={tooltip ? handleMouseLeave : undefined}
-			/>
+			{#if Array.isArray(theline)}
+				<!-- Coloured: solid whatever the series' dash (a dash would restart at every
+				     segment), round caps and joins so a thick line has no notch where the colour
+				     changes. -->
+				{#each theline as p (p.key)}
+					<path
+						d={p.d}
+						fill="none"
+						stroke={p.stroke}
+						stroke-width={lineData.strokeWidth}
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						data-line-colour-bucket={p.key}
+						style="transform: translate({xoffset}px, {yoffset}px); pointer-events: visibleStroke;"
+						role={tooltip ? 'presentation' : undefined}
+						onmousemove={tooltip ? handleHover : undefined}
+						onmouseleave={tooltip ? handleMouseLeave : undefined}
+					/>
+				{/each}
+			{:else}
+				<path
+					d={theline}
+					fill="none"
+					stroke={lineData.colour}
+					stroke-width={lineData.strokeWidth}
+					style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke}; pointer-events: visibleStroke;"
+					role={tooltip ? 'presentation' : undefined}
+					onmousemove={tooltip ? handleHover : undefined}
+					onmouseleave={tooltip ? handleMouseLeave : undefined}
+				/>
+			{/if}
 		</g>
 	{/if}
 {/snippet}

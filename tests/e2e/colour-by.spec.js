@@ -131,3 +131,68 @@ test('colour a series by the hour of day of a wired time column', async ({ page 
 	await expect(svg.locator('.colour-scale')).toHaveCount(0);
 	expect(await svg.locator('path[data-colour-bucket]').count()).toBe(0);
 });
+
+// Phase 1c: coloured LINES. The hysteresis demo (generateDemos, workflow colour-by-hysteresis):
+// hive against air temperature, points and line coloured by hour of day, with a logger outage
+// on day 3 that leaves blank hours. The line must break there, and "Colour the line too" is one
+// undo step that switches the line back to the series colour.
+test('a hysteresis loop with a coloured line that breaks at a gap', async ({ page }) => {
+	await load(page, 'demo-workflow-colour-by-hysteresis');
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1500);
+	const loop = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.name.startsWith('Hive against air'));
+		const d = p.plot.data[0];
+		const xs = d.xData;
+		const ys = d.yData;
+		const ok = (i) => xs[i] != null && ys[i] != null && !isNaN(xs[i]) && !isNaN(ys[i]);
+		let joins = 0;
+		let gaps = 0;
+		for (let i = 1; i < Math.min(xs.length, ys.length); i++) {
+			if (ok(i - 1) && ok(i)) joins++;
+			if (!ok(i)) gaps++;
+		}
+		return { id: p.id, joins, gaps, colourLine: d.colourEncoding.colourLine };
+	});
+	expect(loop.colourLine).toBe(true);
+	expect(loop.gaps).toBeGreaterThan(0); // the outage is in the data
+	const svg = page.locator(`svg[id="plot${loop.id}"]`);
+	await svg.scrollIntoViewIfNeeded();
+	const lineBuckets = svg.locator('path[data-line-colour-bucket]');
+	expect(await lineBuckets.count()).toBeGreaterThan(10);
+	// One M/L pair per join of two valid rows: none across the gap.
+	const segments = await lineBuckets.evaluateAll((ps) =>
+		ps.reduce((n, p) => n + (p.getAttribute('d').match(/M/g)?.length ?? 0), 0)
+	);
+	expect(segments).toBe(loop.joins);
+	// Solid, round caps; the points are coloured too, and one colour bar serves both.
+	for (const cap of await lineBuckets.evaluateAll((ps) =>
+		ps.map((p) => p.getAttribute('stroke-linecap'))
+	))
+		expect(cap).toBe('round');
+	expect(await svg.locator('path[data-colour-bucket]').count()).toBeGreaterThan(10);
+	await expect(svg.locator('.colour-scale')).toHaveCount(1);
+	await expect(svg.locator('.colour-scale .colour-scale-label')).toHaveText('Hour of day (UTC)');
+	if (process.env.E2E_SHOTS)
+		await svg.screenshot({ path: `${process.env.E2E_SHOTS}/e2e-loop.png` });
+
+	// The panel: "Colour the line too" off is ONE undo step; the line returns to one path.
+	await svg.click({ position: { x: 5, y: 5 } });
+	await page.waitForTimeout(400);
+	if (!(await page.locator('text=Properties').first().isVisible())) {
+		await page.mouse.click(1483, 443);
+	}
+	await page.getByRole('tab', { name: 'Data' }).click();
+	await page.waitForTimeout(500);
+	const box = page.getByRole('checkbox', { name: 'Colour the line by the same column' }).first();
+	await expect(box).toBeChecked();
+	const before = await page.evaluate(() => window.__history.undoStack.length);
+	await box.uncheck();
+	await page.waitForTimeout(500);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	await expect(svg.locator('path[data-line-colour-bucket]')).toHaveCount(0);
+	// Undo brings the coloured line back.
+	await page.keyboard.press('ControlOrMeta+z');
+	await page.waitForTimeout(800);
+	expect(await svg.locator('path[data-line-colour-bucket]').count()).toBeGreaterThan(10);
+});

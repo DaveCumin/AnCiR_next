@@ -43,8 +43,10 @@
 		encodingDomain,
 		colourBuckets,
 		bucketColours,
-		NO_VALUE
+		NO_VALUE,
+		COLOUR_BUCKETS
 	} from '$lib/components/plotbits/encodings.js';
+	import { colouredLineSegments } from '$lib/components/plotbits/colouredLine.js';
 	import {
 		effectiveColourMode,
 		effectiveColormap,
@@ -227,6 +229,35 @@
 				format: (v) => formatColourValue(v, mode)
 			};
 		});
+		/**
+		 * The LINE is coloured too (plan 3.6, phase 1c): Colour by is active, the line is drawn
+		 * and the series' "Colour the line too" is on.
+		 */
+		colourLineActive = $derived(
+			this.colourActive && !!this.line?.draw && this.colourEncoding?.colourLine === true
+		);
+		/** What Line draws with (its `colourBy` prop), or null for one line-coloured path. */
+		colourLineRender = $derived.by(() => {
+			if (!this.colourLineActive) return null;
+			const mode = this.colourMode;
+			return {
+				idx: this.colourIdx,
+				colours: this.colourPalette,
+				noValueColour: this.line.colour,
+				values: this.colourEncoded.values,
+				label: this.colourTitle,
+				format: (v) => formatColourValue(v, mode)
+			};
+		});
+		/** Line segments drawn whose starting row has no colour value (in the line colour). */
+		colourLineNoValueCount = $derived.by(() => {
+			if (!this.colourLineActive) return 0;
+			const { groups } = colouredLineSegments(this.xData, this.yData, this.colourIdx, {
+				K: COLOUR_BUCKETS,
+				joinGaps: this.line.joinGaps
+			});
+			return groups[0].length / 2;
+		});
 		/** The colour column is shorter than the series: say how many rows it covers. */
 		get colourLengthNote() {
 			if (!this.colourActive) return null;
@@ -246,11 +277,18 @@
 				: 'The colour bar shows the first coloured series; this one uses a different scale.';
 		}
 
-		/** Switch Colour by on: an empty colour port appears on the canvas. */
+		/**
+		 * Switch Colour by on: an empty colour port appears on the canvas. The line stays in the
+		 * series colour (decision 5) unless the points are hidden and the line is drawn: then
+		 * the line is the only mark, so it is the one coloured.
+		 */
 		enableColourBy() {
 			if (this.colourEncoding) return;
 			this.colourBy = new ColumnClass({ refId: -1 });
-			this.colourEncoding = new ColourEncodingClass({ id: nextEncodingId(this.parentPlot) });
+			this.colourEncoding = new ColourEncodingClass({
+				id: nextEncodingId(this.parentPlot),
+				colourLine: !this.points?.draw && !!this.line?.draw
+			});
 		}
 
 		/** Switch Colour by off: the port and its wire go; the series colour returns. */
@@ -308,12 +346,13 @@
 			};
 
 			// Add line representation if line is visible
+			// A coloured line, like coloured points, has a neutral grey swatch, solid as drawn.
 			if (this.line.draw) {
 				item.elements.push({
 					type: 'line',
-					color: this.line.colour,
+					color: this.colourLineActive ? COLOUR_BY_SWATCH : this.line.colour,
 					strokeWidth: this.line.strokeWidth,
-					stroke: this.line.stroke,
+					stroke: this.colourLineActive ? 'solid' : this.line.stroke,
 					smoother: this.line.showSmoother
 						? {
 								color: this.line.smootherColour,
@@ -410,9 +449,9 @@
 		// The overlay host contract (components/plotbits/overlayHost.js). The scatterplot is
 		// the reference host: every line and band form, a legend, and a time-capable x axis.
 		static overlayCapabilities = ALL_OVERLAY_FORMS;
-		// The colour-by host contract (components/plotbits/encodingHost.js): points only in
-		// phase 1b (coloured lines are phase 1c).
-		static encodingCapabilities = { colour: true, lines: false };
+		// The colour-by host contract (components/plotbits/encodingHost.js): points, and the
+		// line when a series asks for it (phase 1c).
+		static encodingCapabilities = { colour: true, lines: true };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -530,19 +569,28 @@
 		}
 
 		/**
-		 * The colour bar's content: the first series whose points are coloured, or null. `sameAs`
-		 * says whether another series draws with the same scale (else the panel says so).
+		 * The colour bar's content: the first series whose points or line are coloured, or null.
+		 * `sameAs` says whether another series draws with the same scale (else the panel says
+		 * so). The "no value" swatch shows when any mark used it: in the points' colour when a
+		 * point has no value, else the line's (both are the series colour unless overridden).
 		 */
 		colourKey = $derived.by(() => {
-			const series = this.data.find((d) => d.colourActive && d.points?.draw);
+			const colours = (d) => d.colourActive && (d.points?.draw || d.colourLineActive);
+			const series = this.data.find(colours);
 			if (!series) return null;
 			const domain = series.colourDomain;
 			const enc = series.colourEncoding;
 			const sig = (d) =>
 				JSON.stringify([d.colourBy?.refId, d.colourMode, d.colourMap, d.colourDomain]);
 			const mine = sig(series);
-			const using = this.data.filter((d) => d.colourActive && d.points?.draw && sig(d) === mine);
-			const noValueSeries = using.find((d) => d.colourNoValueCount > 0);
+			const using = this.data.filter((d) => colours(d) && sig(d) === mine);
+			const noValuePoints = using.find((d) => d.points?.draw && d.colourNoValueCount > 0);
+			const noValueLine = using.find((d) => d.colourLineNoValueCount > 0);
+			const noValueColour = noValuePoints
+				? noValuePoints.points.colour
+				: noValueLine
+					? noValueLine.line.colour
+					: null;
 			return {
 				series,
 				colormap: series.colourMap,
@@ -552,7 +600,7 @@
 					manualLo: enc.domainMin != null,
 					manualHi: enc.domainMax != null
 				}),
-				noValue: noValueSeries ? { colour: noValueSeries.points.colour, label: 'no value' } : null,
+				noValue: noValueColour ? { colour: noValueColour, label: 'no value' } : null,
 				sameAs: (d) => sig(d) === mine
 			};
 		});
@@ -1804,7 +1852,7 @@
 						</div>
 
 						<Points pointsData={datum.points} which="controls" />
-						{#if datum.points.draw}
+						{#if datum.points.draw || datum.line.draw}
 							<Encoding {datum} />
 						{/if}
 						<Line
@@ -1912,6 +1960,7 @@
 						: theData.plot.yAxisRight.label || 'y'}
 					siblings={scatterSiblings}
 					hideOnAlt={true}
+					colourBy={datum.colourLineRender}
 					which="plot"
 				/>
 				<Points
