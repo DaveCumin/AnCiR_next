@@ -63,8 +63,36 @@ def demo(sid):
     return json.loads((DEMOS / f"{sid}.json").read_text())
 
 
-def plot_by_id(session, pid):
-    return copy.deepcopy(next(p for p in session["plots"] if p.get("id") == pid))
+def plot_by_name(session, name):
+    """A demo plot by its name: demo ids shift whenever the generator adds a node to an
+    earlier demo (v82.49 moved Bin Data's plot from 103 to 105 and its columns 633 to 654)."""
+    (plot,) = [p for p in session["plots"] if p.get("name") == name]
+    return copy.deepcopy(plot)
+
+
+def raw_y(plot, i=0):
+    """The rawData key of series i's y column."""
+    return str(plot["plot"]["data"][i]["y"]["refId"])
+
+
+def raw_x(plot, i=0):
+    """The rawData key of series i's x column."""
+    return str(plot["plot"]["data"][i]["x"]["refId"])
+
+
+BINNED = "Bin Data: data + fit"
+
+
+def automatic_colours(plot):
+    """The plot with every series colour automatic (null). The demo generator picks navy and
+    terracotta for Before/After (nodeDemoBuilders.js RAW_COLOUR, OUT_COLOUR); they equal
+    palette slots 0 and 1, and until v82.49 loading released them as automatic, so the demos
+    saved null. They are picks now and save as such."""
+    for d in plot["plot"]["data"]:
+        for slot in ("line", "points"):
+            if isinstance(d.get(slot), dict):
+                d[slot]["colour"] = None
+    return plot
 
 
 def render(session, plot, fn=None):
@@ -128,9 +156,9 @@ def svg_vertices(d):
 # ---- points-only and line-only series, as the demos save them -------------------------
 
 def test_points_only_series_draws_its_points_and_no_line():
-    # demo-tp-binneddata plot 103, series 0: {draw: False} line, {radius: 3} points.
+    # demo-tp-binneddata "Bin Data: data + fit", series 0: {draw: False} line, {radius: 3} points.
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     s0 = plot["plot"]["data"][0]
     assert s0["line"]["draw"] is False and s0["points"]["draw"] is True
     fig, ax = render(session, plot)
@@ -151,7 +179,7 @@ def test_points_only_series_draws_its_points_and_no_line():
 def test_line_only_series_draws_its_line_at_the_saved_width_and_no_points():
     # Same plot, series 1: the Bin Data line, strokeWidth 2.5, points hidden.
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     s1 = plot["plot"]["data"][1]
     assert s1["line"]["draw"] is True and s1["points"]["draw"] is False
     fig, ax = render(session, plot)
@@ -169,7 +197,7 @@ def test_line_only_series_draws_its_line_at_the_saved_width_and_no_points():
 
 def test_hidden_line_and_hidden_points_draw_nothing():
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["data"][1]["line"]["draw"] = False
     fig, ax = render(session, plot)
     try:
@@ -180,10 +208,9 @@ def test_hidden_line_and_hidden_points_draw_nothing():
 
 def test_line_and_points_of_one_series_share_the_automatic_colour():
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = automatic_colours(plot_by_name(session, BINNED))
     s0 = plot["plot"]["data"][0]
     s0["line"]["draw"] = True
-    assert s0["line"]["colour"] is None and s0["points"]["colour"] is None
     fig, ax = render(session, plot)
     try:
         a = series_artists(ax, 0)
@@ -198,7 +225,7 @@ def test_line_and_points_of_one_series_share_the_automatic_colour():
 
 def test_explicit_colours_are_kept_per_mark():
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     s0 = plot["plot"]["data"][0]
     s0["line"].update(draw=True, colour="#C0392B")
     s0["points"]["colour"] = "#2980B9"
@@ -214,7 +241,7 @@ def test_explicit_colours_are_kept_per_mark():
 def test_missing_keys_take_the_class_defaults():
     # LineClass / PointsClass fromJSON({}): line 3 px solid drawn, points radius 4 circle drawn.
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["data"][0]["line"] = {}
     plot["plot"]["data"][0]["points"] = {}
     fig, ax = render(session, plot)
@@ -231,7 +258,7 @@ def test_missing_keys_take_the_class_defaults():
 @pytest.mark.parametrize("shape", ["triangle", "square", "star", "cross", "x"])
 def test_marker_shapes_are_the_apps_geometry(shape):
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["data"][0]["points"].update(shape=shape, radius=5)
     expected = svg_vertices(js_point_paths(5)[shape])
     fig, ax = render(session, plot)
@@ -246,7 +273,7 @@ def test_marker_shapes_are_the_apps_geometry(shape):
 
 def test_unknown_shape_falls_back_to_a_circle():
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["data"][0]["points"]["shape"] = "hexagon"
     fig, ax = render(session, plot)
     try:
@@ -261,7 +288,7 @@ def test_unknown_shape_falls_back_to_a_circle():
                                             ("5, 2", (5, 2)), ("solid", None), (-1, None)])
 def test_dashes_keep_the_apps_lengths(stroke, pattern):
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["data"][1]["line"]["stroke"] = stroke
     fig, ax = render(session, plot)
     try:
@@ -278,12 +305,12 @@ def test_dashes_keep_the_apps_lengths(stroke, pattern):
 
 # ---- gaps -----------------------------------------------------------------------------
 
-def _gap_session(row, which="633"):
-    """demo-tp-binneddata with one missing raw cell (633 is the data y column) and the data
-    series' line switched on, as the eye toggle in the app does."""
+def _gap_session(row):
+    """demo-tp-binneddata with one missing raw cell (in the data series' y column) and the
+    data series' line switched on, as the eye toggle in the app does."""
     session = demo("demo-tp-binneddata")
-    session["rawData"][which][row] = None
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
+    session["rawData"][raw_y(plot)][row] = None
     plot["plot"]["data"][0]["line"]["draw"] = True
     return session, plot
 
@@ -329,11 +356,11 @@ def test_join_gaps_bridges_the_missing_row():
 
 
 def test_missing_x_breaks_the_line_too():
-    # demo-workflow-stats-anscombe plot 28, series 0: raw x (253) and y (254), 11 rows.
+    # demo-workflow-stats-anscombe "Set I", series 0: raw x and y, 11 rows.
     session = demo("demo-workflow-stats-anscombe")
-    assert len(session["rawData"]["253"]) == 11
-    session["rawData"]["253"][5] = None
-    plot = plot_by_id(session, 28)
+    plot = plot_by_name(session, "Set I: a real linear relationship")
+    assert len(session["rawData"][raw_x(plot)]) == 11
+    session["rawData"][raw_x(plot)][5] = None
     plot["plot"]["data"][0]["line"]["draw"] = True
     fig, ax = render(session, plot)
     try:
@@ -346,8 +373,9 @@ def test_missing_x_breaks_the_line_too():
 
 def test_fewer_than_two_valid_points_draw_no_line_but_keep_the_point():
     session = demo("demo-tp-binneddata")
-    session["rawData"]["633"] = [None] * 49 + [session["rawData"]["633"][49]]
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
+    y = raw_y(plot)
+    session["rawData"][y] = [None] * 49 + [session["rawData"][y][49]]
     plot["plot"]["data"][0]["line"]["draw"] = True
     fig, ax = render(session, plot)
     try:
@@ -359,9 +387,9 @@ def test_fewer_than_two_valid_points_draw_no_line_but_keep_the_point():
 
 
 def test_real_trailing_gap_in_the_join_data_demo_draws_the_valid_rows():
-    # demo-tp-joindata plot 149: two hourly time-axis lines whose last bin is empty.
+    # demo-tp-joindata: two hourly time-axis lines whose last bin is empty.
     session = demo("demo-tp-joindata")
-    plot = plot_by_id(session, 149)
+    plot = plot_by_name(session, "Join Data: hourly ambient and hive")
     fig, ax = render(session, plot)
     try:
         for i in (0, 1):
@@ -374,14 +402,14 @@ def test_real_trailing_gap_in_the_join_data_demo_draws_the_valid_rows():
 
 # ---- the other line-and-points plots --------------------------------------------------
 
-@pytest.mark.parametrize("sid,pid,fn", [
-    ("demo-periodogram-rhythm", 78, rt.plot_periodogram),
-    ("demo-fft-rhythm", 80, rt.plot_fft),
-    ("demo-correlogram-rhythm", 79, rt.plot_correlogram),
+@pytest.mark.parametrize("sid,name,fn", [
+    ("demo-periodogram-rhythm", "Activity periodogram", rt.plot_periodogram),
+    ("demo-fft-rhythm", "Signal FFT", rt.plot_fft),
+    ("demo-correlogram-rhythm", "Activity correlogram", rt.plot_correlogram),
 ])
-def test_spectra_draw_line_and_points_at_the_saved_sizes(sid, pid, fn):
+def test_spectra_draw_line_and_points_at_the_saved_sizes(sid, name, fn):
     session = demo(sid)
-    plot = plot_by_id(session, pid)
+    plot = plot_by_name(session, name)
     s0 = plot["plot"]["data"][0]
     assert s0["line"]["draw"] and s0["points"]["draw"]
     fig, ax = render(session, plot, fn)
@@ -410,7 +438,7 @@ def test_spectra_draw_line_and_points_at_the_saved_sizes(sid, pid, fn):
 def test_overlay_widths_use_the_same_px_to_points_rule_as_the_series():
     from test_plot_overlays import ov
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = plot_by_name(session, BINNED)
     plot["plot"]["overlays"] = [
         ov(1, "line", "horizontal", at=[20], strokeWidth=2.5, stroke="5, 5"),
         ov(2, "band", "vertical", start=[5], end=[10], edge=True, edgeWidth=2),
@@ -429,11 +457,11 @@ def test_overlay_widths_use_the_same_px_to_points_rule_as_the_series():
 
 
 def test_a_points_series_and_a_line_series_get_different_automatic_colours():
-    # As saved: series 0 points only, series 1 line only, both colours automatic. In the app
+    # Series 0 points only, series 1 line only (as saved), both colours automatic. In the app
     # they are two columns, so two colours; matplotlib's separate line and scatter cycles
     # would both start at C0.
     session = demo("demo-tp-binneddata")
-    plot = plot_by_id(session, 103)
+    plot = automatic_colours(plot_by_name(session, BINNED))
     fig, ax = render(session, plot)
     try:
         pts = tuple(series_artists(ax, 0)["points"][0].get_facecolor()[0])

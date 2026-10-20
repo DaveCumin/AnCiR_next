@@ -4,9 +4,9 @@
 		{
 			"name": "byDay",
 			"demo": "demo-boxplot-by-day",
-			"plotId": 73,
+			"plotId": 75,
 			"plotJSON": {
-				"id": 73,
+				"id": 75,
 				"name": "Activity by day",
 				"x": 60,
 				"y": 255,
@@ -42,9 +42,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 509,
+								"id": 530,
 								"name": "day",
-								"refId": 507,
+								"refId": 528,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -53,9 +53,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 510,
+								"id": 531,
 								"name": "activity",
-								"refId": 508,
+								"refId": 529,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -496,9 +496,9 @@
 		{
 			"name": "byDayPoints",
 			"demo": "demo-boxplot-by-day",
-			"plotId": 73,
+			"plotId": 75,
 			"plotJSON": {
-				"id": 73,
+				"id": 75,
 				"name": "Activity by day",
 				"x": 60,
 				"y": 255,
@@ -534,9 +534,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 509,
+								"id": 530,
 								"name": "day",
-								"refId": 507,
+								"refId": 528,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -545,9 +545,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 510,
+								"id": 531,
 								"name": "activity",
-								"refId": 508,
+								"refId": 529,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2669,9 +2669,9 @@
 		{
 			"name": "byDayMonochrome",
 			"demo": "demo-boxplot-by-day",
-			"plotId": 73,
+			"plotId": 75,
 			"plotJSON": {
-				"id": 73,
+				"id": 75,
 				"name": "Activity by day",
 				"x": 60,
 				"y": 255,
@@ -2707,9 +2707,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 509,
+								"id": 530,
 								"name": "day",
-								"refId": 507,
+								"refId": 528,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2718,9 +2718,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 510,
+								"id": 531,
 								"name": "activity",
-								"refId": 508,
+								"refId": 529,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -4842,9 +4842,9 @@
 		{
 			"name": "violinGroups",
 			"demo": "demo-violinplot-groups",
-			"plotId": 74,
+			"plotId": 76,
 			"plotJSON": {
-				"id": 74,
+				"id": 76,
 				"name": "Value by group (violin)",
 				"x": 60,
 				"y": 255,
@@ -4880,9 +4880,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 513,
+								"id": 534,
 								"name": "group",
-								"refId": 511,
+								"refId": 532,
 								"type": "category",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -4891,9 +4891,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 514,
+								"id": 535,
 								"name": "value",
-								"refId": 512,
+								"refId": 533,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -7415,9 +7415,9 @@
 		{
 			"name": "violinOnly",
 			"demo": "demo-violinplot-groups",
-			"plotId": 74,
+			"plotId": 76,
 			"plotJSON": {
-				"id": 74,
+				"id": 76,
 				"name": "Value by group (violin)",
 				"x": 60,
 				"y": 255,
@@ -7453,9 +7453,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 513,
+								"id": 534,
 								"name": "group",
-								"refId": 511,
+								"refId": 532,
 								"type": "category",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -7464,9 +7464,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 514,
+								"id": 535,
 								"name": "value",
-								"refId": 512,
+								"refId": 533,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -11217,9 +11217,9 @@
 		{
 			"name": "groupComparison",
 			"demo": "demo-tp-groupcomparison",
-			"plotId": 123,
+			"plotId": 125,
 			"plotJSON": {
-				"id": 123,
+				"id": 125,
 				"name": "Compare groups (stats): groups",
 				"x": 60,
 				"y": 255,
@@ -11255,9 +11255,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 736,
+								"id": 757,
 								"name": "Compare groups (stats) input 1",
-								"refId": 731,
+								"refId": 752,
 								"type": "category",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -11266,9 +11266,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 737,
+								"id": 758,
 								"name": "Compare groups (stats) input 2",
-								"refId": 732,
+								"refId": 753,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -11340,7 +11340,7 @@
 					}
 				]
 			},
-			"columnLabels": { "733": "Test statistic", "734": "p-value", "735": "Effect size" },
+			"columnLabels": { "754": "Test statistic", "755": "p-value", "756": "Effect size" },
 			"expected": {
 				"plotSize": [440, 255],
 				"padding": { "top": 15, "right": 30, "bottom": 30, "left": 50 },

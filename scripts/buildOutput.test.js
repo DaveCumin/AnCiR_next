@@ -9,6 +9,11 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { resolve } from 'node:path';
 import { buildOutputDirs, E2E_BUILD_ENV } from './buildOutput.js';
 
+// The real @playwright/test opens a connection when imported into vitest; playwright.config.js
+// only needs defineConfig, which returns its argument. (vi.mock is hoisted to the top of the
+// file whatever its place, so it is written here.)
+vi.mock('@playwright/test', () => ({ defineConfig: (c) => c }));
+
 const ROOT = resolve(import.meta.dirname, '..');
 const inRepoBuild = (dir) => resolve(ROOT, dir) === resolve(ROOT, 'build');
 
@@ -70,9 +75,6 @@ describe('svelte.config.js', () => {
 });
 
 describe('playwright.config.js', () => {
-	// The real @playwright/test opens a connection when imported into vitest; the config
-	// only needs defineConfig, which returns its argument.
-	vi.mock('@playwright/test', () => ({ defineConfig: (c) => c }));
 	afterEach(() => {
 		vi.unstubAllEnvs();
 		vi.resetModules();

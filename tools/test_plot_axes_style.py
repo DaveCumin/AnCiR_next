@@ -29,6 +29,7 @@ Pinned here, exactly unless said otherwise:
 from __future__ import annotations
 
 import copy
+import math
 import json
 import sys
 from pathlib import Path
@@ -312,6 +313,41 @@ def test_d3_formats_match_the_apps_strings():
     assert rt.d3_format(1000000, "~g") == "1e+6"
     assert rt.d3_format(2000, "~s") == "2k"
     assert rt.d3_format(0.5, "~s") == "500m"
+
+
+def test_a_zero_width_domain_ticks_as_d3_does():
+    # d3 (d3-array 3.2.4, d3-scale 4.0.2, d3-format 3.1.2, run in node): a domain [a, a] has
+    # the one tick a, tickIncrement -Infinity, tickStep 0, and tickFormat(5) leaves ',f' at
+    # precision 6 ('0.000000'); a NaN or infinite domain has no ticks and a NaN or infinite
+    # step. Python must not raise on these (log10(0) and x / 0 do).
+    assert rt.d3_tick_increment(0, 0, 5) == -float("inf")
+    assert rt.d3_tick_step(0, 0, 5) == 0
+    assert rt.d3_ticks(0, 0, 5) == [0]
+    for a in (0, 3, -2):
+        assert rt.d3_linear_tick_format(a, a, 5)(a) == rt.d3_format(a, ",.6f")
+    assert rt.d3_linear_tick_format(0, 0, 5)(0) == "0.000000"
+    assert rt.d3_linear_tick_format(-2, -2, 5)(-2) == "−2.000000"
+    assert rt.d3_tick_step(0, float("inf"), 5) == float("inf")
+    for lo, hi in ((0, float("nan")), (float("nan"), float("nan"))):
+        assert math.isnan(rt.d3_tick_step(lo, hi, 5))
+        assert rt.d3_ticks(lo, hi, 5) == []
+
+
+def test_a_correlogram_whose_series_has_no_lags_still_draws():
+    # Its lag domain is [0, 0] in the app (Correlogram.svelte laglims: 0 to the longest lag
+    # of any series) and here; the export raised "math domain error" on it before.
+    case = CASES["correlogram"]
+    session = json.loads((DEMOS / f"{case['demo']}.json").read_text())
+    cols, _raw, _errors = run_session(session)
+    plot = copy.deepcopy(case["plotJSON"])
+    for d in plot["plot"]["data"]:
+        d["y"] = {**d["y"], "refId": -999}  # a column the session does not have
+    fig, ax = rt.render_plot_figure(plot, cols, auto_pad=False)
+    fig.canvas.draw()
+    assert [t.get_text() for t in ax.get_xticklabels()] == ["0.000000"]
+    # d3 puts the one tick of a zero-width domain mid-axis.
+    lo, hi = ax.get_xlim()
+    assert ax.get_xticks()[0] == pytest.approx((lo + hi) / 2)
 
 
 def test_time_ticks_are_d3s_utc_intervals_labelled_in_the_zone():

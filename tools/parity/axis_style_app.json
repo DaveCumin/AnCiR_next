@@ -4,10 +4,10 @@
 		{
 			"name": "timeUtc",
 			"demo": "demo-tp-joindata",
-			"plotId": 149,
+			"plotId": 151,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 149,
+				"id": 151,
 				"name": "Join Data: hourly ambient and hive",
 				"x": 60,
 				"y": 255,
@@ -59,9 +59,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 892,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 913,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -72,9 +72,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 893,
-								"name": "binnedy_887_93",
-								"refId": 890,
+								"id": 914,
+								"name": "binnedy_908_95",
+								"refId": 911,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -85,19 +85,19 @@
 							"label": "Ambient (1 h)",
 							"yAxis": "left",
 							"line": {
-								"colour": null,
+								"colour": "#234154",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#234154", "radius": 3, "shape": "circle", "draw": false }
 						},
 						{
 							"x": {
-								"id": 894,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 915,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -108,9 +108,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 895,
-								"name": "binnedy_888_93",
-								"refId": 891,
+								"id": 916,
+								"name": "binnedy_909_95",
+								"refId": 912,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -121,13 +121,13 @@
 							"label": "Hive (1 h)",
 							"yAxis": "right",
 							"line": {
-								"colour": null,
+								"colour": "#BE796B",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#BE796B", "radius": 3, "shape": "circle", "draw": false }
 						}
 					],
 					"legend": {
@@ -147,12 +147,12 @@
 				}
 			},
 			"columnLabels": {
-				"886": "Time",
-				"887": "ambient temp",
-				"888": "hive temp",
-				"889": "Binned: x",
-				"890": "Binned: ambient temp",
-				"891": "Binned: hive temp"
+				"907": "Time",
+				"908": "ambient temp",
+				"909": "hive temp",
+				"910": "Binned: x",
+				"911": "Binned: ambient temp",
+				"912": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -232,10 +232,10 @@
 		{
 			"name": "timeKolkata",
 			"demo": "demo-tp-joindata",
-			"plotId": 149,
+			"plotId": 151,
 			"zone": "Asia/Kolkata",
 			"plotJSON": {
-				"id": 149,
+				"id": 151,
 				"name": "Join Data: hourly ambient and hive",
 				"x": 60,
 				"y": 255,
@@ -287,9 +287,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 892,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 913,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -300,9 +300,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 893,
-								"name": "binnedy_887_93",
-								"refId": 890,
+								"id": 914,
+								"name": "binnedy_908_95",
+								"refId": 911,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -313,19 +313,19 @@
 							"label": "Ambient (1 h)",
 							"yAxis": "left",
 							"line": {
-								"colour": null,
+								"colour": "#234154",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#234154", "radius": 3, "shape": "circle", "draw": false }
 						},
 						{
 							"x": {
-								"id": 894,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 915,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -336,9 +336,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 895,
-								"name": "binnedy_888_93",
-								"refId": 891,
+								"id": 916,
+								"name": "binnedy_909_95",
+								"refId": 912,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -349,13 +349,13 @@
 							"label": "Hive (1 h)",
 							"yAxis": "right",
 							"line": {
-								"colour": null,
+								"colour": "#BE796B",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#BE796B", "radius": 3, "shape": "circle", "draw": false }
 						}
 					],
 					"legend": {
@@ -375,12 +375,12 @@
 				}
 			},
 			"columnLabels": {
-				"886": "Time",
-				"887": "ambient temp",
-				"888": "hive temp",
-				"889": "Binned: x",
-				"890": "Binned: ambient temp",
-				"891": "Binned: hive temp"
+				"907": "Time",
+				"908": "ambient temp",
+				"909": "hive temp",
+				"910": "Binned: x",
+				"911": "Binned: ambient temp",
+				"912": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -460,10 +460,10 @@
 		{
 			"name": "timeNewYorkDst",
 			"demo": "demo-tp-joindata",
-			"plotId": 149,
+			"plotId": 151,
 			"zone": "America/New_York",
 			"plotJSON": {
-				"id": 149,
+				"id": 151,
 				"name": "Join Data: hourly ambient and hive",
 				"x": 60,
 				"y": 255,
@@ -515,9 +515,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 892,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 913,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -528,9 +528,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 893,
-								"name": "binnedy_887_93",
-								"refId": 890,
+								"id": 914,
+								"name": "binnedy_908_95",
+								"refId": 911,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -541,19 +541,19 @@
 							"label": "Ambient (1 h)",
 							"yAxis": "left",
 							"line": {
-								"colour": null,
+								"colour": "#234154",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#234154", "radius": 3, "shape": "circle", "draw": false }
 						},
 						{
 							"x": {
-								"id": 894,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 915,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -564,9 +564,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 895,
-								"name": "binnedy_888_93",
-								"refId": 891,
+								"id": 916,
+								"name": "binnedy_909_95",
+								"refId": 912,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -577,13 +577,13 @@
 							"label": "Hive (1 h)",
 							"yAxis": "right",
 							"line": {
-								"colour": null,
+								"colour": "#BE796B",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#BE796B", "radius": 3, "shape": "circle", "draw": false }
 						}
 					],
 					"legend": {
@@ -603,12 +603,12 @@
 				}
 			},
 			"columnLabels": {
-				"886": "Time",
-				"887": "ambient temp",
-				"888": "hive temp",
-				"889": "Binned: x",
-				"890": "Binned: ambient temp",
-				"891": "Binned: hive temp"
+				"907": "Time",
+				"908": "ambient temp",
+				"909": "hive temp",
+				"910": "Binned: x",
+				"911": "Binned: ambient temp",
+				"912": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -687,10 +687,10 @@
 		{
 			"name": "timeFormatTicks",
 			"demo": "demo-tp-joindata",
-			"plotId": 149,
+			"plotId": 151,
 			"zone": "Europe/London",
 			"plotJSON": {
-				"id": 149,
+				"id": 151,
 				"name": "Join Data: hourly ambient and hive",
 				"x": 60,
 				"y": 255,
@@ -742,9 +742,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 892,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 913,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -755,9 +755,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 893,
-								"name": "binnedy_887_93",
-								"refId": 890,
+								"id": 914,
+								"name": "binnedy_908_95",
+								"refId": 911,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -768,19 +768,19 @@
 							"label": "Ambient (1 h)",
 							"yAxis": "left",
 							"line": {
-								"colour": null,
+								"colour": "#234154",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#234154", "radius": 3, "shape": "circle", "draw": false }
 						},
 						{
 							"x": {
-								"id": 894,
-								"name": "binnedx_93",
-								"refId": 889,
+								"id": 915,
+								"name": "binnedx_95",
+								"refId": 910,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -791,9 +791,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 895,
-								"name": "binnedy_888_93",
-								"refId": 891,
+								"id": 916,
+								"name": "binnedy_909_95",
+								"refId": 912,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -804,13 +804,13 @@
 							"label": "Hive (1 h)",
 							"yAxis": "right",
 							"line": {
-								"colour": null,
+								"colour": "#BE796B",
 								"strokeWidth": 2.5,
 								"stroke": "solid",
 								"draw": true,
 								"joinGaps": false
 							},
-							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": false }
+							"points": { "colour": "#BE796B", "radius": 3, "shape": "circle", "draw": false }
 						}
 					],
 					"legend": {
@@ -830,12 +830,12 @@
 				}
 			},
 			"columnLabels": {
-				"886": "Time",
-				"887": "ambient temp",
-				"888": "hive temp",
-				"889": "Binned: x",
-				"890": "Binned: ambient temp",
-				"891": "Binned: hive temp"
+				"907": "Time",
+				"908": "ambient temp",
+				"909": "hive temp",
+				"910": "Binned: x",
+				"911": "Binned: ambient temp",
+				"912": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -919,10 +919,10 @@
 		{
 			"name": "timeColourBy",
 			"demo": "demo-workflow-colour-by-hysteresis",
-			"plotId": 0,
+			"plotId": 70,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 0,
+				"id": 70,
 				"name": "Hive against air, by hour and humidity",
 				"x": 60,
 				"y": 255,
@@ -974,9 +974,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 13,
-								"name": "binnedy_6_1",
-								"refId": 10,
+								"id": 510,
+								"name": "binnedy_503_41",
+								"refId": 507,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -985,9 +985,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 14,
-								"name": "binnedy_8_1",
-								"refId": 11,
+								"id": 511,
+								"name": "binnedy_505_41",
+								"refId": 508,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1006,9 +1006,9 @@
 							},
 							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": true },
 							"colourBy": {
-								"id": 15,
-								"name": "binnedx_1",
-								"refId": 9,
+								"id": 512,
+								"name": "binnedx_41",
+								"refId": 506,
 								"type": "time",
 								"timeFormat": [],
 								"originTime_ms": 1705276800000,
@@ -1027,9 +1027,9 @@
 								"colourLine": true
 							},
 							"sizeBy": {
-								"id": 16,
-								"name": "binnedy_7_1",
-								"refId": 12,
+								"id": 513,
+								"name": "binnedy_504_41",
+								"refId": 509,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1092,14 +1092,14 @@
 				}
 			},
 			"columnLabels": {
-				"5": "Time",
-				"6": "air temperature",
-				"7": "relative humidity (%)",
-				"8": "hive temperature",
-				"9": "Binned: x",
-				"10": "Binned: air temperature",
-				"11": "Binned: hive temperature",
-				"12": "Binned: relative humidity (%)"
+				"502": "Time",
+				"503": "air temperature",
+				"504": "relative humidity (%)",
+				"505": "hive temperature",
+				"506": "Binned: x",
+				"507": "Binned: air temperature",
+				"508": "Binned: hive temperature",
+				"509": "Binned: relative humidity (%)"
 			},
 			"expected": {
 				"axes": {
@@ -1165,10 +1165,10 @@
 		{
 			"name": "timeAxisDays",
 			"demo": "demo-workflow-colour-by-hysteresis",
-			"plotId": 1,
+			"plotId": 71,
 			"zone": "Pacific/Auckland",
 			"plotJSON": {
-				"id": 1,
+				"id": 71,
 				"name": "Air and hive over time",
 				"x": 630,
 				"y": 255,
@@ -1215,9 +1215,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 17,
-								"name": "binnedx_1",
-								"refId": 9,
+								"id": 514,
+								"name": "binnedx_41",
+								"refId": 506,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1705276800000,
@@ -1228,9 +1228,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 18,
-								"name": "binnedy_6_1",
-								"refId": 10,
+								"id": 515,
+								"name": "binnedy_503_41",
+								"refId": 507,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1251,9 +1251,9 @@
 						},
 						{
 							"x": {
-								"id": 19,
-								"name": "binnedx_1",
-								"refId": 9,
+								"id": 516,
+								"name": "binnedx_41",
+								"refId": 506,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1705276800000,
@@ -1264,9 +1264,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 20,
-								"name": "binnedy_8_1",
-								"refId": 11,
+								"id": 517,
+								"name": "binnedy_505_41",
+								"refId": 508,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1303,14 +1303,14 @@
 				}
 			},
 			"columnLabels": {
-				"5": "Time",
-				"6": "air temperature",
-				"7": "relative humidity (%)",
-				"8": "hive temperature",
-				"9": "Binned: x",
-				"10": "Binned: air temperature",
-				"11": "Binned: hive temperature",
-				"12": "Binned: relative humidity (%)"
+				"502": "Time",
+				"503": "air temperature",
+				"504": "relative humidity (%)",
+				"505": "hive temperature",
+				"506": "Binned: x",
+				"507": "Binned: air temperature",
+				"508": "Binned: hive temperature",
+				"509": "Binned: relative humidity (%)"
 			},
 			"expected": {
 				"axes": {
@@ -1373,10 +1373,10 @@
 		{
 			"name": "numericScatter",
 			"demo": "demo-scatter-rhythm",
-			"plotId": 70,
+			"plotId": 72,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 70,
+				"id": 72,
 				"name": "Activity vs hour",
 				"x": 60,
 				"y": 255,
@@ -1418,9 +1418,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 499,
+								"id": 520,
 								"name": "hour",
-								"refId": 497,
+								"refId": 518,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1429,9 +1429,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 500,
+								"id": 521,
 								"name": "activity",
-								"refId": 498,
+								"refId": 519,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1525,10 +1525,10 @@
 		{
 			"name": "numericScatterStyled",
 			"demo": "demo-scatter-rhythm",
-			"plotId": 70,
+			"plotId": 72,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 70,
+				"id": 72,
 				"name": "Activity vs hour",
 				"x": 60,
 				"y": 255,
@@ -1575,9 +1575,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 499,
+								"id": 520,
 								"name": "hour",
-								"refId": 497,
+								"refId": 518,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1586,9 +1586,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 500,
+								"id": 521,
 								"name": "activity",
-								"refId": 498,
+								"refId": 519,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1679,10 +1679,10 @@
 		{
 			"name": "scatterLogY",
 			"demo": "demo-scatter-rhythm",
-			"plotId": 70,
+			"plotId": 72,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 70,
+				"id": 72,
 				"name": "Activity vs hour",
 				"x": 60,
 				"y": 255,
@@ -1724,9 +1724,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 499,
+								"id": 520,
 								"name": "hour",
-								"refId": 497,
+								"refId": 518,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1735,9 +1735,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 500,
+								"id": 521,
 								"name": "activity",
-								"refId": 498,
+								"refId": 519,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1859,10 +1859,10 @@
 		{
 			"name": "periodogram",
 			"demo": "demo-periodogram-rhythm",
-			"plotId": 78,
+			"plotId": 80,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 78,
+				"id": 80,
 				"name": "Activity periodogram",
 				"x": 60,
 				"y": 255,
@@ -1913,9 +1913,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 535,
+								"id": 556,
 								"name": "hour",
-								"refId": 533,
+								"refId": 554,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1924,9 +1924,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 536,
+								"id": 557,
 								"name": "activity",
-								"refId": 534,
+								"refId": 555,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1959,9 +1959,9 @@
 				}
 			},
 			"columnLabels": {
-				"988": "Peak period (h)",
-				"989": "Peak power",
-				"990": "Peak p (family-wise)"
+				"1009": "Peak period (h)",
+				"1010": "Peak power",
+				"1011": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2016,10 +2016,10 @@
 		{
 			"name": "periodogramLog",
 			"demo": "demo-periodogram-rhythm",
-			"plotId": 78,
+			"plotId": 80,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 78,
+				"id": 80,
 				"name": "Activity periodogram",
 				"x": 60,
 				"y": 255,
@@ -2070,9 +2070,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 535,
+								"id": 556,
 								"name": "hour",
-								"refId": 533,
+								"refId": 554,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2081,9 +2081,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 536,
+								"id": 557,
 								"name": "activity",
-								"refId": 534,
+								"refId": 555,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2116,9 +2116,9 @@
 				}
 			},
 			"columnLabels": {
-				"995": "Peak period (h)",
-				"996": "Peak power",
-				"997": "Peak p (family-wise)"
+				"1016": "Peak period (h)",
+				"1017": "Peak power",
+				"1018": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2177,10 +2177,10 @@
 		{
 			"name": "periodogramManualTicks",
 			"demo": "demo-periodogram-rhythm",
-			"plotId": 78,
+			"plotId": 80,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 78,
+				"id": 80,
 				"name": "Activity periodogram",
 				"x": 60,
 				"y": 255,
@@ -2236,9 +2236,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 535,
+								"id": 556,
 								"name": "hour",
-								"refId": 533,
+								"refId": 554,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2247,9 +2247,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 536,
+								"id": 557,
 								"name": "activity",
-								"refId": 534,
+								"refId": 555,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2282,9 +2282,9 @@
 				}
 			},
 			"columnLabels": {
-				"1002": "Peak period (h)",
-				"1003": "Peak power",
-				"1004": "Peak p (family-wise)"
+				"1023": "Peak period (h)",
+				"1024": "Peak power",
+				"1025": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2337,10 +2337,10 @@
 		{
 			"name": "fft",
 			"demo": "demo-fft-rhythm",
-			"plotId": 80,
+			"plotId": 82,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 80,
+				"id": 82,
 				"name": "Signal FFT",
 				"x": 60,
 				"y": 255,
@@ -2384,9 +2384,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 543,
+								"id": 564,
 								"name": "hour",
-								"refId": 541,
+								"refId": 562,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2395,9 +2395,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 544,
+								"id": 565,
 								"name": "signal",
-								"refId": 542,
+								"refId": 563,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2442,9 +2442,9 @@
 				}
 			},
 			"columnLabels": {
-				"1009": "Peak period (h)",
-				"1010": "Peak frequency (1/h)",
-				"1011": "Peak magnitude"
+				"1030": "Peak period (h)",
+				"1031": "Peak frequency (1/h)",
+				"1032": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2501,10 +2501,10 @@
 		{
 			"name": "fftLog",
 			"demo": "demo-fft-rhythm",
-			"plotId": 80,
+			"plotId": 82,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 80,
+				"id": 82,
 				"name": "Signal FFT",
 				"x": 60,
 				"y": 255,
@@ -2548,9 +2548,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 543,
+								"id": 564,
 								"name": "hour",
-								"refId": 541,
+								"refId": 562,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2559,9 +2559,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 544,
+								"id": 565,
 								"name": "signal",
-								"refId": 542,
+								"refId": 563,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2606,9 +2606,9 @@
 				}
 			},
 			"columnLabels": {
-				"1016": "Peak period (h)",
-				"1017": "Peak frequency (1/h)",
-				"1018": "Peak magnitude"
+				"1037": "Peak period (h)",
+				"1038": "Peak frequency (1/h)",
+				"1039": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2698,10 +2698,10 @@
 		{
 			"name": "correlogram",
 			"demo": "demo-correlogram-rhythm",
-			"plotId": 79,
+			"plotId": 81,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 79,
+				"id": 81,
 				"name": "Activity correlogram",
 				"x": 60,
 				"y": 255,
@@ -2755,9 +2755,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 539,
+								"id": 560,
 								"name": "hour",
-								"refId": 537,
+								"refId": 558,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2766,9 +2766,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 540,
+								"id": 561,
 								"name": "activity",
-								"refId": 538,
+								"refId": 559,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2800,7 +2800,7 @@
 					"overlays": []
 				}
 			},
-			"columnLabels": { "1023": "Peak lag (h)", "1024": "Peak correlation (r)" },
+			"columnLabels": { "1044": "Peak lag (h)", "1045": "Peak correlation (r)" },
 			"expected": {
 				"axes": {
 					"left": {
@@ -2852,10 +2852,10 @@
 		{
 			"name": "boxplot",
 			"demo": "demo-tp-groupcomparison",
-			"plotId": 123,
+			"plotId": 125,
 			"zone": "utc",
 			"plotJSON": {
-				"id": 123,
+				"id": 125,
 				"name": "Compare groups (stats): groups",
 				"x": 60,
 				"y": 255,
@@ -2891,9 +2891,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 736,
+								"id": 757,
 								"name": "Compare groups (stats) input 1",
-								"refId": 731,
+								"refId": 752,
 								"type": "category",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2902,9 +2902,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 737,
+								"id": 758,
 								"name": "Compare groups (stats) input 2",
-								"refId": 732,
+								"refId": 753,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -2915,7 +2915,7 @@
 							"label": "",
 							"boxPlot": {
 								"colour": null,
-								"fillColour": "#234154",
+								"fillColour": null,
 								"fillOpacity": 0.3,
 								"strokeWidth": 2,
 								"stroke": "solid",
@@ -2967,7 +2967,7 @@
 					"overlays": []
 				}
 			},
-			"columnLabels": { "733": "Test statistic", "734": "p-value", "735": "Effect size" },
+			"columnLabels": { "754": "Test statistic", "755": "p-value", "756": "Effect size" },
 			"expected": {
 				"axes": {
 					"left": {
@@ -4611,6 +4611,7 @@
 		{
 			"name": "actogramHeatOffset",
 			"demo": "demo-workflow-colour-by-hysteresis",
+			"plotId": 500,
 			"zone": "utc",
 			"plotJSON": {
 				"id": 500,
@@ -4669,8 +4670,8 @@
 					"xAxis": { "label": "", "gridlines": false, "nticks": 6, "manualTicks": null },
 					"data": [
 						{
-							"x": { "refId": 0 },
-							"y": { "refId": 1 },
+							"x": { "refId": 497 },
+							"y": { "refId": 498 },
 							"label": "",
 							"colour": "#234154",
 							"draw": true,
@@ -4680,14 +4681,14 @@
 				}
 			},
 			"columnLabels": {
-				"5": "Time",
-				"6": "air temperature",
-				"7": "relative humidity (%)",
-				"8": "hive temperature",
-				"9": "Binned: x",
-				"10": "Binned: air temperature",
-				"11": "Binned: hive temperature",
-				"12": "Binned: relative humidity (%)"
+				"502": "Time",
+				"503": "air temperature",
+				"504": "relative humidity (%)",
+				"505": "hive temperature",
+				"506": "Binned: x",
+				"507": "Binned: air temperature",
+				"508": "Binned: hive temperature",
+				"509": "Binned: relative humidity (%)"
 			},
 			"expected": {
 				"axes": {
@@ -4896,10 +4897,10 @@
 		{
 			"name": "actogramDates",
 			"demo": "demo-actogram-rhythm",
-			"plotId": 77,
+			"plotId": 79,
 			"zone": "Asia/Kolkata",
 			"plotJSON": {
-				"id": 77,
+				"id": 79,
 				"name": "Activity actogram",
 				"x": 60,
 				"y": 255,
@@ -4956,9 +4957,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 531,
+								"id": 552,
 								"name": "hour",
-								"refId": 529,
+								"refId": 550,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -4967,9 +4968,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 532,
+								"id": 553,
 								"name": "activity",
-								"refId": 530,
+								"refId": 551,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,

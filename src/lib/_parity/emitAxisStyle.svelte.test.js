@@ -34,6 +34,7 @@ import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 import { resolveStyle } from '$lib/plots/figureStyle.js';
 import { execFileSync } from 'node:child_process';
+import { plotByName, demoRefs } from './demoRefs.js';
 
 const ROOT = process.cwd();
 const DEMOS = join(ROOT, 'static', 'sessions', 'demos');
@@ -51,16 +52,28 @@ class SyncComputeWorker {
 const SERIF_L = { fontFamily: 'serif', fontSize: 'l', fontSizePt: null, roleScale: null };
 
 /**
- * Each case: a demo, the plot in it, the display zone, and the saved settings to change
- * (`edit(plotJSON)` writes the same fields the app's controls write).
+ * Each case: a demo, the plot in it (by NAME: demo ids shift whenever the generator adds a
+ * node), the display zone, and the saved settings to change (`edit(plotJSON, ref)` writes the
+ * same fields the app's controls write; `ref` finds the demo's columns by name, see
+ * demoRefs.js).
  */
 const CASES = [
-	{ name: 'timeUtc', demo: 'demo-tp-joindata', plot: 149, zone: 'utc' },
-	{ name: 'timeKolkata', demo: 'demo-tp-joindata', plot: 149, zone: 'Asia/Kolkata' },
+	{
+		name: 'timeUtc',
+		demo: 'demo-tp-joindata',
+		plot: 'Join Data: hourly ambient and hive',
+		zone: 'utc'
+	},
+	{
+		name: 'timeKolkata',
+		demo: 'demo-tp-joindata',
+		plot: 'Join Data: hourly ambient and hive',
+		zone: 'Asia/Kolkata'
+	},
 	{
 		name: 'timeNewYorkDst',
 		demo: 'demo-tp-joindata',
-		plot: 149,
+		plot: 'Join Data: hourly ambient and hive',
 		zone: 'America/New_York',
 		// Two days across the 10 March 2024 change to daylight time (07:00 UTC).
 		edit: (p) => {
@@ -70,7 +83,7 @@ const CASES = [
 	{
 		name: 'timeFormatTicks',
 		demo: 'demo-tp-joindata',
-		plot: 149,
+		plot: 'Join Data: hourly ambient and hive',
 		zone: 'Europe/London',
 		edit: (p) => {
 			p.plot.xTickFormat = 'DD MMM HH:mm';
@@ -83,7 +96,7 @@ const CASES = [
 	{
 		name: 'timeColourBy',
 		demo: 'demo-workflow-colour-by-hysteresis',
-		plot: 0,
+		plot: 'Hive against air, by hour and humidity',
 		zone: 'utc',
 		// A fixed corner: the export does not reproduce the 'auto' legend's search.
 		edit: (p) => {
@@ -93,18 +106,18 @@ const CASES = [
 	{
 		name: 'timeAxisDays',
 		demo: 'demo-workflow-colour-by-hysteresis',
-		plot: 1,
+		plot: 'Air and hive over time',
 		zone: 'Pacific/Auckland',
 		edit: (p) => {
 			p.plot.legend.position = 'bottomright';
 			p.plot.xAxis.nticks = 10;
 		}
 	},
-	{ name: 'numericScatter', demo: 'demo-scatter-rhythm', plot: 70, zone: 'utc' },
+	{ name: 'numericScatter', demo: 'demo-scatter-rhythm', plot: 'Activity vs hour', zone: 'utc' },
 	{
 		name: 'numericScatterStyled',
 		demo: 'demo-scatter-rhythm',
-		plot: 70,
+		plot: 'Activity vs hour',
 		zone: 'utc',
 		edit: (p) => {
 			p.style = { ...p.style, ...SERIF_L };
@@ -117,18 +130,23 @@ const CASES = [
 	{
 		name: 'scatterLogY',
 		demo: 'demo-scatter-rhythm',
-		plot: 70,
+		plot: 'Activity vs hour',
 		zone: 'utc',
 		edit: (p) => {
 			p.plot.yLogScaleLeft = true;
 			p.plot.ylimsLeftIN = [0.5, 2000];
 		}
 	},
-	{ name: 'periodogram', demo: 'demo-periodogram-rhythm', plot: 78, zone: 'utc' },
+	{
+		name: 'periodogram',
+		demo: 'demo-periodogram-rhythm',
+		plot: 'Activity periodogram',
+		zone: 'utc'
+	},
 	{
 		name: 'periodogramLog',
 		demo: 'demo-periodogram-rhythm',
-		plot: 78,
+		plot: 'Activity periodogram',
 		zone: 'utc',
 		edit: (p) => {
 			p.plot.logScale = true;
@@ -138,7 +156,7 @@ const CASES = [
 	{
 		name: 'periodogramManualTicks',
 		demo: 'demo-periodogram-rhythm',
-		plot: 78,
+		plot: 'Activity periodogram',
 		zone: 'utc',
 		edit: (p) => {
 			p.plot.xAxis.manualTicks = [6, 12, 24, 30];
@@ -146,24 +164,39 @@ const CASES = [
 			p.style = { ...p.style, fontSize: 's', fontSizePt: null, roleScale: null };
 		}
 	},
-	{ name: 'fft', demo: 'demo-fft-rhythm', plot: 80, zone: 'utc' },
+	{ name: 'fft', demo: 'demo-fft-rhythm', plot: 'Signal FFT', zone: 'utc' },
 	{
 		name: 'fftLog',
 		demo: 'demo-fft-rhythm',
-		plot: 80,
+		plot: 'Signal FFT',
 		zone: 'utc',
 		edit: (p) => {
 			p.plot.logScale = true;
 		}
 	},
-	{ name: 'correlogram', demo: 'demo-correlogram-rhythm', plot: 79, zone: 'utc' },
+	{
+		name: 'correlogram',
+		demo: 'demo-correlogram-rhythm',
+		plot: 'Activity correlogram',
+		zone: 'utc'
+	},
 	// With its significance bars, which raise the value axis (tools/test_plot_boxplot.py).
-	{ name: 'boxplot', demo: 'demo-tp-groupcomparison', plot: 123, zone: 'utc' },
-	{ name: 'actogram', demo: 'demo-workflow-masking', plot: 62, zone: 'utc' },
+	{
+		name: 'boxplot',
+		demo: 'demo-tp-groupcomparison',
+		plot: 'Compare groups (stats): groups',
+		zone: 'utc'
+	},
+	{
+		name: 'actogram',
+		demo: 'demo-workflow-masking',
+		plot: 'Actogram: truly entrained',
+		zone: 'utc'
+	},
 	{
 		name: 'actogramRowsHeatmap',
 		demo: 'demo-workflow-masking',
-		plot: 62,
+		plot: 'Actogram: truly entrained',
 		zone: 'utc',
 		edit: (p) => {
 			p.plot.rowLabels = 'period';
@@ -177,11 +210,17 @@ const CASES = [
 		// 25.3 C): the masking demo's actogram, rewired to the hysteresis demo's columns.
 		name: 'actogramHeatOffset',
 		demo: 'demo-workflow-colour-by-hysteresis',
-		source: { demo: 'demo-workflow-masking', plot: 62 },
+		source: { demo: 'demo-workflow-masking', plot: 'Actogram: truly entrained' },
 		zone: 'utc',
-		edit: (p) => {
+		edit: (p, ref) => {
 			p.id = 500;
-			p.plot.data = [{ ...p.plot.data[0], x: { refId: 0 }, y: { refId: 1 } }];
+			p.plot.data = [
+				{
+					...p.plot.data[0],
+					x: { refId: ref.col('time') },
+					y: { refId: ref.col('air temperature') }
+				}
+			];
 			p.plot.renderMode = 'heatmap';
 			p.plot.colormap = 'viridis';
 		}
@@ -189,7 +228,7 @@ const CASES = [
 	{
 		name: 'actogramDates',
 		demo: 'demo-actogram-rhythm',
-		plot: 77,
+		plot: 'Activity actogram',
 		zone: 'Asia/Kolkata',
 		edit: (p) => {
 			p.plot.rowLabels = 'date';
@@ -305,8 +344,10 @@ async function runCase(c) {
 	const from = c.source
 		? JSON.parse(readFileSync(join(DEMOS, c.source.demo + '.json'), 'utf8'))
 		: session;
-	const plotJSON = structuredClone(from.plots.find((p) => p.id === (c.source?.plot ?? c.plot)));
-	c.edit?.(plotJSON);
+	const plotJSON = structuredClone(
+		plotByName(from, c.source?.plot ?? c.plot, c.source?.demo ?? c.demo)
+	);
+	c.edit?.(plotJSON, demoRefs(session, c.demo));
 	appState.displayTimezone = c.zone;
 	core.storedValues = session.storedValues ?? {};
 	core.groups = session.groups ?? [];
@@ -347,7 +388,7 @@ async function runCase(c) {
 	return {
 		name: c.name,
 		demo: c.demo,
-		plotId: c.plot,
+		plotId: plotJSON.id,
 		zone: c.zone,
 		plotJSON,
 		columnLabels,

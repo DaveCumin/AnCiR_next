@@ -44,6 +44,7 @@ import { loadProcesses } from '$test/processRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 import { resolveStyle } from '$lib/plots/figureStyle.js';
+import { plotByName, demoRefs } from './demoRefs.js';
 
 const ROOT = process.cwd();
 const DEMOS = join(ROOT, 'static', 'sessions', 'demos');
@@ -62,17 +63,18 @@ class SyncComputeWorker {
 const series = (base, fields) => ({ ...structuredClone(base), ...fields });
 
 /**
- * Each case: a demo, the boxplot in it, and the saved settings to change (`edit(plotJSON)`
- * writes the same fields the app's controls write). `categoryColours` adds session category
- * colours (a user's pick); `appearance` runs "apply to all" (applyFigureAppearance), as
- * switching monochrome on does.
+ * Each case: a demo, the boxplot in it (by NAME: demo ids shift whenever the generator adds a
+ * node), and the saved settings to change (`edit(plotJSON, ref)` writes the same fields the
+ * app's controls write; `ref` finds the demo's columns by name, see demoRefs.js).
+ * `categoryColours` adds session category colours (a user's pick); `appearance` runs "apply
+ * to all" (applyFigureAppearance), as switching monochrome on does.
  */
 const CASES = [
-	{ name: 'byDay', demo: 'demo-boxplot-by-day', plot: 73 },
+	{ name: 'byDay', demo: 'demo-boxplot-by-day', plot: 'Activity by day' },
 	{
 		name: 'byDayPoints',
 		demo: 'demo-boxplot-by-day',
-		plot: 73,
+		plot: 'Activity by day',
 		edit: (p) => {
 			p.plot.showPoints = true;
 			p.plot.pointJitter = 0.6;
@@ -84,17 +86,17 @@ const CASES = [
 	{
 		name: 'byDayMonochrome',
 		demo: 'demo-boxplot-by-day',
-		plot: 73,
+		plot: 'Activity by day',
 		edit: (p) => {
 			p.style = { ...p.style, monochrome: true };
 			p.plot.showPoints = true;
 		}
 	},
-	{ name: 'violinGroups', demo: 'demo-violinplot-groups', plot: 74 },
+	{ name: 'violinGroups', demo: 'demo-violinplot-groups', plot: 'Value by group (violin)' },
 	{
 		name: 'violinOnly',
 		demo: 'demo-violinplot-groups',
-		plot: 74,
+		plot: 'Value by group (violin)',
 		edit: (p) => {
 			p.plot.showBox = false;
 			p.plot.violinBandwidth = 3;
@@ -103,11 +105,11 @@ const CASES = [
 			p.plot.pointColour = '#333333';
 		}
 	},
-	{ name: 'anova', demo: 'demo-workflow-stats-anova', plot: 15 },
+	{ name: 'anova', demo: 'demo-workflow-stats-anova', plot: 'Measure by condition' },
 	{
 		name: 'anovaKruskalStyled',
 		demo: 'demo-workflow-stats-anova',
-		plot: 15,
+		plot: 'Measure by condition',
 		edit: (p) => {
 			p.plot.sigMethod = 'kruskal';
 			p.plot.showNs = true;
@@ -119,27 +121,34 @@ const CASES = [
 			p.plot.xAxis.gridlines = true;
 		}
 	},
-	{ name: 'twoGroup', demo: 'demo-workflow-stats-two-group', plot: 12 },
+	{ name: 'twoGroup', demo: 'demo-workflow-stats-two-group', plot: 'Response by group' },
 	{
 		name: 'twoGroupMannWhitneyPinned',
 		demo: 'demo-workflow-stats-two-group',
-		plot: 12,
+		plot: 'Response by group',
 		categoryColours: { Treatment: { hex: '#ff8800' } },
 		edit: (p) => {
 			p.plot.sigMethod = 'kruskal';
 			p.plot.showNs = true;
 		}
 	},
-	{ name: 'groupComparison', demo: 'demo-tp-groupcomparison', plot: 123 },
-	{ name: 'joinBySource', demo: 'demo-workflow-join-data', plot: 68 },
+	{
+		name: 'groupComparison',
+		demo: 'demo-tp-groupcomparison',
+		plot: 'Compare groups (stats): groups'
+	},
+	{ name: 'joinBySource', demo: 'demo-workflow-join-data', plot: 'Amplitude by group' },
 	{
 		// Two series over the same categories: dodged boxes, series colours, a legend.
 		name: 'joinTwoSeries',
 		demo: 'demo-workflow-join-data',
-		plot: 68,
-		edit: (p) => {
+		plot: 'Amplitude by group',
+		edit: (p, ref) => {
 			const d = p.plot.data[0];
-			p.plot.data = [d, series(d, { y: { ...d.y, id: 9001, refId: 490 } })];
+			p.plot.data = [
+				d,
+				series(d, { y: { ...d.y, id: 9001, refId: ref.joined(ref.col('acrophase')) } })
+			];
 			p.plot.showPoints = true;
 			p.plot.showViolin = true;
 		}
@@ -149,13 +158,21 @@ const CASES = [
 		// significance groups are the series.
 		name: 'seriesNoCategories',
 		demo: 'demo-workflow-join-data',
-		plot: 68,
-		edit: (p) => {
+		plot: 'Amplitude by group',
+		edit: (p, ref) => {
 			const d = p.plot.data[0];
 			const noX = { ...d.x, id: 9002, refId: -1 };
 			p.plot.data = [
-				series(d, { x: noX, y: { ...d.y, id: 9003, refId: 483 }, label: 'Control' }),
-				series(d, { x: { ...noX, id: 9004 }, y: { ...d.y, id: 9005, refId: 486 }, label: '' })
+				series(d, {
+					x: noX,
+					y: { ...d.y, id: 9003, refId: ref.col('amplitude', 0) },
+					label: 'Control'
+				}),
+				series(d, {
+					x: { ...noX, id: 9004 },
+					y: { ...d.y, id: 9005, refId: ref.col('amplitude', 1) },
+					label: ''
+				})
 			];
 			p.plot.showSigBars = true;
 			p.plot.showNs = true;
@@ -165,8 +182,8 @@ const CASES = [
 		// The box's own styling on uncategorised series (series colours are not overridden).
 		name: 'styledSeries',
 		demo: 'demo-workflow-join-data',
-		plot: 68,
-		edit: (p) => {
+		plot: 'Amplitude by group',
+		edit: (p, ref) => {
 			const d = p.plot.data[0];
 			const noX = { ...d.x, id: 9006, refId: -1 };
 			const box = {
@@ -185,10 +202,15 @@ const CASES = [
 				outlierSize: 5
 			};
 			p.plot.data = [
-				series(d, { x: noX, y: { ...d.y, id: 9007, refId: 469 }, label: 'Joined', boxPlot: box }),
+				series(d, {
+					x: noX,
+					y: { ...d.y, id: 9007, refId: ref.joined(ref.col('temperature')) },
+					label: 'Joined',
+					boxPlot: box
+				}),
 				series(d, {
 					x: { ...noX, id: 9008 },
-					y: { ...d.y, id: 9009, refId: 466 },
+					y: { ...d.y, id: 9009, refId: ref.col('Temperature') },
 					label: 'Logger',
 					boxPlot: { ...d.boxPlot, iqrMultiplier: 0.5, showOutliers: true }
 				})
@@ -199,11 +221,14 @@ const CASES = [
 	{
 		name: 'twoSeriesMonochrome',
 		demo: 'demo-workflow-join-data',
-		plot: 68,
+		plot: 'Amplitude by group',
 		appearance: true,
-		edit: (p) => {
+		edit: (p, ref) => {
 			const d = p.plot.data[0];
-			p.plot.data = [d, series(d, { y: { ...d.y, id: 9010, refId: 490 } })];
+			p.plot.data = [
+				d,
+				series(d, { y: { ...d.y, id: 9010, refId: ref.joined(ref.col('acrophase')) } })
+			];
 			p.style = { ...p.style, monochrome: true };
 			p.plot.showPoints = true;
 		}
@@ -408,8 +433,8 @@ async function runCase(c) {
 	const session = releaseLegacyAutoColours(
 		JSON.parse(readFileSync(join(DEMOS, c.demo + '.json'), 'utf8'))
 	).json;
-	const plotJSON = structuredClone(session.plots.find((p) => p.id === c.plot));
-	c.edit?.(plotJSON);
+	const plotJSON = structuredClone(plotByName(session, c.plot, c.demo));
+	c.edit?.(plotJSON, demoRefs(session, c.demo));
 	core.storedValues = session.storedValues ?? {};
 	core.groups = session.groups ?? [];
 	core.categoryColours = { ...(session.categoryColours ?? {}), ...(c.categoryColours ?? {}) };
@@ -445,7 +470,14 @@ async function runCase(c) {
 	if (colours) saved.seriesColours = colours;
 	const columnLabels = exportColumnLabels();
 	cleanup();
-	return { name: c.name, demo: c.demo, plotId: c.plot, plotJSON: saved, columnLabels, expected };
+	return {
+		name: c.name,
+		demo: c.demo,
+		plotId: plotJSON.id,
+		plotJSON: saved,
+		columnLabels,
+		expected
+	};
 }
 
 describe('Python export Boxplot: what the app draws', () => {

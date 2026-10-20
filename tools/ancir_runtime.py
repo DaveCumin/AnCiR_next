@@ -11649,7 +11649,22 @@ _D3_E10, _D3_E5, _D3_E2 = math.sqrt(50), math.sqrt(10), math.sqrt(2)
 
 
 def _d3_tick_spec(start, stop, count):
-    step = (stop - start) / max(0, count)
+    # d3 runs this in JS arithmetic and does not guard it: a zero, negative or non-finite
+    # step gives a non-finite increment (start == stop gives -Infinity, so tickStep is 0),
+    # which tickStep and tickFormat then carry. Python raises on log10(0) and x / 0, so
+    # those steps return d3's increment here (a correlogram whose series has no lags has
+    # the lag domain [0, 0]).
+    span, count = stop - start, max(0.0, count)
+    if count == 0:
+        step = math.nan if span == 0 or math.isnan(span) else math.copysign(math.inf, span)
+    else:
+        step = span / count
+    if step == 0:
+        return math.nan, math.nan, -math.inf
+    if math.isinf(step) and step > 0:
+        return math.nan, math.nan, math.inf
+    if not step > 0 or not math.isfinite(step):
+        return math.nan, math.nan, math.nan
     power = math.floor(math.log10(step))
     error = step / 10 ** power
     factor = 10 if error >= _D3_E10 else 5 if error >= _D3_E5 else 2 if error >= _D3_E2 else 1
@@ -11838,8 +11853,9 @@ def d3_linear_tick_format(lo, hi, count):
     """d3-scale linear scale.tickFormat(count): ',.Nf' with N from the tick step."""
     step = d3_tick_step(lo, hi, count)
     a = abs(step)
-    precision = max(0, -math.floor(math.log10(a))) if a > 0 and math.isfinite(a) else 0
-    spec = f',.{precision}f'
+    # d3-format's precisionFixed is NaN for a zero or non-finite step (exponent() has no
+    # parts for 0, NaN or Infinity), so tickFormat leaves ',f' at its default precision, 6.
+    spec = f',.{max(0, -math.floor(math.log10(a)))}f' if a > 0 and math.isfinite(a) else ',f'
     return lambda v: d3_format(v, spec)
 
 
@@ -12208,6 +12224,10 @@ def apply_app_axis(ax, which, position, spec, look, *, draw_label=True, grid_ax=
     if kind == 'log':
         (ax.set_xscale if which == 'x' else ax.set_yscale)('log')
     lims = (_to_axis_units(kind, lo), _to_axis_units(kind, hi))
+    if lims[0] == lims[1] and kind != 'log':
+        # A zero-width domain: d3 maps every value to the middle of the range (its
+        # normalize is the constant 0.5), so the one tick sits mid-axis.
+        lims = (lims[0] - 0.5, lims[1] + 0.5)
     (ax.set_xlim if which == 'x' else ax.set_ylim)(*lims)
     locs = [_to_axis_units(kind, v) for v, _ in ticks]
     axis_obj.set_major_locator(FixedLocator(locs))
