@@ -396,8 +396,8 @@
       "id": "workflow-colour-by-hysteresis",
       "name": "Workflow: a hysteresis loop coloured by hour of day",
       "family": "Workflows",
-      "description": "Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.",
-      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day.",
+      "description": "Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. Size by draws each hour’s point by the air’s relative humidity, its area growing with the value, with a size key beside the colour bar. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.",
+      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day and sized by humidity.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/demo-workflow-colour-by-hysteresis.json",
       "kind": "workflow",
@@ -406,7 +406,7 @@
         "BinnedData",
         "scatterplot"
       ],
-      "keywords": "workflow: a hysteresis loop coloured by hour of day hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. a logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. synthetic data. workflows joindata binneddata scatterplot"
+      "keywords": "workflow: a hysteresis loop coloured by hour of day hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. size by draws each hour’s point by the air’s relative humidity, its area growing with the value, with a size key beside the colour bar. a logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. synthetic data. workflows joindata binneddata scatterplot"
     },
     {
       "id": "dataset-testdata",
@@ -722,13 +722,13 @@
       "id": "dataset-workflow-colour-by-hysteresis",
       "name": "A hysteresis loop coloured by hour of day",
       "family": "Sources",
-      "description": "A hysteresis loop: hive against air temperature, coloured by hour of day. Data only: 4 columns × 360 rows, no analysis.",
-      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day.",
+      "description": "A hysteresis loop: hive against air temperature, coloured by hour of day and sized by humidity. Data only: 5 columns × 360 rows, no analysis.",
+      "summary": "A hysteresis loop: hive against air temperature, coloured by hour of day and sized by humidity.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/a-hysteresis-loop-coloured-by-hour-of-day.csv",
       "kind": "dataset",
       "showcases": [],
-      "keywords": "a hysteresis loop coloured by hour of day a hysteresis loop: hive against air temperature, coloured by hour of day. data only: 4 columns × 360 rows, no analysis. sources"
+      "keywords": "a hysteresis loop coloured by hour of day a hysteresis loop: hive against air temperature, coloured by hour of day and sized by humidity. data only: 5 columns × 360 rows, no analysis. sources"
     },
     {
       "id": "tp-blankcolumn",

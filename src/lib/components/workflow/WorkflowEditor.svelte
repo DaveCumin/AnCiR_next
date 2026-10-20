@@ -1985,9 +1985,10 @@
 		return resolveOverlayPort(target.plotObj.plot, portName) != null;
 	}
 
-	// Is this a series' colour-by port (`enc<id>_colour`, components/plotbits/encodingHost.js)
-	// of this plot node? Every wire path gates on it before the overlay gate, and writes through
-	// encodingWiring.js (the series' colour column wrapper, refId in place).
+	// Is this a series' encoding port (`enc<id>_colour` / `enc<id>_size`,
+	// components/plotbits/encodingHost.js) of this plot node? Every wire path gates on it before
+	// the overlay gate, and writes through encodingWiring.js (the series' colour or size column
+	// wrapper, refId in place).
 	function isEncodingPortOn(target, portName) {
 		if (target?.type !== 'plot' || !target.plotObj || target.plotObj.type === 'tableplot') {
 			return false;

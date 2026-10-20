@@ -2380,12 +2380,13 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'colour-by-hysteresis',
-		summary: 'A hysteresis loop: hive against air temperature, coloured by hour of day.',
+		summary:
+			'A hysteresis loop: hive against air temperature, coloured by hour of day and sized by humidity.',
 		name: 'Workflow: a hysteresis loop coloured by hour of day',
 		family: 'Workflows',
 		group: 'Rhythm & circadian',
 		description:
-			'Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.',
+			'Hive temperature plotted against air temperature traces a loop each day, because the hive lags the air by a few hours. Colour by reads the shared time column as the hour of day, on the points and on the line, so the loop direction and the time of day are visible at once. Size by draws each hour’s point by the air’s relative humidity, its area growing with the value, with a size key beside the colour bar. A logger outage on day 3 leaves blank hours, and the line breaks there rather than drawing across the gap. Synthetic data.',
 		showcases: ['JoinData', 'BinnedData', 'scatterplot'],
 		build: buildColourByHysteresisWorkflow
 	}
@@ -2396,7 +2397,9 @@ const WORKFLOWS = [
  * seeded: hourly air temperature (weather station) and a hive logger every 15 min whose
  * temperature follows the air 3 h late, damped, so hive against air is a loop each day. The
  * logger is off for 6 h on day 3, so Bin Data leaves those hours blank and the line breaks.
- * Size by humidity (plan item 10) joins this demo in phase 3.
+ * The weather station also logs relative humidity (high when the air is cool), and the loop's
+ * points are sized by it (plan item 10, phase 3). The humidity has its own seeded generator, so
+ * adding it left the temperatures as they were.
  */
 async function buildColourByHysteresisWorkflow() {
 	const rng = mulberry32(2610);
@@ -2432,7 +2435,20 @@ async function buildColourByHysteresisWorkflow() {
 		seq(HOURS, (i) => r2(airAt(i) + normal(rng, 0, 0.25))),
 		'air temperature'
 	);
-	group('weather station', [wTime, wTemp]);
+	const hrng = mulberry32(2611);
+	const wHum = mkCol(
+		'number',
+		seq(HOURS, (i) =>
+			r2(
+				Math.min(
+					99,
+					68 - 3.2 * (airAt(i) - 18) + 6 * Math.sin((2 * Math.PI * i) / 61) + normal(hrng, 0, 1.5)
+				)
+			)
+		),
+		'relative humidity (%)'
+	);
+	group('weather station', [wTime, wTemp, wHum]);
 
 	// The logger, every 15 min (7 min past), minus the outage rows.
 	const hHours = seq(HOURS * 4, (i) => (7 + 15 * i) / 60).filter(
@@ -2454,13 +2470,18 @@ async function buildColourByHysteresisWorkflow() {
 		'JoinData',
 		{
 			aTimeIN: wTime,
-			aValuesIN: [wTemp],
+			aValuesIN: [wTemp, wHum],
 			bTimeIN: hTime,
 			bValuesIN: [hTemp],
 			pairing: {},
 			shiftB: 0,
 			sourceColumn: null,
-			out: { jointime: -1, [`joined_${wTemp}`]: -1, [`joined_${hTemp}`]: -1 }
+			out: {
+				jointime: -1,
+				[`joined_${wTemp}`]: -1,
+				[`joined_${wHum}`]: -1,
+				[`joined_${hTemp}`]: -1
+			}
 		},
 		'Join by time'
 	);
@@ -2469,7 +2490,7 @@ async function buildColourByHysteresisWorkflow() {
 		'BinnedData',
 		{
 			xIN: jo.jointime,
-			yIN: [jo[`joined_${wTemp}`], jo[`joined_${hTemp}`]],
+			yIN: [jo[`joined_${wTemp}`], jo[`joined_${hTemp}`], jo[`joined_${wHum}`]],
 			binMode: 'uniform',
 			binSize: 1,
 			binStart: 0,
@@ -2485,9 +2506,14 @@ async function buildColourByHysteresisWorkflow() {
 	const bTime = bo.binnedx;
 	const bAir = bo[`binnedy_${jo[`joined_${wTemp}`]}`];
 	const bHive = bo[`binnedy_${jo[`joined_${hTemp}`]}`];
+	const bHum = bo[`binnedy_${jo[`joined_${wHum}`]}`];
 
-	// The loop: points and line, both coloured by the hour of day of the binned time.
-	const loop = new Plot({ name: 'Hive against air, coloured by hour of day', type: 'scatterplot' });
+	// The loop: points and line, both coloured by the hour of day of the binned time; the
+	// points sized by the binned humidity.
+	const loop = new Plot({
+		name: 'Hive against air, by hour and humidity',
+		type: 'scatterplot'
+	});
 	loop.plot.addData({
 		x: { refId: bAir },
 		y: { refId: bHive },
@@ -2499,6 +2525,11 @@ async function buildColourByHysteresisWorkflow() {
 	d.enableColourBy();
 	d.colourBy.refId = bTime;
 	d.colourEncoding.colourLine = true;
+	// Sized by the binned humidity (phase 3): area between 1.5 and 6 px radius.
+	d.enableSizeBy();
+	d.sizeBy.refId = bHum;
+	d.sizeEncoding.minRadius = 1.5;
+	d.sizeEncoding.maxRadius = 6;
 	setAxisLabels(loop, { x: 'Air temperature (°C)', y: 'Hive temperature (°C)' });
 	// Clear of the marks: every fixed corner of either plot has data in it.
 	loop.plot.legend.position = 'auto';

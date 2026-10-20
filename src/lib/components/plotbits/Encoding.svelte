@@ -7,11 +7,19 @@
 	// channel, core/seriesChannelRefs.js); this class holds only how it is read and drawn.
 	// No `colour` field on purpose: monochrome finds a series' colour slots structurally
 	// (plots/seriesAppearance.js) and would write a grey into it.
-	import { ENCODING_MODES } from './encodings.js';
+	import {
+		ENCODING_MODES,
+		isCyclicMode,
+		DEFAULT_MIN_RADIUS,
+		DEFAULT_MAX_RADIUS,
+		MIN_RADIUS_FLOOR
+	} from './encodings.js';
 	import { COLORMAPS } from './colormaps.js';
 	import { AUTO } from './encodingHost.js';
 
 	const MODES = [AUTO, ...ENCODING_MODES];
+	// Size has no Hour of day (plan 3.7: a cyclic quantity has no "bigger").
+	const SIZE_MODES = [AUTO, ...ENCODING_MODES.filter((m) => !isCyclicMode(m))];
 
 	/** A finite number, else null (an automatic end). Number(null) is 0, hence the guard. */
 	function numberOrNullIn(v) {
@@ -81,6 +89,72 @@
 			return new ColourEncodingClass(json ?? {});
 		}
 	}
+
+	/** A radius, px: a finite number, at least MIN_RADIUS_FLOOR, else the default. */
+	function radiusIn(v, fallback) {
+		if (v == null || v === '') return fallback;
+		const n = Number(v);
+		return Number.isFinite(n) ? Math.max(MIN_RADIUS_FLOOR, n) : fallback;
+	}
+
+	/**
+	 * Size by (plan 3.7, phase 3): how a series' size column is read and drawn. The column is
+	 * the series' `sizeBy` wrapper (a series channel), as `colourBy` is for colour. Points only:
+	 * each point's radius comes from its value, area-proportional between `minRadius` and
+	 * `maxRadius` (encodings.sizeRadius); a point with no size value keeps the series' own
+	 * point size.
+	 */
+	export class SizeEncodingClass {
+		// The multi-select panel and the AI editor read these (plots/sharedControls.js).
+		static descriptors = {
+			id: { skip: true },
+			mode: { input: 'select', options: SIZE_MODES, label: 'read as', group: 'Size by' },
+			minRadius: { input: 'number', label: 'smallest point', group: 'Size by', step: 0.5 },
+			maxRadius: { input: 'number', label: 'largest point', group: 'Size by', step: 0.5 },
+			domainMin: { input: 'number', label: 'range min', group: 'Size by' },
+			domainMax: { input: 'number', label: 'range max', group: 'Size by' }
+		};
+
+		/** Stable per plot: names the canvas port `enc<id>_size`. */
+		id = $state(1);
+		/** 'auto' (days since start for a time column, else the value) or a size mode. */
+		mode = $state(AUTO);
+		/** The radius (px) of the range's low and high ends; the area is linear between. */
+		minRadius = $state(DEFAULT_MIN_RADIUS);
+		maxRadius = $state(DEFAULT_MAX_RADIUS);
+		/** Manual range ends; null keeps that end at the data's (decision 8). */
+		domainMin = $state(null);
+		domainMax = $state(null);
+
+		constructor(json = {}) {
+			this.id = Number.isInteger(json?.id) && json.id > 0 ? json.id : 1;
+			this.mode = SIZE_MODES.includes(json?.mode) ? json.mode : AUTO;
+			this.minRadius = radiusIn(json?.minRadius, DEFAULT_MIN_RADIUS);
+			this.maxRadius = radiusIn(json?.maxRadius, DEFAULT_MAX_RADIUS);
+			this.domainMin = numberOrNullIn(json?.domainMin);
+			this.domainMax = numberOrNullIn(json?.domainMax);
+		}
+
+		/** The manual range as encodings.encodingDomain takes it. */
+		get domainIN() {
+			return [this.domainMin, this.domainMax];
+		}
+
+		toJSON() {
+			return {
+				id: this.id,
+				mode: this.mode,
+				minRadius: this.minRadius,
+				maxRadius: this.maxRadius,
+				domainMin: this.domainMin,
+				domainMax: this.domainMax
+			};
+		}
+
+		static fromJSON(json) {
+			return new SizeEncodingClass(json ?? {});
+		}
+	}
 </script>
 
 <script>
@@ -90,12 +164,14 @@
 	import NumberWithUnits, { numberOrNull } from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { ENCODING_MODE_LABELS, encodingModesFor, isCyclicMode } from './encodings.js';
+	import { ENCODING_MODE_LABELS, encodingModesFor } from './encodings.js';
 	import { colormapChoices, CYCLIC_COLORMAP_LABELS, COLORMAP_LABELS } from './colormaps.js';
 	import { effectiveColormap } from './encodingHost.js';
+	import SizeBy from './SizeBy.svelte';
 
 	// `datum`: a series meeting the encoding host contract (encodingHost.js), built on
-	// ColourBySeries (colourBySeries.svelte.js), whose hooks say what a mark is.
+	// EncodedSeries (colourBySeries.svelte.js), whose hooks say what a mark is. The panel shows
+	// Colour by, then Size by (SizeBy.svelte) when the series' plot can size points.
 	// The two selects show 'auto' while the stored choice does not apply to this column (a map
 	// for the other kind of scale, a mode the column cannot be read as): that is what draws.
 	let { datum } = $props();
@@ -246,8 +322,8 @@
 			{#if datum.colourSummaryNote}
 				<p class="colour-by-note">{datum.colourSummaryNote}</p>
 			{/if}
-			{#if datum.colourDrawsPoints && datum.colourNoValueCount > 0}
-				{@const [one, many] = datum.colourMarkWords ?? ['point', 'points']}
+			{#if datum.drawsPoints && datum.colourNoValueCount > 0}
+				{@const [one, many] = datum.markWords ?? ['point', 'points']}
 				<p class="colour-by-note" role="status">
 					{datum.colourNoValueCount}
 					{datum.colourNoValueCount === 1 ? `${one} has` : `${many} have`} no colour value; drawn in the
@@ -275,6 +351,10 @@
 	{/if}
 </div>
 
+{#if datum?.sizeCapable}
+	<SizeBy {datum} />
+{/if}
+
 <style>
 	.colour-by-switch {
 		margin: 0;
@@ -285,6 +365,11 @@
 	}
 	.colour-by-column {
 		margin: var(--space-1) 0;
+		/* The panel's column is `align-items: flex-start`, so a child takes its content's
+		   width: pinned to the panel's, a long column name ellipsises in the picker instead
+		   of running past the panel's edge. */
+		width: 100%;
+		min-width: 0;
 	}
 	.colour-by-note {
 		margin: var(--space-1) 0 0;

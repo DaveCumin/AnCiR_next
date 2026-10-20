@@ -317,3 +317,100 @@ export function groupEncodingValue(values, mode) {
 	}
 	return n ? sum / n : NaN;
 }
+
+// ---- Size by (colour-by plan 2026-10-20, section 3.7; phase 3) --------------------------
+//
+// The same mode, domain and bucket rules as colour, with an AREA-proportional scale: between
+// a smallest and a largest point radius the marker's AREA is linear in the value, so a value
+// twice as far along the range covers twice the extra ink, and large values are not
+// exaggerated (plan 3.14). The radius stays EXACT per mark; the S = 8 size buckets ("layers")
+// exist only to order drawing, largest first, so small points are not hidden under big ones.
+
+/** Size layers per scale (drawing order only; plan 3.7). */
+export const SIZE_BUCKETS = 8;
+
+/** The default smallest and largest point radius, px (plan 3.7). */
+export const DEFAULT_MIN_RADIUS = 2;
+export const DEFAULT_MAX_RADIUS = 10;
+
+/** No point is drawn smaller than this radius, px: it stays visible and hoverable. */
+export const MIN_RADIUS_FLOOR = 1;
+
+/**
+ * The modes a column can be SIZED by: the colour modes without Hour of day. A cyclic
+ * quantity has no "bigger": 23:59 must not be drawn largest beside a smallest 00:00.
+ * @param {{type?: string, originTime_ms?: number|null}} column
+ * @returns {{mode: string, warning: string|null}[]}
+ */
+export function sizeModesFor(column) {
+	return encodingModesFor(column).filter((m) => !isCyclicMode(m.mode));
+}
+
+/**
+ * A size range as drawn: both ends finite and at least MIN_RADIUS_FLOOR. A range given
+ * large-to-small is kept (it reverses the scale, as a reversed manual value range does).
+ * @param {number|null|undefined} rMin
+ * @param {number|null|undefined} rMax
+ * @returns {{rMin: number, rMax: number}}
+ */
+export function sizeRange(rMin, rMax) {
+	const lo = Number.isFinite(Number(rMin)) && rMin != null ? Number(rMin) : DEFAULT_MIN_RADIUS;
+	const hi = Number.isFinite(Number(rMax)) && rMax != null ? Number(rMax) : DEFAULT_MAX_RADIUS;
+	return { rMin: Math.max(MIN_RADIUS_FLOOR, lo), rMax: Math.max(MIN_RADIUS_FLOOR, hi) };
+}
+
+/**
+ * The radius at position t in [0, 1] (clamped): r = sqrt(rMin^2 + t (rMax^2 - rMin^2)), so
+ * t = 0.5 is the AREA midpoint, not the radius midpoint. NaN for no position.
+ * @param {number} t
+ * @param {number} rMin
+ * @param {number} rMax
+ */
+export function sizeRadius(t, rMin, rMax) {
+	if (!Number.isFinite(t)) return NaN;
+	const u = t < 0 ? 0 : t > 1 ? 1 : t;
+	return Math.sqrt(rMin * rMin + u * (rMax * rMax - rMin * rMin));
+}
+
+/**
+ * The drawing layer of a radius: its AREA position between the smallest and largest radius
+ * drawn (lo, hi: whichever way round), cut into S layers. A radius outside clamps (a "no
+ * value" mark at the series' own size can be smaller or larger than the range).
+ * @param {number} r
+ * @param {number} lo the smallest radius of the range
+ * @param {number} hi the largest
+ * @param {number} [S]
+ */
+export function sizeLayer(r, lo, hi, S = SIZE_BUCKETS) {
+	const span = hi * hi - lo * lo;
+	if (!Number.isFinite(r) || !(span > 0)) return 0;
+	return bucketIndex((r * r - lo * lo) / span, S);
+}
+
+/**
+ * The radius and drawing layer of every mark (plan 3.7). A mark with no size value is drawn
+ * at the series' own point size (`fallback`).
+ * @param {ArrayLike<number>} values encoded values (encodingValues), one per mark
+ * @param {{lo: number, hi: number, cyclic?: boolean, period?: number|null}} domain
+ * @param {{rMin: number, rMax: number, fallback: number, S?: number}} o
+ * @returns {{r: Float64Array, layer: Int8Array, noValueLayer: number}}
+ */
+export function sizeRadii(values, domain, { rMin, rMax, fallback, S = SIZE_BUCKETS }) {
+	const n = values?.length ?? 0;
+	const r = new Float64Array(n);
+	const layer = new Int8Array(n);
+	const lo = Math.min(rMin, rMax);
+	const hi = Math.max(rMin, rMax);
+	const noValueLayer = sizeLayer(fallback, lo, hi, S);
+	for (let i = 0; i < n; i++) {
+		const ri = sizeRadius(domainPosition(values[i], domain), rMin, rMax);
+		if (Number.isFinite(ri)) {
+			r[i] = ri;
+			layer[i] = sizeLayer(ri, lo, hi, S);
+		} else {
+			r[i] = fallback;
+			layer[i] = noValueLayer;
+		}
+	}
+	return { r, layer, noValueLayer };
+}

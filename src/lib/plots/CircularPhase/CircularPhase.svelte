@@ -37,8 +37,8 @@
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 	import {
-		ColourBySeries,
-		ColourKeyLayout,
+		EncodedSeries,
+		EncodingKeyLayout,
 		COLOUR_BY_SWATCH,
 		ensureUniqueEncodingIds
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
@@ -71,11 +71,13 @@
 	// core/seriesChannelRefs.js, which knows the fixed fields only.
 	// CircularPhaseSeries follows the same convention: `x` is the optional time
 	// column, `y` is the phase/measurement column.
-	class CircularPhaseSeries extends ColourBySeries {
+	class CircularPhaseSeries extends EncodedSeries {
 		static descriptors = {
 			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
 			// drawn. The column itself is wiring (`colourBy`, a Column), like x and y.
-			colourEncoding: { descend: true, label: 'Colour by' }
+			colourEncoding: { descend: true, label: 'Colour by' },
+			// Size by: how the size column is read and drawn (plan 3.7).
+			sizeEncoding: { descend: true, label: 'Size by' }
 		};
 		parentPlot = $state();
 		x = $state(); // optional time column: wiring this turns the series into a value-radius clock plot
@@ -101,20 +103,20 @@
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.radius = dataIN?.radius ?? 3.4;
 			this.draw = dataIN?.draw ?? true;
-			// Colour by: restored only when it was on (both halves present).
-			this.restoreColourBy(dataIN);
+			// Colour by / Size by: each restored only when it was on (both halves present).
+			this.restoreEncodings(dataIN);
 		}
 
-		// ---- Colour by hooks (ColourBySeries) ----
+		// ---- Encoding hooks (EncodedSeries: Colour by and Size by) ----
 		// A mark is a ROW: a timed series draws row i at (time of day, value), an untimed one
 		// places row i's phase (placeCircularPoints carries the row through stack / bin / rim).
-		get colourSeriesRowCount() {
+		get markRowCount() {
 			return this.rawValues.length;
 		}
-		get colourMarkCount() {
+		get markCount() {
 			return this.rawValues.length;
 		}
-		get colourDrawnTest() {
+		get markDrawnTest() {
 			if (this.timeWired) {
 				const angles = this.angles;
 				const values = this.rawValues;
@@ -123,11 +125,25 @@
 			const place = this.placeValues;
 			return (i) => Number.isFinite(place[i]);
 		}
-		get colourDrawsPoints() {
+		get drawsPoints() {
 			return !!this.draw;
 		}
 		get colourPointColour() {
 			return this.colour;
+		}
+		// Size by: a dot with no size value keeps the series' dot radius, in its shape.
+		get defaultRadius() {
+			return this.radius ?? 3.4;
+		}
+		get pointShape() {
+			return this.shape;
+		}
+		/**
+		 * The dot radius the placements space dots by (stack, bin, rim): the series' own, or,
+		 * sized by a column, its largest, so sized dots stack without overlapping.
+		 */
+		get placeRadius() {
+			return this.sizeActive && this.drawsPoints ? this.sizeMaxRadius : this.radius;
 		}
 
 		timeWired = $derived(this.x?.refId >= 0);
@@ -201,8 +217,8 @@
 				shape: this.shape,
 				radius: this.radius,
 				draw: this.draw,
-				// Only while Colour by is on, so a plain series saves exactly as before.
-				...this.colourByJSON()
+				// Only while Colour by / Size by is on, so a plain series saves exactly as before.
+				...this.encodingsJSON()
 			};
 		}
 		static fromJSON(json, parent) {
@@ -223,7 +239,7 @@
 		static pairedEdits = { unit: { apply: setCircularUnit } };
 		// The colour-by host contract (components/plotbits/encodingHost.js): the points, per row,
 		// in every placement. Rose wedges and mean vectors keep the series colour.
-		static encodingCapabilities = { colour: true, lines: false };
+		static encodingCapabilities = { colour: true, size: true, lines: false };
 
 		parentBox = $state();
 		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
@@ -296,7 +312,7 @@
 					this.availWidth -
 						this.legendLayout.reserveW -
 						(this.legendCorner?.reserveW ?? 0) -
-						this.colourKeys.reserveW,
+						this.encodingKeys.reserveW,
 					this.availHeight - this.legendLayout.reserveH - (this.legendCorner?.reserveH ?? 0),
 					this.clockFitSize
 				)
@@ -358,7 +374,7 @@
 			// Beside clears the "6" / "18" labels; above, "24 / 0"; below, the hint line. A colour
 			// bar (Colour by) shares a right strip with the legend (the wider sets it), and has a
 			// strip of its own beside the clock otherwise, which the comparison counts.
-			const keyW = this.colourKeyWidth;
+			const keyW = this.keyStripWidth;
 			const beside = this.roomBeside(
 				right ? Math.max(box.width, keyW) : box.width,
 				M,
@@ -384,27 +400,42 @@
 			outside: (box, { explicit }) => this.legendOutside(box, explicit)
 		});
 
-		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
+		// ---- Colour by / Size by: the keys (plan 3.7, 3.8; colourBySeries.svelte.js) ----
 		// The corners of a polar square are small and the hour labels hang past the ring, so the
 		// bar always sits BESIDE the clock, clear of the "6" label: under a legend that has a
 		// strip on the right (outside, or a right-corner legend given a strip), else in a strip
 		// of its own, centred on the clock. "Beside plot" is the only position offered.
-		colourKeys = new ColourKeyLayout(this, {
+		encodingKeys = new EncodingKeyLayout(this, {
 			positions: ['right'],
 			reserveW: () => this.colourStripReserveW,
 			place: (keys) => this.colourKeyPlace(keys)
 		});
 		get colourScale() {
-			return this.colourKeys.scale;
+			return this.encodingKeys.scale;
 		}
 		set colourScale(v) {
-			this.colourKeys.scale = v;
+			this.encodingKeys.scale = v;
 		}
 		get colourKey() {
-			return this.colourKeys.key;
+			return this.encodingKeys.key;
 		}
-		/** The bar's footprint width (0 without a bar); decided before any reservation. */
-		colourKeyWidth = $derived(this.colourKeys.base?.width ?? 0);
+		// Size by: the size key's settings and content (plan 3.7).
+		get sizeScale() {
+			return this.encodingKeys.sizeScale;
+		}
+		set sizeScale(v) {
+			this.encodingKeys.sizeScale = v;
+		}
+		get sizeKey() {
+			return this.encodingKeys.sizeKey;
+		}
+		/**
+		 * The keys' strip width: the wider of the colour bar and the size key (0 without
+		 * either); decided before any reservation.
+		 */
+		keyStripWidth = $derived(
+			Math.max(this.encodingKeys.base?.width ?? 0, this.encodingKeys.sizeBase?.width ?? 0)
+		);
 		/** The series legend sits in a strip on the clock's right, which the bar then shares. */
 		legendSharesKeyStrip = $derived(
 			this.legendLayout.outsidePlacement?.side === 'right' ||
@@ -416,52 +447,64 @@
 		}
 		/** The room the bar's own strip takes (0 when it shares the legend's, or has none). */
 		colourStripReserveW = $derived.by(() => {
-			const w = this.colourKeyWidth;
+			const w = this.keyStripWidth;
 			if (!(w > 0) || this.legendSharesKeyStrip) return 0;
 			const along =
 				this.availWidth - this.legendLayout.reserveW - (this.legendCorner?.reserveW ?? 0);
 			return this.keyStripFor(w, this.legendLayout.margin, along).reserve;
 		});
 
-		/** Where the bar goes ({ x, y, length }, relative to the padding's top left). */
+		/**
+		 * Where the keys go, relative to the padding's top left: the colour bar ({ x, y,
+		 * length }) with the size key under it ({ x, y } in `size`), as one block in the strip.
+		 * Either may be absent (`length` null without a bar, `size` null without a size key).
+		 */
 		colourKeyPlace(keys) {
 			const base = keys.base;
+			const sizeBox = keys.sizeBase;
 			const M = keys.margin;
 			const size = this.plotSize;
 			const corner = this.legendCorner;
 			const box = this.legendLayout.box;
 			const out = this.legendLayout.outsidePlacement;
 			const fixed = this.colourScale.barLength;
-			// The bar's length for `room` px of height for the whole key (bar + "no value").
+			// The size key's share of the block's height (it sits under the bar, M apart).
+			const under = sizeBox ? sizeBox.height + (base ? M : 0) : 0;
+			// The bar's length for `room` px of height for the whole block (bar, "no value", and
+			// the size key under it).
 			const fit = (room) => {
+				if (!base) return null;
 				if (fixed != null) return fixed;
 				const besides = base.height - keys.length0;
-				return Math.max(20, Math.min(keys.length0, room - besides));
+				return Math.max(20, Math.min(keys.length0, room - besides - under));
 			};
+			const barH = (length) => (base ? (keys.geometry(length)?.height ?? base.height) : 0);
+			const at = (x, y, length) => ({
+				x,
+				y,
+				length,
+				size: sizeBox ? { x, y: base ? y + barH(length) + M : y } : null
+			});
 			if (out?.side === 'right' && box) {
 				const y = out.y + box.height + M;
-				return { x: out.x, y, length: fit(this.availHeight - y) };
+				return at(out.x, y, fit(this.availHeight - y));
 			}
 			if (this.legendSharesKeyStrip && corner && box) {
 				// Right-aligned with the corner legend in its strip, under it or above it.
-				const x = size + corner.reserveW - M - base.width;
+				const x = size + corner.reserveW - M - this.keyStripWidth;
 				if (this.legend.position.startsWith('top')) {
 					const y = M + box.height + M;
-					return { x, y, length: fit(size - y - M) };
+					return at(x, y, fit(size - y - M));
 				}
-				return { x, y: M, length: fit(size - box.height - 3 * M) };
+				return at(x, M, fit(size - box.height - 3 * M));
 			}
 			// A strip of its own: past the ring and its labels, centred on the clock's middle.
 			const k = 0.5 + RING_RADIUS / 2;
 			const gap = Math.max(M, size * k + LABEL_REACH - size);
 			const length = fit(size * RING_RADIUS);
-			const height = keys.geometry(length)?.height ?? base.height;
+			const height = barH(length) + under;
 			const middle = (corner?.offsetY ?? 0) + this.clockShiftY + size / 2;
-			return {
-				x: (corner?.offsetX ?? 0) + size + gap,
-				y: Math.max(0, middle - height / 2),
-				length
-			};
+			return at((corner?.offsetX ?? 0) + size + gap, Math.max(0, middle - height / 2), length);
 		}
 
 		// An outside legend beside or below the square. It goes where the figure already has
@@ -472,7 +515,7 @@
 			const M = box.margin ?? LEGEND_MARGIN;
 			// A colour bar (Colour by) stacks under a legend beside the clock (the wider sets the
 			// strip); with the legend below, the bar takes a strip of its own, which counts.
-			const keyW = this.colourKeyWidth;
+			const keyW = this.keyStripWidth;
 			const right = this.roomBeside(Math.max(box.width, keyW), M, LABEL_REACH, true);
 			const below = this.roomBeside(box.height, M, HINT_BOTTOM, false);
 			const belowSize =
@@ -557,7 +600,7 @@
 							placement: this.placement,
 							period: this.displayPeriod,
 							binWidth: this.binWidth,
-							dotRadius: d.radius,
+							dotRadius: d.placeRadius,
 							plotRadius: P.radius,
 							maxStack: this.untimedMaxStack,
 							innerRim: INNER_RIM,
@@ -569,7 +612,7 @@
 							py.push(y);
 						}
 					}
-					out.push({ px, py, radius: d.radius });
+					out.push({ px, py, radius: d.placeRadius });
 				}
 				if (this.showMeanVectors && Number.isFinite(d.stats?.meanValue)) {
 					const [x, y] = P.toXY(d.stats.meanValue, d.stats.R);
@@ -702,7 +745,7 @@
 				data: this.data,
 				legend: this.legend.toJSON(),
 				// The colour bar's settings, while any series is coloured by a column.
-				...this.colourKeys.toJSON()
+				...this.encodingKeys.toJSON()
 			};
 		}
 		static fromJSON(parent, json) {
@@ -720,6 +763,7 @@
 			c.legend = LegendClass.fromJSON(json.legend);
 			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
 			c.colourScale = json.colourScale ?? null;
+			c.sizeScale = json.sizeScale ?? null;
 			if (json.data) {
 				c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
 				ensureUniqueEncodingIds(c);
@@ -748,6 +792,7 @@
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import Encoding from '$lib/components/plotbits/Encoding.svelte';
 	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
+	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 	import {
 		bindAltTooltipToggle,
 		computeTooltipPosition,
@@ -838,10 +883,15 @@
 						: ''
 				}`;
 
-		// Coloured by a column: the row's colour value too (no encoding is the only channel).
-		const colourLine = cb
-			? `<br/><span style="opacity:0.7">${escapeHtml(cb.label)}:</span> ${escapeHtml(cb.format(cb.values[bestIdx]))}`
-			: '';
+		// Coloured or sized by a column: the row's encoded values too (no encoding is the only
+		// channel).
+		const colourLine = [cb, d.sizeRender]
+			.filter((enc) => enc)
+			.map(
+				(enc) =>
+					`<br/><span style="opacity:0.7">${escapeHtml(enc.label)}:</span> ${escapeHtml(enc.format(enc.values[bestIdx]))}`
+			)
+			.join('');
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
 		dispatchTooltip(evt.currentTarget, {
@@ -873,7 +923,7 @@
 				placement: plot.placement,
 				period: plot.displayPeriod,
 				binWidth: plot.binWidth,
-				dotRadius: d.radius,
+				dotRadius: d.placeRadius,
 				plotRadius: P.radius,
 				maxStack: plot.untimedMaxStack,
 				innerRim: INNER_RIM,
@@ -891,6 +941,7 @@
 			radius: d.radius,
 			colour: d.colour,
 			colourBy: d.colourRender,
+			sizeBy: d.sizeRender,
 			marks
 		});
 	}
@@ -934,15 +985,16 @@
 				/>
 			{/if}
 			{#if d.draw}
-				<!-- One path in the series colour, or one per colour bucket when the series is
-				     coloured by a column (markerPaths.js); every row keeps its own colour in each
-				     placement, since the placement carries the row. -->
+				<!-- One path in the series colour, or one per colour bucket (and size layer) when the
+				     series is coloured (or sized) by a column (markerPaths.js); every row keeps its
+				     own colour and size in each placement, since the placement carries the row. -->
 				{#each seriesPaths(plot, P, valueScale, d) as p (p.key)}
 					<path
 						d={p.d}
 						fill={p.fill}
 						fill-opacity="0.9"
 						data-colour-bucket={d.colourRender ? p.key : undefined}
+						data-size-layer={d.sizeRender ? p.layer : undefined}
 						role="presentation"
 						onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
 						onpointerleave={handleSeriesLeave}
@@ -993,8 +1045,11 @@
 			which="plot"
 		/>
 		<!-- Colour by: the colour bar, beside the clock clear of its labels and the legend. -->
-		{#if plot.colourKeys.drawProps}
-			<ColourScale {...plot.colourKeys.drawProps} which="plot" />
+		{#if plot.encodingKeys.drawProps}
+			<ColourScale {...plot.encodingKeys.drawProps} which="plot" />
+		{/if}
+		{#if plot.encodingKeys.sizeDrawProps}
+			<SizeKey {...plot.encodingKeys.sizeDrawProps} which="plot" />
 		{/if}
 	</svg>
 	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />
@@ -1017,7 +1072,17 @@
 			<ColourScale
 				scaleData={theData.colourScale}
 				figureStyle={theData.parentBox?.style}
-				positions={theData.colourKeys.positions}
+				positions={theData.encodingKeys.positions}
+				which="controls"
+			/>
+		{/if}
+		{#if theData.sizeKey}
+			<div class="div-line"></div>
+			<!-- The size key of Size by. -->
+			<SizeKey
+				scaleData={theData.sizeScale}
+				figureStyle={theData.parentBox?.style}
+				positions={theData.encodingKeys.positions}
 				which="controls"
 			/>
 		{/if}

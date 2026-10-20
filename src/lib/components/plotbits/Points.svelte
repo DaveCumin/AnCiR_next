@@ -94,7 +94,7 @@
 
 <script>
 	import { quadtree } from 'd3-quadtree';
-	import { markerPaths } from './markerPaths.js';
+	import { markerPaths, findMarkerHit } from './markerPaths.js';
 	import {
 		buildAggregatedContent,
 		computeTooltipPosition,
@@ -129,7 +129,13 @@
 		// with no value is drawn in (the series colour), `values` the colour value of each row
 		// and `label` / `format(v)` how the tooltip names and prints it. One path per non-empty
 		// bucket, "no value" first (underneath), then bucket order (decision 9).
-		colourBy = null
+		colourBy = null,
+		// Size by (plan 3.7): null draws every point at `pointsData.radius`. Otherwise
+		//   { r, layer, noValueLayer, S, values, label, format }
+		// `r` is the EXACT radius of each ROW (a point with no size value already carries the
+		// series' own radius), `layer` its drawing layer (largest drawn first), `values` / `label`
+		// / `format` the tooltip's size row. Hover reaches each point by its own radius.
+		sizeBy = null
 	} = $props();
 
 	let qt;
@@ -189,7 +195,7 @@
 		const m = filteredData.length;
 		const px = new Float64Array(m);
 		const py = new Float64Array(m);
-		const rows = colourBy ? new Int32Array(m) : null;
+		const rows = colourBy || sizeBy ? new Int32Array(m) : null;
 		for (let j = 0; j < m; j++) {
 			const p = filteredData[j];
 			px[j] = sx(p.x);
@@ -201,6 +207,7 @@
 			radius,
 			colour: pd.colour,
 			colourBy,
+			sizeBy,
 			marks: rows
 		});
 	});
@@ -215,7 +222,16 @@
 
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
-		const closest = qt.find(mouseX, mouseY, pointsData.radius * 2);
+		const sb = sizeBy;
+		const closest = sb?.r
+			? findMarkerHit(
+					qt,
+					mouseX,
+					mouseY,
+					(d) => (d.i < sb.r.length ? sb.r[d.i] : pointsData.radius),
+					maxSizeRadius(sb.r, pointsData.radius)
+				)
+			: qt.find(mouseX, mouseY, pointsData.radius * 2);
 
 		if (!closest) {
 			hideTooltip(e.target);
@@ -237,18 +253,16 @@
 					}
 				];
 
-		const cb = colourBy;
-		const extra =
-			cb?.values && cb.label
-				? [
-						{
-							label: cb.label,
-							value: cb.format
-								? cb.format(cb.values[closest.i])
-								: String(cb.values[closest.i] ?? 'no value')
-						}
-					]
-				: [];
+		// The encoded values of the hovered row (plan 3.14: no encoding is the only channel).
+		const extra = [];
+		for (const enc of [colourBy, sizeBy]) {
+			if (!enc?.values || !enc.label) continue;
+			const v = enc.values[closest.i];
+			extra.push({
+				label: enc.label,
+				value: enc.format ? enc.format(v) : String(v ?? 'no value')
+			});
+		}
 		const content = buildAggregatedContent({
 			xLabel: xLabel || 'x',
 			xValue: closest.x,
@@ -259,6 +273,16 @@
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(e.clientX, e.clientY);
 		dispatchTooltip(e.target, { visible: true, x: xPos, y: yPos, content });
+	}
+
+	// The largest radius of a sized series (cached per array: hover runs per mouse move).
+	let maxCache = { r: null, max: 0 };
+	function maxSizeRadius(r, fallback) {
+		if (maxCache.r === r) return maxCache.max;
+		let max = fallback;
+		for (let k = 0; k < r.length; k++) if (r[k] > max) max = r[k];
+		maxCache = { r, max };
+		return max;
 	}
 
 	function handleMouseLeave(e) {
@@ -321,6 +345,7 @@
 				fill={p.fill}
 				stroke="none"
 				data-colour-bucket={colourBy ? p.key : undefined}
+				data-size-layer={sizeBy ? p.layer : undefined}
 				style={`transform: translate( ${xoffset}px, ${yoffset}px );`}
 				role={tooltip ? 'presentation' : undefined}
 				onmousemove={tooltip ? handleHover : undefined}

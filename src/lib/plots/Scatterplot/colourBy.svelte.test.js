@@ -287,13 +287,13 @@ describe('the colour bar and the legend never overlap', () => {
 
 	/** The key as drawn, backdrop included (ColourScale pads a key over the data). */
 	function barRect(s) {
-		const at = s.colourKeys.placement;
-		const g = s.colourKeys.geometry(at.length);
-		const pad = s.colourKeys.inset;
+		const at = s.encodingKeys.placement;
+		const g = s.encodingKeys.geometry(at.length);
+		const pad = s.encodingKeys.inset;
 		return { x: at.x - pad, y: at.y - pad, width: g.width + 2 * pad, height: g.height + 2 * pad };
 	}
 	function legendRect(s) {
-		const p = s.colourKeys.legendPlaced;
+		const p = s.encodingKeys.legendPlaced;
 		return {
 			x: p.outside ? p.x : (s.legendLayout.auto?.x ?? p.x),
 			y: p.y,
@@ -327,7 +327,7 @@ describe('the colour bar and the legend never overlap', () => {
 		s.legend.position = 'outsideright';
 		s.colourScale.position = 'right';
 		flushSync();
-		const legend = s.colourKeys.legendPlaced;
+		const legend = s.encodingKeys.legendPlaced;
 		expect(legend.outside).toBe(true);
 		const bar = barRect(s);
 		expect(bar.y).toBeGreaterThanOrEqual(legend.y + legend.height);

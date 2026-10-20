@@ -40,11 +40,11 @@
 		overlaysToJSON
 	} from '$lib/components/plotbits/overlayHost.js';
 	import {
-		ColourBySeries,
-		ColourKeyLayout,
+		EncodedSeries,
+		EncodingKeyLayout,
 		COLOUR_BY_SWATCH,
 		ensureUniqueEncodingIds,
-		withColourKeyOutside
+		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
 	import { markerPaths } from '$lib/components/plotbits/markerPaths.js';
 
@@ -52,11 +52,13 @@
 	export const QQPlot_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const QQPlot_displayName = 'Q-Q plot';
 
-	class QQPlotDataclass extends ColourBySeries {
+	class QQPlotDataclass extends EncodedSeries {
 		static descriptors = {
 			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
 			// drawn. The column itself is wiring (`colourBy`, a Column), like `column`.
-			colourEncoding: { descend: true, label: 'Colour by' }
+			colourEncoding: { descend: true, label: 'Colour by' },
+			// Size by: how the size column is read and drawn (plan 3.7).
+			sizeEncoding: { descend: true, label: 'Size by' }
 		};
 
 		parentPlot = $state();
@@ -79,23 +81,30 @@
 			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length);
 			this.pointRadius = dataIN?.pointRadius ?? 3;
 			this.opacity = dataIN?.opacity ?? 0.85;
-			// Colour by: restored only when it was on (both halves present).
-			this.restoreColourBy(dataIN);
+			// Colour by / Size by: each restored only when it was on (both halves present).
+			this.restoreEncodings(dataIN);
 		}
 
-		// ---- Colour by hooks (ColourBySeries) ----
+		// ---- Encoding hooks (EncodedSeries: Colour by and Size by) ----
 		// A mark is a SORTED sample: it keeps the colour of the row it came from (plan 3.12).
-		get colourMarkRows() {
+		get markRows() {
 			return this.qq.order;
 		}
-		get colourSeriesRowCount() {
+		get markRowCount() {
 			return (this.column?.getData?.() ?? []).length;
 		}
-		get colourDrawsPoints() {
+		get drawsPoints() {
 			return true;
 		}
 		get colourPointColour() {
 			return this.colour;
+		}
+		// Size by: a point with no size value keeps the series' point radius.
+		get defaultRadius() {
+			return this.pointRadius ?? 3;
+		}
+		get pointShape() {
+			return 'circle';
 		}
 
 		// Derived: the full Q-Q computation for this series' live column data.
@@ -137,8 +146,8 @@
 				colour: this.colour,
 				pointRadius: this.pointRadius,
 				opacity: this.opacity,
-				// Only while Colour by is on, so a plain series saves exactly as before.
-				...this.colourByJSON()
+				// Only while Colour by / Size by is on, so a plain series saves exactly as before.
+				...this.encodingsJSON()
 			};
 		}
 
@@ -161,7 +170,7 @@
 		});
 		// The colour-by host contract (components/plotbits/encodingHost.js): the sample points
 		// (no data line; the reference line and envelope keep the series colour).
-		static encodingCapabilities = { colour: true, lines: false };
+		static encodingCapabilities = { colour: true, size: true, lines: false };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -203,28 +212,38 @@
 		// The room on the right is the wider of an outside legend and a colour bar beside the
 		// plot: they stack (colourBySeries.svelte.js).
 		plotwidth = $derived(
-			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeys.reserveW)
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.encodingKeys.reserveW)
 		);
 
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: withColourKeyOutside(
+			outside: withEncodingKeysOutside(
 				rightOfPlot(() => ({ baseWidth: this.basePlotWidth })),
-				() => this.colourKeys
+				() => this.encodingKeys
 			),
-			area: () => this.colourKeys.legendArea()
+			area: () => this.encodingKeys.legendArea()
 		});
 
-		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
-		colourKeys = new ColourKeyLayout(this);
+		// ---- Colour by / Size by: the keys (plan 3.7, 3.8; colourBySeries.svelte.js) ----
+		encodingKeys = new EncodingKeyLayout(this);
 		get colourScale() {
-			return this.colourKeys.scale;
+			return this.encodingKeys.scale;
 		}
 		set colourScale(v) {
-			this.colourKeys.scale = v;
+			this.encodingKeys.scale = v;
 		}
 		get colourKey() {
-			return this.colourKeys.key;
+			return this.encodingKeys.key;
+		}
+		// Size by: the size key's settings and content (plan 3.7).
+		get sizeScale() {
+			return this.encodingKeys.sizeScale;
+		}
+		set sizeScale(v) {
+			this.encodingKeys.sizeScale = v;
+		}
+		get sizeKey() {
+			return this.encodingKeys.sizeKey;
 		}
 
 		// What a legend must not cover, in px over a w x h plot area: the sample points, the
@@ -239,7 +258,7 @@
 				out.push({
 					px: q.theoretical.map(xs),
 					py: q.sample.map(ys),
-					radius: d.pointRadius ?? 3
+					radius: (d.sizeActive ? d.sizeMaxRadius : d.pointRadius) ?? 3
 				});
 				const fitted = Number.isFinite(q.line.slope);
 				if (fitted && this.showBand) {
@@ -267,7 +286,7 @@
 				}
 			}
 			// An inside colour bar is an obstacle too, so an 'auto' legend never lands on it.
-			const bar = this.colourKeys.obstacle(w, h);
+			const bar = this.encodingKeys.obstacle(w, h);
 			if (bar) out.push(bar);
 			return out;
 		}
@@ -402,15 +421,19 @@
 		// CSV export: one row per (series × order statistic) with the quantile pair,
 		// the reference-line value at that theoretical quantile, and the envelope.
 		// Colour by adds a `colour` column: the value each point is coloured by (plan 3.9), e.g.
-		// its row's hour of day, blank where it has none or the series is not coloured.
+		// its row's hour of day, blank where it has none or the series is not coloured. Size by
+		// adds a `size` column the same way.
 		getDownloadData() {
 			const coloured = this.data.some((d) => d.colourActive);
+			const sized = this.data.some((d) => d.sizeActive);
 			const headers = ['series', 'theoretical', 'sample', 'line', 'band_lo', 'band_hi'];
 			if (coloured) headers.push('colour');
+			if (sized) headers.push('size');
 			const rows = [];
 			this.data.forEach((d) => {
 				const q = d.qq;
 				const cv = d.colourActive ? d.colourMarkValues : null;
+				const sv = d.sizeActive ? d.sizeMarkValues : null;
 				for (let i = 0; i < q.theoretical.length; i++) {
 					const row = [
 						d.displayLabel,
@@ -421,6 +444,7 @@
 						q.band.hi[i]
 					];
 					if (coloured) row.push(cv && Number.isFinite(cv[i]) ? cv[i] : '');
+					if (sized) row.push(sv && Number.isFinite(sv[i]) ? sv[i] : '');
 					rows.push(row);
 				}
 			});
@@ -521,7 +545,7 @@
 				legend: this.legend.toJSON(),
 				overlays: overlaysToJSON(this.overlays),
 				// The colour bar's settings, while any series is coloured by a column.
-				...this.colourKeys.toJSON()
+				...this.encodingKeys.toJSON()
 			};
 		}
 
@@ -544,6 +568,7 @@
 			chart.legend = LegendClass.fromJSON(json.legend);
 			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
 			chart.colourScale = json.colourScale ?? null;
+			chart.sizeScale = json.sizeScale ?? null;
 			if (json.data) {
 				chart.data = json.data.map((/** @type {any} */ d) => QQPlotDataclass.fromJSON(d, chart));
 				ensureUniqueEncodingIds(chart);
@@ -598,12 +623,14 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 	import Encoding from '$lib/components/plotbits/Encoding.svelte';
 	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
+	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 
 	let { theData, which } = $props();
 
 	// The sample points of one series as marker paths (plotbits/markerPaths.js): one path in
-	// the series colour, or one per colour bucket when the series is coloured by a column. Mark
-	// k is the k-th sorted sample; its colour is its own row's (colourBySeries colourMarkRows).
+	// the series colour, or one per colour bucket (and size layer) when the series is coloured
+	// (or sized) by a column. Mark k is the k-th sorted sample; its colour and size are its own
+	// row's (colourBySeries markRows).
 	function samplePaths(datum, xScale, yScale, xoff, yoff) {
 		const q = datum.qq;
 		const n = q.theoretical.length;
@@ -617,7 +644,8 @@
 			shape: 'circle',
 			radius: datum.pointRadius,
 			colour: datum.colour,
-			colourBy: datum.colourRender
+			colourBy: datum.colourRender,
+			sizeBy: datum.sizeRender
 		});
 	}
 
@@ -706,6 +734,15 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
+		{#if theData.sizeKey}
+			<div class="div-line"></div>
+			<!-- The size key of Size by. -->
+			<SizeKey
+				scaleData={theData.sizeScale}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>
@@ -967,6 +1004,7 @@
 								fill-opacity={datum.opacity}
 								stroke="none"
 								data-colour-bucket={datum.colourRender ? p.key : undefined}
+								data-size-layer={datum.sizeRender ? p.layer : undefined}
 							/>
 						{/each}
 					{/if}
@@ -987,9 +1025,12 @@
 				outsidePosition={theData.plot.legendLayout.outsidePosition}
 				which="plot"
 			/>
-			<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
-			{#if theData.plot.colourKeys.drawProps}
-				<ColourScale {...theData.plot.colourKeys.drawProps} which="plot" />
+			<!-- Colour by / Size by: the keys, stacked clear of the legend (encodingHost.placeKey). -->
+			{#if theData.plot.encodingKeys.drawProps}
+				<ColourScale {...theData.plot.encodingKeys.drawProps} which="plot" />
+			{/if}
+			{#if theData.plot.encodingKeys.sizeDrawProps}
+				<SizeKey {...theData.plot.encodingKeys.sizeDrawProps} which="plot" />
 			{/if}
 		{/if}
 	</svg>

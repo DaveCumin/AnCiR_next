@@ -78,6 +78,10 @@ def render(name):
     session = json.loads((DEMOS / f"{case['demo']}.json").read_text())
     cols, _raw, errors = run_session(session)
     assert not errors, errors
+    # The app's names for node outputs, as the export carries them (columnLabels).
+    for cid, label in (case.get("columnLabels") or {}).items():
+        if int(cid) in cols:
+            cols[int(cid)].label = label
     rt.set_display_timezone(case["zone"])
     plot = copy.deepcopy(case["plotJSON"])
     # The saved padding, as the emitter's jsdom (which cannot measure text) lays the plot out;

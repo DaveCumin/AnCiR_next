@@ -22,7 +22,7 @@ describe('ports', () => {
 	it('round-trips enc<id>_colour and rejects other ports', () => {
 		expect(encodingPortName(3)).toBe('enc3_colour');
 		expect(parseEncodingPort('enc3_colour')).toEqual({ id: 3, channel: 'colour' });
-		for (const p of ['ov3_at', 'ys1', 'enc_colour', 'enc3_size', '', null])
+		for (const p of ['ov3_at', 'ys1', 'enc_colour', 'enc3_shape', '', null])
 			expect(parseEncodingPort(p)).toBeNull();
 	});
 

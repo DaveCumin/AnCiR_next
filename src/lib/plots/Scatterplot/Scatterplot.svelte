@@ -33,12 +33,12 @@
 	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
 	import { markerPaddedDomain } from '$lib/plots/axisDomain.js';
 	import {
-		ColourBySeries,
-		ColourKeyLayout,
+		EncodedSeries,
+		EncodingKeyLayout,
 		COLOUR_BY_SWATCH,
 		slimWrapper,
 		ensureUniqueEncodingIds,
-		withColourKeyOutside
+		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
@@ -57,7 +57,7 @@
 		return [];
 	}
 
-	export class ScatterDataclass extends ColourBySeries {
+	export class ScatterDataclass extends EncodedSeries {
 		static descriptors = {
 			yAxis: { label: 'Y-axis', input: 'select', options: ['left', 'right'] },
 			// Surface per-series line/points style (colour, marker, width …) in the
@@ -66,7 +66,9 @@
 			points: { descend: true, label: 'Points' },
 			// Colour by (encodingHost.js): how the colour column is read and drawn. The column
 			// itself is wiring (`colourBy`, a Column), like x and y.
-			colourEncoding: { descend: true, label: 'Colour by' }
+			colourEncoding: { descend: true, label: 'Colour by' },
+			// Size by: how the size column is read and drawn (plan 3.7).
+			sizeEncoding: { descend: true, label: 'Size by' }
 		};
 
 		parentPlot = $state();
@@ -84,15 +86,15 @@
 		yData = $derived(safeColumnData(this.y));
 
 		// ---- Colour by (encoding host contract, components/plotbits/encodingHost.js) ----
-		// The shared machinery is ColourBySeries (plotbits/colourBySeries.svelte.js). Here a mark
+		// The shared machinery is EncodedSeries (plotbits/colourBySeries.svelte.js). Here a mark
 		// is a row, drawn when both its x and y are valid.
-		get colourSeriesRowCount() {
+		get markRowCount() {
 			return Math.min(this.xData.length, this.yData.length);
 		}
-		get colourMarkCount() {
+		get markCount() {
 			return Math.min(this.xData.length, this.yData.length);
 		}
-		get colourDrawnTest() {
+		get markDrawnTest() {
 			const xs = this.xData;
 			const ys = this.yData;
 			return (i) => {
@@ -131,8 +133,8 @@
 				this.line.draw = false;
 			}
 			this.points = new PointsClass(dataIN?.points, this);
-			// Colour by: restored only when it was on (both halves present).
-			this.restoreColourBy(dataIN);
+			// Colour by / Size by: each restored only when it was on (both halves present).
+			this.restoreEncodings(dataIN);
 		}
 
 		// Effective label for display: the user's label if set, else the y column
@@ -191,8 +193,8 @@
 				yAxis: this.yAxis,
 				line: this.line.toJSON(),
 				points: this.points.toJSON(),
-				// Only while Colour by is on, so a plain series saves exactly as before.
-				...this.colourByJSON()
+				// Only while Colour by / Size by is on, so a plain series saves exactly as before.
+				...this.encodingsJSON()
 			};
 		}
 
@@ -234,7 +236,9 @@
 				line: LineClass.fromJSON(json.line),
 				points: PointsClass.fromJSON(json.points),
 				colourBy: slimColour,
-				colourEncoding: json.colourEncoding
+				colourEncoding: json.colourEncoding,
+				sizeBy: json.sizeBy,
+				sizeEncoding: json.sizeEncoding
 			});
 		}
 	}
@@ -245,7 +249,7 @@
 		static overlayCapabilities = ALL_OVERLAY_FORMS;
 		// The colour-by host contract (components/plotbits/encodingHost.js): points, and the
 		// line when a series asks for it (phase 1c).
-		static encodingCapabilities = { colour: true, lines: true };
+		static encodingCapabilities = { colour: true, size: true, lines: true };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -324,7 +328,7 @@
 		// The room on the right is the wider of the series legend (when outside) and a colour
 		// bar beside the plot: they stack, legend on top (encodingHost.placeColourKey).
 		plotwidth = $derived(
-			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeys.reserveW)
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.encodingKeys.reserveW)
 		);
 		basePlotHeight = $derived(this.plotheight);
 
@@ -333,29 +337,39 @@
 		// An inside legend is placed over the plot area left beside a colour bar.
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: withColourKeyOutside(
+			outside: withEncodingKeysOutside(
 				rightOfPlot(() => ({
 					baseWidth: this.basePlotWidth,
 					hasRightAxis: this.hasRightAxisData,
 					paddingRight: this.padding.right
 				})),
-				() => this.colourKeys
+				() => this.encodingKeys
 			),
-			area: () => this.colourKeys.legendArea()
+			area: () => this.encodingKeys.legendArea()
 		});
 
-		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
+		// ---- Colour by / Size by: the keys (plan 3.7, 3.8; colourBySeries.svelte.js) ----
 		// One bar per plot, for the first coloured series; settings saved with the plot.
-		colourKeys = new ColourKeyLayout(this);
+		encodingKeys = new EncodingKeyLayout(this);
 		get colourScale() {
-			return this.colourKeys.scale;
+			return this.encodingKeys.scale;
 		}
 		set colourScale(v) {
-			this.colourKeys.scale = v;
+			this.encodingKeys.scale = v;
 		}
 		/** The colour bar's content (the first coloured series), or null. */
 		get colourKey() {
-			return this.colourKeys.key;
+			return this.encodingKeys.key;
+		}
+		// Size by: the size key's settings and content (plan 3.7).
+		get sizeScale() {
+			return this.encodingKeys.sizeScale;
+		}
+		set sizeScale(v) {
+			this.encodingKeys.sizeScale = v;
+		}
+		get sizeKey() {
+			return this.encodingKeys.sizeKey;
 		}
 
 		// The drawn marks in px over a w x h plot area, using scales built here from the
@@ -398,11 +412,12 @@
 					px[i] = xs(origin != null ? origin + xv * 3600000 : xv);
 					py[i] = ys(yv);
 				}
-				series.push({ px, py, line, radius: pts ? (d.points.radius ?? 0) : 0 });
+				const radius = pts ? ((d.sizeActive ? d.sizeMaxRadius : d.points.radius) ?? 0) : 0;
+				series.push({ px, py, line, radius });
 			}
 			// A colour bar inside the plot area is an obstacle too, so an 'auto' legend never
 			// lands on it (plan 3.8).
-			const bar = this.colourKeys.obstacle(w, h);
+			const bar = this.encodingKeys.obstacle(w, h);
 			if (bar) series.push(bar);
 			return series;
 		}
@@ -489,7 +504,9 @@
 		markerPadPx(series) {
 			let pad = 0;
 			for (const d of series) {
-				if (d.points?.draw) pad = Math.max(pad, Number(d.points.radius) || 0);
+				// Sized points (Size by) reach their largest radius.
+				if (d.points?.draw)
+					pad = Math.max(pad, (d.sizeActive ? d.sizeMaxRadius : Number(d.points.radius)) || 0);
 				if (d.line?.draw) pad = Math.max(pad, (Number(d.line.strokeWidth) || 0) / 2);
 			}
 			return pad > 0 ? pad + 1 : 0;
@@ -570,7 +587,7 @@
 				this.basePlotWidth -
 				Math.max(
 					mayGoOutside ? box.width + 2 * (box.margin ?? LEGEND_MARGIN) : 0,
-					this.colourKeys.reserveW
+					this.encodingKeys.reserveW
 				);
 			const [plo, phi] = markerPaddedDomain(xmin, xmax, this.markerPadPx(this.data), lengthPx, {
 				log: this.xLogScale && !this.anyXdataTime
@@ -888,6 +905,11 @@
 					headers.push(`c_${label}`);
 					columns.push(datum.colourEncoded.values.map((v) => (Number.isFinite(v) ? v : '')));
 				}
+				// Size by: the value each point is sized by (plan 3.9).
+				if (datum.sizeActive) {
+					headers.push(`s_${label}`);
+					columns.push(datum.sizeEncoded.values.map((v) => (Number.isFinite(v) ? v : '')));
+				}
 			});
 			// Overlays: each enabled one's resolved positions/edges, under its name.
 			const isoX = (v) => (this.anyXdataTime ? new Date(v).toISOString() : v);
@@ -919,7 +941,7 @@
 				legend: this.legend.toJSON(),
 				overlays: overlaysToJSON(this.overlays),
 				// The colour bar's settings, while any series is coloured by a column.
-				...this.colourKeys.toJSON()
+				...this.encodingKeys.toJSON()
 			};
 		}
 		static fromJSON(parent, json) {
@@ -971,6 +993,7 @@
 			// `show` defaults on: a bar that is absent from the file (the plot was not coloured
 			// when saved) must come back visible.
 			scatter.colourScale = json.colourScale ?? null;
+			scatter.sizeScale = json.sizeScale ?? null;
 			if (json.data) {
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
 				ensureUniqueEncodingIds(scatter);
@@ -1023,6 +1046,7 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 	import Encoding from '$lib/components/plotbits/Encoding.svelte';
 	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
+	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 	import {
 		limitsFromBrush,
 		toLimitNumber,
@@ -1189,6 +1213,15 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
+		{#if theData.sizeKey}
+			<div class="div-line"></div>
+			<!-- The size key of Size by. -->
+			<SizeKey
+				scaleData={theData.sizeScale}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>
@@ -1598,6 +1631,7 @@
 					siblings={scatterSiblings}
 					hideOnAlt={true}
 					colourBy={datum.colourRender}
+					sizeBy={datum.sizeRender}
 					which="plot"
 				/>
 			{/if}
@@ -1634,9 +1668,13 @@
 			outsidePosition={theData.plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
-		<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
-		{#if theData.plot.colourKeys.drawProps}
-			<ColourScale {...theData.plot.colourKeys.drawProps} which="plot" />
+		<!-- Colour by / Size by: the colour bar and the size key, stacked clear of the legend
+		     (encodingHost.placeKey). -->
+		{#if theData.plot.encodingKeys.drawProps}
+			<ColourScale {...theData.plot.encodingKeys.drawProps} which="plot" />
+		{/if}
+		{#if theData.plot.encodingKeys.sizeDrawProps}
+			<SizeKey {...theData.plot.encodingKeys.sizeDrawProps} which="plot" />
 		{/if}
 	</svg>
 	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />

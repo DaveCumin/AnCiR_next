@@ -8,7 +8,10 @@
  * every series: the colour bucket and colour of every point, the coloured line's segments
  * (colouredLine.js, the 1c rule) and their colours, the colour bar (title, ticks, "no value"),
  * the legend swatches, and the colours a series with no saved colour resolves to. Also the
- * app's colormap stop tables and 64 bucket colours per map.
+ * app's colormap stop tables and 64 bucket colours per map. Size by (phase 3) adds, per sized
+ * series, every drawn point's exact radius and the order the points are drawn in (largest
+ * layer first), and per plot the size key (entries, "no value", title, shape) and where the
+ * two keys are placed (tools/test_plot_size_by.py).
  *
  * tools/test_plot_colour_by.py runs the same sessions through the Python runtime and checks
  * the exported figure draws exactly these colours. The fixture is COMMITTED
@@ -33,6 +36,7 @@ import { COLORMAPS } from '$lib/components/plotbits/colormaps.js';
 import { bucketColours, COLOUR_BUCKETS } from '$lib/components/plotbits/encodings.js';
 import { colouredLineSegments, isValidXY } from '$lib/components/plotbits/colouredLine.js';
 import { formatColourValue } from '$lib/components/plotbits/encodingHost.js';
+import { markerPaths } from '$lib/components/plotbits/markerPaths.js';
 
 /** Values the colour bar prints, through every formatting branch (JS number printing). */
 const FORMAT_SAMPLES = [
@@ -79,8 +83,14 @@ function col(values, type = 'number', name = 'c', extra = {}) {
 	return c.id;
 }
 
-/** A scatterplot from plain series; `colour` per series: { refId, ...encoding fields }. */
-function scatter(name, series, { legend = false, colourScale = null, style = null } = {}) {
+/**
+ * A scatterplot from plain series; `colour` / `size` per series: { refId, ...encoding fields }.
+ */
+function scatter(
+	name,
+	series,
+	{ legend = false, colourScale = null, sizeScale = null, style = null } = {}
+) {
 	const plot = new Plot({
 		type: 'scatterplot',
 		name,
@@ -105,8 +115,18 @@ function scatter(name, series, { legend = false, colourScale = null, style = nul
 			if (k !== 'refId') d.colourEncoding[k] = v;
 		}
 	});
+	series.forEach((s, i) => {
+		if (!s.size) return;
+		const d = p.plot.data[i];
+		d.enableSizeBy();
+		d.sizeBy.refId = s.size.refId;
+		for (const [k, v] of Object.entries(s.size)) {
+			if (k !== 'refId') d.sizeEncoding[k] = v;
+		}
+	});
 	p.plot.legend.show = legend;
 	if (colourScale) Object.assign(p.plot.colourScale, colourScale);
+	if (sizeScale) Object.assign(p.plot.sizeScale, sizeScale);
 	return p;
 }
 
@@ -142,8 +162,41 @@ function drawnByApp(p) {
 				}
 			});
 		}
+		// Size by: each drawn point's radius, and the order the app draws the points in (the
+		// marker builder's own grouping, read back from centres placed at x = row).
+		let size = null;
+		if (d.sizeActive) {
+			const rows = [];
+			for (let i = 0; i < n; i++) if (d.points.draw && isValidXY(xs[i], ys[i])) rows.push(i);
+			const sb = d.sizeRender;
+			const drawOrder = sb
+				? markerPaths(
+						rows,
+						rows.map(() => 0),
+						{
+							shape: 'circle',
+							radius: d.points.radius,
+							colour: 'k',
+							colourBy: d.colourRender,
+							sizeBy: sb,
+							marks: rows
+						}
+					).flatMap((path) => [...path.d.matchAll(/M(\d+) 0m/g)].map((m) => Number(m[1])))
+				: [];
+			const radii = Array.from({ length: n }, () => null);
+			for (const r of rows) radii[r] = r < sb.r.length ? sb.r[r] : d.points.radius;
+			size = {
+				mode: d.sizeMode,
+				domain: d.sizeDomain,
+				range: d.sizeRadiusRange,
+				title: d.sizeTitle,
+				radii,
+				drawOrder
+			};
+		}
 		return {
 			resolved: { line: d.line.colour, points: d.points.colour },
+			size,
 			active,
 			mode: d.colourMode,
 			colormap: active ? d.colourMap : null,
@@ -156,9 +209,28 @@ function drawnByApp(p) {
 		};
 	});
 	const key = inner.colourKey;
+	const sizeKey = inner.sizeKey;
+	const keys = inner.encodingKeys;
 	return {
 		id: p.id,
 		series,
+		sizeKey: sizeKey
+			? {
+					series: inner.data.indexOf(sizeKey.series),
+					title: sizeKey.title,
+					shape: sizeKey.shape,
+					items: sizeKey.items,
+					noValue: sizeKey.noValue
+				}
+			: null,
+		// Where the keys go, px from the plot area's top left (EncodingKeyLayout), at the
+		// app's default figure size.
+		keyLayout: {
+			plotArea: { w: inner.plotwidth, h: inner.plotheight },
+			colour: keys.placement,
+			size: keys.sizePlacement,
+			sizeGeometry: keys.sizeBase
+		},
 		key: key
 			? {
 					series: inner.data.indexOf(key.series),
@@ -335,6 +407,88 @@ const CASES = {
 		scatter('wrapped', [{ x, y, colour: { refId: plain, mode: 'hourOfDay' } }]);
 		return 'America/New_York';
 	},
+	// ---- Size by (phase 3) ----
+	/** Size and colour together: missing values on both channels, the colour bar and the
+	 *  size key stacked beside the plot, square markers, the legend on. */
+	sizeAndColour() {
+		const x = col([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'number', 'x');
+		const y = col([3, 1, 4, 1, 5, 9, 2, 6, 5, 3], 'number', 'hive');
+		const c = col([0, 1, 2, null, 4, 5, 6, 7, 8, 9], 'number', 'outside');
+		const h = col([40, 55, null, 70, 'n/a', 90, 62, 48, 81, 75], 'number', 'humidity');
+		scatter(
+			'size and colour',
+			[
+				{
+					x,
+					y,
+					line: { draw: true, strokeWidth: 1 },
+					points: { shape: 'square', radius: 3 },
+					colour: { refId: c },
+					size: { refId: h }
+				}
+			],
+			{ legend: true }
+		);
+	},
+	/** Size only: a manual range clamping, a custom size range, the key in a corner over the
+	 *  data (its backdrop), triangles; a second series on another column (the key shows the
+	 *  first). */
+	sizeManual() {
+		const x = col([0, 1, 2, 3, 4, 5, 6, 7], 'number', 'x');
+		const y = col([2, 4, 3, 5, 4, 6, 5, 7], 'number', 'y');
+		const s1 = col([0, 10, 20, 30, 40, 50, 60, 70], 'number', 'count');
+		const s2 = col([5, 4, 3, 2, 1, 0, 1, 2], 'number', 'other');
+		scatter(
+			'size manual',
+			[
+				{
+					x,
+					y,
+					points: { shape: 'triangle' },
+					size: { refId: s1, domainMin: 15, domainMax: 55, minRadius: 3, maxRadius: 14 }
+				},
+				{ x, y: s2, points: { shape: 'circle', radius: 2 }, size: { refId: s2 } }
+			],
+			{ sizeScale: { position: 'topleft' } }
+		);
+	},
+	/** A time size column (days since start), both keys sharing the bottom right corner (the
+	 *  bar shortens to leave the size key room), stars. */
+	sizeTimeCorner() {
+		const t = Array.from({ length: 24 }, (_, i) => T0 + i * 6 * 3600000);
+		const x = col(t, 'time', 'time');
+		const y = col(
+			t.map((_, i) => Math.round(Math.cos(i / 3) * 100) / 10),
+			'number',
+			'inside'
+		);
+		scatter(
+			'size time',
+			[
+				{
+					x,
+					y,
+					points: { shape: 'star', radius: 5 },
+					colour: { refId: x },
+					size: { refId: x }
+				}
+			],
+			{ colourScale: { position: 'bottomright' }, sizeScale: { position: 'bottomright' } }
+		);
+	},
+	/** Facets: the panels share one size range over every sized series of the mode. */
+	sizeFacets() {
+		const x = col([0, 1, 2, 3], 'number', 'x');
+		const ya = col([1, 2, 3, 4], 'number', 'a');
+		const yb = col([4, 3, 2, 1], 'number', 'b');
+		const sa = col([0, 1, 2, 3], 'number', 'sa');
+		const sb = col([10, 20, 30, 40], 'number', 'sb');
+		const p = scatter('size facet', [
+			{ x, y: ya, size: { refId: sa } },
+			{ x, y: yb, size: { refId: sb } }
+		]);
+		p.facet = true;
+	},
 	/** Series with no saved colour: the app's colour is the column's pinned colour, not the
 	 *  series' position (the second plot's only series is the first plot's second). */
 	resolvedColours() {
@@ -391,6 +545,7 @@ function essentials(fx) {
 			facet: c.session.plots.map((p) => p.facet),
 			monochrome: c.session.plots.map((p) => p.style?.monochrome ?? false),
 			colourScale: c.session.plots.map((p) => p.plot.colourScale ?? null),
+			sizeScale: c.session.plots.map((p) => p.plot.sizeScale ?? null),
 			appState: c.session.appState,
 			seriesColours: c.session.seriesColours,
 			expected: c.expected
@@ -424,9 +579,18 @@ describe('colour by: the app side of the Python export fixture', () => {
 		const fx = buildFixture();
 		for (const c of fx.cases.filter((k) => k.name !== 'resolvedColours')) {
 			expect(
-				c.expected.some((p) => p.series.some((s) => s.active)),
+				c.expected.some((p) => p.series.some((s) => s.active || s.size)),
 				c.name
 			).toBe(true);
+		}
+		// The size cases size something, and their draw order covers every drawn point.
+		for (const c of fx.cases.filter((k) => k.name.startsWith('size'))) {
+			const sized = c.expected.flatMap((p) => p.series).filter((s) => s.size);
+			expect(sized.length, c.name).toBeGreaterThan(0);
+			for (const s of sized) {
+				const drawn = s.size.radii.filter((r) => r != null).length;
+				expect(s.size.drawOrder.length, c.name).toBe(drawn);
+			}
 		}
 		const rc = fx.cases.find((k) => k.name === 'resolvedColours');
 		const [both, alone] = rc.expected;

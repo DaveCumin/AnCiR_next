@@ -1,7 +1,7 @@
 /**
- * Colour by and resolved series colours in the Python export (colour-by plan 2026-10-20,
- * phase 1d): the exported script carries what the runtime needs, and RUNS, drawing the
- * coloured figures without a plot error. The sessions are the app-built ones in
+ * Colour by, Size by and resolved series colours in the Python export (colour-by plan
+ * 2026-10-20, phases 1d and 3): the exported script carries what the runtime needs, and RUNS,
+ * drawing the coloured and sized figures without a plot error. The sessions are the app-built ones in
  * tools/parity/colour_by_app.json (src/lib/_parity/emitColourBy.svelte.test.js); the colours
  * themselves are checked per point in tools/test_plot_colour_by.py.
  */
@@ -59,7 +59,19 @@ describe('resolved series colours reach the script', () => {
 });
 
 describe.runIf(existsSync(PYTHON))('a coloured export runs (tools/.venv)', () => {
-	for (const name of ['valueLines', 'hourOfDayZone', 'lineOnly', 'monochrome', 'resolvedColours']) {
+	for (const name of [
+		'valueLines',
+		'hourOfDayZone',
+		'lineOnly',
+		'monochrome',
+		'resolvedColours',
+		// Size by (phase 3): sized points, the size key beside the plot, in a corner, shared
+		// with the colour bar, and faceted.
+		'sizeAndColour',
+		'sizeManual',
+		'sizeTimeCorner',
+		'sizeFacets'
+	]) {
 		it(`${name}: the script runs and writes every plot without a plot error`, () => {
 			const dir = mkdtempSync(join(tmpdir(), 'ancir-colourby-'));
 			tempDirs.push(dir);

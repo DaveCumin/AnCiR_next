@@ -427,8 +427,8 @@ describe('Circular phase: every dot keeps its own row’s colour', () => {
 		}
 		/** The bar and the clock's right label reach, in view px. */
 		function rects(inner) {
-			const at = inner.colourKeys.placement;
-			const g = inner.colourKeys.geometry(at.length);
+			const at = inner.encodingKeys.placement;
+			const g = inner.encodingKeys.geometry(at.length);
 			const bar = {
 				x: inner.padding.left + at.x,
 				y: inner.padding.top + at.y,
@@ -498,10 +498,10 @@ describe('Circular phase: every dot keeps its own row’s colour', () => {
 
 		it('only "Beside plot" is offered, and no backdrop is drawn whatever is saved', () => {
 			const inner = coloured('topright');
-			expect(inner.colourKeys.positions).toEqual(['right']);
+			expect(inner.encodingKeys.positions).toEqual(['right']);
 			inner.colourScale.position = 'topleft';
 			flushSync();
-			expect(inner.colourKeys.drawProps.backdrop).toBe(false);
+			expect(inner.encodingKeys.drawProps.backdrop).toBe(false);
 		});
 	});
 

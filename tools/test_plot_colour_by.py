@@ -148,6 +148,23 @@ def expected_point_groups(exp_series, xs, ys):
 def check_points(ax, session, plot, exp, i):
     s_exp = exp["series"][i]
     xs, ys = app_rows(session, plot, i)
+    if s_exp.get("size"):
+        # Sized (phase 3): ONE collection in the app's drawing order (largest layer first,
+        # then colour as below within a layer); sizes are checked in test_plot_size_by.py.
+        rows = s_exp["size"]["drawOrder"]
+        coll = artist(ax, f"series-{i}-points")
+        assert artist(ax, f"series-{i}-points-novalue") is None
+        if not rows:
+            assert coll is None
+            return
+        want_xy = [(x_coord(ax, session, plot, i, xs[r]), float(ys[r])) for r in rows]
+        np.testing.assert_allclose(np.asarray(coll.get_offsets(), dtype=float), want_xy,
+                                   rtol=0, atol=1e-9)
+        faces = coll.get_facecolors()
+        if len(faces) == 1:
+            faces = np.repeat(faces, len(rows), axis=0)
+        assert [rgb255(f) for f in faces] == [rgb255(s_exp["pointColours"][r]) for r in rows]
+        return
     none, coloured = expected_point_groups(s_exp, xs, ys)
     for gid, rows in ((f"series-{i}-points", coloured), (f"series-{i}-points-novalue", none)):
         coll = artist(ax, gid)

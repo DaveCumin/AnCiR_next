@@ -27,6 +27,7 @@ import { core, appConsts, appState, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { exportColumnLabels } from '$lib/core/columnLabels.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
@@ -347,6 +348,9 @@ async function runCase(c) {
 	await tick();
 	flushSync();
 	const out = drawn(container, live.plot, live.style);
+	// The names the app shows for node outputs ("Binned: air temperature"), which the export
+	// carries too: a key titled by its column (a size key) is as wide as its words.
+	const columnLabels = exportColumnLabels();
 	cleanup();
 	return {
 		name: c.name,
@@ -354,6 +358,7 @@ async function runCase(c) {
 		plotId: c.plot,
 		zone: c.zone,
 		plotJSON,
+		columnLabels,
 		expected: out
 	};
 }

@@ -1,26 +1,32 @@
 // @ts-check
-// The colour-by HOST contract and the helpers every host shares (colour-by plan 2026-10-20,
-// sections 3.2, 3.5 and 3.8; phase 1b: Scatterplot points).
+// The encoding HOST contract and the helpers every host shares (colour-by plan 2026-10-20,
+// sections 3.2, 3.5, 3.7 and 3.8; colour by in phases 1 and 2, size by in phase 3).
 //
-// A host is a plot's inner data object (Scatterplotclass today; Q-Q, Mean +/- SEM and
-// Circular phase in phase 2). It declares what it can encode and gives each series two
-// fields, so the canvas, the panel, save/load, facets and the colour bar find everything
-// through one shape:
+// A host is a plot's inner data object (Scatterplot, Q-Q, Mean +/- SEM, Circular phase). It
+// declares what it can encode and gives each series two fields per CHANNEL, so the canvas,
+// the panel, save/load, facets and the keys find everything through one shape:
 //
-//   static encodingCapabilities = { colour: true, lines: false }  // per plot class
-//   series.colourBy        Column wrapper (the wired colour column), or null while off
-//   series.colourEncoding  ColourEncodingClass (Encoding.svelte), or null while off
-//   series.enableColourBy() / series.disableColourBy()
+//   static encodingCapabilities = { colour: true, size: true, lines: false }  // per class
+//   series.colourBy / series.sizeBy              Column wrappers (the wired columns), or null
+//   series.colourEncoding / series.sizeEncoding  settings (Encoding.svelte), or null while off
+//   series.enableColourBy() / disableColourBy() / enableSizeBy() / disableSizeBy()
 //
-// The colour column is a series CHANNEL (core/seriesChannelRefs.js, field `colourBy`, not
-// primary, no passthrough), so the data hash, column delete, ref remapping, copy/paste and
-// the facet projection already reach it. Its canvas port is a NAMED port, `enc<id>_colour`,
-// where `id` is the encoding's own stable number (like an overlay's), so the positional
-// x<n>/ys<n> storage rule (plots/portVsStorageFields.test.js) is untouched.
+// Each column is a series CHANNEL (core/seriesChannelRefs.js, fields `colourBy` and `sizeBy`,
+// not primary, no passthrough), so the data hash, column delete, ref remapping, copy/paste
+// and the facet projection already reach it. Its canvas port is a NAMED port,
+// `enc<id>_<channel>`, where `id` is the encoding's own stable number (like an overlay's), so
+// the positional x<n>/ys<n> storage rule (plots/portVsStorageFields.test.js) is untouched.
+// ENCODING_FIELDS maps a channel to its two fields; every helper here takes the channel.
 //
 // Pure: no Svelte, no core. The host passes in what it knows.
 
-import { isCyclicMode, encodingModesFor } from './encodings.js';
+import {
+	isCyclicMode,
+	encodingModesFor,
+	sizeModesFor,
+	sizeRadius,
+	domainPosition
+} from './encodings.js';
 import {
 	DEFAULT_COLORMAP,
 	DEFAULT_CYCLIC_COLORMAP,
@@ -29,10 +35,22 @@ import {
 	COLORMAPS
 } from './colormaps.js';
 
-/** The encoding channels a series can carry, and the word each port ends in. */
-export const ENCODING_CHANNELS = Object.freeze(['colour']);
+/**
+ * The encoding channels a series can carry, and the word each port ends in. Each channel is
+ * two series fields, both null while it is off: the wired column (a Column wrapper, a
+ * seriesChannelRefs channel) and its settings (ColourEncodingClass / SizeEncodingClass in
+ * Encoding.svelte). Everything below takes the channel as a parameter, so colour and size
+ * share one implementation of ports, ids and wiring.
+ */
+export const ENCODING_CHANNELS = Object.freeze(['colour', 'size']);
 
-const ENCODING_PORT_RE = /^enc(\d+)_(colour)$/;
+/** The series fields of each channel: its column wrapper and its settings. */
+export const ENCODING_FIELDS = Object.freeze({
+	colour: Object.freeze({ column: 'colourBy', encoding: 'colourEncoding' }),
+	size: Object.freeze({ column: 'sizeBy', encoding: 'sizeEncoding' })
+});
+
+const ENCODING_PORT_RE = /^enc(\d+)_(colour|size)$/;
 
 /** `enc<id>_<channel>`: the canvas input port of one series' encoding. */
 export function encodingPortName(id, channel = 'colour') {
@@ -50,31 +68,82 @@ export function supportsColourBy(inner) {
 	return inner?.constructor?.encodingCapabilities?.colour === true;
 }
 
+/** Whether a plot's inner (its class) can size its series' points by a column. */
+export function supportsSizeBy(inner) {
+	return inner?.constructor?.encodingCapabilities?.size === true;
+}
+
+/** The settings of one channel of a series (null while off). */
+export function seriesEncoding(dp, channel = 'colour') {
+	const f = ENCODING_FIELDS[channel];
+	return f ? (dp?.[f.encoding] ?? null) : null;
+}
+
+/** The column wrapper of one channel of a series (null while off). */
+export function seriesEncodingColumn(dp, channel = 'colour') {
+	const f = ENCODING_FIELDS[channel];
+	return f ? (dp?.[f.column] ?? null) : null;
+}
+
+/** The series of `inner` whose `channel` encoding is switched on, in data order. */
+export function encodedSeries(inner, channel = 'colour') {
+	return (inner?.data ?? []).filter(
+		(dp) => seriesEncoding(dp, channel) && seriesEncodingColumn(dp, channel)
+	);
+}
+
 /** The series of `inner` whose colour encoding is switched on, in data order. */
 export function colourEncodedSeries(inner) {
-	return (inner?.data ?? []).filter((dp) => dp?.colourEncoding && dp?.colourBy);
+	return encodedSeries(inner, 'colour');
 }
 
 /**
- * The series an encoding port belongs to: `{ datum, channel, encoding }`, or null when the
- * name is not an encoding port, or no series of this inner has that encoding switched on.
+ * The series an encoding port belongs to: `{ datum, channel, encoding, column }` (column: the
+ * channel's Column wrapper), or null when the name is not an encoding port, or no series of
+ * this inner has that channel switched on with that id.
  */
 export function resolveEncodingPort(inner, portName) {
 	const parsed = parseEncodingPort(portName);
 	if (!parsed) return null;
-	const datum = colourEncodedSeries(inner).find((dp) => dp.colourEncoding.id === parsed.id);
-	return datum ? { datum, channel: parsed.channel, encoding: datum.colourEncoding } : null;
+	const { channel } = parsed;
+	const datum = encodedSeries(inner, channel).find(
+		(dp) => seriesEncoding(dp, channel).id === parsed.id
+	);
+	return datum
+		? {
+				datum,
+				channel,
+				encoding: seriesEncoding(datum, channel),
+				column: seriesEncodingColumn(datum, channel)
+			}
+		: null;
 }
 
-/** The next free encoding id on a plot (1 for the first). */
-export function nextEncodingId(inner) {
-	let max = 0;
-	for (const dp of inner?.data ?? []) {
-		const id = dp?.colourEncoding?.id;
-		if (typeof id === 'number' && id > max) max = id;
+/**
+ * The id a new `channel` encoding of `datum` takes: the series' other encoding's id when no
+ * series of the plot uses it on this channel (so one series' colour and size ports read
+ * `enc3_colour` and `enc3_size`), else the next free id on the channel (1 for the first).
+ */
+export function nextEncodingId(inner, channel = 'colour', datum = null) {
+	const used = new Set(
+		(inner?.data ?? []).map((dp) => seriesEncoding(dp, channel)?.id).filter((id) => id != null)
+	);
+	for (const other of ENCODING_CHANNELS) {
+		if (other === channel) continue;
+		const id = seriesEncoding(datum, other)?.id;
+		if (Number.isInteger(id) && id > 0 && !used.has(id)) return id;
 	}
+	let max = 0;
+	for (const id of used) if (typeof id === 'number' && id > max) max = id;
 	return max + 1;
 }
+
+/**
+ * The series legend swatch of a series coloured by a column (plan 3.8), and the size key's
+ * reference circles: a neutral mid grey. Figure ink, not interface chrome, so a literal rather
+ * than a CSS token: a saved SVG or PNG cannot resolve var(--…) outside the app.
+ */
+export const COLOUR_BY_SWATCH = 'rgb(140, 140, 140)';
 
 /** The stored mode that means "pick for the column" (time: hour of day; number: value). */
 export const AUTO = 'auto';
@@ -89,6 +158,19 @@ export function effectiveColourMode(stored, column) {
 	const offered = encodingModesFor(column ?? {}).map((m) => m.mode);
 	if (stored && stored !== AUTO && offered.includes(stored)) return stored;
 	return column?.type === 'time' ? 'hourOfDay' : offered[0];
+}
+
+/**
+ * The mode a series is SIZED by: the stored one when the column offers it for size (never
+ * Hour of day, plan 3.7), else the column's natural one (days since start for a time column,
+ * the value for anything else).
+ * @param {string|null|undefined} stored
+ * @param {{type?: string, originTime_ms?: number|null}|null|undefined} column
+ */
+export function effectiveSizeMode(stored, column) {
+	const offered = sizeModesFor(column ?? {}).map((m) => m.mode);
+	if (stored && stored !== AUTO && offered.includes(stored)) return stored;
+	return column?.type === 'time' ? 'daysSinceStart' : offered[0];
 }
 
 /**
@@ -168,35 +250,74 @@ export function colourBarTicks(domain, mode, { manualLo = false, manualHi = fals
 }
 
 /**
- * Where the colour bar goes and what room it takes (plan 3.8), in px relative to the plot
- * area's top-left corner. Pure, so "never overlaps the legend" is tested on numbers.
+ * The size key's entries (plan 3.7): reference circles at both ends of the range and its
+ * middle, low first, each `{ value, r, label }` with the radius the scale draws that value at.
+ * A manual end is marked as the colour bar marks it (values beyond it clamp to the end size).
+ * A one-value range has one entry.
+ * @param {{lo: number, hi: number}} domain
+ * @param {string} mode an effective (size) mode
+ * @param {{rMin: number, rMax: number, manualLo?: boolean, manualHi?: boolean}} o
+ */
+export function sizeKeyItems(domain, mode, { rMin, rMax, manualLo = false, manualHi = false }) {
+	const lo = Number(domain?.lo);
+	const hi = Number(domain?.hi);
+	if (!Number.isFinite(lo) || !Number.isFinite(hi)) return [];
+	const fmt = (v) => formatColourValue(v, mode);
+	const at = (v) => sizeRadius(domainPosition(v, domain), rMin, rMax);
+	if (lo === hi) return [{ value: lo, r: at(lo), label: fmt(lo) }];
+	const mid = (lo + hi) / 2;
+	return [
+		{ value: lo, r: at(lo), label: (manualLo ? '≤ ' : '') + fmt(lo) },
+		{ value: mid, r: at(mid), label: fmt(mid) },
+		{ value: hi, r: at(hi), label: (manualHi ? '≥ ' : '') + fmt(hi) }
+	];
+}
+
+/**
+ * @typedef {object} PlacedBox a key already placed, for the next one to keep clear of
+ * @property {number} x
+ * @property {number} y
+ * @property {number} width
+ * @property {number} height
+ * @property {boolean} outside in the right margin (the series legend outside, or a key
+ *   'right')
+ * @property {string|null} [corner] the inside corner it sits in, null for custom
+ */
+
+/**
+ * Where a key goes (the colour bar, the size key) and what room it takes (plan 3.8), in px
+ * relative to the plot area's top-left corner. Pure, so "never overlaps" is tested on
+ * numbers. The keys stack in reading order: the series legend, the colour bar, the size key.
+ * `stack` lists the boxes placed before this one.
  *
- * - 'right' (beside the plot, the default): in the right margin, past a right axis. Below
- *   the series legend when the legend is outside too (they stack; the wider one sets the
- *   room taken). Its length is capped to the height left under the legend.
- * - an inside corner: the corner, inset like the legend presets. When the series legend sits
- *   in the SAME corner (a fixed preset), the bar moves past it (under a top legend, above a
- *   bottom one). An 'auto' legend never lands on it: the host passes the bar's rectangle to
- *   the legend as an obstacle (`colourKeyObstacle`).
+ * - 'right' (beside the plot, the default): in the right margin, past a right axis, below
+ *   every box already in the right margin (they stack; the widest sets the room taken). Its
+ *   room is the height left below them.
+ * - an inside corner: the corner, inset like the legend presets. Boxes in the SAME corner
+ *   push it along (under them in a top corner, above them in a bottom one); a box at the
+ *   other end that it would run into caps its room (`maxLength`), so a column of keys that can
+ *   shrink (an automatic colour bar) stops short of them. An 'auto' legend
+ *   never lands on a key: the host passes the keys' rectangles to the legend as obstacles
+ *   (`keyObstacle`).
  * - 'custom': the fractions, over the same inset area the legend's custom placement uses.
  *
  * @param {object} o
- * @param {string} o.position ColourScaleClass.position
- * @param {{width: number, height: number}} o.box the bar's footprint
+ * @param {string} o.position ColourScaleClass.position / SizeScaleClass.position
+ * @param {{width: number, height: number}} o.box the key's footprint
  * @param {number} o.plotW the plot area as drawn
  * @param {number} o.plotH
  * @param {number} o.margin the legend inset (scaled to the view)
  * @param {boolean} [o.hasRightAxis]
  * @param {number} [o.paddingRight]
- * @param {{x: number, y: number, width: number, height: number, outside: boolean, corner?: string|null}|null} [o.legend]
- *   the series legend as placed (null when hidden)
+ * @param {PlacedBox[]} [o.stack] the boxes placed before this one (hidden ones left out)
  * @param {{customX?: number, customY?: number}} [o.custom]
- * @param {number} [o.inset] the backdrop ColourScale draws round the key when it sits over the
+ * @param {number} [o.inset] the backdrop the key draws round itself when it sits over the
  *   data (its `padding`): inside the plot the key is placed by its BACKDROP, so the backdrop
- *   keeps the same inset from the edges and from the legend as a legend box does
- * @returns {{x: number, y: number, maxLength: number}} x, y of the key itself (not its backdrop)
+ *   keeps the same inset from the edges and from the other boxes as a legend box does
+ * @returns {{x: number, y: number, maxLength: number}} x, y of the key itself (not its
+ *   backdrop); maxLength the height (vertical room) left for it
  */
-export function placeColourKey({
+export function placeKey({
 	position,
 	box,
 	plotW,
@@ -204,13 +325,14 @@ export function placeColourKey({
 	margin,
 	hasRightAxis = false,
 	paddingRight = 0,
-	legend = null,
+	stack = [],
 	custom = {},
 	inset = 0
 }) {
 	if (position === 'right') {
 		const x = plotW + (hasRightAxis ? paddingRight : 0) + margin;
-		const y = legend?.outside ? legend.y + legend.height + margin : 0;
+		let y = 0;
+		for (const b of stack) if (b?.outside) y = Math.max(y, b.y + b.height + margin);
 		return { x, y, maxLength: Math.max(0, plotH - y) };
 	}
 	// Inside: place the backdrop, then step in to the key.
@@ -221,14 +343,22 @@ export function placeColourKey({
 		plotW,
 		plotH,
 		margin,
-		legend,
+		stack,
 		custom
 	});
 	return { x: p.x + inset, y: p.y + inset, maxLength: Math.max(0, p.maxLength - 2 * inset) };
 }
 
-/** placeColourKey's inside positions, for a backdrop of `width` x `height`. */
-function placeBackdrop({ position, width, height, plotW, plotH, margin, legend, custom }) {
+/**
+ * placeKey for the colour bar, with the series legend as the one box before it.
+ * @param {Parameters<typeof placeKey>[0] & {legend?: PlacedBox|null}} o
+ */
+export function placeColourKey({ legend = null, ...o }) {
+	return placeKey({ ...o, stack: legend ? [legend] : [] });
+}
+
+/** placeKey's inside positions, for a backdrop of `width` x `height`. */
+function placeBackdrop({ position, width, height, plotW, plotH, margin, stack, custom }) {
 	if (position === 'custom') {
 		const fx = Math.min(1, Math.max(0, custom.customX ?? 0));
 		const fy = Math.min(1, Math.max(0, custom.customY ?? 0));
@@ -239,16 +369,26 @@ function placeBackdrop({ position, width, height, plotW, plotH, margin, legend, 
 	const left = position === 'topleft' || position === 'bottomleft';
 	const bottom = position === 'bottomright' || position === 'bottomleft';
 	const x = left ? margin : plotW - width - margin;
-	let y = bottom ? plotH - height - margin : margin;
-	let maxLength = plotH - 2 * margin;
-	if (legend && !legend.outside && legend.corner === position) {
-		if (bottom) {
-			y = legend.y - height - margin;
-			maxLength = Math.max(0, legend.y - 2 * margin);
-		} else {
-			y = legend.y + legend.height + margin;
-			maxLength = Math.max(0, plotH - y - margin);
-		}
+	const inside = (stack ?? []).filter((b) => b && !b.outside);
+	// The boxes this one stacks after (its corner), and those it must stop short of: a box in
+	// a corner at the other end (top / bottom) that it would run into (they share some x), so a
+	// tall column of keys never reaches the far corner's box.
+	const same = inside.filter((b) => b.corner === position);
+	const far = inside.filter(
+		(b) =>
+			b.corner && b.corner.startsWith('bottom') !== bottom && b.x < x + width && x < b.x + b.width
+	);
+	let y;
+	let maxLength;
+	if (bottom) {
+		const floor = same.length ? Math.min(...same.map((b) => b.y)) - margin : plotH - margin;
+		const ceiling = far.length ? Math.max(...far.map((b) => b.y + b.height)) + margin : margin;
+		y = floor - height;
+		maxLength = Math.max(0, floor - ceiling);
+	} else {
+		y = same.length ? Math.max(...same.map((b) => b.y + b.height)) + margin : margin;
+		const floor = far.length ? Math.min(...far.map((b) => b.y)) - margin : plotH - margin;
+		maxLength = Math.max(0, floor - y);
 	}
 	return { x, y, maxLength };
 }
@@ -259,12 +399,17 @@ export function colourKeyReserveW(boxWidth, margin, hasRightAxis = false) {
 }
 
 /**
- * The colour bar as an obstacle for the 'auto' series legend: `[x0, y0, x1, y1]` over a
- * w x h plot area, or null when the bar is not inside the plot area. Same corner rule as
- * placeColourKey without a legend (the legend is what is being placed).
+ * A key as an obstacle for the 'auto' series legend: `[x0, y0, x1, y1]` over a w x h plot
+ * area, or null when the key is not inside the plot area. Same corner rule as placeKey with
+ * the keys before it (`stack`) but no legend (the legend is what is being placed).
  */
-export function colourKeyObstacle(position, box, w, h, margin, custom = {}, inset = 0) {
+export function keyObstacle(position, box, w, h, margin, custom = {}, inset = 0, stack = []) {
 	if (!box || position === 'right') return null;
-	const p = placeColourKey({ position, box, plotW: w, plotH: h, margin, custom, inset });
+	const p = placeKey({ position, box, plotW: w, plotH: h, margin, custom, inset, stack });
 	return [p.x - inset, p.y - inset, p.x + box.width + inset, p.y + box.height + inset];
+}
+
+/** The colour bar as an obstacle (keyObstacle with nothing before it). */
+export function colourKeyObstacle(position, box, w, h, margin, custom = {}, inset = 0) {
+	return keyObstacle(position, box, w, h, margin, custom, inset);
 }

@@ -50,7 +50,7 @@ beforeEach(async () => {
 
 describe('seriesChannelRefs', () => {
 	it('lists the fixed fields in order, including the vestigial z', () => {
-		expect(SERIES_COLUMN_FIELDS).toEqual(['x', 'y', 'z', 'column', 'colourBy']);
+		expect(SERIES_COLUMN_FIELDS).toEqual(['x', 'y', 'z', 'column', 'colourBy', 'sizeBy']);
 		const dp = { x: { refId: 1 }, y: { refId: 2 }, z: { refId: 3 }, column: { refId: 4 } };
 		expect(seriesChannelRefs(dp).map((c) => [c.field, c.refId, c.display, c.axis])).toEqual([
 			['x', 1, 'x', 'x'],

@@ -393,6 +393,49 @@ describe('every plot control panel edit is one exact undo step', () => {
 		}, 240000);
 	}
 
+	// Size by (colour-by plan 2026-10-20, phase 3) on every host, with Colour by on too so the
+	// two panels and the two keys are audited side by side: the switch, the column, how it is
+	// read, the smallest and largest point, the range, and the size key's settings.
+	for (const type of ['scatterplot', 'qqplot', 'meansem', 'circularphase']) {
+		it(`${type} with Size by on (its own controls and the size key)`, async () => {
+			const prepare = (plot) => {
+				const c = mkCol(
+					'c',
+					Array.from({ length: N }, (_, i) => i % 7)
+				);
+				const s = mkCol(
+					's',
+					Array.from({ length: N }, (_, i) => (i * 5) % 11)
+				);
+				const d = plot.plot.data[0];
+				d.enableColourBy();
+				d.colourBy.refId = c;
+				d.enableSizeBy();
+				d.sizeBy.refId = s;
+			};
+			const results = await auditType(type, prepare);
+			const failures = Object.fromEntries(
+				Object.entries(results).filter(
+					([k, v]) => v !== 'ok' && !(k in EXCLUSIONS) && !(k in NO_SAVED_CHANGE)
+				)
+			);
+			expect(failures).toEqual({});
+			const keys = Object.keys(results).join('\n');
+			for (const want of [
+				'Size points by a column',
+				'Size read as',
+				'Smallest',
+				'Largest',
+				'Size from',
+				'Size to'
+			])
+				expect(keys, type).toContain(want);
+			// The size key's own font size: a third "Font size" after the legend's and the
+			// colour bar's.
+			expect(keys, type).toMatch(/properties \| Font size #3/);
+		}, 240000);
+	}
+
 	it('records something for every plot type (guards a harness that edits nothing)', () => {
 		for (const type of PLOT_TYPES) {
 			const ok = Object.values(RESULTS[type] ?? {}).filter((v) => v === 'ok').length;

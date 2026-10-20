@@ -1112,6 +1112,9 @@ export const OVERLAY_CHANNEL_DESCRIPTIONS = {
 // A series' colour-by port, `enc<id>_colour` (components/plotbits/encodingHost.js).
 export const COLOUR_BY_DESCRIPTION =
 	'Column that colours this series’ points: a number by its value, a time by its hour of day (or day of year, or days since start; set in the panel). Rows with no value keep the series colour.';
+// A series' size-by port, `enc<id>_size`.
+export const SIZE_BY_DESCRIPTION =
+	'Column that sizes this series’ points, the area growing with the value between the smallest and largest point size: a number by its value, a time by days since start (or day of year; set in the panel). Rows with no value keep the series’ point size.';
 const NEW_LINE_DESCRIPTION =
 	'Each drop adds a reference line at the column’s values; set vertical or horizontal in the panel.';
 
@@ -1238,7 +1241,7 @@ export function portEnv(getColumnById) {
 const PLOT_X_PORT = /^x\d+$/;
 const PLOT_Y_PORT = /^ys\d+$/;
 const OVERLAY_PORT = /^ov(\d+)_([A-Za-z]\w*)$/;
-const ENCODING_PORT = /^enc\d+_colour$/;
+const ENCODING_PORT = /^enc\d+_(colour|size)$/;
 
 /**
  * What a port on a canvas node card expects (dir 'in') or produces (dir 'out'), or null.
@@ -1271,7 +1274,8 @@ export function describeNodePort(node, port, dir, env = {}) {
 		const plotType = plot?.type;
 		if (dir === 'in') {
 			if (name === 'ovnew_line') return NEW_LINE_DESCRIPTION;
-			if (ENCODING_PORT.test(name)) return COLOUR_BY_DESCRIPTION;
+			const enc = ENCODING_PORT.exec(name);
+			if (enc) return enc[1] === 'size' ? SIZE_BY_DESCRIPTION : COLOUR_BY_DESCRIPTION;
 			const ov = OVERLAY_PORT.exec(name);
 			if (ov) {
 				const overlay = (plot?.plot?.overlays ?? []).find((o) => String(o?.id) === ov[1]);

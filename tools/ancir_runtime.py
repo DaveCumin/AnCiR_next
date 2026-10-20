@@ -9426,6 +9426,191 @@ def coloured_line_segments(xs, ys, idx, k=COLOUR_BUCKETS, join_gaps=False):
     return groups
 
 
+
+# ---- Size by (colour-by plan 2026-10-20, section 3.7; phase 3) --------------------------
+#
+# encodings.js / encodingHost.js, ported: the same modes (no Hour of day: a cycle has no
+# "bigger"), range and bucket rules as colour, with an AREA-proportional radius between the
+# smallest and largest point radius. The radius is exact per point; the 8 size layers only
+# order the drawing (largest first). tools/test_plot_size_by.py pins every point's `s`
+# against the app.
+
+SIZE_BUCKETS = 8
+DEFAULT_MIN_RADIUS = 2
+DEFAULT_MAX_RADIUS = 10
+MIN_RADIUS_FLOOR = 1
+
+
+def size_modes_for(col_type, origin_ms=None):
+    """encodings.js sizeModesFor: the colour modes without Hour of day."""
+    return [m for m in encoding_modes_for(col_type, origin_ms) if not is_cyclic_mode(m)]
+
+
+def effective_size_mode(stored, col_type, origin_ms=None):
+    """encodingHost.js effectiveSizeMode: the stored mode when the column offers it for size,
+    else days since start for a time column and the value (the first offered) otherwise."""
+    offered = size_modes_for(col_type, origin_ms)
+    if stored and stored != 'auto' and stored in offered:
+        return stored
+    return 'daysSinceStart' if col_type == 'time' else offered[0]
+
+
+def _radius_in(v, fallback):
+    """Encoding.svelte radiusIn: a finite number, at least 1 px, else the default."""
+    if v is None or v == '' or isinstance(v, bool):
+        return fallback
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return fallback
+    return max(MIN_RADIUS_FLOOR, n) if math.isfinite(n) else fallback
+
+
+def size_range(r_min, r_max):
+    """encodings.js sizeRange: (rMin, rMax), each finite and at least 1 px."""
+    return (max(MIN_RADIUS_FLOOR, _radius_in(r_min, DEFAULT_MIN_RADIUS)),
+            max(MIN_RADIUS_FLOOR, _radius_in(r_max, DEFAULT_MAX_RADIUS)))
+
+
+def size_radius(t, r_min, r_max):
+    """encodings.js sizeRadius: sqrt(rMin^2 + t (rMax^2 - rMin^2)), t clamped; NaN for none."""
+    if not (isinstance(t, (int, float)) and math.isfinite(t)):
+        return _NAN
+    u = 0 if t < 0 else (1 if t > 1 else t)
+    return math.sqrt(r_min * r_min + u * (r_max * r_max - r_min * r_min))
+
+
+def size_layer(r, lo, hi, s=SIZE_BUCKETS):
+    """encodings.js sizeLayer: the AREA position of r between the smallest and largest radius,
+    cut into s layers (clamped)."""
+    span = hi * hi - lo * lo
+    if not (isinstance(r, (int, float)) and math.isfinite(r)) or not (span > 0):
+        return 0
+    return bucket_index((r * r - lo * lo) / span, s)
+
+
+def size_radii(values, domain, r_min, r_max, fallback, s=SIZE_BUCKETS):
+    """encodings.js sizeRadii: (radius per mark, layer per mark, the "no value" layer); a mark
+    with no size value keeps `fallback` (the series' point radius)."""
+    lo, hi = min(r_min, r_max), max(r_min, r_max)
+    nv_layer = size_layer(fallback, lo, hi, s)
+    radii, layers = [], []
+    for v in values or []:
+        r = size_radius(domain_position(v, domain), r_min, r_max)
+        if math.isfinite(r):
+            radii.append(r)
+            layers.append(size_layer(r, lo, hi, s))
+        else:
+            radii.append(fallback)
+            layers.append(nv_layer)
+    return radii, layers, nv_layer
+
+
+def size_key_items(domain, mode, r_min, r_max, manual_lo=False, manual_hi=False):
+    """encodingHost.js sizeKeyItems: [(value, r, label)], low first: both ends and the middle
+    (one entry for a one-value range), a manual end marked <= or >=."""
+    lo, hi = (domain or {}).get('lo', _NAN), (domain or {}).get('hi', _NAN)
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        return []
+
+    def at(v):
+        return size_radius(domain_position(v, domain), r_min, r_max)
+    if lo == hi:
+        return [(lo, at(lo), format_colour_value(lo, mode))]
+    mid = (lo + hi) / 2
+    return [(lo, at(lo), ('≤ ' if manual_lo else '') + format_colour_value(lo, mode)),
+            (mid, at(mid), format_colour_value(mid, mode)),
+            (hi, at(hi), ('≥ ' if manual_hi else '') + format_colour_value(hi, mode))]
+
+
+SIZE_KEY_LABEL_GAP = 6
+_SIZE_KEY_TITLE_GAP = 4
+_SIZE_KEY_TITLE_LINE_GAP = 2
+_SIZE_KEY_TITLE_MIN_CHARS = 14
+
+
+def wrap_key_title(title, max_chars):
+    """SizeKey.svelte wrapKeyTitle: greedy lines of at most max_chars at spaces."""
+    lines, line = [], ''
+    for w in [w for w in str(title or '').split(' ') if w != '']:
+        if line and len(line) + 1 + len(w) > max_chars:
+            lines.append(line)
+            line = w
+        else:
+            line = f'{line} {w}' if line else w
+    if line:
+        lines.append(line)
+    return lines
+
+
+def size_key_geometry(items, no_value, title, font_px, item_spacing=4):
+    """SizeKey.svelte sizeKeyGeometry: the key's footprint, its title lines and its rows, in
+    px. The title wraps at the rows' width (14 characters at least); rows run low value first,
+    then "no value"; each row as tall as its circle or the text; the circles on one centre
+    line as wide as the largest. {'width', 'height', 'colW', 'titleLines': [(text, y)],
+    'rows': [(r, label, cy, is_no_value)]}."""
+    rows_in = [(r, label, False) for _, r, label in items or []]
+    if no_value:
+        rows_in.append((no_value['r'], no_value.get('label') or 'no value', True))
+    col_w = 2 * max([0] + [r for r, _, _ in rows_in])
+    label_w = max([0] + [len(str(lab)) * font_px * 0.6 for _, lab, _ in rows_in])
+    rows_w = col_w + SIZE_KEY_LABEL_GAP + label_w if rows_in else 0
+    max_chars = max(_SIZE_KEY_TITLE_MIN_CHARS, math.floor(rows_w / (font_px * 0.6)))
+    lines = wrap_key_title(title, max_chars) if title else []
+    title_lines = [(t, k * (font_px + _SIZE_KEY_TITLE_LINE_GAP)) for k, t in enumerate(lines)]
+    title_h = (len(lines) * font_px + (len(lines) - 1) * _SIZE_KEY_TITLE_LINE_GAP
+               + _SIZE_KEY_TITLE_GAP) if lines else 0
+    y = title_h
+    rows = []
+    for i, (r, label, nv) in enumerate(rows_in):
+        h = max(2 * r, font_px)
+        rows.append((r, label, y + h / 2, nv))
+        y += h + (item_spacing if i < len(rows_in) - 1 else 0)
+    width = max([rows_w] + [len(t) * font_px * 0.6 for t in lines])
+    return {'width': width, 'height': y, 'colW': col_w, 'titleLines': title_lines,
+            'rows': rows}
+
+
+def place_key(position, box_w, box_h, plot_w, plot_h, margin, has_right_axis=False,
+              padding_right=0, stack=(), custom=None, inset=0):
+    """encodingHost.js placeKey: (x, y, max_length) of a key (not its backdrop), in px from
+    the plot area's top left; `stack` the boxes placed before it ({'x', 'y', 'w', 'h',
+    'outside', 'corner'}). Beside the plot ('right') it goes under every box already in the
+    right margin; in a corner, past the boxes in that corner, its room capped by a box at
+    the other end it would run into; 'custom' at the fractions."""
+    if position == 'right':
+        x = plot_w + (padding_right if has_right_axis else 0) + margin
+        y = 0
+        for b in stack or ():
+            if b and b.get('outside'):
+                y = max(y, b['y'] + b['h'] + margin)
+        return x, y, max(0, plot_h - y)
+    w, h = box_w + 2 * inset, box_h + 2 * inset
+    if position == 'custom':
+        c = custom or {}
+        fx = min(1, max(0, c.get('customX') or 0))
+        fy = min(1, max(0, c.get('customY') or 0))
+        bx = margin + max(0, plot_w - w - 2 * margin) * fx
+        by = margin + max(0, plot_h - h - 2 * margin) * fy
+        return bx + inset, by + inset, max(0, plot_h - 2 * margin - 2 * inset)
+    left = position in ('topleft', 'bottomleft')
+    bottom = position in ('bottomright', 'bottomleft')
+    x = margin if left else plot_w - w - margin
+    inside = [b for b in stack or () if b and not b.get('outside')]
+    same = [b for b in inside if b.get('corner') == position]
+    far = [b for b in inside if b.get('corner') and b['corner'].startswith('bottom') != bottom
+           and b['x'] < x + w and x < b['x'] + b['w']]
+    if bottom:
+        floor = (min(b['y'] for b in same) - margin) if same else plot_h - margin
+        ceiling = (max(b['y'] + b['h'] for b in far) + margin) if far else margin
+        y = floor - h
+        max_len = max(0, floor - ceiling)
+    else:
+        y = (max(b['y'] + b['h'] for b in same) + margin) if same else margin
+        floor = (min(b['y'] for b in far) - margin) if far else plot_h - margin
+        max_len = max(0, floor - y)
+    return x + inset, y + inset, max(0, max_len - 2 * inset)
+
 # ---- Series marks: a series' line and points as the app draws them -----------------------
 #
 # The app saves them as LineClass.toJSON {colour, strokeWidth, stroke, draw, joinGaps}
@@ -9531,7 +9716,8 @@ def _x_numbers(ax, xs):
 _SVG_LINE_JOIN = 'bevel'
 
 
-def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=None):
+def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=None,
+                       size_by=None):
     """Draw one series' line, then its points, as Line.svelte and Points.svelte do, and
     return the drawn artists (gids `series-<index>-line` / `series-<index>-points`, plus
     `series-<index>-points-novalue` for coloured points with no colour value).
@@ -9554,6 +9740,11 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
       value" first, then the buckets in order). A coloured line is a LineCollection of
       segments (colouredLine.js): each takes its starting row's colour (the series line
       colour when that row has no value), solid, round caps and joins.
+    - Size by (`size_by` = {'r': radius per row, 'layer': drawing layer per row,
+      'no_value_layer'}): every point at its own exact radius (s = (1.5 r m)^2 per point,
+      _scatter_marker), in ONE collection whose points run in the app's drawing order:
+      largest layer first, within a layer "no value" colour first then the buckets, rows in
+      data order (markerPaths.js). A row past the size column's end keeps the series radius.
     The label goes on the line when it is drawn, else on the points. That artist carries the
     app's legend swatch (`_ancir_legend_handle`: the line with the marker on it, the points
     grey when coloured by a column), which _legend_with_overlays uses in its place."""
@@ -9622,7 +9813,25 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
     if points['draw'] and rows:
         point_label = '_nolegend_' if drawn['line'] is not None else label
         common = dict(marker=marker, s=size, linewidths=0, edgecolors='none', zorder=2)
-        if coloured:
+        if size_by is not None:
+            radii = list(size_by.get('r') or [])
+            layers = list(size_by.get('layer') or [])
+            nv_layer = size_by.get('no_value_layer', 0)
+
+            def group(i):
+                b = bucket(i) if coloured else NO_COLOUR_VALUE
+                return 0 if b == NO_COLOUR_VALUE else b + 1
+            order = sorted(rows, key=lambda i: (-(layers[i] if i < len(layers) else nv_layer),
+                                                group(i)))
+            sizes = [_scatter_marker(points['shape'],
+                                     radii[i] if i < len(radii) else points['radius'])[1]
+                     for i in order]
+            colours = [palette[group(i) - 1] if group(i) > 0 else points_colour for i in order]
+            drawn['points'] = ax.scatter(
+                [x[i] for i in order], [_js_number(y[i]) for i in order],
+                color=colours, gid=f'series-{index}-points', label=point_label,
+                **{**common, 's': sizes})
+        elif coloured:
             none_rows = [i for i in rows if bucket(i) == NO_COLOUR_VALUE]
             # Buckets in index order, rows in data order within a bucket (one path each).
             col_rows = sorted((i for i in rows if bucket(i) != NO_COLOUR_VALUE), key=bucket)
@@ -10554,6 +10763,234 @@ def scatter_colour_key(plot, columns_index, encodings, xy=None):
     }
 
 
+
+def scatter_size_encodings(plot, columns_index, zone=None):
+    """Scatterplot size by, per series (None where it is off): what the app's EncodedSeries
+    derives (sizeActive, sizeMode, sizeMarkValues, sizeDomain, sizeRadiusRange, sizeRadii,
+    sizeTitle), from the saved series alone. Active only while switched on AND wired to a
+    column that exists; the range spans every sized series of the plot reading the same
+    column the same way (facets: every sized series of that mode); a manual end overrides.
+    A point with no size value keeps the series' point radius."""
+    zone = DISPLAY_TIMEZONE if zone is None else zone
+    p = plot.get('plot', {}) or {}
+    data = p.get('data', []) or []
+    facet = plot.get('facet') is True
+    out = []
+    for s in data:
+        enc = s.get('sizeEncoding')
+        sb = s.get('sizeBy')
+        ref = (sb or {}).get('refId')
+        col = (_resolve_plot_col(sb, columns_index)
+               if enc and isinstance(ref, int) and not isinstance(ref, bool) and ref >= 0
+               else None)
+        if col is None:
+            out.append(None)
+            continue
+        origin = None if col.type == 'time' else _scatter_x_origin_ms(col)
+        mode = effective_size_mode(enc.get('mode'), col.type, origin)
+        values, warning = encoding_values(mode, col.get_data() or [], col.type, origin, zone)
+        r_min, r_max = size_range(enc.get('minRadius'), enc.get('maxRadius'))
+        points = _with_defaults(s.get('points'), _POINTS_DEFAULTS)
+        out.append({
+            'ref': ref, 'mode': mode, 'values': values, 'warning': warning,
+            'domain_in': [_number_or_none(enc.get('domainMin')),
+                          _number_or_none(enc.get('domainMax'))],
+            'r_min': r_min, 'r_max': r_max, 'default_r': points['radius'],
+            'shape': points['shape'] if points['shape'] in POINT_SHAPES else 'circle',
+            'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone),
+        })
+    for e in out:
+        if e is None:
+            continue
+        arrays = [o['values'] for o in out
+                  if o is not None and o['mode'] == e['mode'] and (facet or o['ref'] == e['ref'])]
+        e['domain'] = encoding_domain(arrays, mode=e['mode'], domain_in=e['domain_in'])
+        e['r'], e['layer'], e['no_value_layer'] = size_radii(
+            e['values'], e['domain'], e['r_min'], e['r_max'], e['default_r'])
+        e['max_r'] = max(e['r']) if e['r'] else e['default_r']
+    return out
+
+
+def scatter_size_key(plot, sizes, xy=None):
+    """EncodingKeyLayout.sizeKey: the size key's content for the FIRST series whose points are
+    sized ({'items', 'no_value', 'title', 'shape'}), or None. `no_value` ({'r', 'label'}, at
+    that series' point radius) when a drawn point of a series on the same scale had no size
+    value."""
+    p = plot.get('plot', {}) or {}
+    data = p.get('data', []) or []
+
+    def drawn(i):
+        return sizes[i] is not None and \
+            _with_defaults(data[i].get('points'), _POINTS_DEFAULTS)['draw']
+    first = next((i for i in range(len(sizes)) if drawn(i)), None)
+    if first is None:
+        return None
+    e = sizes[first]
+
+    def sig(o):
+        return (o['ref'], o['mode'], repr(o['domain']['lo']), repr(o['domain']['hi']),
+                o['r_min'], o['r_max'])
+
+    def missing(i):
+        o = sizes[i]
+        xs, ys = (xy or {}).get(i, ([], []))
+        return any(_js_plot_valid(xs[r]) and _js_plot_valid(ys[r])
+                   and not (r < len(o['values']) and math.isfinite(o['values'][r]))
+                   for r in range(min(len(xs), len(ys))))
+    hit = next((i for i in range(len(sizes)) if drawn(i) and sig(sizes[i]) == sig(e)
+                and missing(i)), None)
+    return {
+        'series': first, 'title': e['title'], 'shape': e['shape'],
+        'items': size_key_items(e['domain'], e['mode'], e['r_min'], e['r_max'],
+                                manual_lo=e['domain_in'][0] is not None,
+                                manual_hi=e['domain_in'][1] is not None),
+        'no_value': ({'r': sizes[hit]['default_r'], 'label': 'no value'}
+                     if hit is not None else None),
+    }
+
+
+def _key_font_px(scale_json, look):
+    """A key's own `fontSize` (px), else the figure's legend size."""
+    return _colour_key_font_px(scale_json, look)
+
+
+def _key_inset(scale_json):
+    """The backdrop a key draws round itself over the data (its padding), px; none beside."""
+    scale = scale_json or {}
+    if (scale.get('position') or 'right') == 'right':
+        return 0
+    pad = scale.get('padding')
+    return pad if isinstance(pad, (int, float)) and not isinstance(pad, bool) else 8
+
+
+def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
+                        has_right_axis=False, padding_right=30):
+    """EncodingKeyLayout.placement / sizePlacement (no series legend among them): where the
+    colour bar ({'x', 'y', 'length', 'geom'}) and the size key ({'x', 'y', 'geom'}) go, in px
+    from the plot area's top left, or None for a key not shown. The size key stacks after the
+    bar (beside the plot under it, in a shared corner past it), and an automatic vertical bar
+    shortens so both fit (fitVertical)."""
+    ax_w, ax_h = _axes_px(ax)
+    margin = 10
+    cs = colour_json or {}
+    ss = size_json or {}
+    colour_on = key is not None and cs.get('show', True) is not False
+    size_on = size_key is not None and ss.get('show', True) is not False
+    out = {'colour': None, 'size': None}
+    size_geom = None
+    s_pos = ss.get('position') or 'right'
+    if s_pos not in ('right', 'topright', 'topleft', 'bottomright', 'bottomleft', 'custom'):
+        s_pos = 'right'
+    if size_on:
+        size_geom = size_key_geometry(size_key['items'], size_key['no_value'],
+                                      size_key['title'], _key_font_px(ss, look),
+                                      ss.get('itemSpacing') if isinstance(
+                                          ss.get('itemSpacing'), (int, float)) else 4)
+    s_inset = _key_inset(ss)
+    args = dict(plot_w=ax_w, plot_h=ax_h, margin=margin, has_right_axis=has_right_axis,
+                padding_right=padding_right)
+    bar_box = None
+    if colour_on:
+        vertical = cs.get('orientation') != 'horizontal'
+        thickness = cs.get('barThickness') or 10
+        fixed = cs.get('barLength')
+        fixed = fixed if isinstance(fixed, (int, float)) and not isinstance(fixed, bool) else None
+        length0 = fixed if fixed is not None else max(30, min(ax_h, 150))
+        font_px = _colour_key_font_px(cs, look)
+        labels = [lab for _, lab in key['ticks']]
+        nv = key['no_value']['label'] if key['no_value'] else None
+
+        def geom(length):
+            return colour_key_geometry(vertical, thickness, length, font_px, labels,
+                                       key['title'], nv)
+        c_pos = cs.get('position') or 'right'
+        c_inset = _key_inset(cs)
+        custom = {'customX': cs.get('customX'), 'customY': cs.get('customY')}
+        base = geom(length0)
+        x, y, max_len = place_key(c_pos, base['width'], base['height'], custom=custom,
+                                  inset=c_inset, **args)
+        length = length0
+        shares = size_on and c_pos == s_pos and c_pos != 'custom'
+        after = size_geom['height'] + 2 * s_inset + margin if shares else 0
+        besides = base['height'] - length0
+        if vertical and fixed is None and max_len - after < length0 + besides:
+            length = max(20, max_len - after - besides)
+            g = geom(length)
+            x, y, _ = place_key(c_pos, g['width'], g['height'], custom=custom, inset=c_inset,
+                                **args)
+        g = geom(length)
+        out['colour'] = {'x': x, 'y': y, 'length': length, 'geom': g}
+        bar_box = {'x': x - c_inset, 'y': y - c_inset, 'w': g['width'] + 2 * c_inset,
+                   'h': g['height'] + 2 * c_inset, 'outside': c_pos == 'right',
+                   'corner': None if c_pos in ('right', 'custom') else c_pos}
+    if size_on:
+        x, y, _ = place_key(s_pos, size_geom['width'], size_geom['height'],
+                            stack=[bar_box] if bar_box else [],
+                            custom={'customX': ss.get('customX'), 'customY': ss.get('customY')},
+                            inset=s_inset, **args)
+        out['size'] = {'x': x, 'y': y, 'geom': size_geom, 'position': s_pos, 'inset': s_inset}
+    return out
+
+
+def _key_backdrop(ax, x, y, w, h, scale_json, look, gid):
+    """The box a key draws round itself over the data (ColourScale.svelte / SizeKey.svelte):
+    its `backgroundColor`, its border (`borderColor`, `borderWidth`) when the figure style
+    boxes legends, corners rounded 3 px; x, y, w, h in px from the plot area's top left."""
+    from matplotlib.patches import FancyBboxPatch
+    scale = scale_json or {}
+    ax_w, ax_h = _axes_px(ax)
+    look = look or resolve_figure_style(None)
+    width = scale.get('borderWidth', 1)
+    width = width if isinstance(width, (int, float)) and not isinstance(width, bool) else 1
+    show_box = look['legend_box'] and width > 0
+    ax.add_patch(FancyBboxPatch(
+        (x / ax_w, 1 - (y + h) / ax_h), w / ax_w, h / ax_h,
+        boxstyle=f'round,pad=0,rounding_size={3 / ax_w}', mutation_aspect=ax_w / ax_h,
+        transform=ax.transAxes, zorder=4.9, gid=gid,
+        facecolor=_css_colour(scale.get('backgroundColor'), (1, 1, 1, 0.9)),
+        edgecolor=(_css_colour(scale.get('borderColor'), _LEGEND_BORDER_DEFAULT)
+                   if show_box else 'none'),
+        linewidth=width * _PX_TO_PT if show_box else 0))
+
+
+def _draw_size_key(ax, size_key, scale_json, at, look=None):
+    """The size key (SizeKey.svelte) at the app's placement `at` (encoding_key_layout): an
+    inset axes (gid 'size-key') exactly the key's px footprint, its reference circles drawn as
+    the series' markers at their exact radii in the key's neutral grey, labelled to the
+    right, the title above; on a white backdrop when it sits over the data."""
+    from matplotlib.patches import Rectangle
+    if size_key is None or at is None:
+        return None
+    scale = scale_json or {}
+    ax_w, ax_h = _axes_px(ax)
+    g = at['geom']
+    font_px = _key_font_px(scale, look)
+    font_pt = font_px * _PX_TO_PT
+    family = _font_family_list((look or resolve_figure_style(None))['family'])
+    pad = at.get('inset', 0)
+    if pad:
+        _key_backdrop(ax, at['x'] - pad, at['y'] - pad, g['width'] + 2 * pad,
+                      g['height'] + 2 * pad, scale, look, 'size-key-backdrop')
+    w = max(g['width'], 1e-6)
+    h = max(g['height'], 1e-6)
+    kax = ax.inset_axes([at['x'] / ax_w, 1 - (at['y'] + h) / ax_h, w / ax_w, h / ax_h])
+    kax.set_gid('size-key')
+    kax.set_xlim(0, w)
+    kax.set_ylim(h, 0)  # px, y down, as the SVG
+    kax.set_axis_off()
+    kax.patch.set_alpha(0)
+    grey = _mpl_colour(COLOUR_BY_SWATCH)
+    for r, label, cy, nv in g['rows']:
+        marker, s_ = _scatter_marker(size_key['shape'], r)
+        kax.scatter([g['colW'] / 2], [cy], s=s_, marker=marker, color=grey, linewidths=0,
+                    edgecolors='none', clip_on=False, gid='size-key-novalue' if nv else None)
+        kax.text(g['colW'] + SIZE_KEY_LABEL_GAP, cy, label, va='center', ha='left',
+                 fontsize=font_pt, fontfamily=family, clip_on=False)
+    for text, ty in g['titleLines']:
+        kax.text(0, ty, text, va='top', ha='left', fontsize=font_pt, fontfamily=family,
+                 clip_on=False)
+    return kax
+
 def colour_key_geometry(vertical, thickness, bar_len, font_px, tick_labels, label=None,
                         no_value_label=None):
     """ColourScale.svelte colourScaleGeometry: the key's footprint in px (bar, ticks, title
@@ -10569,7 +11006,8 @@ def colour_key_geometry(vertical, thickness, bar_len, font_px, tick_labels, labe
     return {'width': width, 'height': height, 'swatch': swatch}
 
 
-def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, padding_right=30):
+def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, padding_right=30,
+                     at=None):
     """The colour bar (ColourScale.svelte, placed by encodingHost.placeColourKey) as a
     matplotlib colorbar over the same 64 bucket colours, ticks and title, with a "no value"
     swatch under it when a mark had no colour value. Its axes has gid 'colour-key'.
@@ -10582,7 +11020,9 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
     plot at its top (past the right padding when there is a right axis); an inside corner or
     'custom' sits over the data, inset by the legend margin, on a white backdrop (`padding`,
     8 px). Text is the key's own `fontSize` (px), else the figure's legend size (`look`).
-    `show` false draws none."""
+    `show` false draws none. `at` ({'x', 'y', 'length'} in px from the plot area's top left,
+    encoding_key_layout) places it as the app's EncodingKeyLayout does, sharing its place
+    with the size key."""
     import matplotlib.cm as mcm
     from matplotlib.colors import ListedColormap, Normalize
     from matplotlib.patches import Patch, Rectangle
@@ -10596,6 +11036,8 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
     length = scale.get('barLength')
     if not isinstance(length, (int, float)) or isinstance(length, bool):
         length = max(30, min(ax_h if vertical else ax_w, 150))
+    if at is not None:
+        length = at['length']
     margin = 10
     font_px = _colour_key_font_px(scale, look)
     font_pt = font_px * _PX_TO_PT
@@ -10610,7 +11052,12 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, paddi
         if inside else 0
     box_w, box_h = (geom['width'] + 2 * pad) / ax_w, (geom['height'] + 2 * pad) / ax_h
     mx, my = margin / ax_w, margin / ax_h
-    if not inside:
+    if at is not None:
+        rect = [at['x'] / ax_w, 1 - at['y'] / ax_h - h, w, h]
+        if inside:
+            _key_backdrop(ax, at['x'] - pad, at['y'] - pad, geom['width'] + 2 * pad,
+                          geom['height'] + 2 * pad, scale, look, 'colour-key-backdrop')
+    elif not inside:
         gap = (margin + (padding_right if has_right_axis else 0)) / ax_w
         rect = [1 + gap, 1 - h, w, h]
     else:
@@ -11708,6 +12155,7 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     look = plot_look(plot)
     xctx = _scatter_x_context(p, columns_index)
     encodings = scatter_colour_encodings(plot, columns_index)
+    sizes = scatter_size_encodings(plot, columns_index)
     xy = {}
     used_right = False
     for index, series in enumerate(p.get('data', [])):
@@ -11732,11 +12180,15 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         label = series.get('label') or _display_name(y_col)
         xy[index] = (x, y)
         enc = encodings[index] if index < len(encodings) else None
+        size = sizes[index] if index < len(sizes) else None
         _draw_series_marks(ax, x, y, series, index, label,
                            resolved=_resolved_series_colours(plot, index),
                            colour_by=None if enc is None else {
                                'idx': enc['idx'], 'palette': enc['palette'],
-                               'line': enc['line']})
+                               'line': enc['line']},
+                           size_by=None if size is None else {
+                               'r': size['r'], 'layer': size['layer'],
+                               'no_value_layer': size['no_value_layer']})
     # Overlay y channels read on the left axis while it carries data, else on the right
     # (Scatterplot overlayYAxis).
     series_list = p.get('data', []) or []
@@ -11754,14 +12206,18 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         origin = xctx['origin_for'](col)
         return (lambda h: origin + h * _MS_PER_HOUR) if origin is not None else None
 
-    # Colour by: the colour bar for the first coloured series (Scatterplotclass.colourKey),
-    # whose room beside the plot comes off the plot area first.
+    # Colour by / Size by: the colour bar for the first coloured series and the size key for
+    # the first sized one (EncodingKeyLayout), whose room beside the plot comes off the plot
+    # area first.
     key = scatter_colour_key(plot, columns_index, encodings, xy)
+    size_key = scatter_size_key(plot, sizes, xy)
     _reserve_colour_key_room(ax_left, ax_right, key, p.get('colourScale'), look,
-                             has_right_axis=ax_right is not None and used_right)
+                             has_right_axis=ax_right is not None and used_right,
+                             size_key=size_key, size_json=p.get('sizeScale'))
 
     def x_domain(extent):
-        return scatter_axis_specs(plot, columns_index, ax_left, xctx, extent)['bottom']['domain']
+        return scatter_axis_specs(plot, columns_index, ax_left, xctx, extent,
+                                  sizes=sizes)['bottom']['domain']
 
     ov = _draw_overlays(
         ov_ax, plot, columns_index, host='scatterplot', x_value_for=x_value_for,
@@ -11772,7 +12228,8 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         legacy_night_bands=True,
         series_colour=first_colour, x_domain=x_domain)
     specs = scatter_axis_specs(plot, columns_index, ax_left, xctx, ov.get('extent'),
-                               key=key, has_right_axis=ax_right is not None and used_right)
+                               key=key, has_right_axis=ax_right is not None and used_right,
+                               sizes=sizes)
     _draw_app_axes(ax_left, ax_right if used_right else None, specs, look)
     if ax_right is not None and not used_right:
         ax_right.set_axis_off()
@@ -11780,28 +12237,46 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         _legend_with_overlays(ax_left, ov['legend'],
                               extra_axes=(ax_right,) if ax_right is not None else (),
                               legend_json=p.get('legend'), look=look)
-    _draw_colour_key(ax_left, key, p.get('colourScale'),
-                     has_right_axis=ax_right is not None and used_right, look=look,
-                     padding_right=float(((p.get('padding') or {}).get('right')) or 30))
+    pad_right = float(((p.get('padding') or {}).get('right')) or 30)
+    has_right = ax_right is not None and used_right
+    layout = encoding_key_layout(ax_left, key, size_key, p.get('colourScale'),
+                                 p.get('sizeScale'), look, has_right_axis=has_right,
+                                 padding_right=pad_right)
+    if layout['colour'] is not None:
+        _draw_colour_key(ax_left, key, p.get('colourScale'), has_right_axis=has_right,
+                         look=look, padding_right=pad_right, at=layout['colour'])
+    _draw_size_key(ax_left, size_key, p.get('sizeScale'), layout['size'], look=look)
 
 
-def _reserve_colour_key_room(ax, ax_right, key, scale_json, look, has_right_axis=False):
-    """Scatterplotclass.colourKeyReserveW: a colour bar beside the plot takes its width, a
-    10 px margin (and another past a right axis) from the plot area."""
+def _reserve_colour_key_room(ax, ax_right, key, scale_json, look, has_right_axis=False,
+                             size_key=None, size_json=None):
+    """EncodingKeyLayout.reserveW: the keys beside the plot (the colour bar, the size key)
+    take the wider one's width, a 10 px margin (and another past a right axis) from the plot
+    area."""
     scale = scale_json or {}
-    if key is None or scale.get('show', True) is False or \
-            (scale.get('position') or 'right') != 'right':
+    widths = [0]
+    if key is not None and scale.get('show', True) is not False and \
+            (scale.get('position') or 'right') == 'right':
+        vertical = scale.get('orientation') != 'horizontal'
+        w_px, h_px = _axes_px(ax)
+        length = scale.get('barLength')
+        if not _style_valid(length, 'number'):
+            length = max(30, min(h_px if vertical else w_px, 150))
+        fpx = _colour_key_font_px(scale, look)
+        geom = colour_key_geometry(vertical, scale.get('barThickness') or 10, length, fpx,
+                                   [lab for _, lab in key['ticks']], key['title'],
+                                   key['no_value']['label'] if key['no_value'] else None)
+        widths.append(geom['width'])
+    ss = size_json or {}
+    if size_key is not None and ss.get('show', True) is not False and \
+            (ss.get('position') or 'right') == 'right':
+        spacing = ss.get('itemSpacing')
+        widths.append(size_key_geometry(
+            size_key['items'], size_key['no_value'], size_key['title'], _key_font_px(ss, look),
+            spacing if isinstance(spacing, (int, float)) else 4)['width'])
+    if max(widths) <= 0:
         return
-    vertical = scale.get('orientation') != 'horizontal'
-    w_px, h_px = _axes_px(ax)
-    length = scale.get('barLength')
-    if not _style_valid(length, 'number'):
-        length = max(30, min(h_px if vertical else w_px, 150))
-    fpx = _colour_key_font_px(scale, look)
-    geom = colour_key_geometry(vertical, scale.get('barThickness') or 10, length, fpx,
-                               [lab for _, lab in key['ticks']], key['title'],
-                               key['no_value']['label'] if key['no_value'] else None)
-    reserve = geom['width'] + 10 + (10 if has_right_axis else 0)
+    reserve = max(widths) + 10 + (10 if has_right_axis else 0)
     for a in (ax, ax_right):
         if a is None:
             continue
@@ -11839,22 +12314,26 @@ def _draw_app_axes(ax, ax_right, specs, look):
 
 
 def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, key=None,
-                       has_right_axis=False):
+                       has_right_axis=False, sizes=None):
     """Scatterplotclass's axes: x (xlims, XScale: time when any x is time, log when asked
     and both ends are positive) and the left and right y (ylimsLeft/Right, YScaleLeft/Right).
     Automatic ends are the data's range (x floored and ceiled to whole units) widened by the
-    overlays on that axis, then by room for the widest marker (markerPaddedDomain); a manual
-    end wins as typed."""
+    overlays on that axis, then by room for the widest marker (markerPaddedDomain; a sized
+    series' largest point, `sizes` from scatter_size_encodings); a manual end wins as
+    typed."""
     p = plot.get('plot', {}) or {}
     xctx = xctx or _scatter_x_context(p, columns_index)
     w_px, h_px = _axes_px(ax)
     series = []
-    for s in p.get('data', []) or []:
+    max_r = {}
+    for i, s in enumerate(p.get('data', []) or []):
         x_col = _resolve_plot_col(s.get('x'), columns_index)
         y_col = _resolve_plot_col(s.get('y'), columns_index)
         if x_col is None or y_col is None:
             continue
         series.append((s, x_col, y_col))
+        if sizes is not None and i < len(sizes) and sizes[i] is not None:
+            max_r[id(s)] = sizes[i]['max_r']
 
     def pad_px(ss):
         pad = 0.0
@@ -11862,7 +12341,7 @@ def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, 
             line = _with_defaults(s.get('line'), _LINE_DEFAULTS)
             pts = _with_defaults(s.get('points'), _POINTS_DEFAULTS)
             if pts['draw']:
-                pad = max(pad, _js_number(pts['radius']) or 0)
+                pad = max(pad, max_r.get(id(s), _js_number(pts['radius'])) or 0)
             if line['draw']:
                 pad = max(pad, (_js_number(line['strokeWidth']) or 0) / 2)
         return pad + 1 if pad > 0 else 0

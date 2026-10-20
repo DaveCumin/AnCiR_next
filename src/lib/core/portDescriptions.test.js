@@ -312,6 +312,10 @@ describe('describeNodePort: one resolver for every node card', () => {
 		expect(describeNodePort(node, { name: 'enc2_colour' }, 'in', env)).toMatch(
 			/colours this series’ points/
 		);
+		// And its size-by port (phase 3).
+		expect(describeNodePort(node, { name: 'enc2_size' }, 'in', env)).toMatch(
+			/sizes this series’ points/
+		);
 		expect(describeNodePort(node, { name: 'col_9' }, 'out', env)).toMatch(/^Period of/);
 		expect(describeNodePort(node, { name: 'col_5', passthrough: true }, 'out', env)).toMatch(
 			/passed on/

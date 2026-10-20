@@ -37,7 +37,7 @@
  * @property {boolean} passthrough whether the plot node re-exposes the column as a passthrough
  *                               output port. Encodings do not (like overlays: a colour column
  *                               is an encoding of the series, not a series to chain off).
- * @property {string|null} encoding the encoding channel ('colour') or null for a data channel
+ * @property {string|null} encoding the encoding channel ('colour', 'size') or null for a data channel
  */
 
 // A data channel: drawn, passed through, and what keeps a series alive.
@@ -48,7 +48,8 @@ const DATA = { primary: true, passthrough: true, encoding: null };
  * encodings. `colourBy` is the colour-by column (colour-by plan 2026-10-20, phase 1b): a
  * Column wrapper like x and y, present only while the series has Colour by switched on
  * (ScatterDataclass.colourBy is null otherwise, so a plain series has no extra channel).
- * Its canvas port is `enc<id>_colour` (encodingHost.js), not a passthrough.
+ * Its canvas port is `enc<id>_colour` (encodingHost.js), not a passthrough. `sizeBy`, the
+ * size-by column, is the same kind of channel (port `enc<id>_size`).
  */
 const FIXED_CHANNELS = Object.freeze([
 	Object.freeze({ field: 'x', display: 'x', axis: 'x', perSeries: true, ...DATA }),
@@ -63,6 +64,17 @@ const FIXED_CHANNELS = Object.freeze([
 		primary: false,
 		passthrough: false,
 		encoding: 'colour'
+	}),
+	// The size-by column (colour-by plan 2026-10-20, phase 3), the same kind of channel; its
+	// port is `enc<id>_size`.
+	Object.freeze({
+		field: 'sizeBy',
+		display: 'size',
+		axis: null,
+		perSeries: true,
+		primary: false,
+		passthrough: false,
+		encoding: 'size'
 	})
 ]);
 

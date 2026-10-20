@@ -24,11 +24,11 @@
 		overlaysToJSON
 	} from '$lib/components/plotbits/overlayHost.js';
 	import {
-		ColourBySeries,
-		ColourKeyLayout,
+		EncodedSeries,
+		EncodingKeyLayout,
 		COLOUR_BY_SWATCH,
 		ensureUniqueEncodingIds,
-		withColourKeyOutside
+		withEncodingKeysOutside
 	} from '$lib/components/plotbits/colourBySeries.svelte.js';
 	import { isCyclicMode } from '$lib/components/plotbits/encodings.js';
 
@@ -54,11 +54,13 @@
 	export const MeanSEM_defaultDataInputs = ['x', 'y'];
 	export const MeanSEM_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
-	class MeanSEMDataClass extends ColourBySeries {
+	class MeanSEMDataClass extends EncodedSeries {
 		static descriptors = {
 			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
 			// drawn. The column itself is wiring (`colourBy`, a Column), like x and y.
-			colourEncoding: { descend: true, label: 'Colour by' }
+			colourEncoding: { descend: true, label: 'Colour by' },
+			// Size by: how the size column is read and drawn (plan 3.7).
+			sizeEncoding: { descend: true, label: 'Size by' }
 		};
 
 		parentPlot = $state();
@@ -100,8 +102,8 @@
 			this.errorWidth = dataIN?.errorWidth ?? 1.5;
 			this.errorCapWidth = dataIN?.errorCapWidth ?? 6;
 			this.showError = dataIN?.showError ?? true;
-			// Colour by: restored only when it was on (both halves present).
-			this.restoreColourBy(dataIN);
+			// Colour by / Size by: each restored only when it was on (both halves present).
+			this.restoreEncodings(dataIN);
 		}
 
 		get displayLabel() {
@@ -118,21 +120,21 @@
 			return meanSemByGroup(xData, yData, { rows: true });
 		});
 
-		// ---- Colour by hooks (ColourBySeries) ----
+		// ---- Encoding hooks (EncodedSeries: Colour by and Size by) ----
 		// A mark is a GROUP mean, coloured by the group's summary of the colour column over the
 		// rows its mean used: the mean, or the circular mean for Hour of day (decided 2026-10-20),
 		// so a group spanning midnight is coloured by midnight, not noon.
-		get colourMarkGroups() {
+		get markGroups() {
 			return this.stats.map((st) => st.rows);
 		}
-		get colourSeriesRowCount() {
+		get markRowCount() {
 			return (this.y.getData() ?? []).length;
 		}
 		// The connecting line runs through the means in group order.
 		get colourLineXY() {
 			return { x: this.stats.map((_, k) => k), y: this.stats.map((st) => st.mean) };
 		}
-		get colourMarkWords() {
+		get markWords() {
 			return ['group mean', 'group means'];
 		}
 		get colourSummaryNote() {
@@ -140,6 +142,11 @@
 			return isCyclicMode(this.colourMode)
 				? 'Each group mean is coloured by the circular mean of its rows’ hours of day.'
 				: 'Each group mean is coloured by the mean of its rows’ colour values.';
+		}
+		// Size by: the arithmetic mean of the rows' size values (Hour of day is not offered).
+		get sizeSummaryNote() {
+			if (!this.sizeActive) return null;
+			return 'Each group mean is sized by the mean of its rows’ size values.';
 		}
 
 		getLegendItem() {
@@ -176,8 +183,8 @@
 				errorWidth: this.errorWidth,
 				errorCapWidth: this.errorCapWidth,
 				showError: this.showError,
-				// Only while Colour by is on, so a plain series saves exactly as before.
-				...this.colourByJSON()
+				// Only while Colour by / Size by is on, so a plain series saves exactly as before.
+				...this.encodingsJSON()
 			};
 		}
 
@@ -193,7 +200,9 @@
 				errorCapWidth: json.errorCapWidth,
 				showError: json.showError,
 				colourBy: json.colourBy,
-				colourEncoding: json.colourEncoding
+				colourEncoding: json.colourEncoding,
+				sizeBy: json.sizeBy,
+				sizeEncoding: json.sizeEncoding
 			});
 		}
 	}
@@ -212,7 +221,7 @@
 		});
 		// The colour-by host contract (components/plotbits/encodingHost.js): the mean markers,
 		// and the connecting line when a series asks for it. Error bars keep their colour.
-		static encodingCapabilities = { colour: true, lines: true };
+		static encodingCapabilities = { colour: true, size: true, lines: true };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -254,28 +263,38 @@
 		// The room on the right is the wider of an outside legend and a colour bar beside the
 		// plot: they stack (colourBySeries.svelte.js).
 		plotwidth = $derived(
-			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeys.reserveW)
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.encodingKeys.reserveW)
 		);
 
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: withColourKeyOutside(
+			outside: withEncodingKeysOutside(
 				rightOfPlot(() => ({ baseWidth: this.basePlotWidth })),
-				() => this.colourKeys
+				() => this.encodingKeys
 			),
-			area: () => this.colourKeys.legendArea()
+			area: () => this.encodingKeys.legendArea()
 		});
 
-		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
-		colourKeys = new ColourKeyLayout(this);
+		// ---- Colour by / Size by: the keys (plan 3.7, 3.8; colourBySeries.svelte.js) ----
+		encodingKeys = new EncodingKeyLayout(this);
 		get colourScale() {
-			return this.colourKeys.scale;
+			return this.encodingKeys.scale;
 		}
 		set colourScale(v) {
-			this.colourKeys.scale = v;
+			this.encodingKeys.scale = v;
 		}
 		get colourKey() {
-			return this.colourKeys.key;
+			return this.encodingKeys.key;
+		}
+		// Size by: the size key's settings and content (plan 3.7).
+		get sizeScale() {
+			return this.encodingKeys.sizeScale;
+		}
+		set sizeScale(v) {
+			this.encodingKeys.sizeScale = v;
+		}
+		get sizeKey() {
+			return this.encodingKeys.sizeKey;
 		}
 
 		// What a legend must not cover, in px over a w x h plot area: each mean marker, its
@@ -298,12 +317,12 @@
 					px: pts.map((p) => xs(p.cx)),
 					py: pts.map((p) => ys(p.mean)),
 					line: !!d.line?.draw,
-					radius: d.points?.draw ? (d.points.radius ?? 4) : 0,
+					radius: d.points?.draw ? ((d.sizeActive ? d.sizeMaxRadius : d.points.radius) ?? 4) : 0,
 					rects
 				});
 			});
 			// An inside colour bar is an obstacle too, so an 'auto' legend never lands on it.
-			const bar = this.colourKeys.obstacle(w, h);
+			const bar = this.encodingKeys.obstacle(w, h);
 			if (bar) out.push(bar);
 			return out;
 		}
@@ -549,6 +568,17 @@
 					});
 					rows.push(row);
 				}
+				// Size by: the value each group mean is sized by.
+				if (datum.sizeActive) {
+					const sv = datum.sizeMarkValues;
+					const byGroup = new Map(datum.stats.map((s, k) => [String(s.x), sv[k]]));
+					const row = multiSeries ? [label, 'size'] : ['size'];
+					categories.forEach((cat) => {
+						const v = byGroup.get(String(cat));
+						row.push(Number.isFinite(v) ? v : '');
+					});
+					rows.push(row);
+				}
 			});
 			return { headers, rows };
 		}
@@ -564,7 +594,7 @@
 				legend: this.legend.toJSON(),
 				overlays: overlaysToJSON(this.overlays),
 				// The colour bar's settings, while any series is coloured by a column.
-				...this.colourKeys.toJSON()
+				...this.encodingKeys.toJSON()
 			};
 		}
 
@@ -592,6 +622,7 @@
 
 			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
 			chart.colourScale = json.colourScale ?? null;
+			chart.sizeScale = json.sizeScale ?? null;
 			if (json.data) {
 				chart.data = json.data.map((d) => MeanSEMDataClass.fromJSON(d, chart));
 				ensureUniqueEncodingIds(chart);
@@ -633,6 +664,7 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 	import Encoding from '$lib/components/plotbits/Encoding.svelte';
 	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
+	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 
 	let { theData, which } = $props();
 
@@ -700,6 +732,15 @@
 			<!-- The colour bar of Colour by (a series' Data settings). -->
 			<ColourScale
 				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
+		{#if theData.sizeKey}
+			<div class="div-line"></div>
+			<!-- The size key of Size by. -->
+			<SizeKey
+				scaleData={theData.sizeScale}
 				figureStyle={theData.parentBox?.style}
 				which="controls"
 			/>
@@ -963,6 +1004,7 @@
 				xoffset={plot.padding.left}
 				yoffset={plot.padding.top}
 				colourBy={datum.colourRender}
+				sizeBy={datum.sizeRender}
 				which="plot"
 			/>
 		{/each}
@@ -981,9 +1023,12 @@
 			outsidePosition={plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
-		<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
-		{#if plot.colourKeys.drawProps}
-			<ColourScale {...plot.colourKeys.drawProps} which="plot" />
+		<!-- Colour by / Size by: the keys, stacked clear of the legend (encodingHost.placeKey). -->
+		{#if plot.encodingKeys.drawProps}
+			<ColourScale {...plot.encodingKeys.drawProps} which="plot" />
+		{/if}
+		{#if plot.encodingKeys.sizeDrawProps}
+			<SizeKey {...plot.encodingKeys.sizeDrawProps} which="plot" />
 		{/if}
 	</svg>
 {/snippet}

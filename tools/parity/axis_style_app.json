@@ -146,6 +146,14 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {
+				"886": "Time",
+				"887": "ambient temp",
+				"888": "hive temp",
+				"889": "Binned: x",
+				"890": "Binned: ambient temp",
+				"891": "Binned: hive temp"
+			},
 			"expected": {
 				"axes": {
 					"left": {
@@ -365,6 +373,14 @@
 					},
 					"overlays": []
 				}
+			},
+			"columnLabels": {
+				"886": "Time",
+				"887": "ambient temp",
+				"888": "hive temp",
+				"889": "Binned: x",
+				"890": "Binned: ambient temp",
+				"891": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -586,6 +602,14 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {
+				"886": "Time",
+				"887": "ambient temp",
+				"888": "hive temp",
+				"889": "Binned: x",
+				"890": "Binned: ambient temp",
+				"891": "Binned: hive temp"
+			},
 			"expected": {
 				"axes": {
 					"left": {
@@ -805,6 +829,14 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {
+				"886": "Time",
+				"887": "ambient temp",
+				"888": "hive temp",
+				"889": "Binned: x",
+				"890": "Binned: ambient temp",
+				"891": "Binned: hive temp"
+			},
 			"expected": {
 				"axes": {
 					"left": {
@@ -891,7 +923,7 @@
 			"zone": "utc",
 			"plotJSON": {
 				"id": 0,
-				"name": "Hive against air, coloured by hour of day",
+				"name": "Hive against air, by hour and humidity",
 				"x": 60,
 				"y": 255,
 				"width": 520,
@@ -942,9 +974,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 10,
-								"name": "binnedy_5_1",
-								"refId": 8,
+								"id": 13,
+								"name": "binnedy_6_1",
+								"refId": 10,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -953,9 +985,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 11,
-								"name": "binnedy_6_1",
-								"refId": 9,
+								"id": 14,
+								"name": "binnedy_8_1",
+								"refId": 11,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -974,9 +1006,9 @@
 							},
 							"points": { "colour": null, "radius": 3, "shape": "circle", "draw": true },
 							"colourBy": {
-								"id": 12,
+								"id": 15,
 								"name": "binnedx_1",
-								"refId": 7,
+								"refId": 9,
 								"type": "time",
 								"timeFormat": [],
 								"originTime_ms": 1705276800000,
@@ -993,6 +1025,25 @@
 								"domainMin": null,
 								"domainMax": null,
 								"colourLine": true
+							},
+							"sizeBy": {
+								"id": 16,
+								"name": "binnedy_7_1",
+								"refId": 12,
+								"type": "number",
+								"tableProcessGUId": "",
+								"producerNodeId": null,
+								"producerPort": null,
+								"producerArtifactKind": null,
+								"processes": []
+							},
+							"sizeEncoding": {
+								"id": 1,
+								"mode": "auto",
+								"minRadius": 1.5,
+								"maxRadius": 6,
+								"domainMin": null,
+								"domainMax": null
 							}
 						}
 					],
@@ -1024,8 +1075,31 @@
 						"fontSize": null,
 						"barLength": null,
 						"barThickness": 10
+					},
+					"sizeScale": {
+						"show": true,
+						"position": "right",
+						"customX": 0.02,
+						"customY": 0.02,
+						"orientation": "vertical",
+						"backgroundColor": "rgba(255, 255, 255, 0.9)",
+						"borderColor": "var(--color-lightness-25)",
+						"borderWidth": 1,
+						"padding": 8,
+						"itemSpacing": 4,
+						"fontSize": null
 					}
 				}
+			},
+			"columnLabels": {
+				"5": "Time",
+				"6": "air temperature",
+				"7": "relative humidity (%)",
+				"8": "hive temperature",
+				"9": "Binned: x",
+				"10": "Binned: air temperature",
+				"11": "Binned: hive temperature",
+				"12": "Binned: relative humidity (%)"
 			},
 			"expected": {
 				"axes": {
@@ -1046,7 +1120,7 @@
 					},
 					"bottom": {
 						"ticks": [
-							{ "value": 10, "label": "10", "grid": false },
+							{ "value": 10, "label": "10", "grid": true },
 							{ "value": 15, "label": "15", "grid": true },
 							{ "value": 20, "label": "20", "grid": true },
 							{ "value": 25, "label": "25", "grid": true }
@@ -1058,13 +1132,13 @@
 					}
 				},
 				"domains": {
-					"XScale": [9.838628341, 26.161371659],
-					"YScaleLeft": [21.741963563, 28.310536437],
+					"XScale": [9.679633867, 26.320366133],
+					"YScaleLeft": [21.660197095, 28.392302905],
 					"YScaleRight": [0, 0],
-					"overlayXScale": [9.838628341, 26.161371659],
-					"overlayYScale": [21.741963563, 28.310536437]
+					"overlayXScale": [9.679633867, 26.320366133],
+					"overlayYScale": [21.660197095, 28.392302905]
 				},
-				"plotSize": [404.6, 255],
+				"plotSize": [363.6, 255],
 				"sizes": {
 					"axisLabel": 16,
 					"legend": 12,
@@ -1141,9 +1215,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 13,
+								"id": 17,
 								"name": "binnedx_1",
-								"refId": 7,
+								"refId": 9,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1705276800000,
@@ -1154,9 +1228,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 14,
-								"name": "binnedy_5_1",
-								"refId": 8,
+								"id": 18,
+								"name": "binnedy_6_1",
+								"refId": 10,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1177,9 +1251,9 @@
 						},
 						{
 							"x": {
-								"id": 15,
+								"id": 19,
 								"name": "binnedx_1",
-								"refId": 7,
+								"refId": 9,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1705276800000,
@@ -1190,9 +1264,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 16,
-								"name": "binnedy_6_1",
-								"refId": 9,
+								"id": 20,
+								"name": "binnedy_8_1",
+								"refId": 11,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -1227,6 +1301,16 @@
 					},
 					"overlays": []
 				}
+			},
+			"columnLabels": {
+				"5": "Time",
+				"6": "air temperature",
+				"7": "relative humidity (%)",
+				"8": "hive temperature",
+				"9": "Binned: x",
+				"10": "Binned: air temperature",
+				"11": "Binned: hive temperature",
+				"12": "Binned: relative humidity (%)"
 			},
 			"expected": {
 				"axes": {
@@ -1383,6 +1467,7 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"left": {
@@ -1539,6 +1624,7 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"left": {
@@ -1687,6 +1773,7 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"left": {
@@ -1871,6 +1958,11 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {
+				"988": "Peak period (h)",
+				"989": "Peak power",
+				"990": "Peak p (family-wise)"
+			},
 			"expected": {
 				"axes": {
 					"left": {
@@ -2022,6 +2114,11 @@
 					],
 					"overlays": []
 				}
+			},
+			"columnLabels": {
+				"995": "Peak period (h)",
+				"996": "Peak power",
+				"997": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2184,6 +2281,11 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": {
+				"1002": "Peak period (h)",
+				"1003": "Peak power",
+				"1004": "Peak p (family-wise)"
+			},
 			"expected": {
 				"axes": {
 					"left": {
@@ -2338,6 +2440,11 @@
 					},
 					"overlays": []
 				}
+			},
+			"columnLabels": {
+				"1009": "Peak period (h)",
+				"1010": "Peak frequency (1/h)",
+				"1011": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2497,6 +2604,11 @@
 					},
 					"overlays": []
 				}
+			},
+			"columnLabels": {
+				"1016": "Peak period (h)",
+				"1017": "Peak frequency (1/h)",
+				"1018": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2688,6 +2800,7 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": { "1023": "Peak lag (h)", "1024": "Peak correlation (r)" },
 			"expected": {
 				"axes": {
 					"left": {
@@ -2854,6 +2967,7 @@
 					"overlays": []
 				}
 			},
+			"columnLabels": { "733": "Test statistic", "734": "p-value", "735": "Effect size" },
 			"expected": {
 				"axes": {
 					"left": {
@@ -2992,6 +3106,7 @@
 					]
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"top": {
@@ -3119,6 +3234,7 @@
 					]
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"top": {
@@ -4561,6 +4677,16 @@
 					]
 				}
 			},
+			"columnLabels": {
+				"5": "Time",
+				"6": "air temperature",
+				"7": "relative humidity (%)",
+				"8": "hive temperature",
+				"9": "Binned: x",
+				"10": "Binned: air temperature",
+				"11": "Binned: hive temperature",
+				"12": "Binned: relative humidity (%)"
+			},
 			"expected": {
 				"axes": {
 					"top": {
@@ -4857,6 +4983,7 @@
 					]
 				}
 			},
+			"columnLabels": {},
 			"expected": {
 				"axes": {
 					"top": {

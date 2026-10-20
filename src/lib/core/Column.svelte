@@ -847,7 +847,7 @@
 					<TypeSelector bind:value={col.type} onChange={onTypeChange} />
 
 					{#if canChange}
-						<div>
+						<div class="col-picker">
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
@@ -1037,6 +1037,13 @@
 
 	.clps-container:hover {
 		background-color: var(--color-lightness-97);
+	}
+
+	/* The picker shrinks with the panel (its label ellipsises) rather than running a long
+	   column name ("Binned: relative humidity (%)") past the panel's edge. */
+	.col-picker {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.clps-title {

@@ -424,3 +424,207 @@ test('Circular phase: every dot keeps its own row’s colour through the placeme
 	});
 	expect(barBox.x).toBeGreaterThan(ringRight + 20);
 });
+
+// ---- Phase 3: Size by (plan section 3.7), on every host -----------------------------------
+// The hysteresis demo ships sized by humidity; the other hosts are sized here as a user does it
+// (switch Size by on in the series' panel, drag a column onto the new size port). Each checks
+// in the real browser that every point is drawn at its exact radius, the largest layer first,
+// that the size key, the colour bar and the legend do not overlap and stay inside the figure,
+// and that the size panel's edits are single undo steps.
+
+/** Every sized marker drawn: { r, layer } read from circle paths (`m-r 0`). */
+const sizedMarks = (svg) =>
+	svg.locator('path[data-size-layer]').evaluateAll((ps) =>
+		ps.flatMap((p) =>
+			[...p.getAttribute('d').matchAll(/M([-\d.e]+) ([-\d.e]+)m-([-\d.e]+) 0/g)].map((m) => ({
+				x: Number(m[1]),
+				y: Number(m[2]),
+				r: Number(m[3]),
+				layer: Number(p.getAttribute('data-size-layer'))
+			}))
+		)
+	);
+
+/** The size key, the colour bar and the legend: inside the figure, no two overlapping. */
+async function keysClear(svg) {
+	const svgBox = await svg.boundingBox();
+	const boxes = {};
+	for (const [name, sel] of [
+		['size', 'g.size-key'],
+		['bar', '.colour-scale'],
+		['legend', 'g.plot-legend']
+	]) {
+		const loc = svg.locator(sel).first();
+		if (await loc.count()) boxes[name] = await loc.boundingBox();
+	}
+	expect(boxes.size).toBeTruthy();
+	for (const b of Object.values(boxes)) {
+		expect(b.x).toBeGreaterThanOrEqual(svgBox.x - 0.5);
+		expect(b.y).toBeGreaterThanOrEqual(svgBox.y - 0.5);
+		expect(b.x + b.width).toBeLessThanOrEqual(svgBox.x + svgBox.width + 0.5);
+		expect(b.y + b.height).toBeLessThanOrEqual(svgBox.y + svgBox.height + 0.5);
+	}
+	const names = Object.keys(boxes);
+	for (let i = 0; i < names.length; i++) {
+		for (let j = i + 1; j < names.length; j++) {
+			const a = boxes[names[i]];
+			const b = boxes[names[j]];
+			const overlap =
+				a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+			expect(overlap, `${names[i]} vs ${names[j]}`).toBe(false);
+		}
+	}
+	return boxes;
+}
+
+test('the hysteresis loop sized by humidity: exact radii, largest first, a size key', async ({
+	page
+}) => {
+	await load(page, 'demo-workflow-colour-by-hysteresis');
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1500);
+	const loop = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.name.startsWith('Hive against air'));
+		const d = p.plot.data[0];
+		return {
+			id: p.id,
+			radii: [...d.sizeRadii.r],
+			range: d.sizeRadiusRange,
+			title: d.sizeTitle,
+			humidity: d.sizeBy.refId
+		};
+	});
+	expect(loop.range).toEqual({ rMin: 1.5, rMax: 6 });
+	const svg = page.locator(`svg[id="plot${loop.id}"]`);
+	await svg.scrollIntoViewIfNeeded();
+	const marks = await sizedMarks(svg);
+	expect(marks.length).toBeGreaterThan(50);
+	// Every drawn radius is one the scale computed (to the path's printed precision).
+	const want = new Set(loop.radii.map((r) => r.toFixed(6)));
+	for (const m of marks) expect(want.has(m.r.toFixed(6)), String(m.r)).toBe(true);
+	expect(Math.max(...marks.map((m) => m.r))).toBeCloseTo(6, 6);
+	expect(Math.min(...marks.map((m) => m.r))).toBeCloseTo(1.5, 6);
+	// Largest layer first in the DOM.
+	const layers = marks.map((m) => m.layer);
+	expect(layers).toEqual([...layers].sort((a, b) => b - a));
+	// The key: three reference circles under the title, beside the colour bar.
+	const key = svg.locator('g.size-key');
+	await expect(key).toHaveCount(1);
+	expect(await key.locator('g.size-key-row').count()).toBeGreaterThanOrEqual(3);
+	const title = (await key.locator('.size-key-title').allTextContents()).join(' ');
+	expect(title).toBe(loop.title);
+	const boxes = await keysClear(svg);
+	expect(boxes.size.y).toBeGreaterThanOrEqual(boxes.bar.y + boxes.bar.height - 0.5);
+	await shot(svg, 'e2e-size-loop');
+
+	// The panel: Largest is one undo step and redraws every point; undo restores it.
+	await openData(page, svg);
+	await expect(
+		page.getByRole('checkbox', { name: 'Size points by a column' }).first()
+	).toBeChecked();
+	const before = await page.evaluate(() => window.__history.undoStack.length);
+	const largest = page.getByLabel('Largest (px)').first();
+	await largest.fill('9');
+	await largest.press('Enter');
+	await page.waitForTimeout(600);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	expect(Math.max(...(await sizedMarks(svg)).map((m) => m.r))).toBeCloseTo(9, 6);
+	await page.keyboard.press('Escape');
+	await svg.click({ position: { x: 5, y: 5 } });
+	await page.keyboard.press('ControlOrMeta+z');
+	await page.waitForTimeout(800);
+	expect(Math.max(...(await sizedMarks(svg)).map((m) => m.r))).toBeCloseTo(6, 6);
+
+	// Off, then on again and wired on the canvas through the series' size port.
+	await openData(page, svg);
+	await page.getByRole('checkbox', { name: 'Size points by a column' }).first().uncheck();
+	await page.waitForTimeout(500);
+	await expect(svg.locator('path[data-size-layer]')).toHaveCount(0);
+	await expect(svg.locator('g.size-key')).toHaveCount(0);
+	await page.getByRole('checkbox', { name: 'Size points by a column' }).first().check();
+	await page.waitForTimeout(500);
+	await page.click('[data-testid=nav-workflow-view]');
+	await page.waitForTimeout(1200);
+	const port = page.locator(`[data-node-id="plot_${loop.id}"][data-port-name="enc1_size"]`);
+	await expect(port).toHaveCount(1);
+	const out = await page.evaluate((col) => {
+		const tp = window.__core.tableProcesses.find((t) =>
+			Object.values(t.args.out ?? {}).includes(col)
+		);
+		return { tp: tp.id };
+	}, loop.humidity);
+	await dragWire(
+		page,
+		page.locator(
+			`[data-node-id="tableprocess_${out.tp}"][data-port-name="col_${loop.humidity}"][data-port-dir="out"]`
+		),
+		port
+	);
+	expect(
+		await page.evaluate((pid) => {
+			const d = window.__core.plots.find((q) => q.id === pid).plot.data[0];
+			return d.sizeBy.refId;
+		}, loop.id)
+	).toBe(loop.humidity);
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1500);
+	expect((await sizedMarks(svg)).length).toBe(marks.length);
+});
+
+/** Switch Size by on for the plot's first series and wire `colId` into its size port. */
+async function sizeFirstSeries(page, id, colId) {
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1200);
+	const svg = page.locator(`svg[id="plot${id}"]`);
+	await openData(page, svg);
+	const before = await page.evaluate(() => window.__history.undoStack.length);
+	await page.getByRole('checkbox', { name: 'Size points by a column' }).first().check();
+	await page.waitForTimeout(500);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	await page.click('[data-testid=nav-workflow-view]');
+	await page.waitForTimeout(1200);
+	const port = page.locator(`[data-node-id="plot_${id}"][data-port-name="enc1_size"]`);
+	await expect(port).toHaveCount(1);
+	await dragWire(
+		page,
+		page.locator(`[data-node-id="data_${colId}"][data-port-name="column"][data-port-dir="out"]`),
+		port
+	);
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1500);
+	return svg;
+}
+
+// The size column: [series, field] of a column already in the plot (the second Q-Q sample,
+// the Mean +/- SEM values, the Circular phase group A phases).
+for (const [host, demo, type, [series, field]] of [
+	['Q-Q', 'demo-qqplot-normality', 'qqplot', [1, 'column']],
+	['Mean ± SEM', 'demo-meansem-by-day', 'meansem', [0, 'y']],
+	['Circular phase', 'demo-circular-phase-two-groups', 'circularphase', [0, 'y']]
+]) {
+	test(`${host}: sized points at their rows’ exact radii, with a size key clear of the rest`, async ({
+		page
+	}) => {
+		await load(page, demo);
+		const { id, col } = await page.evaluate(
+			({ type, series, field }) => {
+				const p = window.__core.plots.find((q) => q.type === type);
+				return { id: p.id, col: p.plot.data[series][field].refId };
+			},
+			{ type, series, field }
+		);
+		const svg = await sizeFirstSeries(page, id, col);
+		const radii = await page.evaluate((pid) => {
+			const d = window.__core.plots.find((q) => q.id === pid).plot.data[0];
+			return [...d.sizeRadii.r];
+		}, id);
+		const marks = await sizedMarks(svg);
+		expect(marks.length).toBeGreaterThan(2);
+		const want = new Set(radii.map((r) => r.toFixed(6)));
+		for (const m of marks) expect(want.has(m.r.toFixed(6)), String(m.r)).toBe(true);
+		const layers = marks.map((m) => m.layer);
+		expect(layers).toEqual([...layers].sort((a, b) => b - a));
+		await keysClear(svg);
+		await shot(svg, `e2e-size-${type}`);
+	});
+}

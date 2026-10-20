@@ -10,7 +10,13 @@ import {
 import { createColumnNamer } from './outputLabels.js';
 import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
 import { seriesChannelRefs, plotInnerUsesColumn, isWiredRef } from './seriesChannelRefs.js';
-import { encodingPortName, colourEncodedSeries } from '$lib/components/plotbits/encodingHost.js';
+import {
+	encodingPortName,
+	encodedSeries,
+	seriesEncoding,
+	seriesEncodingColumn,
+	ENCODING_CHANNELS
+} from '$lib/components/plotbits/encodingHost.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -147,7 +153,8 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	const plainInputs = [];
 	for (const p of inputs) {
 		if (p?.encoding) {
-			// A series' colour-by port (`enc<id>_colour`): a row of ITS series block, under y.
+			// A series' encoding port (`enc<id>_colour` / `enc<id>_size`): a row of ITS series
+			// block, under y.
 			const s = series.find((ss) => ss.n === p.series);
 			if (s) s.enc.push(p);
 			else plainInputs.push(p);
@@ -801,24 +808,28 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const tp of core.tableProcesses ?? []) emitTableProcessNode(tp);
 
-	// Colour by (components/plotbits/encodingHost.js): one `enc<id>_colour` input port per
-	// series with Colour by on, tagged `encoding` so plotNodeSlots puts it in its series block
-	// (`series`), or after the plain inputs of a single-input plot (`series` null). Named after
-	// the series it colours when there are several to tell apart.
-	const pushColourPorts = (inputs, dataPoints, series) => {
-		const coloured = dataPoints.filter((dp) => colourEncodedSeries({ data: [dp] }).length);
-		for (const dp of coloured) {
-			const ref = dp?.y?.refId ?? dp?.column?.refId;
-			const yCol = isWiredRef(ref) ? (core.data ?? []).find((c) => c.id === ref) : null;
-			// The series as its legend names it (a label, else its column), the shorter handle.
-			const seriesName = dp.label || (yCol ? displayName(yCol) : '');
-			const several = series == null ? coloured.length > 1 : dataPoints.length > 1;
-			inputs.push({
-				...makeNodePort(encodingPortName(dp.colourEncoding.id, 'colour'), 'input', 'column', false),
-				series,
-				display: several && seriesName ? `colour: ${seriesName}` : 'colour',
-				encoding: { id: dp.colourEncoding.id, channel: 'colour' }
-			});
+	// Colour by and Size by (components/plotbits/encodingHost.js): one `enc<id>_<channel>`
+	// input port per series with that encoding on (colour first, then size), tagged `encoding`
+	// so plotNodeSlots puts it in its series block (`series`), or after the plain inputs of a
+	// single-input plot (`series` null). Named after the series it encodes when there are
+	// several to tell apart.
+	const pushEncodingPorts = (inputs, dataPoints, series) => {
+		for (const channel of ENCODING_CHANNELS) {
+			const encoded = encodedSeries({ data: dataPoints }, channel);
+			for (const dp of encoded) {
+				const ref = dp?.y?.refId ?? dp?.column?.refId;
+				const yCol = isWiredRef(ref) ? (core.data ?? []).find((c) => c.id === ref) : null;
+				// The series as its legend names it (a label, else its column), the shorter handle.
+				const seriesName = dp.label || (yCol ? displayName(yCol) : '');
+				const several = series == null ? encoded.length > 1 : dataPoints.length > 1;
+				const id = seriesEncoding(dp, channel).id;
+				inputs.push({
+					...makeNodePort(encodingPortName(id, channel), 'input', 'column', false),
+					series,
+					display: several && seriesName ? `${channel}: ${seriesName}` : channel,
+					encoding: { id, channel }
+				});
+			}
 		}
 	};
 
@@ -842,7 +853,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				inputs.push(makeNodePort('data', 'input', 'column', true));
 				// Colour by (the Q-Q plot): a coloured series' colour port follows the data port,
 				// named after its series when several are coloured (no series blocks here).
-				pushColourPorts(inputs, plot.plot?.data ?? [], null);
+				pushEncodingPorts(inputs, plot.plot?.data ?? [], null);
 			} else {
 				// Every other plot stores its data points as {x, y} — Scatterplot and
 				// Boxplot label these x/y, while the time-series plots (Actogram,
@@ -874,8 +885,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				groups.forEach((_, i) => addSeriesPorts(i + 1, false));
 				addSeriesPorts(groups.length + 1, true);
 
-				// Colour by: one `enc<id>_colour` port per coloured series, in its series block.
-				groups.forEach((g, i) => pushColourPorts(inputs, g.dataPoints, i + 1));
+				// Colour by / Size by: one `enc<id>_<channel>` port per encoded series, in its
+				// series block.
+				groups.forEach((g, i) => pushEncodingPorts(inputs, g.dataPoints, i + 1));
 			}
 
 			// Overlays (reference lines / bands): one input port per channel of the
@@ -1197,6 +1209,14 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			}
 			addConnection(fromId, plotNodeId, 'data-plot', fromPort, port);
 		}
+		// A series' Colour by / Size by columns, each into its own `enc<id>_<channel>` port.
+		function addEncodingCols(dp) {
+			for (const channel of ENCODING_CHANNELS) {
+				const enc = seriesEncoding(dp, channel);
+				const ref = seriesEncodingColumn(dp, channel)?.refId;
+				if (enc && isWiredRef(ref)) addPlotCol(ref, encodingPortName(enc.id, channel));
+			}
+		}
 
 		// One bundle wire per wired Column Set → the channel's anchor port.
 		const anchorPort = { series: 'series', data: 'data', y: 'ys1' };
@@ -1229,10 +1249,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				for (const dp of plot.plot?.data ?? []) {
 					const refId = dp?.[field]?.refId;
 					if (refId != null && refId >= 0) addPlotCol(refId, 'data');
-					// Colour by: the colour column into the series' own colour port.
-					if (dp?.colourEncoding && isWiredRef(dp?.colourBy?.refId)) {
-						addPlotCol(dp.colourBy.refId, encodingPortName(dp.colourEncoding.id, 'colour'));
-					}
+					// Colour by / Size by: each encoding column into the series' own port.
+					addEncodingCols(dp);
 				}
 			} else {
 				// All other plots store {x, y} data points (see the port block
@@ -1245,10 +1263,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					if (g.xRefId != null && g.xRefId >= 0) addPlotCol(g.xRefId, portX);
 					for (const dp of g.dataPoints) {
 						if (dp?.y?.refId != null && dp.y.refId >= 0) addPlotCol(dp.y.refId, portYs);
-						// Colour by: the colour column into the series' own colour port.
-						if (dp?.colourEncoding && isWiredRef(dp?.colourBy?.refId)) {
-							addPlotCol(dp.colourBy.refId, encodingPortName(dp.colourEncoding.id, 'colour'));
-						}
+						// Colour by / Size by: each encoding column into the series' own port.
+						addEncodingCols(dp);
 					}
 				});
 			}
