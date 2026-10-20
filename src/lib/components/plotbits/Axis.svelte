@@ -336,8 +336,8 @@
 				ticksWithGrid
 					.append('line')
 					.attr('class', 'gridline')
-					.attr('y1', -plotPadding.top) // Start at top of plot area
-					.attr('y2', -height); // End at bottom of plot area
+					.attr('y1', 0) // Start at axis (the group already sits at the plot's bottom edge)
+					.attr('y2', -height); // End at top of plot area
 			} else if (position == 'top') {
 				ticksWithGrid
 					.append('line')
