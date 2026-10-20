@@ -179,3 +179,10 @@ export function columnIdFields(name) {
 	const s = SCHEMA[name];
 	return s ? { scalar: s.inputs.scalar ?? [], array: s.inputs.array ?? [] } : null;
 }
+
+/**
+ * Colour by / Size by facts (modes, the modes each kind of column offers, colormaps and their
+ * kinds, the size defaults), registry-derived by gen-schema.js from the app's encoding code.
+ * The draft normalizer validates a series' `colourBy` / `sizeBy` against them (encodings.js).
+ */
+export const ENCODINGS = generated.encodings ?? null;

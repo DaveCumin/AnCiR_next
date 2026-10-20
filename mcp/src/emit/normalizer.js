@@ -14,6 +14,7 @@
 //   { id?, columns?: [{name, type?, values:number[]}],
 //     analyses?: [{name, args:{ xIN?, yIN?, ...params }}],
 //     plots?:    [{type, inputs:{...}, overlays?:[...]}] }   // plots: minimal emit (see note)
+//   A plot series may also carry `colourBy` / `sizeBy` (Colour by / Size by; encodings.js).
 //
 // Returns { session, warnings, errors } — a broken analysis is dropped with an error
 // (mirroring the engine's discardTp) rather than poisoning the whole session.
@@ -21,7 +22,9 @@
 // SESSION_VERSION is registry-derived (see schema.js): it's the app version gen-schema.js read
 // when it built the catalogue, not a literal maintained by hand here — which is how it fell two
 // versions behind the app before.
-import { SCHEMA, PLOTS as plots_, columnIdFields, SESSION_VERSION } from './schema.js';
+import { SCHEMA, PLOTS as plots_, ENCODINGS, columnIdFields, SESSION_VERSION } from './schema.js';
+// Colour by / Size by on a draft series (pure; validated against the generated ENCODINGS).
+import { draftSeriesEncodings } from './encodings.js';
 // The app's FormulaColumn grammar, shared so the Worker refuses exactly what the GUI refuses.
 // Pure and dependency-free like this file, so it bundles into the Worker unchanged.
 import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.js';
@@ -145,7 +148,7 @@ function columnDescriptor(id, name, type, timeFormat) {
  */
 export function normalizeSession(
 	draft,
-	{ schema = SCHEMA, plots: plotSchemas = plots_, provenance = null } = {}
+	{ schema = SCHEMA, plots: plotSchemas = plots_, encodings = ENCODINGS, provenance = null } = {}
 ) {
 	const warnings = [];
 	const errors = [];
@@ -440,6 +443,7 @@ export function normalizeSession(
 	// name/x/y/width/height, so we only position them so they don't stack.
 	let plotId = 5000;
 	let plotSlot = 0;
+	const columns = data; // the session's columns (the series loop below has its own `data`)
 	for (const p of draft.plots ?? []) {
 		const pSchema = plotSchemas[p.type];
 		if (!pSchema) {
@@ -501,6 +505,27 @@ export function normalizeSession(
 				if (spec?.label != null) series.label = String(spec.label);
 				series.yAxis = 'left';
 				Object.assign(series, seriesStyle(spec?.kind, spec?.colour));
+				// Colour by / Size by: the app's own series fields, or an error naming why not
+				// (only that encoding is dropped; see encodings.js).
+				if (spec && typeof spec === 'object' && !Array.isArray(spec)) {
+					Object.assign(
+						series,
+						draftSeriesEncodings(spec, data.length, {
+							plotType: p.type,
+							plotSchemas,
+							encodings,
+							resolveRef,
+							data: columns,
+							rawData,
+							where: `Plot "${p.name ?? p.type}" series ${data.length + 1}:`,
+							errors,
+							warnings
+						})
+					);
+					// Asking for the line to be coloured means wanting a line: a "points" series
+					// draws none, so draw it (the points stay).
+					if (series.colourEncoding?.colourLine && series.line) series.line.draw = true;
+				}
 				data.push(series);
 			}
 

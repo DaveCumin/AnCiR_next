@@ -392,6 +392,95 @@ test('describe_session says which columns actually hold data', async () => {
 	assert.match(body.result.content[0].text, /computed on open/);
 });
 
+test('Colour by / Size by: list_capabilities teaches them; describe_session and check_draft report them', async () => {
+	const caps = await call('list_capabilities', {});
+	assert.match(
+		caps.body.result.content[0].text,
+		/COLOUR BY \/ SIZE BY .*plots: circularphase, meansem, qqplot, scatterplot/
+	);
+
+	const env = ENV();
+	const draft = {
+		analyses: [
+			{
+				name: 'SimulatedData',
+				args: {
+					startTime: '2024-01-15T00:00:00.000Z',
+					samplingPeriod_hours: 1,
+					sections: [{ duration_hours: 48, rhythmPeriod_hours: 24, rhythmAmplitude: 3 }]
+				}
+			}
+		],
+		plots: [
+			{
+				type: 'scatterplot',
+				name: 'Loop',
+				series: [
+					{
+						x: 'time',
+						y: 'values',
+						label: 'Activity',
+						colourBy: { column: 'time', mode: 'hourOfDay', colourLine: true },
+						sizeBy: { column: 'values', minRadius: 1.5, maxRadius: 6 }
+					}
+				]
+			}
+		]
+	};
+	const dry = await call('check_draft', draft, env);
+	assert.deepEqual(dry.body.result.structuredContent.errors, []);
+	assert.match(
+		dry.body.result.content[0].text,
+		/scatterplot "Loop"; series "Activity" colour by "time" \(hourOfDay, line too\); series "Activity" size by "values" \(auto, 1\.5 to 6 px\)/
+	);
+
+	const built = await call('build_session', draft, env);
+	const { body } = await call(
+		'describe_session',
+		{ session: built.body.result.structuredContent.sessionId },
+		env
+	);
+	assert.match(
+		body.result.content[0].text,
+		/series "Activity" colour by "time" \(hourOfDay, line too\)/
+	);
+	assert.deepEqual(body.result.structuredContent.plots[0].encodings, [
+		{
+			series: 'Activity',
+			channel: 'colour',
+			column: 'time',
+			mode: 'hourOfDay',
+			colormap: 'auto',
+			colourLine: true
+		},
+		{
+			series: 'Activity',
+			channel: 'size',
+			column: 'values',
+			mode: 'auto',
+			minRadius: 1.5,
+			maxRadius: 6
+		}
+	]);
+
+	// A refused encoding is reported, and the plot is still built.
+	const bad = await call(
+		'check_draft',
+		{
+			...draft,
+			plots: [
+				{
+					...draft.plots[0],
+					series: [{ x: 'time', y: 'values', sizeBy: { column: 'time', mode: 'hourOfDay' } }]
+				}
+			]
+		},
+		env
+	);
+	assert.match(bad.body.result.structuredContent.errors.join('\n'), /size cannot read "hourOfDay"/);
+	assert.deepEqual(bad.body.result.structuredContent.plots, ['scatterplot']);
+});
+
 test('describe_session PARSES a url — it never fetches one (SSRF)', async () => {
 	// "Describe the session at this URL" reads as an invitation to go and get it, which would
 	// hand any caller a fetch primitive inside our Worker. We only ever read our own KV, so a

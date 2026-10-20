@@ -202,7 +202,33 @@ RULES:
   runs a periodogram OF the spectrum and the result is meaningless. So EITHER: periodogram plot
   from raw (time, values); OR RhythmicityAnalysis → scatterplot of its period vs power. Not both.`;
 
+/**
+ * Colour by / Size by on a draft series (normalizer: src/emit/encodings.js), registry-derived:
+ * the plots that can, the modes and the colormaps come from the generated catalogue. Draft-only:
+ * the /edit client (src/lib/utils/aiEdit.js) does not read these series keys, so the shared
+ * catalogue does not teach them. Kept to a few lines (token budget, ADR 2026-07-28).
+ */
+export function encodingNote(schema = generated) {
+	const enc = schema.encodings;
+	const hosts = Object.entries(schema.plots ?? {})
+		.filter(([, p]) => p.encodings?.colour)
+		.map(([t]) => t);
+	if (!enc || !hosts.length) return '';
+	const cyclic = new Set(enc.cyclicModes ?? []);
+	const maps = Object.entries(enc.colormaps ?? {});
+	const mapsOf = (c) =>
+		maps
+			.filter(([, k]) => (k === 'cyclic') === c)
+			.map(([m]) => m)
+			.join('|');
+	return `COLOUR BY / SIZE BY (only when asked, e.g. a hysteresis loop by time of day, or a third variable; plots: ${hosts.join(', ')}):
+a series may add "colourBy": {"column":"<col>","mode":"hourOfDay","colourLine":true} and/or
+"sizeBy": {"column":"<col>","minRadius":1.5,"maxRadius":6}. mode: auto (default), ${enc.modes.join(', ')}
+(size: not ${enc.modes.filter((m) => !(enc.sizeModes ?? []).includes(m)).join(', ')}). Optional "colormap" (${mapsOf(false)}; ${[...cyclic].join(', ')}: ${mapsOf(true)}) and "range": [min, max].`;
+}
+
 /** Full system prompt: contract + registry-derived catalogue. */
 export function buildDraftPrompt(schema = generated) {
-	return `${FRAME}\n\n${buildCatalogue(schema)}`;
+	const enc = encodingNote(schema);
+	return `${FRAME}\n\n${buildCatalogue(schema)}${enc ? `\n\n${enc}` : ''}`;
 }

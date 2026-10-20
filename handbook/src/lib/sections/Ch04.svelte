@@ -304,6 +304,12 @@
 		Wiring a time for only one dataset is refused: wire a time for both datasets, or for neither.
 	</p>
 
+	<p>
+		Once two series share a clock, plotting one against the other often draws a loop (a hive lagging
+		the air it sits in, for example). Colour the points by the hour of day to see which way the loop
+		runs; see <a href="#colour-by">Colour by and Size by</a>.
+	</p>
+
 	<h3 class="section-head">Smoothing</h3>
 	<p>
 		Measurements always carry <strong>noise</strong>: fast, point-to-point jitter from the sensor
@@ -328,7 +334,7 @@
 	</p>
 
 	<p>AnCiR offers four smoothers, from the crude to the sophisticated:</p>
-	<MethodTable headers={methodHeaders} rows={methodRows} />
+	<MethodTable headers={methodHeaders} rows={methodRows.map((r) => r.cells)} />
 
 	<p>
 		<strong>Which to choose?</strong> Use a <strong>moving average</strong> for a quick look;

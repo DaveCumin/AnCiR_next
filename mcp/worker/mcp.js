@@ -17,6 +17,8 @@
 import { normalizeSession } from '../src/emit/normalizer.js';
 import { checkFitness } from '../src/emit/fitness.js';
 import { fingerprint } from './fingerprint.js';
+import { encodingNote } from './draftPrompt.js';
+import { describePlotEncodings, encodingsText } from '../src/emit/encodings.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 // Matches the SUPPORTED_PROTOCOL_VERSIONS list in @modelcontextprotocol/sdk 1.29. We echo the
@@ -79,7 +81,7 @@ const DRAFT_SCHEMA = {
 						items: {
 							type: 'object',
 							description:
-								'Column NAMES per the plot type\'s fields, plus optional label and kind ("points" for measured data, "line" for a fit).'
+								'Column NAMES per the plot type\'s fields, plus optional label and kind ("points" for measured data, "line" for a fit), and optional colourBy / sizeBy (colour or size the marks by a column; see list_capabilities).'
 						}
 					},
 					inputs: { type: 'object', description: 'Shorthand for a single series.' }
@@ -180,7 +182,8 @@ function capabilitiesText() {
 			)}]`;
 		})
 		.join('\n');
-	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (exact series fields):\n${plots}`;
+	const enc = encodingNote(generated);
+	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (exact series fields):\n${plots}${enc ? `\n\n${enc}` : ''}`;
 }
 
 // An actogram's MARKER RULES publish five output columns each, keyed on the rule's id
@@ -199,12 +202,21 @@ function actogramRuleOutputs(plot) {
 			outputs: RULE_OUTPUT_SUFFIXES.map((s) => `${r.id}_${s}`)
 		}));
 }
-function describePlotLine(p) {
-	const base = `  ${p.type}${p.name ? ` "${p.name}"` : ''}`;
+/** A column's name by id in a stored session (null when it has none). */
+function columnNamer(session) {
+	const byId = new Map((session?.data ?? []).map((c) => [c.id, c.name]));
+	return (id) => byId.get(id) ?? null;
+}
+
+function describePlotLine(p, session) {
+	let line = `  ${p.type}${p.name ? ` "${p.name}"` : ''}`;
+	// Colour by / Size by: which column each encoded series reads, and how.
+	const enc = encodingsText(describePlotEncodings(p, columnNamer(session)));
+	if (enc) line += `; ${enc}`;
 	const rules = actogramRuleOutputs(p);
-	if (!rules.length) return base;
+	if (!rules.length) return line;
 	const list = rules.map((r) => `"${r.name}" (${r.type}) -> ${r.outputs.join(', ')}`).join('; ');
-	return `${base}; marker rules: ${list} (tau, phi and RMSE in hours; one value per series, computed on open)`;
+	return `${line}; marker rules: ${list} (tau, phi and RMSE in hours; one value per series, computed on open)`;
 }
 
 /** Fitness advice as text the agent can act on, or '' when there's nothing to say. */
@@ -225,7 +237,7 @@ function structureText(session) {
 			.filter(Boolean);
 		return `  ${t.name}${outs.length ? ` -> creates: ${outs.join(', ')}` : ''}`;
 	});
-	const plots = (session.plots ?? []).map((p) => `  ${p.type}${p.name ? ` "${p.name}"` : ''}`);
+	const plots = (session.plots ?? []).map((p) => describePlotLine(p, session));
 	return [
 		`ANALYSES:\n${analyses.join('\n') || '  (none)'}`,
 		`PLOTS:\n${plots.join('\n') || '  (none)'}`
@@ -328,7 +340,7 @@ async function callTool(name, args, env, request, ctx) {
 						`Session ${id} (AnCiR ${session.version ?? 'unknown'}${session.generatedBy ? `, built by ${session.generatedBy.source} via ${session.generatedBy.route}` : ''}).`,
 						`COLUMNS:\n${columns.join('\n') || '  (none)'}`,
 						`ANALYSES:\n${detail || '  (none)'}`,
-						`PLOTS:\n${(session.plots ?? []).map(describePlotLine).join('\n') || '  (none)'}`,
+						`PLOTS:\n${(session.plots ?? []).map((p) => describePlotLine(p, session)).join('\n') || '  (none)'}`,
 						fitnessText(session),
 						"This is the session's STRUCTURE. Results exist only once the link is opened in a browser."
 					]
@@ -352,7 +364,13 @@ async function callTool(name, args, env, request, ctx) {
 				})),
 				plots: (session.plots ?? []).map((p) => {
 					const rules = actogramRuleOutputs(p);
-					return { type: p.type, name: p.name, ...(rules.length ? { markerRules: rules } : {}) };
+					const encodings = describePlotEncodings(p, columnNamer(session));
+					return {
+						type: p.type,
+						name: p.name,
+						...(rules.length ? { markerRules: rules } : {}),
+						...(encodings.length ? { encodings } : {})
+					};
 				}),
 				fitness: checkFitness(session)
 			}

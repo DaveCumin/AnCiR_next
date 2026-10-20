@@ -19,6 +19,7 @@
 		{ label: 'AnCiR Quick Start', id: 'ancir-start' },
 		{ label: 'Choosing a Method', id: 'choosing' },
 		{ label: 'Recipes (common tasks)', id: 'recipes' },
+		{ label: 'Colour by and Size by', id: 'colour-by' },
 		{ label: 'Statistical Foundations', id: 'stats' },
 		{ label: '1. Introduction', id: 'ch1', group: 'Chapters' },
 		{ label: '2. Data Collection', id: 'ch2' },
