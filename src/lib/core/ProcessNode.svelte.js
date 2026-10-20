@@ -801,6 +801,27 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const tp of core.tableProcesses ?? []) emitTableProcessNode(tp);
 
+	// Colour by (components/plotbits/encodingHost.js): one `enc<id>_colour` input port per
+	// series with Colour by on, tagged `encoding` so plotNodeSlots puts it in its series block
+	// (`series`), or after the plain inputs of a single-input plot (`series` null). Named after
+	// the series it colours when there are several to tell apart.
+	const pushColourPorts = (inputs, dataPoints, series) => {
+		const coloured = dataPoints.filter((dp) => colourEncodedSeries({ data: [dp] }).length);
+		for (const dp of coloured) {
+			const ref = dp?.y?.refId ?? dp?.column?.refId;
+			const yCol = isWiredRef(ref) ? (core.data ?? []).find((c) => c.id === ref) : null;
+			// The series as its legend names it (a label, else its column), the shorter handle.
+			const seriesName = dp.label || (yCol ? displayName(yCol) : '');
+			const several = series == null ? coloured.length > 1 : dataPoints.length > 1;
+			inputs.push({
+				...makeNodePort(encodingPortName(dp.colourEncoding.id, 'colour'), 'input', 'column', false),
+				series,
+				display: several && seriesName ? `colour: ${seriesName}` : 'colour',
+				encoding: { id: dp.colourEncoding.id, channel: 'colour' }
+			});
+		}
+	};
+
 	for (const plot of core.plots ?? []) {
 		// Tableplots have a flat `columnRefs` list — keep them as a single `series`
 		// port. Every other plot type carries `data: [{x: {refId}, y: {refId}, z?:
@@ -819,6 +840,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				// becomes its own series with independent binning/colour. Mirrors the
 				// tableplot `series` pattern.
 				inputs.push(makeNodePort('data', 'input', 'column', true));
+				// Colour by (the Q-Q plot): a coloured series' colour port follows the data port,
+				// named after its series when several are coloured (no series blocks here).
+				pushColourPorts(inputs, plot.plot?.data ?? [], null);
 			} else {
 				// Every other plot stores its data points as {x, y} — Scatterplot and
 				// Boxplot label these x/y, while the time-series plots (Actogram,
@@ -850,30 +874,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				groups.forEach((_, i) => addSeriesPorts(i + 1, false));
 				addSeriesPorts(groups.length + 1, true);
 
-				// Colour by (components/plotbits/encodingHost.js): one `enc<id>_colour` port per
-				// series with Colour by on, in its series block. Named after the series it colours
-				// when the set has several.
-				groups.forEach((g, i) => {
-					for (const dp of g.dataPoints) {
-						if (!colourEncodedSeries({ data: [dp] }).length) continue;
-						const yCol = isWiredRef(dp?.y?.refId)
-							? (core.data ?? []).find((c) => c.id === dp.y.refId)
-							: null;
-						// The series as its legend names it (a label, else its y), the shorter handle.
-						const seriesName = dp.label || (yCol ? displayName(yCol) : '');
-						inputs.push({
-							...makeNodePort(
-								encodingPortName(dp.colourEncoding.id, 'colour'),
-								'input',
-								'column',
-								false
-							),
-							series: i + 1,
-							display: g.dataPoints.length > 1 && seriesName ? `colour: ${seriesName}` : 'colour',
-							encoding: { id: dp.colourEncoding.id, channel: 'colour' }
-						});
-					}
-				});
+				// Colour by: one `enc<id>_colour` port per coloured series, in its series block.
+				groups.forEach((g, i) => pushColourPorts(inputs, g.dataPoints, i + 1));
 			}
 
 			// Overlays (reference lines / bands): one input port per channel of the
@@ -1227,6 +1229,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				for (const dp of plot.plot?.data ?? []) {
 					const refId = dp?.[field]?.refId;
 					if (refId != null && refId >= 0) addPlotCol(refId, 'data');
+					// Colour by: the colour column into the series' own colour port.
+					if (dp?.colourEncoding && isWiredRef(dp?.colourBy?.refId)) {
+						addPlotCol(dp.colourBy.refId, encodingPortName(dp.colourEncoding.id, 'colour'));
+					}
 				}
 			} else {
 				// All other plots store {x, y} data points (see the port block

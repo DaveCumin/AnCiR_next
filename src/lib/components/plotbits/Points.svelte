@@ -5,7 +5,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from './pointShapes.js';
+	import { POINT_SHAPES, POINT_SHAPE_LABELS } from './pointShapes.js';
 
 	export class PointsClass {
 		// Opts itself into the shared-options panel + AI editor across every plot that uses it.
@@ -94,6 +94,7 @@
 
 <script>
 	import { quadtree } from 'd3-quadtree';
+	import { markerPaths } from './markerPaths.js';
 	import {
 		buildAggregatedContent,
 		computeTooltipPosition,
@@ -183,34 +184,25 @@
 				.addAll(filteredData);
 		}
 
-		const cb = colourBy;
-		if (!cb?.idx || !cb?.colours) {
-			let out = '';
-			for (const p of filteredData) {
-				out += getPointPath(shape, sx(p.x), sy(p.y), radius) + ' ';
-			}
-			return [{ key: 'all', fill: pd.colour, d: out }];
+		// Marker centres in px, then the shared builder (markerPaths.js): one path in the series
+		// colour, or one per colour bucket with "no value" first.
+		const m = filteredData.length;
+		const px = new Float64Array(m);
+		const py = new Float64Array(m);
+		const rows = colourBy ? new Int32Array(m) : null;
+		for (let j = 0; j < m; j++) {
+			const p = filteredData[j];
+			px[j] = sx(p.x);
+			py[j] = sy(p.y);
+			if (rows) rows[j] = p.i;
 		}
-
-		// One list of path pieces per bucket (index 0 is "no value"), joined once.
-		const K = cb.colours.length;
-		const idx = cb.idx;
-		const nIdx = idx.length;
-		const parts = Array.from({ length: K + 1 }, () => []);
-		for (const p of filteredData) {
-			const b = p.i < nIdx ? idx[p.i] : -1;
-			parts[b >= 0 && b < K ? b + 1 : 0].push(getPointPath(shape, sx(p.x), sy(p.y), radius));
-		}
-		const out = [];
-		for (let g = 0; g <= K; g++) {
-			if (parts[g].length === 0) continue;
-			out.push({
-				key: g === 0 ? 'none' : `b${g - 1}`,
-				fill: g === 0 ? (cb.noValueColour ?? pd.colour) : cb.colours[g - 1],
-				d: parts[g].join(' ') + ' '
-			});
-		}
-		return out;
+		return markerPaths(px, py, {
+			shape,
+			radius,
+			colour: pd.colour,
+			colourBy,
+			marks: rows
+		});
 	});
 
 	function handleHover(e) {

@@ -94,7 +94,8 @@
 	import { colormapChoices, CYCLIC_COLORMAP_LABELS, COLORMAP_LABELS } from './colormaps.js';
 	import { effectiveColormap } from './encodingHost.js';
 
-	// `datum`: a series meeting the encoding host contract (encodingHost.js).
+	// `datum`: a series meeting the encoding host contract (encodingHost.js), built on
+	// ColourBySeries (colourBySeries.svelte.js), whose hooks say what a mark is.
 	// The two selects show 'auto' while the stored choice does not apply to this column (a map
 	// for the other kind of scale, a mode the column cannot be read as): that is what draws.
 	let { datum } = $props();
@@ -174,7 +175,7 @@
 				</div>
 			</div>
 
-			{#if datum.line?.draw}
+			{#if datum.colourLineCapable}
 				<!-- Plan 3.6 (phase 1c): the line keeps the series colour unless this is on. -->
 				<label class="control-input-checkbox colour-line-row">
 					<input
@@ -242,10 +243,14 @@
 			{#if datum.colourLengthNote}
 				<p class="colour-by-note colour-by-warning" role="status">{datum.colourLengthNote}</p>
 			{/if}
-			{#if datum.points?.draw && datum.colourNoValueCount > 0}
+			{#if datum.colourSummaryNote}
+				<p class="colour-by-note">{datum.colourSummaryNote}</p>
+			{/if}
+			{#if datum.colourDrawsPoints && datum.colourNoValueCount > 0}
+				{@const [one, many] = datum.colourMarkWords ?? ['point', 'points']}
 				<p class="colour-by-note" role="status">
 					{datum.colourNoValueCount}
-					{datum.colourNoValueCount === 1 ? 'point has' : 'points have'} no colour value; drawn in the
+					{datum.colourNoValueCount === 1 ? `${one} has` : `${many} have`} no colour value; drawn in the
 					series colour.
 				</p>
 			{/if}

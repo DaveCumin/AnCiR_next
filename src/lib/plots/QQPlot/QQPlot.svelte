@@ -39,13 +39,25 @@
 		overlaysFromJSON,
 		overlaysToJSON
 	} from '$lib/components/plotbits/overlayHost.js';
+	import {
+		ColourBySeries,
+		ColourKeyLayout,
+		COLOUR_BY_SWATCH,
+		ensureUniqueEncodingIds,
+		withColourKeyOutside
+	} from '$lib/components/plotbits/colourBySeries.svelte.js';
+	import { markerPaths } from '$lib/components/plotbits/markerPaths.js';
 
 	export const QQPlot_defaultDataInputs = ['column'];
 	export const QQPlot_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const QQPlot_displayName = 'Q-Q plot';
 
-	class QQPlotDataclass {
-		static descriptors = {};
+	class QQPlotDataclass extends ColourBySeries {
+		static descriptors = {
+			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
+			// drawn. The column itself is wiring (`colourBy`, a Column), like `column`.
+			colourEncoding: { descend: true, label: 'Colour by' }
+		};
 
 		parentPlot = $state();
 		column = $state();
@@ -55,6 +67,7 @@
 		opacity = $state(0.85);
 
 		constructor(parent, dataIN) {
+			super();
 			this.parentPlot = parent;
 			if (dataIN?.column) {
 				this.column = ColumnClass.fromJSON(dataIN.column);
@@ -66,6 +79,23 @@
 			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length);
 			this.pointRadius = dataIN?.pointRadius ?? 3;
 			this.opacity = dataIN?.opacity ?? 0.85;
+			// Colour by: restored only when it was on (both halves present).
+			this.restoreColourBy(dataIN);
+		}
+
+		// ---- Colour by hooks (ColourBySeries) ----
+		// A mark is a SORTED sample: it keeps the colour of the row it came from (plan 3.12).
+		get colourMarkRows() {
+			return this.qq.order;
+		}
+		get colourSeriesRowCount() {
+			return (this.column?.getData?.() ?? []).length;
+		}
+		get colourDrawsPoints() {
+			return true;
+		}
+		get colourPointColour() {
+			return this.colour;
 		}
 
 		// Derived: the full Q-Q computation for this series' live column data.
@@ -88,7 +118,15 @@
 		getLegendItem() {
 			return {
 				label: this.displayLabel,
-				elements: [{ type: 'points', color: this.colour, shape: 'circle', size: 4 }]
+				// Coloured by a column, a neutral grey: the colour bar is the key (plan 3.8).
+				elements: [
+					{
+						type: 'points',
+						color: this.colourActive ? COLOUR_BY_SWATCH : this.colour,
+						shape: 'circle',
+						size: 4
+					}
+				]
 			};
 		}
 
@@ -98,7 +136,9 @@
 				label: this.label,
 				colour: this.colour,
 				pointRadius: this.pointRadius,
-				opacity: this.opacity
+				opacity: this.opacity,
+				// Only while Colour by is on, so a plain series saves exactly as before.
+				...this.colourByJSON()
 			};
 		}
 
@@ -119,6 +159,9 @@
 			xTime: false,
 			domain: Object.freeze(['x', 'y'])
 		});
+		// The colour-by host contract (components/plotbits/encodingHost.js): the sample points
+		// (no data line; the reference line and envelope keep the series colour).
+		static encodingCapabilities = { colour: true, lines: false };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -157,12 +200,32 @@
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 		basePlotHeight = $derived(this.plotheight);
-		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+		// The room on the right is the wider of an outside legend and a colour bar beside the
+		// plot: they stack (colourBySeries.svelte.js).
+		plotwidth = $derived(
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeys.reserveW)
+		);
 
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+			outside: withColourKeyOutside(
+				rightOfPlot(() => ({ baseWidth: this.basePlotWidth })),
+				() => this.colourKeys
+			),
+			area: () => this.colourKeys.legendArea()
 		});
+
+		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
+		colourKeys = new ColourKeyLayout(this);
+		get colourScale() {
+			return this.colourKeys.scale;
+		}
+		set colourScale(v) {
+			this.colourKeys.scale = v;
+		}
+		get colourKey() {
+			return this.colourKeys.key;
+		}
 
 		// What a legend must not cover, in px over a w x h plot area: the sample points, the
 		// confidence band and the reference line, as far as each is shown.
@@ -203,6 +266,9 @@
 					});
 				}
 			}
+			// An inside colour bar is an obstacle too, so an 'auto' legend never lands on it.
+			const bar = this.colourKeys.obstacle(w, h);
+			if (bar) out.push(bar);
 			return out;
 		}
 
@@ -335,20 +401,27 @@
 
 		// CSV export: one row per (series × order statistic) with the quantile pair,
 		// the reference-line value at that theoretical quantile, and the envelope.
+		// Colour by adds a `colour` column: the value each point is coloured by (plan 3.9), e.g.
+		// its row's hour of day, blank where it has none or the series is not coloured.
 		getDownloadData() {
+			const coloured = this.data.some((d) => d.colourActive);
 			const headers = ['series', 'theoretical', 'sample', 'line', 'band_lo', 'band_hi'];
+			if (coloured) headers.push('colour');
 			const rows = [];
 			this.data.forEach((d) => {
 				const q = d.qq;
+				const cv = d.colourActive ? d.colourMarkValues : null;
 				for (let i = 0; i < q.theoretical.length; i++) {
-					rows.push([
+					const row = [
 						d.displayLabel,
 						q.theoretical[i],
 						q.sample[i],
 						q.line.intercept + q.line.slope * q.theoretical[i],
 						q.band.lo[i],
 						q.band.hi[i]
-					]);
+					];
+					if (coloured) row.push(cv && Number.isFinite(cv[i]) ? cv[i] : '');
+					rows.push(row);
 				}
 			});
 			return { headers, rows };
@@ -369,6 +442,7 @@
 
 		addData(dataIN) {
 			this.data.push(new QQPlotDataclass(this, dataIN));
+			ensureUniqueEncodingIds(this);
 		}
 
 		removeData(idx) {
@@ -445,7 +519,9 @@
 				yAxis: this.yAxis.toJSON(),
 				data: this.data.map((d) => d.toJSON()),
 				legend: this.legend.toJSON(),
-				overlays: overlaysToJSON(this.overlays)
+				overlays: overlaysToJSON(this.overlays),
+				// The colour bar's settings, while any series is coloured by a column.
+				...this.colourKeys.toJSON()
 			};
 		}
 
@@ -466,8 +542,11 @@
 			if (json.xAxis) chart.xAxis = AxisClass.fromJSON(json.xAxis);
 			if (json.yAxis) chart.yAxis = AxisClass.fromJSON(json.yAxis);
 			chart.legend = LegendClass.fromJSON(json.legend);
+			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
+			chart.colourScale = json.colourScale ?? null;
 			if (json.data) {
 				chart.data = json.data.map((/** @type {any} */ d) => QQPlotDataclass.fromJSON(d, chart));
+				ensureUniqueEncodingIds(chart);
 			} else if (json.dataIn) {
 				// Creation-time hint: wire raw column refs via the live addData path so
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
@@ -517,8 +596,30 @@
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
+	import Encoding from '$lib/components/plotbits/Encoding.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 
 	let { theData, which } = $props();
+
+	// The sample points of one series as marker paths (plotbits/markerPaths.js): one path in
+	// the series colour, or one per colour bucket when the series is coloured by a column. Mark
+	// k is the k-th sorted sample; its colour is its own row's (colourBySeries colourMarkRows).
+	function samplePaths(datum, xScale, yScale, xoff, yoff) {
+		const q = datum.qq;
+		const n = q.theoretical.length;
+		const px = new Float64Array(n);
+		const py = new Float64Array(n);
+		for (let i = 0; i < n; i++) {
+			px[i] = xScale(q.theoretical[i]) + xoff;
+			py[i] = yScale(q.sample[i]) + yoff;
+		}
+		return markerPaths(px, py, {
+			shape: 'circle',
+			radius: datum.pointRadius,
+			colour: datum.colour,
+			colourBy: datum.colourRender
+		});
+	}
 
 	// Keep the plot's metric output columns (qq_r / qq_n ports) reconciled +
 	// written from the per-series qq deriveds this component already renders.
@@ -599,6 +700,16 @@
 			canPlaceOutside={theData.legendLayout.canPlaceOutside}
 			which="controls"
 		/>
+
+		{#if theData.colourKey}
+			<div class="div-line"></div>
+			<!-- The colour bar of Colour by (a series' Data settings). -->
+			<ColourScale
+				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -760,6 +871,7 @@
 								<NumberWithUnits bind:value={datum.opacity} min="0" max="1" step="0.05" />
 							</ControlInput>
 						</div>
+						<Encoding {datum} />
 					</div>
 					<div class="div-line"></div>
 				</div>
@@ -847,13 +959,14 @@
 								stroke-dasharray="5 3"
 							/>
 						{/if}
-						{#each q.theoretical as t, i (i)}
-							<circle
-								cx={xScale(t) + theData.plot.padding.left}
-								cy={yScale(q.sample[i]) + theData.plot.padding.top}
-								r={datum.pointRadius}
-								fill={datum.colour}
+						{#each samplePaths(datum, xScale, yScale, theData.plot.padding.left, theData.plot.padding.top) as p (p.key)}
+							<path
+								class="qq-points"
+								d={p.d}
+								fill={p.fill}
 								fill-opacity={datum.opacity}
+								stroke="none"
+								data-colour-bucket={datum.colourRender ? p.key : undefined}
 							/>
 						{/each}
 					{/if}
@@ -874,6 +987,10 @@
 				outsidePosition={theData.plot.legendLayout.outsidePosition}
 				which="plot"
 			/>
+			<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
+			{#if theData.plot.colourKeys.drawProps}
+				<ColourScale {...theData.plot.colourKeys.drawProps} which="plot" />
+			{/if}
 		{/if}
 	</svg>
 {/snippet}

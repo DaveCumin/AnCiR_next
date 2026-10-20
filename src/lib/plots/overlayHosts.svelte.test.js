@@ -153,7 +153,8 @@ const HOSTS = {
 		caps: XY_ALL,
 		inputs: ['column'],
 		series: oneColumn,
-		seriesSel: 'circle',
+		// The sample points: one marker path per colour (plotbits/markerPaths.js).
+		seriesSel: 'path.qq-points',
 		xKey: 'xlimsIN',
 		xRange: (inner) => inner.xlims,
 		seed: () => {},

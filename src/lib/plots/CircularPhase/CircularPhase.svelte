@@ -10,11 +10,7 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import {
-		POINT_SHAPES,
-		POINT_SHAPE_LABELS,
-		getPointPath
-	} from '$lib/components/plotbits/pointShapes.js';
+	import { POINT_SHAPES, POINT_SHAPE_LABELS } from '$lib/components/plotbits/pointShapes.js';
 	import { createPolar } from '$lib/components/plotbits/polar.js';
 	import { placeCircularPoints, maxStackHeight } from '$lib/components/plotbits/circularStack.js';
 	import PolarGrid from '$lib/components/plotbits/PolarGrid.svelte';
@@ -40,6 +36,13 @@
 	} from '$lib/utils/circularPlot.js';
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
+	import {
+		ColourBySeries,
+		ColourKeyLayout,
+		COLOUR_BY_SWATCH,
+		ensureUniqueEncodingIds
+	} from '$lib/components/plotbits/colourBySeries.svelte.js';
+	import { markerPaths } from '$lib/components/plotbits/markerPaths.js';
 
 	// Shared radial placement constants: the inner/outer rim fractions of the
 	// plot radius, used by both the timed (value-radius clock) valueScale range
@@ -68,8 +71,12 @@
 	// core/seriesChannelRefs.js, which knows the fixed fields only.
 	// CircularPhaseSeries follows the same convention: `x` is the optional time
 	// column, `y` is the phase/measurement column.
-	class CircularPhaseSeries {
-		static descriptors = {};
+	class CircularPhaseSeries extends ColourBySeries {
+		static descriptors = {
+			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
+			// drawn. The column itself is wiring (`colourBy`, a Column), like x and y.
+			colourEncoding: { descend: true, label: 'Colour by' }
+		};
 		parentPlot = $state();
 		x = $state(); // optional time column: wiring this turns the series into a value-radius clock plot
 		y = $state(); // phase column (untimed) or measurement column (timed)
@@ -80,6 +87,7 @@
 		draw = $state(true); // show this series' points
 
 		constructor(parent, dataIN) {
+			super();
 			this.parentPlot = parent;
 			const xJSON = dataIN?.x ?? dataIN?.time;
 			this.x = xJSON ? ColumnClass.fromJSON(xJSON) : new ColumnClass({ refId: -1 });
@@ -93,6 +101,33 @@
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.radius = dataIN?.radius ?? 3.4;
 			this.draw = dataIN?.draw ?? true;
+			// Colour by: restored only when it was on (both halves present).
+			this.restoreColourBy(dataIN);
+		}
+
+		// ---- Colour by hooks (ColourBySeries) ----
+		// A mark is a ROW: a timed series draws row i at (time of day, value), an untimed one
+		// places row i's phase (placeCircularPoints carries the row through stack / bin / rim).
+		get colourSeriesRowCount() {
+			return this.rawValues.length;
+		}
+		get colourMarkCount() {
+			return this.rawValues.length;
+		}
+		get colourDrawnTest() {
+			if (this.timeWired) {
+				const angles = this.angles;
+				const values = this.rawValues;
+				return (i) => Number.isFinite(angles[i]) && Number.isFinite(values[i]);
+			}
+			const place = this.placeValues;
+			return (i) => Number.isFinite(place[i]);
+		}
+		get colourDrawsPoints() {
+			return !!this.draw;
+		}
+		get colourPointColour() {
+			return this.colour;
 		}
 
 		timeWired = $derived(this.x?.refId >= 0);
@@ -145,7 +180,15 @@
 			const rTxt = Number.isFinite(s.R) ? ` (R=${s.R.toFixed(2)})` : '';
 			return {
 				label: this.displayLabel + rTxt,
-				elements: [{ type: 'points', color: this.colour, size: this.radius, shape: this.shape }]
+				// Coloured by a column, a neutral grey: the colour bar is the key (plan 3.8).
+				elements: [
+					{
+						type: 'points',
+						color: this.colourActive ? COLOUR_BY_SWATCH : this.colour,
+						size: this.radius,
+						shape: this.shape
+					}
+				]
 			};
 		}
 
@@ -157,7 +200,9 @@
 				colour: this.colour,
 				shape: this.shape,
 				radius: this.radius,
-				draw: this.draw
+				draw: this.draw,
+				// Only while Colour by is on, so a plain series saves exactly as before.
+				...this.colourByJSON()
 			};
 		}
 		static fromJSON(json, parent) {
@@ -176,6 +221,9 @@
 		// values are recorded in converts the bin widths, which are stored in that unit, by
 		// every edit route: Properties, the multi-select panel, an AI edit, the MCP settings.
 		static pairedEdits = { unit: { apply: setCircularUnit } };
+		// The colour-by host contract (components/plotbits/encodingHost.js): the points, per row,
+		// in every placement. Rose wedges and mean vectors keep the series colour.
+		static encodingCapabilities = { colour: true, lines: false };
 
 		parentBox = $state();
 		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
@@ -245,7 +293,10 @@
 			Math.max(
 				40,
 				Math.min(
-					this.availWidth - this.legendLayout.reserveW - (this.legendCorner?.reserveW ?? 0),
+					this.availWidth -
+						this.legendLayout.reserveW -
+						(this.legendCorner?.reserveW ?? 0) -
+						this.colourKeys.reserveW,
 					this.availHeight - this.legendLayout.reserveH - (this.legendCorner?.reserveH ?? 0),
 					this.clockFitSize
 				)
@@ -304,10 +355,24 @@
 			const y = top ? M : S - box.height - M;
 			const occupancy = buildOccupancy({ width: S, height: S, series: this.legendObstacles(S) });
 			if (coveredFraction(occupancy, x, y, box.width, box.height) <= CLEAR_FRACTION) return null;
-			// Beside clears the "6" / "18" labels; above, "24 / 0"; below, the hint line.
-			const beside = this.roomBeside(box.width, M, LABEL_REACH, true);
+			// Beside clears the "6" / "18" labels; above, "24 / 0"; below, the hint line. A colour
+			// bar (Colour by) shares a right strip with the legend (the wider sets it), and has a
+			// strip of its own beside the clock otherwise, which the comparison counts.
+			const keyW = this.colourKeyWidth;
+			const beside = this.roomBeside(
+				right ? Math.max(box.width, keyW) : box.width,
+				M,
+				LABEL_REACH,
+				true
+			);
 			const end = this.roomBeside(box.height, M, top ? LABEL_REACH : HINT_BOTTOM, false);
-			if (beside.size >= end.size) {
+			const besideSize =
+				keyW > 0 && !right
+					? Math.min(beside.size, this.keyStripFor(keyW, M, this.availWidth - beside.reserve).size)
+					: beside.size;
+			const endSize =
+				keyW > 0 ? Math.min(end.size, this.keyStripFor(keyW, M, this.availWidth).size) : end.size;
+			if (besideSize >= endSize) {
 				const offsetX = right ? 0 : beside.reserve;
 				return { reserveW: beside.reserve, reserveH: 0, offsetX, offsetY: 0 };
 			}
@@ -319,15 +384,102 @@
 			outside: (box, { explicit }) => this.legendOutside(box, explicit)
 		});
 
+		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
+		// The corners of a polar square are small and the hour labels hang past the ring, so the
+		// bar always sits BESIDE the clock, clear of the "6" label: under a legend that has a
+		// strip on the right (outside, or a right-corner legend given a strip), else in a strip
+		// of its own, centred on the clock. "Beside plot" is the only position offered.
+		colourKeys = new ColourKeyLayout(this, {
+			positions: ['right'],
+			reserveW: () => this.colourStripReserveW,
+			place: (keys) => this.colourKeyPlace(keys)
+		});
+		get colourScale() {
+			return this.colourKeys.scale;
+		}
+		set colourScale(v) {
+			this.colourKeys.scale = v;
+		}
+		get colourKey() {
+			return this.colourKeys.key;
+		}
+		/** The bar's footprint width (0 without a bar); decided before any reservation. */
+		colourKeyWidth = $derived(this.colourKeys.base?.width ?? 0);
+		/** The series legend sits in a strip on the clock's right, which the bar then shares. */
+		legendSharesKeyStrip = $derived(
+			this.legendLayout.outsidePlacement?.side === 'right' ||
+				(this.legendCorner?.reserveW > 0 && !!this.legend?.position?.endsWith('right'))
+		);
+		/** A strip `extent` px wide beside the clock, out of `along` px (roomBeside, clearing "6"). */
+		keyStripFor(extent, M, along) {
+			return this.roomBeside(extent, M, LABEL_REACH, true, along);
+		}
+		/** The room the bar's own strip takes (0 when it shares the legend's, or has none). */
+		colourStripReserveW = $derived.by(() => {
+			const w = this.colourKeyWidth;
+			if (!(w > 0) || this.legendSharesKeyStrip) return 0;
+			const along =
+				this.availWidth - this.legendLayout.reserveW - (this.legendCorner?.reserveW ?? 0);
+			return this.keyStripFor(w, this.legendLayout.margin, along).reserve;
+		});
+
+		/** Where the bar goes ({ x, y, length }, relative to the padding's top left). */
+		colourKeyPlace(keys) {
+			const base = keys.base;
+			const M = keys.margin;
+			const size = this.plotSize;
+			const corner = this.legendCorner;
+			const box = this.legendLayout.box;
+			const out = this.legendLayout.outsidePlacement;
+			const fixed = this.colourScale.barLength;
+			// The bar's length for `room` px of height for the whole key (bar + "no value").
+			const fit = (room) => {
+				if (fixed != null) return fixed;
+				const besides = base.height - keys.length0;
+				return Math.max(20, Math.min(keys.length0, room - besides));
+			};
+			if (out?.side === 'right' && box) {
+				const y = out.y + box.height + M;
+				return { x: out.x, y, length: fit(this.availHeight - y) };
+			}
+			if (this.legendSharesKeyStrip && corner && box) {
+				// Right-aligned with the corner legend in its strip, under it or above it.
+				const x = size + corner.reserveW - M - base.width;
+				if (this.legend.position.startsWith('top')) {
+					const y = M + box.height + M;
+					return { x, y, length: fit(size - y - M) };
+				}
+				return { x, y: M, length: fit(size - box.height - 3 * M) };
+			}
+			// A strip of its own: past the ring and its labels, centred on the clock's middle.
+			const k = 0.5 + RING_RADIUS / 2;
+			const gap = Math.max(M, size * k + LABEL_REACH - size);
+			const length = fit(size * RING_RADIUS);
+			const height = keys.geometry(length)?.height ?? base.height;
+			const middle = (corner?.offsetY ?? 0) + this.clockShiftY + size / 2;
+			return {
+				x: (corner?.offsetX ?? 0) + size + gap,
+				y: Math.max(0, middle - height / 2),
+				length
+			};
+		}
+
 		// An outside legend beside or below the square. It goes where the figure already has
 		// spare room if either side does (costing the plot nothing); otherwise on the side that
 		// shrinks the square least. 'Outside Right' chosen explicitly always goes right.
 		legendOutside(box, explicit) {
 			// The view's inset (scaled in a workflow node), carried on the box.
 			const M = box.margin ?? LEGEND_MARGIN;
-			const right = this.roomBeside(box.width, M, LABEL_REACH, true);
+			// A colour bar (Colour by) stacks under a legend beside the clock (the wider sets the
+			// strip); with the legend below, the bar takes a strip of its own, which counts.
+			const keyW = this.colourKeyWidth;
+			const right = this.roomBeside(Math.max(box.width, keyW), M, LABEL_REACH, true);
 			const below = this.roomBeside(box.height, M, HINT_BOTTOM, false);
-			if (explicit || right.size >= below.size) {
+			const belowSize =
+				keyW > 0
+					? Math.min(below.size, this.keyStripFor(keyW, M, this.availWidth).size)
+					: below.size;
+			if (explicit || right.size >= belowSize) {
 				return {
 					reserveW: right.reserve,
 					reserveH: 0,
@@ -351,8 +503,8 @@
 		// and the strip's depth. The gap clears what the clock draws past its square on that
 		// side, `beyond` px past the ring (the hour labels, or the hint line below), which
 		// hangs further out the smaller the square is: hence the second case.
-		roomBeside(extent, M, beyond, horizontal) {
-			const along = horizontal ? this.availWidth : this.availHeight;
+		roomBeside(extent, M, beyond, horizontal, alongIN = null) {
+			const along = alongIN ?? (horizontal ? this.availWidth : this.availHeight);
 			const across = horizontal ? this.availHeight : this.availWidth;
 			const k = 0.5 + RING_RADIUS / 2; // the ring's reach from the square's middle, per S
 			const overhang = (S) => S * k + beyond - S;
@@ -485,6 +637,10 @@
 		}
 
 		addData(dataIN) {
+			this.addSeries(dataIN);
+			ensureUniqueEncodingIds(this);
+		}
+		addSeries(dataIN) {
 			// Public wiring shape is {time, values}; remap to the internal {x, y}
 			// convention shared with Periodogram/Actogram/Correlogram/FFT (preserving
 			// any other keys, e.g. label/colour, unlike the sibling plots' remap).
@@ -544,7 +700,9 @@
 				showWatsonWilliams: this.showWatsonWilliams,
 				padding: this.#padding,
 				data: this.data,
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				// The colour bar's settings, while any series is coloured by a column.
+				...this.colourKeys.toJSON()
 			};
 		}
 		static fromJSON(parent, json) {
@@ -560,8 +718,12 @@
 			c.showWatsonWilliams = json.showWatsonWilliams ?? false;
 			c.padding = json.padding ?? c.padding;
 			c.legend = LegendClass.fromJSON(json.legend);
-			if (json.data) c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
-			else if (json.column)
+			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
+			c.colourScale = json.colourScale ?? null;
+			if (json.data) {
+				c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
+				ensureUniqueEncodingIds(c);
+			} else if (json.column)
 				c.addData({ column: json.column }); // very old flat single-series sessions
 			else if (json.dataIn) c.addData(json.dataIn); // creation-time hint (mirrors sibling plots)
 			return c;
@@ -584,6 +746,8 @@
 	import { slide } from 'svelte/transition';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import Encoding from '$lib/components/plotbits/Encoding.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 	import {
 		bindAltTooltipToggle,
 		computeTooltipPosition,
@@ -658,8 +822,12 @@
 
 		// Same two surfaces as buildAggregatedContent: the label is text (escaped) and
 		// the colour is a `style` attribute (shape-validated, then escaped).
+		// A coloured series' dot is in the hovered row's own colour.
+		const cb = d.colourRender;
+		const b = cb ? (cb.idx[bestIdx] ?? -1) : -1;
+		const dotColour = cb ? (b >= 0 ? cb.colours[b] : cb.noValueColour) : d.colour;
 		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${escapeHtml(
-			safeColour(d.colour)
+			safeColour(dotColour)
 		)};margin-right:4px;vertical-align:middle;"></span>`;
 		const content = d.timeWired
 			? `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
@@ -670,8 +838,61 @@
 						: ''
 				}`;
 
+		// Coloured by a column: the row's colour value too (no encoding is the only channel).
+		const colourLine = cb
+			? `<br/><span style="opacity:0.7">${escapeHtml(cb.label)}:</span> ${escapeHtml(cb.format(cb.values[bestIdx]))}`
+			: '';
+
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
-		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
+		dispatchTooltip(evt.currentTarget, {
+			visible: true,
+			x: xPos,
+			y: yPos,
+			content: content + colourLine
+		});
+	}
+
+	// One series' dots in px (row order) and the marker paths for them. A timed series draws
+	// row i at (time of day, value); an untimed one where placeCircularPoints puts it, which
+	// carries each dot's row (`index`) through stack, bin and rim.
+	function seriesPaths(plot, P, valueScale, d) {
+		const px = [];
+		const py = [];
+		const marks = [];
+		if (d.timeWired) {
+			d.angles.forEach((ph, i) => {
+				const v = d.rawValues[i];
+				if (!Number.isFinite(ph) || !Number.isFinite(v)) return;
+				const [x, y] = P.toXY(ph, valueScale(v));
+				px.push(x);
+				py.push(y);
+				marks.push(i);
+			});
+		} else {
+			const placed = placeCircularPoints(d.placeValues, {
+				placement: plot.placement,
+				period: plot.displayPeriod,
+				binWidth: plot.binWidth,
+				dotRadius: d.radius,
+				plotRadius: P.radius,
+				maxStack: plot.untimedMaxStack,
+				innerRim: INNER_RIM,
+				outerRim: OUTER_RIM
+			});
+			for (const p of placed) {
+				const [x, y] = P.toXY(p.value, p.r01);
+				px.push(x);
+				py.push(y);
+				marks.push(p.index);
+			}
+		}
+		return markerPaths(px, py, {
+			shape: d.shape,
+			radius: d.radius,
+			colour: d.colour,
+			colourBy: d.colourRender,
+			marks
+		});
 	}
 
 	function handleSeriesLeave(evt) {
@@ -713,48 +934,20 @@
 				/>
 			{/if}
 			{#if d.draw}
-				{#if d.timeWired}
+				<!-- One path in the series colour, or one per colour bucket when the series is
+				     coloured by a column (markerPaths.js); every row keeps its own colour in each
+				     placement, since the placement carries the row. -->
+				{#each seriesPaths(plot, P, valueScale, d) as p (p.key)}
 					<path
-						d={d.angles
-							.map((ph, idx) => {
-								const v = d.rawValues[idx];
-								if (!Number.isFinite(ph) || !Number.isFinite(v)) return '';
-								const [x, y] = P.toXY(ph, valueScale(v));
-								return getPointPath(d.shape, x, y, d.radius);
-							})
-							.filter(Boolean)
-							.join(' ')}
-						fill={d.colour}
+						d={p.d}
+						fill={p.fill}
 						fill-opacity="0.9"
+						data-colour-bucket={d.colourRender ? p.key : undefined}
 						role="presentation"
 						onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
 						onpointerleave={handleSeriesLeave}
 					/>
-				{:else}
-					{@const placed = placeCircularPoints(d.placeValues, {
-						placement: plot.placement,
-						period: plot.displayPeriod,
-						binWidth: plot.binWidth,
-						dotRadius: d.radius,
-						plotRadius: P.radius,
-						maxStack: plot.untimedMaxStack,
-						innerRim: INNER_RIM,
-						outerRim: OUTER_RIM
-					})}
-					<path
-						d={placed
-							.map((p) => {
-								const [x, y] = P.toXY(p.value, p.r01);
-								return getPointPath(d.shape, x, y, d.radius);
-							})
-							.join(' ')}
-						fill={d.colour}
-						fill-opacity="0.9"
-						role="presentation"
-						onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
-						onpointerleave={handleSeriesLeave}
-					/>
-				{/if}
+				{/each}
 			{/if}
 			{#if plot.showMeanVectors}
 				<MeanVector projection={P} value={d.stats.meanValue} length={d.stats.R} colour={d.colour} />
@@ -799,6 +992,10 @@
 			outsidePosition={plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
+		<!-- Colour by: the colour bar, beside the clock clear of its labels and the legend. -->
+		{#if plot.colourKeys.drawProps}
+			<ColourScale {...plot.colourKeys.drawProps} which="plot" />
+		{/if}
 	</svg>
 	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />
 {/snippet}
@@ -813,6 +1010,17 @@
 			canPlaceOutside={theData.legendLayout.canPlaceOutside}
 			which="controls"
 		/>
+
+		{#if theData.colourKey}
+			<div class="div-line"></div>
+			<!-- The colour bar of Colour by (a series' Data settings); always beside the clock. -->
+			<ColourScale
+				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				positions={theData.colourKeys.positions}
+				which="controls"
+			/>
+		{/if}
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -984,6 +1192,9 @@
 								<NumberWithUnits bind:value={datum.radius} min="0.5" step="0.5" />
 							</ControlInput>
 						</div>
+						{#if datum.draw}
+							<Encoding {datum} />
+						{/if}
 					</div>
 
 					{#if datum.stats}

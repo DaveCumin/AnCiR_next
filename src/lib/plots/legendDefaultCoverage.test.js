@@ -284,9 +284,10 @@ describe('the colour-scale control', () => {
 		.filter(({ src }) => /<ColourScale\b[^>]*which="plot"/s.test(src));
 
 	it('finds the plots that draw one (so the assertions below are not vacuous)', () => {
-		// Scatterplot: the colour bar of Colour by (colour-by plan 2026-10-20, phase 1b).
+		// The colour bar of Colour by (colour-by plan 2026-10-20): the Scatterplot (phase 1b),
+		// then Q-Q, Mean +/- SEM and Circular phase (phase 2).
 		expect(sources.map((s) => s.name).sort()).toEqual(
-			['CWT', 'CorrelationHeatmap', 'Scatterplot'].sort()
+			['CWT', 'CorrelationHeatmap', 'Scatterplot', 'QQPlot', 'MeanSEM', 'CircularPhase'].sort()
 		);
 	});
 

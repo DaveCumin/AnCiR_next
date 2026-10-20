@@ -1,5 +1,8 @@
 // Radial placement of individual phase observations for the Circular phase
-// plot. Returns [{ value, r01 }] pairs the plot projects through polar.js.
+// plot. Returns [{ value, r01, index }] the plot projects through polar.js; `index` is the
+// position of the observation in `values` (its row), so a placed dot can be coloured or
+// hovered by its own row (colour by, plan 2026-10-20 section 3.12) whatever order the
+// placement emits dots in.
 //   'rim'   — pin every value to the circumference (density reads by overlap)
 //   'stack' — dodge coincident values outward at their exact angle (dot plot)
 //   'bin'   — snap to user-set bins and pile radially (circular dot-histogram)
@@ -9,7 +12,7 @@
  * @param {{placement:'stack'|'bin'|'rim', period:number, binWidth?:number,
  *          dotRadius?:number, plotRadius:number, baseRim?:number, quant?:number,
  *          maxStack?:number, innerRim?:number, outerRim?:number, rim?:number}} opts
- * @returns {Array<{value:number, r01:number}>}
+ * @returns {Array<{value:number, r01:number, index:number}>}
  */
 export function placeCircularPoints(values, opts) {
 	const {
@@ -21,10 +24,14 @@ export function placeCircularPoints(values, opts) {
 		baseRim = 0.9,
 		quant = 0.5
 	} = opts;
-	const vals = (values ?? []).filter((v) => Number.isFinite(v));
+	// The finite values with the row each came from.
+	const rows = [];
+	const src = values ?? [];
+	for (let i = 0; i < src.length; i++) if (Number.isFinite(src[i])) rows.push(i);
+	const vals = rows.map((i) => src[i]);
 
 	if (placement === 'rim') {
-		return vals.map((v) => ({ value: v, r01: 1 }));
+		return vals.map((v, j) => ({ value: v, r01: 1, index: rows[j] }));
 	}
 
 	const naturalStep = (dotRadius * 2 + 1.4) / plotRadius;
@@ -38,30 +45,30 @@ export function placeCircularPoints(values, opts) {
 		const nb = Math.max(1, Math.round(period / binWidth));
 		const bw = period / nb;
 		const bins = new Map();
-		for (const v of vals) {
+		vals.forEach((v, j) => {
 			const m = ((v % period) + period) % period;
 			const bi = Math.floor(m / bw) % nb;
 			if (!bins.has(bi)) bins.set(bi, []);
-			bins.get(bi).push(v);
-		}
+			bins.get(bi).push(j);
+		});
 		const out = [];
 		for (const [bi, arr] of bins) {
 			const center = (bi + 0.5) * bw;
-			arr.forEach((_, k) => out.push({ value: center, r01: base + k * step }));
+			arr.forEach((j, k) => out.push({ value: center, r01: base + k * step, index: rows[j] }));
 		}
 		return out;
 	}
 
 	// 'stack': quantise to group coincident values, dodge each group outward.
 	const bins = new Map();
-	for (const v of vals) {
+	vals.forEach((v, j) => {
 		const k = Math.round(v / quant);
 		if (!bins.has(k)) bins.set(k, []);
-		bins.get(k).push(v);
-	}
+		bins.get(k).push(j);
+	});
 	const out = [];
 	for (const arr of bins.values()) {
-		arr.forEach((v, k) => out.push({ value: v, r01: base + k * step }));
+		arr.forEach((j, k) => out.push({ value: vals[j], r01: base + k * step, index: rows[j] }));
 	}
 	return out;
 }

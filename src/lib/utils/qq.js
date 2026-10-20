@@ -158,26 +158,33 @@ function quantileSorted(sorted, q) {
  * - r: the probability-plot correlation coefficient (see qqCorrelation) of
  *   the plotted (theoretical, sample) pairs; null when undefined (n < 3, or
  *   constant data).
+ * - order: the source row (index into `values`) of each sorted sample, so a
+ *   mark drawn at sample[k] can be coloured by its own row (colour by, plan
+ *   2026-10-20 section 3.12). Ties keep their row order.
  *
  * @param {Array} values raw column values (nulls / NaNs are dropped)
  * @param {{distribution?: string, confidence?: number}} [opts]
- * @returns {{theoretical:number[], sample:number[], line:{slope:number,intercept:number}, band:{lo:number[],hi:number[]}, r:(number|null), n:number, dropped:number}}
+ * @returns {{theoretical:number[], sample:number[], order:number[], line:{slope:number,intercept:number}, band:{lo:number[],hi:number[]}, r:(number|null), n:number, dropped:number}}
  */
 export function qqPoints(values, { distribution = 'normal', confidence = 0.95 } = {}) {
 	// v1: 'normal' is the only distribution; the option exists so persisted
 	// sessions never need migrating when others are added.
 	void distribution;
 	const raw = values ?? [];
-	const sample = raw
-		.filter((v) => !isInvalidValue(v))
-		.map(Number)
-		.sort((a, b) => a - b);
+	// Sort the ROWS by value (Array.prototype.sort is stable, so ties keep row order), then
+	// read the values: the same sorted sample as sorting the values, plus where each came from.
+	const order = [];
+	for (let i = 0; i < raw.length; i++) if (!isInvalidValue(raw[i])) order.push(i);
+	const num = raw.map((v) => Number(v));
+	order.sort((a, b) => num[a] - num[b]);
+	const sample = order.map((i) => num[i]);
 	const n = sample.length;
 	const dropped = raw.length - n;
 	if (n < 3) {
 		return {
 			theoretical: [],
 			sample: [],
+			order: [],
 			line: { slope: NaN, intercept: NaN },
 			band: { lo: [], hi: [] },
 			r: null,
@@ -211,6 +218,7 @@ export function qqPoints(values, { distribution = 'normal', confidence = 0.95 } 
 	return {
 		theoretical,
 		sample,
+		order,
 		line: { slope, intercept },
 		band: { lo, hi },
 		r: qqCorrelation(theoretical, sample),

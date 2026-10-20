@@ -216,8 +216,25 @@
 		// The bar's length when a host sizes it (it reserved the room), or null for the
 		// stored length or the automatic one.
 		length = null,
+		// The position presets the panel offers (a subset of POSITIONS' keys), or null for all.
+		// A host with no room inside its plot area for a key (the Circular phase clock) offers
+		// "Beside plot" only.
+		positions = null,
+		// Draw the backdrop box: null decides by position (over the data: yes; beside: no). A
+		// host that always places the key outside its marks passes false.
+		backdrop = null,
 		which = 'plot'
 	} = $props();
+
+	const POSITIONS = {
+		right: 'Beside plot',
+		topright: 'Top right',
+		topleft: 'Top left',
+		bottomright: 'Bottom right',
+		bottomleft: 'Bottom left',
+		custom: 'Custom'
+	};
+	const positionKeys = $derived(positions ?? Object.keys(POSITIONS));
 
 	const resolved = $derived(resolveStyle(figureStyle));
 	const fontSize = $derived(scaleData?.fontSize ?? resolved.sizes.legend);
@@ -288,7 +305,7 @@
 	// A backdrop only where the key sits OVER the data. In the right margin there is
 	// nothing to sit over, and a box round it there would add furniture to two
 	// figures that never had any.
-	const overData = $derived(scaleData?.position !== 'right');
+	const overData = $derived(backdrop ?? scaleData?.position !== 'right');
 	// Where a tick sits along the bar: vertical bars run low at the BOTTOM.
 	const tickAlong = (t) => (vertical ? (1 - t) * barLen : t * barLen);
 	const edgeOf = (t) => (t <= 0 ? 'low' : t >= 1 ? 'high' : 'mid');
@@ -465,22 +482,17 @@
 
 		{#if scaleData.show}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Position</p>
-					<AttributeSelect
-						bind:value={scaleData.position}
-						options={['right', 'topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
-						optionsDisplay={[
-							'Beside plot',
-							'Top right',
-							'Top left',
-							'Bottom right',
-							'Bottom left',
-							'Custom'
-						]}
-						onChange={(v) => onPositionChange(v)}
-					/>
-				</div>
+				{#if positionKeys.length > 1}
+					<div class="control-input">
+						<p>Position</p>
+						<AttributeSelect
+							bind:value={scaleData.position}
+							options={positionKeys}
+							optionsDisplay={positionKeys.map((k) => POSITIONS[k])}
+							onChange={(v) => onPositionChange(v)}
+						/>
+					</div>
+				{/if}
 				<div class="control-input">
 					<p>Layout</p>
 					<AttributeSelect

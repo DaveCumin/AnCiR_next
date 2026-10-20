@@ -23,6 +23,14 @@
 		overlaysFromJSON,
 		overlaysToJSON
 	} from '$lib/components/plotbits/overlayHost.js';
+	import {
+		ColourBySeries,
+		ColourKeyLayout,
+		COLOUR_BY_SWATCH,
+		ensureUniqueEncodingIds,
+		withColourKeyOutside
+	} from '$lib/components/plotbits/colourBySeries.svelte.js';
+	import { isCyclicMode } from '$lib/components/plotbits/encodings.js';
 
 	/**
 	 * Round a value outward to a "nice" axis limit (shared with Boxplot).
@@ -46,8 +54,12 @@
 	export const MeanSEM_defaultDataInputs = ['x', 'y'];
 	export const MeanSEM_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
-	class MeanSEMDataClass {
-		static descriptors = {};
+	class MeanSEMDataClass extends ColourBySeries {
+		static descriptors = {
+			// Colour by (plotbits/colourBySeries.svelte.js): how the colour column is read and
+			// drawn. The column itself is wiring (`colourBy`, a Column), like x and y.
+			colourEncoding: { descend: true, label: 'Colour by' }
+		};
 
 		parentPlot = $state();
 		x = $state();
@@ -61,6 +73,7 @@
 		showError = $state(true);
 
 		constructor(parent, dataIN) {
+			super();
 			this.parentPlot = parent;
 
 			if (dataIN?.x) {
@@ -87,6 +100,8 @@
 			this.errorWidth = dataIN?.errorWidth ?? 1.5;
 			this.errorCapWidth = dataIN?.errorCapWidth ?? 6;
 			this.showError = dataIN?.showError ?? true;
+			// Colour by: restored only when it was on (both halves present).
+			this.restoreColourBy(dataIN);
 		}
 
 		get displayLabel() {
@@ -99,23 +114,49 @@
 			const xRaw = this.x.getData() ?? [];
 			// No category column → treat the whole series as one group named by label.
 			const xData = xRaw.length > 0 ? xRaw : yData.map(() => this.displayLabel);
-			return meanSemByGroup(xData, yData);
+			// `rows`: the rows each mean used, so Colour by summarises exactly those (plan 3.12).
+			return meanSemByGroup(xData, yData, { rows: true });
 		});
+
+		// ---- Colour by hooks (ColourBySeries) ----
+		// A mark is a GROUP mean, coloured by the group's summary of the colour column over the
+		// rows its mean used: the mean, or the circular mean for Hour of day (decided 2026-10-20),
+		// so a group spanning midnight is coloured by midnight, not noon.
+		get colourMarkGroups() {
+			return this.stats.map((st) => st.rows);
+		}
+		get colourSeriesRowCount() {
+			return (this.y.getData() ?? []).length;
+		}
+		// The connecting line runs through the means in group order.
+		get colourLineXY() {
+			return { x: this.stats.map((_, k) => k), y: this.stats.map((st) => st.mean) };
+		}
+		get colourMarkWords() {
+			return ['group mean', 'group means'];
+		}
+		get colourSummaryNote() {
+			if (!this.colourActive) return null;
+			return isCyclicMode(this.colourMode)
+				? 'Each group mean is coloured by the circular mean of its rows’ hours of day.'
+				: 'Each group mean is coloured by the mean of its rows’ colour values.';
+		}
 
 		getLegendItem() {
 			const elements = [];
 			if (this.line.draw) {
+				// A coloured line, like coloured points, has a neutral grey swatch, solid as drawn.
 				elements.push({
 					type: 'line',
-					color: this.line.colour,
+					color: this.colourLineActive ? COLOUR_BY_SWATCH : this.line.colour,
 					strokeWidth: this.line.strokeWidth,
-					stroke: this.line.stroke === 'solid' ? '' : this.line.stroke
+					stroke: this.colourLineActive || this.line.stroke === 'solid' ? '' : this.line.stroke
 				});
 			}
 			if (this.points.draw) {
 				elements.push({
 					type: 'points',
-					color: this.points.colour,
+					color: this.colourActive ? COLOUR_BY_SWATCH : this.points.colour,
 					shape: this.points.shape,
 					size: this.points.radius
 				});
@@ -134,7 +175,9 @@
 				errorColour: this.errorColour,
 				errorWidth: this.errorWidth,
 				errorCapWidth: this.errorCapWidth,
-				showError: this.showError
+				showError: this.showError,
+				// Only while Colour by is on, so a plain series saves exactly as before.
+				...this.colourByJSON()
 			};
 		}
 
@@ -148,7 +191,9 @@
 				errorColour: json.errorColour,
 				errorWidth: json.errorWidth,
 				errorCapWidth: json.errorCapWidth,
-				showError: json.showError
+				showError: json.showError,
+				colourBy: json.colourBy,
+				colourEncoding: json.colourEncoding
 			});
 		}
 	}
@@ -165,6 +210,9 @@
 			xTime: false,
 			domain: Object.freeze(['y'])
 		});
+		// The colour-by host contract (components/plotbits/encodingHost.js): the mean markers,
+		// and the connecting line when a series asks for it. Error bars keep their colour.
+		static encodingCapabilities = { colour: true, lines: true };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -203,12 +251,32 @@
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 		basePlotHeight = $derived(this.plotheight);
-		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+		// The room on the right is the wider of an outside legend and a colour bar beside the
+		// plot: they stack (colourBySeries.svelte.js).
+		plotwidth = $derived(
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeys.reserveW)
+		);
 
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+			outside: withColourKeyOutside(
+				rightOfPlot(() => ({ baseWidth: this.basePlotWidth })),
+				() => this.colourKeys
+			),
+			area: () => this.colourKeys.legendArea()
 		});
+
+		// ---- Colour by: the colour bar (plan 3.8; plotbits/colourBySeries.svelte.js) ----
+		colourKeys = new ColourKeyLayout(this);
+		get colourScale() {
+			return this.colourKeys.scale;
+		}
+		set colourScale(v) {
+			this.colourKeys.scale = v;
+		}
+		get colourKey() {
+			return this.colourKeys.key;
+		}
 
 		// What a legend must not cover, in px over a w x h plot area: each mean marker, its
 		// error bar and caps, and the connecting line.
@@ -234,6 +302,9 @@
 					rects
 				});
 			});
+			// An inside colour bar is an obstacle too, so an 'auto' legend never lands on it.
+			const bar = this.colourKeys.obstacle(w, h);
+			if (bar) out.push(bar);
 			return out;
 		}
 
@@ -383,6 +454,7 @@
 
 		addData(dataIN) {
 			this.data.push(new MeanSEMDataClass(this, dataIN));
+			ensureUniqueEncodingIds(this);
 		}
 
 		removeData(idx) {
@@ -466,6 +538,17 @@
 					});
 					rows.push(row);
 				});
+				// Colour by: the value each group mean is coloured by (plan 3.9).
+				if (datum.colourActive) {
+					const cv = datum.colourMarkValues;
+					const byGroup = new Map(datum.stats.map((s, k) => [String(s.x), cv[k]]));
+					const row = multiSeries ? [label, 'colour'] : ['colour'];
+					categories.forEach((cat) => {
+						const v = byGroup.get(String(cat));
+						row.push(Number.isFinite(v) ? v : '');
+					});
+					rows.push(row);
+				}
 			});
 			return { headers, rows };
 		}
@@ -479,7 +562,9 @@
 				yAxis: this.yAxis.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON(),
-				overlays: overlaysToJSON(this.overlays)
+				overlays: overlaysToJSON(this.overlays),
+				// The colour bar's settings, while any series is coloured by a column.
+				...this.colourKeys.toJSON()
 			};
 		}
 
@@ -505,8 +590,11 @@
 				chart.yAxis = new AxisClass({ label: json.ylabel ?? '', gridlines: true });
 			}
 
+			// `show` defaults on: a bar absent from the file (not coloured when saved) comes back.
+			chart.colourScale = json.colourScale ?? null;
 			if (json.data) {
 				chart.data = json.data.map((d) => MeanSEMDataClass.fromJSON(d, chart));
+				ensureUniqueEncodingIds(chart);
 			} else if (json.dataIn) {
 				chart.addData(json.dataIn);
 			}
@@ -543,6 +631,8 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
+	import Encoding from '$lib/components/plotbits/Encoding.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 
 	let { theData, which } = $props();
 
@@ -604,6 +694,16 @@
 			canPlaceOutside={theData.legendLayout.canPlaceOutside}
 			which="controls"
 		/>
+
+		{#if theData.colourKey}
+			<div class="div-line"></div>
+			<!-- The colour bar of Colour by (a series' Data settings). -->
+			<ColourScale
+				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -716,6 +816,9 @@
 
 						<Points pointsData={datum.points} which="controls" />
 						<Line lineData={datum.line} which="controls" title="Connecting line" />
+						{#if datum.points.draw || datum.line.draw}
+							<Encoding {datum} />
+						{/if}
 
 						<div class="control-component">
 							<div class="control-component-title">
@@ -845,6 +948,7 @@
 					yscale={yScale}
 					xoffset={plot.padding.left}
 					yoffset={plot.padding.top}
+					colourBy={datum.colourLineRender}
 					which="plot"
 				/>
 			{/if}
@@ -858,6 +962,7 @@
 				yscale={yScale}
 				xoffset={plot.padding.left}
 				yoffset={plot.padding.top}
+				colourBy={datum.colourRender}
 				which="plot"
 			/>
 		{/each}
@@ -876,6 +981,10 @@
 			outsidePosition={plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
+		<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
+		{#if plot.colourKeys.drawProps}
+			<ColourScale {...plot.colourKeys.drawProps} which="plot" />
+		{/if}
 	</svg>
 {/snippet}
 

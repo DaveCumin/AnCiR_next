@@ -60,11 +60,15 @@ export function compareGroupKeys(a, b) {
  *
  * @param {Array<number|string>} xs - Group labels / x positions.
  * @param {Array<number>} ys - Numeric observations, aligned with `xs`.
- * @returns {Array<{ x: number|string, mean: number, sem: number, sd: number, n: number }>}
+ * @param {{ rows?: boolean }} [opts] - `rows: true` adds each group's `rows`.
+ * @returns {Array<{ x: number|string, mean: number, sem: number, sd: number, n: number, rows?: number[] }>}
  *   One entry per distinct valid x, sorted ascending (numeric-aware). Empty
- *   when there is no valid pair.
+ *   when there is no valid pair. With `rows: true`, `rows` are the indices (into `xs` / `ys`) of
+ *   exactly the pairs the mean used, in row order, so a summary of another
+ *   column over the group (colour by, plan 2026-10-20 section 3.12) reads the
+ *   same rows.
  */
-export function meanSemByGroup(xs, ys) {
+export function meanSemByGroup(xs, ys, { rows = false } = {}) {
 	const xArr = Array.isArray(xs) ? xs : [];
 	const yArr = Array.isArray(ys) ? ys : [];
 	const len = Math.min(xArr.length, yArr.length);
@@ -80,10 +84,11 @@ export function meanSemByGroup(xs, ys) {
 		const key = String(xv);
 		let g = groups.get(key);
 		if (!g) {
-			g = { x: xv, values: [] };
+			g = { x: xv, values: [], rows: [] };
 			groups.set(key, g);
 		}
 		g.values.push(yv);
+		g.rows.push(i);
 	}
 
 	const out = [];
@@ -103,7 +108,7 @@ export function meanSemByGroup(xs, ys) {
 			sd = Math.sqrt(ss / (n - 1));
 		}
 		const sem = n > 1 ? sd / Math.sqrt(n) : NaN;
-		out.push({ x: g.x, mean, sem, sd, n });
+		out.push(rows ? { x: g.x, mean, sem, sd, n, rows: g.rows } : { x: g.x, mean, sem, sd, n });
 	}
 
 	out.sort((a, b) => compareGroupKeys(a.x, b.x));

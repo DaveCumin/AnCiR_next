@@ -196,3 +196,231 @@ test('a hysteresis loop with a coloured line that breaks at a gap', async ({ pag
 	await page.waitForTimeout(800);
 	expect(await svg.locator('path[data-line-colour-bucket]').count()).toBeGreaterThan(10);
 });
+
+// ---- Phase 2: Colour by on Q-Q, Mean ± SEM and Circular phase (plan section 3.12) ----
+// Each on its shipped demo, as a user does it: switch Colour by on in the series' panel, drag a
+// column onto the series' new colour port on the canvas, and read the figure. Each checks that
+// the colours follow the right rows (or groups) in the real browser, that the colour bar sits
+// clear of the legend (and of the clock's hour labels) inside the figure, and that undo takes
+// the wire back.
+
+/** Select the plot in the workspace and open its Data tab. */
+async function openData(page, svg) {
+	await svg.click({ position: { x: 5, y: 5 } });
+	await page.waitForTimeout(400);
+	if (!(await page.locator('text=Properties').first().isVisible())) {
+		await page.mouse.click(1483, 443); // the panel's open tab on the right edge
+	}
+	await page.getByRole('tab', { name: 'Data' }).click();
+	await page.waitForTimeout(500);
+}
+
+/** Open the plot's Data tab in the workspace and switch Colour by on for its first series. */
+async function colourFirstSeries(page, id) {
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1200);
+	const svg = page.locator(`svg[id="plot${id}"]`);
+	await openData(page, svg);
+	const before = await page.evaluate(() => window.__history.undoStack.length);
+	await page.getByRole('checkbox', { name: 'Colour points by a column' }).first().check();
+	await page.waitForTimeout(500);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	return { svg, before };
+}
+
+/** Drag the column `colId` from its data node onto the series' colour port. */
+async function wireColumn(page, id, colId) {
+	await page.click('[data-testid=nav-workflow-view]');
+	await page.waitForTimeout(1200);
+	const port = page.locator(`[data-node-id="plot_${id}"][data-port-name="enc1_colour"]`);
+	await expect(port).toHaveCount(1);
+	// A raw column's own data node (its `column` output), as the demo's columns are.
+	const from = page.locator(
+		`[data-node-id="data_${colId}"][data-port-name="column"][data-port-dir="out"]`
+	);
+	await dragWire(page, from, port);
+	await page.click('[data-testid=nav-workspace-view]');
+	await page.waitForTimeout(1500);
+}
+
+/** The colour bar lies inside the figure and clear of the series legend. */
+async function barClear(svg) {
+	const bar = svg.locator('.colour-scale');
+	await expect(bar).toHaveCount(1);
+	const barBox = await bar.boundingBox();
+	const svgBox = await svg.boundingBox();
+	expect(barBox.x).toBeGreaterThanOrEqual(svgBox.x - 0.5);
+	expect(barBox.y).toBeGreaterThanOrEqual(svgBox.y - 0.5);
+	expect(barBox.x + barBox.width).toBeLessThanOrEqual(svgBox.x + svgBox.width + 0.5);
+	expect(barBox.y + barBox.height).toBeLessThanOrEqual(svgBox.y + svgBox.height + 0.5);
+	const legend = svg.locator('g.plot-legend').first();
+	if (await legend.count()) {
+		const l = await legend.boundingBox();
+		const overlap =
+			barBox.x < l.x + l.width &&
+			l.x < barBox.x + barBox.width &&
+			barBox.y < l.y + l.height &&
+			l.y < barBox.y + barBox.height;
+		expect(overlap).toBe(false);
+	}
+	return barBox;
+}
+
+const shot = async (svg, name) => {
+	if (process.env.E2E_SHOTS) await svg.screenshot({ path: `${process.env.E2E_SHOTS}/${name}.png` });
+};
+
+test('Q-Q: each sorted sample keeps its own row’s colour', async ({ page }) => {
+	await load(page, 'demo-qqplot-normality');
+	const { id, normal, skewed } = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.type === 'qqplot');
+		return { id: p.id, normal: p.plot.data[0].column.refId, skewed: p.plot.data[1].column.refId };
+	});
+	const { svg, before } = await colourFirstSeries(page, id);
+	// Colour the normal sample by itself: the colour order IS the sort order, so the drawn
+	// samples' colours must rise with their y (a mark coloured by its position would not care,
+	// so pair it with a check against the rows).
+	await wireColumn(page, id, normal);
+	const state = await page.evaluate((pid) => {
+		const d = window.__core.plots.find((q) => q.id === pid).plot.data[0];
+		const rows = d.qq.order;
+		const vals = d.colourEncoded.values;
+		return {
+			refId: d.colourBy.refId,
+			// Each mark's colour value is its own row's.
+			follows: rows.every((r, k) => d.colourMarkValues[k] === vals[r]),
+			// Sorted by value and coloured by the same value: never decreasing.
+			monotone: [...d.colourIdx].every((b, k, a) => k === 0 || b >= a[k - 1])
+		};
+	}, id);
+	expect(state).toEqual({ refId: normal, follows: true, monotone: true });
+	const buckets = svg.locator('path[data-colour-bucket]');
+	expect(await buckets.count()).toBeGreaterThan(10);
+	// The lowest sample is in the first colour, the highest in the last.
+	const ends = await buckets.evaluateAll((ps) => {
+		const pts = ps.flatMap((p) =>
+			[...p.getAttribute('d').matchAll(/M([-\d.e]+) ([-\d.e]+)m/g)].map((m) => ({
+				y: Number(m[2]),
+				key: p.getAttribute('data-colour-bucket')
+			}))
+		);
+		pts.sort((a, b) => a.y - b.y);
+		return { top: pts[0].key, bottom: pts[pts.length - 1].key };
+	});
+	expect(ends).toEqual({ top: 'b63', bottom: 'b0' });
+	await barClear(svg);
+	await shot(svg, 'e2e-qq');
+	void skewed;
+	await page.keyboard.press('ControlOrMeta+z');
+	await page.waitForTimeout(800);
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(before + 1);
+	await expect(svg.locator('.colour-scale')).toHaveCount(0);
+});
+
+test('Mean ± SEM: each group mean in its group’s mean colour, the line too', async ({ page }) => {
+	await load(page, 'demo-meansem-by-day');
+	const { id, day } = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.type === 'meansem');
+		return { id: p.id, day: p.plot.data[0].x.refId };
+	});
+	const { svg } = await colourFirstSeries(page, id);
+	await wireColumn(page, id, day);
+	// Coloured by its own grouping column, each group's colour value is the day itself.
+	const state = await page.evaluate((pid) => {
+		const d = window.__core.plots.find((q) => q.id === pid).plot.data[0];
+		return {
+			groups: d.stats.length,
+			sameAsKey: d.stats.every((s, k) => Number(s.x) === d.colourMarkValues[k])
+		};
+	}, id);
+	expect(state.sameAsKey).toBe(true);
+	const buckets = svg.locator('path[data-colour-bucket]');
+	expect(await buckets.count()).toBe(state.groups);
+	// Error bars keep their colour.
+	const errs = await svg
+		.locator('line[stroke-width]')
+		.evaluateAll((ls) => [...new Set(ls.map((l) => l.getAttribute('stroke')))]);
+	expect(errs.length).toBe(1);
+	await barClear(svg);
+
+	// The connecting line, coloured too: one segment per pair of neighbouring means.
+	await openData(page, svg);
+	await page.getByRole('button', { name: 'Show connecting line', exact: true }).first().click();
+	await page.waitForTimeout(300);
+	await page.getByRole('checkbox', { name: 'Colour the line by the same column' }).first().check();
+	await page.waitForTimeout(600);
+	const segs = await svg
+		.locator('path[data-line-colour-bucket]')
+		.evaluateAll((ps) =>
+			ps.reduce((n, p) => n + (p.getAttribute('d').match(/M/g)?.length ?? 0), 0)
+		);
+	expect(segs).toBe(state.groups - 1);
+	await shot(svg, 'e2e-meansem');
+});
+
+test('Circular phase: every dot keeps its own row’s colour through the placement', async ({
+	page
+}) => {
+	await load(page, 'demo-circular-phase-two-groups');
+	const { id, phaseA } = await page.evaluate(() => {
+		const p = window.__core.plots.find((q) => q.type === 'circularphase');
+		return { id: p.id, phaseA: p.plot.data[0].y.refId };
+	});
+	const { svg } = await colourFirstSeries(page, id);
+	// Group A coloured by its own phase: every dot's colour must match where it sits on the
+	// clock, in every placement (stack and bin reorder the dots).
+	await wireColumn(page, id, phaseA);
+	for (const placement of ['stack', 'bin', 'rim']) {
+		const bad = await page.evaluate(
+			async ({ pid, placement }) => {
+				const p = window.__core.plots.find((q) => q.id === pid);
+				p.plot.placement = placement;
+				await new Promise((r) => setTimeout(r, 300));
+				const d = p.plot.data[0];
+				const svgEl = document.getElementById('plot' + pid);
+				const ring = svgEl.querySelector('circle');
+				const cx = Number(ring.getAttribute('cx'));
+				const cy = Number(ring.getAttribute('cy'));
+				const period = p.plot.displayPeriod;
+				const bw = period / Math.max(1, Math.round(period / p.plot.binWidth));
+				const vals = d.colourMarkValues;
+				let wrong = 0;
+				let seen = 0;
+				for (const path of svgEl.querySelectorAll('path[data-colour-bucket]')) {
+					const key = path.getAttribute('data-colour-bucket');
+					for (const m of path.getAttribute('d').matchAll(/M([-\d.e]+) ([-\d.e]+)m/g)) {
+						let th = Math.atan2(Number(m[1]) - cx, -(Number(m[2]) - cy));
+						if (th < 0) th += 2 * Math.PI;
+						const at = (th / (2 * Math.PI)) * period;
+						// The rows whose phase lands here (the bin centre when binned).
+						const rows = [...vals.keys()].filter((r) => {
+							const v = d.placeValues[r];
+							const want = placement === 'bin' ? (Math.floor(v / bw) + 0.5) * bw : v;
+							const diff = Math.abs(((want - at + period / 2) % period) - period / 2);
+							return diff < 1e-3;
+						});
+						seen++;
+						if (!rows.some((r) => `b${d.colourIdx[r]}` === key)) wrong++;
+					}
+				}
+				return { wrong, seen };
+			},
+			{ pid: id, placement }
+		);
+		expect(bad.seen, placement).toBeGreaterThan(5);
+		expect(bad.wrong, placement).toBe(0);
+		await shot(svg, `e2e-circular-${placement}`);
+	}
+	// Beside the clock, past its right-hand hour label, clear of the legend.
+	const barBox = await barClear(svg);
+	// The outer ring is the largest circle; its "6" label reaches about 21 px past it.
+	const ringRight = await svg.evaluate((el) => {
+		const rings = [...el.querySelectorAll('circle')];
+		const outer = rings.reduce((a, b) =>
+			Number(b.getAttribute('r')) > Number(a.getAttribute('r')) ? b : a
+		);
+		const r = outer.getBoundingClientRect();
+		return r.x + r.width;
+	});
+	expect(barBox.x).toBeGreaterThan(ringRight + 20);
+});

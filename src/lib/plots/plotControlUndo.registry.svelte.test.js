@@ -361,6 +361,38 @@ describe('every plot control panel edit is one exact undo step', () => {
 			expect(keys).toContain(want);
 	}, 240000);
 
+	// Colour by on the phase 2 hosts (Q-Q, Mean +/- SEM, Circular phase): the same shared
+	// panel and colour bar, audited on each, since each host wires them in itself.
+	for (const [type, extra] of [
+		['qqplot', []],
+		// The connecting line drawn, so "Colour the line too" is audited here as well.
+		['meansem', ['Colour the line by the same column']],
+		['circularphase', []]
+	]) {
+		it(`${type} with Colour by on (its own controls and the colour bar)`, async () => {
+			const prepare = (plot) => {
+				const c = mkCol(
+					'c',
+					Array.from({ length: N }, (_, i) => i % 7)
+				);
+				const d = plot.plot.data[0];
+				if (d.line) d.line.draw = true;
+				d.enableColourBy();
+				d.colourBy.refId = c;
+			};
+			const results = await auditType(type, prepare);
+			const failures = Object.fromEntries(
+				Object.entries(results).filter(
+					([k, v]) => v !== 'ok' && !(k in EXCLUSIONS) && !(k in NO_SAVED_CHANGE)
+				)
+			);
+			expect(failures).toEqual({});
+			const keys = Object.keys(results).join('\n');
+			for (const want of ['Colour points by a column', 'Read as', 'Colours', 'Bar width', ...extra])
+				expect(keys, type).toContain(want);
+		}, 240000);
+	}
+
 	it('records something for every plot type (guards a harness that edits nothing)', () => {
 		for (const type of PLOT_TYPES) {
 			const ok = Object.values(RESULTS[type] ?? {}).filter((v) => v === 'ok').length;
