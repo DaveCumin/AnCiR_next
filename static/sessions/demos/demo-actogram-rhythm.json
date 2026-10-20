@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "529": [
+    "550": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "530": [
+    "551": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 529,
+      "id": 550,
       "name": "hour",
-      "data": 529,
+      "data": 550,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 530,
+      "id": 551,
       "name": "activity",
-      "data": 530,
+      "data": 551,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 77,
+      "id": 79,
       "name": "Activity actogram",
       "x": 60,
       "y": 255,
@@ -443,9 +443,9 @@
         "data": [
           {
             "x": {
-              "id": 531,
+              "id": 552,
               "name": "hour",
-              "refId": 529,
+              "refId": 550,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -454,9 +454,9 @@
               "processes": []
             },
             "y": {
-              "id": 532,
+              "id": 553,
               "name": "activity",
-              "refId": 530,
+              "refId": 551,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -479,7 +479,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_35",
+      "id": "note_36",
       "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band. To put numbers on it, add a MARKER RULE (Overlays tab, Marker rules): it detects activity onsets (or offsets) with the same settings on every series, fits a line through them, and adds five output ports per rule, each a column with one value per series: τ (h, the harmonic-checked period: the slope of the line unless the data clearly support half or twice it), φ (h after the row start at the reference day), R² (the share of the spread in onset time of day that the drift of the line explains, so near 0 for an entrained record with no drift; read RMSE for tightness), RMSE (h) and n (markers fitted). Wire τ into Describe Data or φ into a Rayleigh test to compare animals.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
       "x": 40,
       "y": 24,
@@ -513,19 +513,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_529": {
+    "data_550": {
       "x": 60,
       "y": 314
     },
-    "data_530": {
+    "data_551": {
       "x": 60,
       "y": 814
     },
-    "note_35": {
+    "note_36": {
       "x": 40,
       "y": 24
     },
-    "plot_77": {
+    "plot_79": {
       "x": 820,
       "y": 314
     }
@@ -589,5 +589,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

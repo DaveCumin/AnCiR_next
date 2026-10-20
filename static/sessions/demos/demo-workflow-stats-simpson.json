@@ -546,7 +546,7 @@
       "name": "var_i_26",
       "data": 309,
       "type": "category",
-      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
+      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -557,7 +557,7 @@
       "name": "var_j_26",
       "data": 310,
       "type": "category",
-      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
+      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -568,7 +568,7 @@
       "name": "r_26",
       "data": 311,
       "type": "number",
-      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
+      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -579,7 +579,7 @@
       "name": "pvalue_26",
       "data": 312,
       "type": "number",
-      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
+      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -590,7 +590,7 @@
       "name": "n_26",
       "data": 313,
       "type": "number",
-      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
+      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -698,14 +698,14 @@
             "label": "Ward A",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -737,14 +737,14 @@
             "label": "Ward B",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -1221,5 +1221,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

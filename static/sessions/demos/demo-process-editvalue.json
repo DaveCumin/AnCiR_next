@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "589": [
+    "610": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "590": [
+    "611": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 589,
+      "id": 610,
       "name": "x",
-      "data": 589,
+      "data": 610,
       "type": "number",
-      "tableProcessGUId": "65e040b7-ef65-4f5d-a50b-1a96567b1509",
+      "tableProcessGUId": "f6254373-c2d3-485f-92f3-8cea52432ffa",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 590,
+      "id": 611,
       "name": "y",
-      "data": 590,
+      "data": 611,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 591,
+      "id": 612,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_590",
+      "producerPort": "out_611",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 91,
+      "id": 93,
       "name": "Edit value: before vs after",
       "x": 60,
       "y": 255,
@@ -217,9 +217,9 @@
         "data": [
           {
             "x": {
-              "id": 592,
+              "id": 613,
               "name": "x",
-              "refId": 589,
+              "refId": 610,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -228,9 +228,9 @@
               "processes": []
             },
             "y": {
-              "id": 593,
+              "id": 614,
               "name": "y",
-              "refId": 590,
+              "refId": 611,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -241,14 +241,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -256,9 +256,9 @@
           },
           {
             "x": {
-              "id": 594,
+              "id": 615,
               "name": "x",
-              "refId": 589,
+              "refId": 610,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -267,9 +267,9 @@
               "processes": []
             },
             "y": {
-              "id": 595,
+              "id": 616,
               "name": "Edit value result",
-              "refId": 591,
+              "refId": 612,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -280,14 +280,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -311,7 +311,7 @@
       }
     },
     {
-      "id": 92,
+      "id": 94,
       "name": "Edit value: values",
       "x": 630,
       "y": 255,
@@ -344,8 +344,8 @@
       },
       "plot": {
         "columnRefs": [
-          590,
-          591
+          611,
+          612
         ],
         "showCol": [
           true,
@@ -360,7 +360,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 43,
+      "id": 45,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -370,7 +370,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 589
+          "result": 610
         }
       },
       "refTPId": null
@@ -381,7 +381,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_43",
+      "id": "note_44",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -403,7 +403,7 @@
           }
         ],
         "inIN": [
-          590
+          611
         ]
       }
     }
@@ -431,11 +431,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_590": {
+    "data_611": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_43": {
+    "tableprocess_45": {
       "x": 60,
       "y": 814
     },
@@ -443,15 +443,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_91": {
+    "plot_93": {
       "x": 820,
       "y": 314
     },
-    "plot_92": {
+    "plot_94": {
       "x": 820,
       "y": 814
     },
-    "note_43": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -515,5 +515,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

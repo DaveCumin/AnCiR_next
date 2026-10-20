@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "541": [
+    "562": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "542": [
+    "563": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 541,
+      "id": 562,
       "name": "hour",
-      "data": 541,
+      "data": 562,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -402,9 +402,9 @@
       "processes": []
     },
     {
-      "id": 542,
+      "id": 563,
       "name": "signal",
-      "data": 542,
+      "data": 563,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -415,7 +415,7 @@
   ],
   "plots": [
     {
-      "id": 80,
+      "id": 82,
       "name": "Signal FFT",
       "x": 60,
       "y": 255,
@@ -484,9 +484,9 @@
         "data": [
           {
             "x": {
-              "id": 543,
+              "id": 564,
               "name": "hour",
-              "refId": 541,
+              "refId": 562,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -495,9 +495,9 @@
               "processes": []
             },
             "y": {
-              "id": 544,
+              "id": 565,
               "name": "signal",
-              "refId": 542,
+              "refId": 563,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -558,7 +558,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_39",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots their amplitude against frequency (a pure rhythm of amplitude A reads A, whatever the record length); a peak at a given frequency corresponds to a rhythm of period 1/frequency, and the reported peak is refined between frequency bins. The series is put on its own sampling grid first: up to 3 missing samples in a row are interpolated, and a longer gap is refused with a reason (use the Lomb-Scargle periodogram for gappy data). Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
@@ -592,19 +592,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_541": {
+    "data_562": {
       "x": 60,
       "y": 314
     },
-    "data_542": {
+    "data_563": {
       "x": 60,
       "y": 814
     },
-    "note_38": {
+    "note_39": {
       "x": 40,
       "y": 24
     },
-    "plot_80": {
+    "plot_82": {
       "x": 820,
       "y": 314
     }
@@ -668,5 +668,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

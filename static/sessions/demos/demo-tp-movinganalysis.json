@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "810": [
+    "831": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "811": [
+    "832": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "812": [
+    "833": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "813": [
+    "834": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "814": [
+    "835": [
       83.5,
       83.49999999999999,
       83.49999999999999,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 810,
+      "id": 831,
       "name": "x",
-      "data": 810,
+      "data": 831,
       "type": "number",
-      "tableProcessGUId": "56d55e1b-cd8e-4577-a448-64eca5c3fe66",
+      "tableProcessGUId": "24417740-221c-4c93-b6d7-5ef7b205224d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 811,
+      "id": 832,
       "name": "y",
-      "data": 811,
+      "data": 832,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 812,
-      "name": "movex_77",
-      "data": 812,
+      "id": 833,
+      "name": "movex_79",
+      "data": 833,
       "type": "number",
-      "tableProcessGUId": "5615c786-cbcd-479a-8289-63d9229f3a6b",
+      "tableProcessGUId": "2b423cce-6183-4a8a-85a6-c89f8bb8274a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 813,
-      "name": "811_peak_period_77",
-      "data": 813,
+      "id": 834,
+      "name": "832_peak_period_79",
+      "data": 834,
       "type": "number",
-      "tableProcessGUId": "5615c786-cbcd-479a-8289-63d9229f3a6b",
+      "tableProcessGUId": "2b423cce-6183-4a8a-85a6-c89f8bb8274a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 814,
-      "name": "811_peak_power_77",
-      "data": 814,
+      "id": 835,
+      "name": "832_peak_power_79",
+      "data": 835,
       "type": "number",
-      "tableProcessGUId": "5615c786-cbcd-479a-8289-63d9229f3a6b",
+      "tableProcessGUId": "2b423cce-6183-4a8a-85a6-c89f8bb8274a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -763,7 +763,7 @@
   ],
   "plots": [
     {
-      "id": 132,
+      "id": 134,
       "name": "Moving Analysis: signal + moving period",
       "x": 60,
       "y": 255,
@@ -838,9 +838,9 @@
         "data": [
           {
             "x": {
-              "id": 815,
+              "id": 836,
               "name": "x",
-              "refId": 810,
+              "refId": 831,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -849,9 +849,9 @@
               "processes": []
             },
             "y": {
-              "id": 816,
+              "id": 837,
               "name": "y",
-              "refId": 811,
+              "refId": 832,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -862,14 +862,14 @@
             "label": "Signal",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -877,9 +877,9 @@
           },
           {
             "x": {
-              "id": 817,
-              "name": "movex_77",
-              "refId": 812,
+              "id": 838,
+              "name": "movex_79",
+              "refId": 833,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -888,9 +888,9 @@
               "processes": []
             },
             "y": {
-              "id": 818,
-              "name": "811_peak_period_77",
-              "refId": 813,
+              "id": 839,
+              "name": "832_peak_period_79",
+              "refId": 834,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -901,14 +901,14 @@
             "label": "Moving period",
             "yAxis": "right",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -932,7 +932,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 135,
       "name": "Moving Analysis: result",
       "x": 630,
       "y": 255,
@@ -965,9 +965,9 @@
       },
       "plot": {
         "columnRefs": [
-          812,
-          813,
-          814
+          833,
+          834,
+          835
         ],
         "showCol": [
           true,
@@ -983,7 +983,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 76,
+      "id": 78,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -993,19 +993,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 810
+          "result": 831
         }
       },
       "refTPId": null
     },
     {
-      "id": 77,
+      "id": 79,
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 810,
+        "xIN": 831,
         "yIN": [
-          811
+          832
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -1024,9 +1024,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 812,
-          "811_peak_period": 813,
-          "811_peak_power": 814
+          "movex": 833,
+          "832_peak_period": 834,
+          "832_peak_power": 835
         }
       },
       "refTPId": null
@@ -1037,7 +1037,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_72",
+      "id": "note_73",
       "text": "Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Phase outputs (M10 onset, acrophases, onset and offset) are put on one frame for every window: the instant the window actually contains, as hours after the record's first sample, folded onto the fixed period (or 24 h for a free period), so a stable rhythm reads the same value in every window and a free-running one drifts by its period minus 24 h per day. Set Phase reference to Clock time of day for clock time. C1_phase is the model phase angle in radians; C1_acrophase is the time of the window's peak. A chi-squared periodogram reports, per window, the period whose Qp rises furthest above its threshold and that peak's family-wise p (peak_pvalue; at or above alpha means no period in that window crossed its threshold). The fixed-period cosinor's rmse is the residual standard error, sqrt(SS/(n - p)), and is labelled Residual SE, and its rmse_n is the RMSE, sqrt(SS/n), comparable with the other analyses' rmse; the rectangular-wave fit's mesor is its midline, halfway between the high and low levels; and the double-logistic fit's mesor is its baseline (rest level), labelled Baseline. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -1071,27 +1071,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_811": {
+    "data_832": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_76": {
+    "tableprocess_78": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_77": {
+    "tableprocess_79": {
       "x": 440,
       "y": 314
     },
-    "plot_132": {
+    "plot_134": {
       "x": 820,
       "y": 314
     },
-    "plot_133": {
+    "plot_135": {
       "x": 820,
       "y": 814
     },
-    "note_72": {
+    "note_73": {
       "x": 40,
       "y": 24
     }
@@ -1155,5 +1155,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

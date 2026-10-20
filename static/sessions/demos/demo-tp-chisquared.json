@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "771": [
+    "792": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "772": [
+    "793": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,30 +184,30 @@
       "non-responder",
       "non-responder"
     ],
-    "773": [
+    "794": [
       0
     ],
-    "774": [
+    "795": [
       1
     ],
-    "775": [
+    "796": [
       1
     ],
-    "776": [
+    "797": [
       0
     ],
-    "777": [
+    "798": [
       null
     ],
-    "778": [
+    "799": [
       null
     ]
   },
   "data": [
     {
-      "id": 771,
+      "id": 792,
       "name": "Categorical tests input 1",
-      "data": 771,
+      "data": 792,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -216,9 +216,9 @@
       "processes": []
     },
     {
-      "id": 772,
+      "id": 793,
       "name": "Categorical tests input 2",
-      "data": 772,
+      "data": 793,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,66 +227,66 @@
       "processes": []
     },
     {
-      "id": 773,
-      "name": "statistic_71",
-      "data": 773,
+      "id": 794,
+      "name": "statistic_73",
+      "data": 794,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 774,
-      "name": "pvalue_71",
-      "data": 774,
+      "id": 795,
+      "name": "pvalue_73",
+      "data": 795,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 775,
-      "name": "df_71",
-      "data": 775,
+      "id": 796,
+      "name": "df_73",
+      "data": 796,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 776,
-      "name": "effectSize_71",
-      "data": 776,
+      "id": 797,
+      "name": "effectSize_73",
+      "data": 797,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 777,
-      "name": "ciLow_71",
-      "data": 777,
+      "id": 798,
+      "name": "ciLow_73",
+      "data": 798,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 778,
-      "name": "ciHigh_71",
-      "data": 778,
+      "id": 799,
+      "name": "ciHigh_73",
+      "data": 799,
       "type": "number",
-      "tableProcessGUId": "06c9f271-9f02-45ce-addf-9487ec336df8",
+      "tableProcessGUId": "8efcb152-e652-4c59-88c1-2014637cec02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -295,7 +295,7 @@
   ],
   "plots": [
     {
-      "id": 127,
+      "id": 129,
       "name": "Categorical tests result",
       "x": 60,
       "y": 255,
@@ -328,14 +328,14 @@
       },
       "plot": {
         "columnRefs": [
-          771,
-          772,
-          773,
-          774,
-          775,
-          776,
-          777,
-          778
+          792,
+          793,
+          794,
+          795,
+          796,
+          797,
+          798,
+          799
         ],
         "showCol": [
           true,
@@ -356,22 +356,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 71,
+      "id": 73,
       "name": "ChiSquared",
       "displayName": "Categorical tests",
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 771,
-        "yIN": 772,
+        "xIN": 792,
+        "yIN": 793,
         "correction": true,
         "out": {
-          "statistic": 773,
-          "pvalue": 774,
-          "df": 775,
-          "effectSize": 776,
-          "ciLow": 777,
-          "ciHigh": 778
+          "statistic": 794,
+          "pvalue": 795,
+          "df": 796,
+          "effectSize": 797,
+          "ciLow": 798,
+          "ciHigh": 799
         },
         "alternative": "two-sided",
         "gofInput": "auto",
@@ -385,7 +385,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_67",
+      "id": "note_68",
       "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation; 'Read the column as' can force counts (which must be non-negative whole numbers) or categories (for numeric codes). Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
       "x": 40,
       "y": 24,
@@ -419,23 +419,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_771": {
+    "data_792": {
       "x": 60,
       "y": 314
     },
-    "data_772": {
+    "data_793": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_71": {
+    "tableprocess_73": {
       "x": 440,
       "y": 314
     },
-    "plot_127": {
+    "plot_129": {
       "x": 820,
       "y": 314
     },
-    "note_67": {
+    "note_68": {
       "x": 40,
       "y": 24
     }
@@ -499,5 +499,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "511": [
+    "532": [
       "Unimodal",
       "Unimodal",
       "Unimodal",
@@ -182,7 +182,7 @@
       "Bimodal",
       "Bimodal"
     ],
-    "512": [
+    "533": [
       42.20769176555606,
       42.60823190104661,
       59.58024802604939,
@@ -367,9 +367,9 @@
   },
   "data": [
     {
-      "id": 511,
+      "id": 532,
       "name": "group",
-      "data": 511,
+      "data": 532,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -378,9 +378,9 @@
       "processes": []
     },
     {
-      "id": 512,
+      "id": 533,
       "name": "value",
-      "data": 512,
+      "data": 533,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -391,7 +391,7 @@
   ],
   "plots": [
     {
-      "id": 74,
+      "id": 76,
       "name": "Value by group (violin)",
       "x": 60,
       "y": 255,
@@ -452,9 +452,9 @@
         "data": [
           {
             "x": {
-              "id": 513,
+              "id": 534,
               "name": "group",
-              "refId": 511,
+              "refId": 532,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -463,9 +463,9 @@
               "processes": []
             },
             "y": {
-              "id": 514,
+              "id": 535,
               "name": "value",
-              "refId": 512,
+              "refId": 533,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -476,7 +476,7 @@
             "label": "",
             "boxPlot": {
               "colour": null,
-              "fillColour": "#234154",
+              "fillColour": null,
               "fillOpacity": 0.3,
               "strokeWidth": 2,
               "stroke": "solid",
@@ -535,7 +535,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_32",
+      "id": "note_33",
       "text": "The violin overlay draws a mirrored kernel-density outline behind each box, showing the FULL shape of the distribution where the box shows only five summaries. That matters when a distribution is bimodal: the demo's two outer groups have near-identical boxes (same median, similar spread), but the violin reveals one is a single hump and the other is two, a structure the box cannot show. Jittered raw points confirm what the density is smoothing. Bandwidth defaults to Silverman's rule (adjust it if the violin looks over- or under-smoothed), and hiding the box gives a pure violin plot. Kernel density estimation: Silverman (1986); violin plots: Hintze & Nelson (1998).",
       "x": 40,
       "y": 24,
@@ -569,19 +569,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_511": {
+    "data_532": {
       "x": 60,
       "y": 314
     },
-    "data_512": {
+    "data_533": {
       "x": 60,
       "y": 814
     },
-    "note_32": {
+    "note_33": {
       "x": 40,
       "y": 24
     },
-    "plot_74": {
+    "plot_76": {
       "x": 820,
       "y": 314
     }
@@ -645,5 +645,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

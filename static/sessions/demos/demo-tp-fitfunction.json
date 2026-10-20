@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "710": [
+    "731": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "711": [
+    "732": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "712": [
+    "733": [
       0,
       1,
       2,
@@ -156,37 +156,37 @@
       48,
       49
     ],
-    "713": [
+    "734": [
       0.9421144462997514
     ],
-    "714": [
+    "735": [
       7.373734291701205
     ],
-    "715": [
+    "736": [
       7.149100639963999
     ],
-    "716": [
+    "737": [
       null
     ],
-    "717": [
+    "738": [
       24
     ],
-    "718": [
+    "739": [
       49.14987381245017
     ],
-    "719": [
+    "740": [
       40.09378243532288
     ],
-    "720": [
+    "741": [
       12.168012298528875
     ],
-    "721": [
+    "742": [
       40.09378243532288
     ],
-    "722": [
+    "743": [
       12.168012298528875
     ],
-    "723": [
+    "744": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -241,20 +241,20 @@
   },
   "data": [
     {
-      "id": 710,
+      "id": 731,
       "name": "x",
-      "data": 710,
+      "data": 731,
       "type": "number",
-      "tableProcessGUId": "9ac65df8-8fa3-4fb9-911a-02f67b1bade3",
+      "tableProcessGUId": "95ddf68c-3390-4a92-8ccd-39f5b77b1571",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 711,
+      "id": 732,
       "name": "y",
-      "data": 711,
+      "data": 732,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -263,132 +263,132 @@
       "processes": []
     },
     {
-      "id": 712,
-      "name": "fitx_66",
-      "data": 712,
+      "id": 733,
+      "name": "fitx_68",
+      "data": 733,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 713,
-      "name": "r2_66",
-      "data": 713,
+      "id": 734,
+      "name": "r2_68",
+      "data": 734,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 714,
-      "name": "rmse_66",
-      "data": 714,
+      "id": 735,
+      "name": "rmse_68",
+      "data": 735,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 715,
-      "name": "rmse_n_66",
-      "data": 715,
+      "id": 736,
+      "name": "rmse_n_68",
+      "data": 736,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 716,
-      "name": "perm_pvalue_66",
-      "data": 716,
+      "id": 737,
+      "name": "perm_pvalue_68",
+      "data": 737,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 717,
-      "name": "period_66",
-      "data": 717,
+      "id": 738,
+      "name": "period_68",
+      "data": 738,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 718,
-      "name": "mesor_66",
-      "data": 718,
+      "id": 739,
+      "name": "mesor_68",
+      "data": 739,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 719,
-      "name": "amplitude_66",
-      "data": 719,
+      "id": 740,
+      "name": "amplitude_68",
+      "data": 740,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 720,
-      "name": "acrophase_66",
-      "data": 720,
+      "id": 741,
+      "name": "acrophase_68",
+      "data": 741,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 721,
-      "name": "amplitude_h1_66",
-      "data": 721,
+      "id": 742,
+      "name": "amplitude_h1_68",
+      "data": 742,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 722,
-      "name": "acrophase_h1_66",
-      "data": 722,
+      "id": 743,
+      "name": "acrophase_h1_68",
+      "data": 743,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 723,
-      "name": "fity_711_66",
-      "data": 723,
+      "id": 744,
+      "name": "fity_732_68",
+      "data": 744,
       "type": "number",
-      "tableProcessGUId": "a50ae757-f6c5-4a62-b98e-b6a65b7ea1d9",
+      "tableProcessGUId": "ac86791e-eb18-49bc-99b3-394d4e5c641a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -397,7 +397,7 @@
   ],
   "plots": [
     {
-      "id": 120,
+      "id": 122,
       "name": "Fit waveform model: data + fit",
       "x": 60,
       "y": 255,
@@ -472,9 +472,9 @@
         "data": [
           {
             "x": {
-              "id": 724,
+              "id": 745,
               "name": "x",
-              "refId": 710,
+              "refId": 731,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -483,9 +483,9 @@
               "processes": []
             },
             "y": {
-              "id": 725,
+              "id": 746,
               "name": "y",
-              "refId": 711,
+              "refId": 732,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -496,14 +496,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -511,9 +511,9 @@
           },
           {
             "x": {
-              "id": 726,
-              "name": "fitx_66",
-              "refId": 712,
+              "id": 747,
+              "name": "fitx_68",
+              "refId": 733,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -522,9 +522,9 @@
               "processes": []
             },
             "y": {
-              "id": 727,
-              "name": "fity_711_66",
-              "refId": 723,
+              "id": 748,
+              "name": "fity_732_68",
+              "refId": 744,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -535,14 +535,14 @@
             "label": "Fit waveform model",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -566,7 +566,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 123,
       "name": "Fit waveform model: values",
       "x": 630,
       "y": 255,
@@ -599,8 +599,8 @@
       },
       "plot": {
         "columnRefs": [
-          711,
-          723
+          732,
+          744
         ],
         "showCol": [
           true,
@@ -615,7 +615,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 65,
+      "id": 67,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -625,19 +625,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 710
+          "result": 731
         }
       },
       "refTPId": null
     },
     {
-      "id": 66,
+      "id": 68,
       "name": "FitFunction",
       "displayName": "Fit waveform model",
       "args": {
-        "xIN": 710,
+        "xIN": 731,
         "yIN": [
-          711
+          732
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -663,18 +663,18 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 712,
-          "r2": 713,
-          "rmse": 714,
-          "rmse_n": 715,
-          "perm_pvalue": 716,
-          "period": 717,
-          "mesor": 718,
-          "amplitude": 719,
-          "acrophase": 720,
-          "amplitude_h1": 721,
-          "acrophase_h1": 722,
-          "fity_711": 723
+          "fitx": 733,
+          "r2": 734,
+          "rmse": 735,
+          "rmse_n": 736,
+          "perm_pvalue": 737,
+          "period": 738,
+          "mesor": 739,
+          "amplitude": 740,
+          "acrophase": 741,
+          "amplitude_h1": 742,
+          "acrophase_h1": 743,
+          "fity_732": 744
         }
       },
       "refTPId": null
@@ -685,7 +685,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_62",
+      "id": "note_63",
       "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. It reports R² and RMSE, the model coefficients, and a residual column per series (observed − fitted, aligned to the input), with a \"Plot residuals\" button to scatter them against the input for a fit-diagnostic check (a good fit leaves residuals patternless around zero). Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Every free period stays inside a period range (1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units). The acrophase, onset and offset ports are hours after the first sample (x units after x = 0 for a numeric x) by default, or clock time of day with Phase reference set to Clock time of day; with a multi-harmonic cosinor, amplitude and acrophase describe the overall fitted curve and amplitude_h1 / acrophase_h1 keep harmonic 1. With a fixed-period cosinor the rmse port holds the residual standard error, sqrt(SS/(n - p)) (labelled Residual SE), and the rmse_n port the RMSE, sqrt(SS/n), which is what every other model's rmse port holds. The mesor port keeps its key for every model but is labelled for what it holds: Midline for the rectangular wave (halfway between its two levels) and Baseline for the double logistic (the rest level the bout rises from). The permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Nonlinear least-squares model fitting (Marquardt 1963). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
       "x": 40,
       "y": 24,
@@ -719,27 +719,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_711": {
+    "data_732": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_65": {
+    "tableprocess_67": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_66": {
+    "tableprocess_68": {
       "x": 440,
       "y": 314
     },
-    "plot_120": {
+    "plot_122": {
       "x": 820,
       "y": 314
     },
-    "plot_121": {
+    "plot_123": {
       "x": 820,
       "y": 814
     },
-    "note_62": {
+    "note_63": {
       "x": 40,
       "y": 24
     }
@@ -803,5 +803,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

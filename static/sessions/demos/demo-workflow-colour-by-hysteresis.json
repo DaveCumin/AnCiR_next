@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "497": [
       "2024-01-15T00:00:00.000Z",
       "2024-01-15T01:00:00.000Z",
       "2024-01-15T02:00:00.000Z",
@@ -98,7 +98,7 @@
       "2024-01-18T22:00:00.000Z",
       "2024-01-18T23:00:00.000Z"
     ],
-    "1": [
+    "498": [
       13.64,
       11.89,
       11.58,
@@ -196,7 +196,7 @@
       16.64,
       14.58
     ],
-    "2": [
+    "499": [
       83.47,
       87.31,
       90.52,
@@ -294,7 +294,7 @@
       73.25,
       75.38
     ],
-    "3": [
+    "500": [
       "2024-01-15T00:07:00.000Z",
       "2024-01-15T00:22:00.000Z",
       "2024-01-15T00:37:00.000Z",
@@ -656,7 +656,7 @@
       "2024-01-18T23:37:00.000Z",
       "2024-01-18T23:52:00.000Z"
     ],
-    "4": [
+    "501": [
       24.93,
       24.59,
       24.32,
@@ -1018,7 +1018,7 @@
       25.34,
       25.21
     ],
-    "5": [
+    "502": [
       1705276800000,
       1705277220000,
       1705278120000,
@@ -1476,7 +1476,7 @@
       1705621020000,
       1705621920000
     ],
-    "6": [
+    "503": [
       13.64,
       null,
       null,
@@ -1934,7 +1934,7 @@
       null,
       null
     ],
-    "7": [
+    "504": [
       83.47,
       null,
       null,
@@ -2392,7 +2392,7 @@
       null,
       null
     ],
-    "8": [
+    "505": [
       null,
       24.93,
       24.59,
@@ -2850,7 +2850,7 @@
       25.34,
       25.21
     ],
-    "9": [
+    "506": [
       1705276800000,
       1705280400000,
       1705284000000,
@@ -2949,7 +2949,7 @@
       1705618800000,
       1705622400000
     ],
-    "10": [
+    "507": [
       13.64,
       11.89,
       11.58,
@@ -3048,7 +3048,7 @@
       14.58,
       null
     ],
-    "11": [
+    "508": [
       24.52,
       23.8125,
       23.1525,
@@ -3147,7 +3147,7 @@
       25.455,
       null
     ],
-    "12": [
+    "509": [
       83.47,
       87.31,
       90.52,
@@ -3249,9 +3249,9 @@
   },
   "data": [
     {
-      "id": 0,
+      "id": 497,
       "name": "time",
-      "data": 0,
+      "data": 497,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -3261,9 +3261,9 @@
       "processes": []
     },
     {
-      "id": 1,
+      "id": 498,
       "name": "air temperature",
-      "data": 1,
+      "data": 498,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3272,9 +3272,9 @@
       "processes": []
     },
     {
-      "id": 2,
+      "id": 499,
       "name": "relative humidity (%)",
-      "data": 2,
+      "data": 499,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3283,9 +3283,9 @@
       "processes": []
     },
     {
-      "id": 3,
+      "id": 500,
       "name": "time",
-      "data": 3,
+      "data": 500,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -3295,9 +3295,9 @@
       "processes": []
     },
     {
-      "id": 4,
+      "id": 501,
       "name": "hive temperature",
-      "data": 4,
+      "data": 501,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3306,91 +3306,91 @@
       "processes": []
     },
     {
-      "id": 5,
-      "name": "jointime_0",
-      "data": 5,
+      "id": 502,
+      "name": "jointime_40",
+      "data": 502,
       "type": "time",
       "timeFormat": null,
-      "tableProcessGUId": "9a78b01d-cf2b-4c7e-a1a8-6d6564a58de5",
+      "tableProcessGUId": "0e667462-033c-4fbe-a998-2217f6954846",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 6,
-      "name": "joined_1_0",
-      "data": 6,
+      "id": 503,
+      "name": "joined_498_40",
+      "data": 503,
       "type": "number",
-      "tableProcessGUId": "9a78b01d-cf2b-4c7e-a1a8-6d6564a58de5",
+      "tableProcessGUId": "0e667462-033c-4fbe-a998-2217f6954846",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 7,
-      "name": "joined_2_0",
-      "data": 7,
+      "id": 504,
+      "name": "joined_499_40",
+      "data": 504,
       "type": "number",
-      "tableProcessGUId": "9a78b01d-cf2b-4c7e-a1a8-6d6564a58de5",
+      "tableProcessGUId": "0e667462-033c-4fbe-a998-2217f6954846",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 8,
-      "name": "joined_4_0",
-      "data": 8,
+      "id": 505,
+      "name": "joined_501_40",
+      "data": 505,
       "type": "number",
-      "tableProcessGUId": "9a78b01d-cf2b-4c7e-a1a8-6d6564a58de5",
+      "tableProcessGUId": "0e667462-033c-4fbe-a998-2217f6954846",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 9,
-      "name": "binnedx_1",
-      "data": 9,
+      "id": 506,
+      "name": "binnedx_41",
+      "data": 506,
       "type": "time",
       "timeFormat": null,
       "originTime_ms": 1705276800000,
-      "tableProcessGUId": "f3d1b641-1469-456d-8313-3525c50fefb6",
+      "tableProcessGUId": "046bcc3e-3b89-4ff8-bb56-f1b9a3977bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 10,
-      "name": "binnedy_6_1",
-      "data": 10,
+      "id": 507,
+      "name": "binnedy_503_41",
+      "data": 507,
       "type": "number",
-      "tableProcessGUId": "f3d1b641-1469-456d-8313-3525c50fefb6",
+      "tableProcessGUId": "046bcc3e-3b89-4ff8-bb56-f1b9a3977bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 11,
-      "name": "binnedy_8_1",
-      "data": 11,
+      "id": 508,
+      "name": "binnedy_505_41",
+      "data": 508,
       "type": "number",
-      "tableProcessGUId": "f3d1b641-1469-456d-8313-3525c50fefb6",
+      "tableProcessGUId": "046bcc3e-3b89-4ff8-bb56-f1b9a3977bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 12,
-      "name": "binnedy_7_1",
-      "data": 12,
+      "id": 509,
+      "name": "binnedy_504_41",
+      "data": 509,
       "type": "number",
-      "tableProcessGUId": "f3d1b641-1469-456d-8313-3525c50fefb6",
+      "tableProcessGUId": "046bcc3e-3b89-4ff8-bb56-f1b9a3977bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -3399,7 +3399,7 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 70,
       "name": "Hive against air, by hour and humidity",
       "x": 60,
       "y": 255,
@@ -3474,9 +3474,9 @@
         "data": [
           {
             "x": {
-              "id": 13,
-              "name": "binnedy_6_1",
-              "refId": 10,
+              "id": 510,
+              "name": "binnedy_503_41",
+              "refId": 507,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3485,9 +3485,9 @@
               "processes": []
             },
             "y": {
-              "id": 14,
-              "name": "binnedy_8_1",
-              "refId": 11,
+              "id": 511,
+              "name": "binnedy_505_41",
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3511,9 +3511,9 @@
               "draw": true
             },
             "colourBy": {
-              "id": 15,
-              "name": "binnedx_1",
-              "refId": 9,
+              "id": 512,
+              "name": "binnedx_41",
+              "refId": 506,
               "type": "time",
               "timeFormat": [],
               "originTime_ms": 1705276800000,
@@ -3532,9 +3532,9 @@
               "colourLine": true
             },
             "sizeBy": {
-              "id": 16,
-              "name": "binnedy_7_1",
-              "refId": 12,
+              "id": 513,
+              "name": "binnedy_504_41",
+              "refId": 509,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3597,7 +3597,7 @@
       }
     },
     {
-      "id": 1,
+      "id": 71,
       "name": "Air and hive over time",
       "x": 630,
       "y": 255,
@@ -3672,9 +3672,9 @@
         "data": [
           {
             "x": {
-              "id": 17,
-              "name": "binnedx_1",
-              "refId": 9,
+              "id": 514,
+              "name": "binnedx_41",
+              "refId": 506,
               "type": "time",
               "timeFormat": "",
               "originTime_ms": 1705276800000,
@@ -3685,9 +3685,9 @@
               "processes": []
             },
             "y": {
-              "id": 18,
-              "name": "binnedy_6_1",
-              "refId": 10,
+              "id": 515,
+              "name": "binnedy_503_41",
+              "refId": 507,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3713,9 +3713,9 @@
           },
           {
             "x": {
-              "id": 19,
-              "name": "binnedx_1",
-              "refId": 9,
+              "id": 516,
+              "name": "binnedx_41",
+              "refId": 506,
               "type": "time",
               "timeFormat": "",
               "originTime_ms": 1705276800000,
@@ -3726,9 +3726,9 @@
               "processes": []
             },
             "y": {
-              "id": 20,
-              "name": "binnedy_8_1",
-              "refId": 11,
+              "id": 517,
+              "name": "binnedy_505_41",
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3772,27 +3772,27 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 40,
       "name": "JoinData",
       "displayName": "Join by time",
       "args": {
-        "aTimeIN": 0,
+        "aTimeIN": 497,
         "aValuesIN": [
-          1,
-          2
+          498,
+          499
         ],
-        "bTimeIN": 3,
+        "bTimeIN": 500,
         "bValuesIN": [
-          4
+          501
         ],
         "pairing": {},
         "shiftB": 0,
         "sourceColumn": null,
         "out": {
-          "jointime": 5,
-          "joined_1": 6,
-          "joined_2": 7,
-          "joined_4": 8
+          "jointime": 502,
+          "joined_498": 503,
+          "joined_499": 504,
+          "joined_501": 505
         },
         "_resolvedPairs": {},
         "_sourceLabels": [
@@ -3803,15 +3803,15 @@
       "refTPId": null
     },
     {
-      "id": 1,
+      "id": 41,
       "name": "BinnedData",
       "displayName": "Bin Data (1 h)",
       "args": {
-        "xIN": 5,
+        "xIN": 502,
         "yIN": [
-          6,
-          8,
-          7
+          503,
+          505,
+          504
         ],
         "binMode": "uniform",
         "binSize": 1,
@@ -3821,10 +3821,10 @@
         "cuts": [],
         "aggFunction": "mean",
         "out": {
-          "binnedx": 9,
-          "binnedy_6": 10,
-          "binnedy_8": 11,
-          "binnedy_7": 12
+          "binnedx": 506,
+          "binnedy_503": 507,
+          "binnedy_505": 508,
+          "binnedy_504": 509
         }
       },
       "refTPId": null
@@ -3835,7 +3835,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_1",
+      "id": "note_29",
       "text": "WORKFLOW: colour by hour of day. Plot one temperature against another and each day traces a loop, because the hive follows the air a few hours late. Colour by (Data tab, under Points) reads the binned time as the hour of day on a cyclic scale, so midnight and the next midnight are the same dark colour and noon is light. 'Colour the line too' colours each line segment by the hour it starts at. Size by (just below) draws each point by the air's relative humidity, its area growing with the value between the smallest and largest size you set; the size key sits under the colour bar. A logger outage on day 3 leaves blank hours; the line breaks there, as any line does, unless Join gaps is on.",
       "x": 40,
       "y": 24,
@@ -3845,31 +3845,31 @@
   ],
   "groups": [
     {
-      "id": "group_1",
+      "id": "group_6",
       "name": "weather station",
       "x": 80,
       "y": 80,
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        0,
-        1,
-        2
+        497,
+        498,
+        499
       ],
       "allColumnIds": null,
       "collapsed": false,
       "rowState": {}
     },
     {
-      "id": "group_2",
+      "id": "group_7",
       "name": "hive logger",
       "x": 80,
       "y": 80,
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        3,
-        4
+        500,
+        501
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -3901,31 +3901,31 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "tableprocess_0": {
+    "tableprocess_40": {
       "x": 440,
       "y": 314
     },
-    "tableprocess_1": {
+    "tableprocess_41": {
       "x": 440,
       "y": 814
     },
-    "note_1": {
+    "note_29": {
       "x": 40,
       "y": 24
     },
-    "group_1": {
+    "group_6": {
       "x": 440,
       "y": 1814
     },
-    "group_2": {
+    "group_7": {
       "x": 440,
       "y": 2314
     },
-    "plot_0": {
+    "plot_70": {
       "x": 820,
       "y": 314
     },
-    "plot_1": {
+    "plot_71": {
       "x": 820,
       "y": 814
     }
@@ -3989,5 +3989,5 @@
       "No"
     ]
   },
-  "version": "β.82.43"
+  "version": "β.82.49"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "853": [
+    "874": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 853,
-      "name": "result_84",
-      "data": 853,
+      "id": 874,
+      "name": "result_86",
+      "data": 874,
       "type": "number",
-      "tableProcessGUId": "d8bf7526-cee4-4082-9a20-c71e62c61e3a",
+      "tableProcessGUId": "e4a155e8-74ec-4946-a87d-7a462f46bd47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 141,
+      "id": 143,
       "name": "Sequence Column result",
       "x": 60,
       "y": 255,
@@ -101,7 +101,7 @@
       },
       "plot": {
         "columnRefs": [
-          853
+          874
         ],
         "showCol": [
           true
@@ -115,7 +115,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 84,
+      "id": 86,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -125,7 +125,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 853
+          "result": 874
         }
       },
       "refTPId": null
@@ -136,7 +136,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_77",
+      "id": "note_78",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values. Up to 2,000,000 values; a longer sequence is refused with a warning on the node.",
       "x": 40,
       "y": 24,
@@ -170,15 +170,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "tableprocess_84": {
+    "tableprocess_86": {
       "x": 60,
       "y": 314
     },
-    "plot_141": {
+    "plot_143": {
       "x": 820,
       "y": 314
     },
-    "note_77": {
+    "note_78": {
       "x": 40,
       "y": 24
     }
@@ -242,5 +242,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

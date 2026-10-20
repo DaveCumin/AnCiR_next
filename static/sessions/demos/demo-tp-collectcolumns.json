@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "649": [
+    "670": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "650": [
+    "671": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "651": [
+    "672": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "652": [
+    "673": [
       1,
       3,
       5,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 649,
+      "id": 670,
       "name": "Collect Columns input 1",
-      "data": 649,
+      "data": 670,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 650,
+      "id": 671,
       "name": "Collect Columns input 2",
-      "data": 650,
+      "data": 671,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 651,
-      "name": "col_649_54",
-      "data": 651,
+      "id": 672,
+      "name": "col_670_56",
+      "data": 672,
       "type": "number",
-      "tableProcessGUId": "781df6ee-8f9a-4f22-9770-962e04bdaf2b",
+      "tableProcessGUId": "f6146c04-8625-4d08-bb98-790a3fc8a417",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 652,
-      "name": "col_650_54",
-      "data": 652,
+      "id": 673,
+      "name": "col_671_56",
+      "data": 673,
       "type": "number",
-      "tableProcessGUId": "781df6ee-8f9a-4f22-9770-962e04bdaf2b",
+      "tableProcessGUId": "f6146c04-8625-4d08-bb98-790a3fc8a417",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 108,
+      "id": 110,
       "name": "Collect Columns result",
       "x": 60,
       "y": 255,
@@ -290,10 +290,10 @@
       },
       "plot": {
         "columnRefs": [
-          649,
-          650,
-          651,
-          652
+          670,
+          671,
+          672,
+          673
         ],
         "showCol": [
           true,
@@ -310,19 +310,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 54,
+      "id": 56,
       "name": "CollectColumns",
       "displayName": "Collect Columns",
       "args": {
         "colIds": [
-          649,
-          650
+          670,
+          671
         ],
         "preProcesses": [],
         "aggregates": [],
         "out": {
-          "col_649": 651,
-          "col_650": 652
+          "col_670": 672,
+          "col_671": 673
         }
       },
       "refTPId": null
@@ -333,7 +333,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_53",
+      "id": "note_54",
       "text": "Gathers several columns into one node: each is passed through (after optional pre-processing steps) as its own output, and optional row-wise aggregates (mean, min, max, sum) combine the columns row by row, by position. It does not stack columns end to end, and it does not line rows up by time; to put two datasets on one time axis, use Join Data.",
       "x": 40,
       "y": 24,
@@ -367,23 +367,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_649": {
+    "data_670": {
       "x": 60,
       "y": 314
     },
-    "data_650": {
+    "data_671": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_54": {
+    "tableprocess_56": {
       "x": 440,
       "y": 314
     },
-    "plot_108": {
+    "plot_110": {
       "x": 820,
       "y": 314
     },
-    "note_53": {
+    "note_54": {
       "x": 40,
       "y": 24
     }
@@ -447,5 +447,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

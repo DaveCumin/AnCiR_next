@@ -348,7 +348,7 @@
       "data": 0,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "758c5730-5e60-4b9c-8ef2-a7cd9b502493",
+      "tableProcessGUId": "4cad3797-aa3c-4e81-9d26-ba275cddfe62",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,7 +359,7 @@
       "name": "values_0",
       "data": 1,
       "type": "number",
-      "tableProcessGUId": "758c5730-5e60-4b9c-8ef2-a7cd9b502493",
+      "tableProcessGUId": "4cad3797-aa3c-4e81-9d26-ba275cddfe62",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -468,14 +468,14 @@
             "label": "Activity",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -752,5 +752,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

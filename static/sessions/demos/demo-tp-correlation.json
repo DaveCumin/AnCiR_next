@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "791": [
+    "812": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "792": [
+    "813": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "793": [
+    "814": [
       100,
       98,
       96,
@@ -156,47 +156,47 @@
       4,
       2
     ],
-    "794": [
+    "815": [
       "Correlation input 1",
       "Correlation input 1",
       "Correlation input 2"
     ],
-    "795": [
+    "816": [
       "Correlation input 2",
       "Correlation input 3",
       "Correlation input 3"
     ],
-    "796": [
+    "817": [
       1,
       0.044645731583387575,
       0.04464573158338759
     ],
-    "797": [
+    "818": [
       0,
       0.7581875239105605,
       0.7581875239105605
     ],
-    "798": [
+    "819": [
       0,
       1,
       1
     ],
-    "799": [
+    "820": [
       50,
       50,
       50
     ],
-    "800": [
+    "821": [
       1,
       -0.2366427555642181,
       -0.2366427555642181
     ],
-    "801": [
+    "822": [
       1,
       0.3190288666233962,
       0.31902886662339625
     ],
-    "802": [
+    "823": [
       1,
       0,
       0
@@ -204,9 +204,9 @@
   },
   "data": [
     {
-      "id": 791,
+      "id": 812,
       "name": "Correlation input 1",
-      "data": 791,
+      "data": 812,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -215,9 +215,9 @@
       "processes": []
     },
     {
-      "id": 792,
+      "id": 813,
       "name": "Correlation input 2",
-      "data": 792,
+      "data": 813,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -226,9 +226,9 @@
       "processes": []
     },
     {
-      "id": 793,
+      "id": 814,
       "name": "Correlation input 3",
-      "data": 793,
+      "data": 814,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -237,99 +237,99 @@
       "processes": []
     },
     {
-      "id": 794,
-      "name": "var_i_74",
-      "data": 794,
+      "id": 815,
+      "name": "var_i_76",
+      "data": 815,
       "type": "category",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 795,
-      "name": "var_j_74",
-      "data": 795,
+      "id": 816,
+      "name": "var_j_76",
+      "data": 816,
       "type": "category",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 796,
-      "name": "r_74",
-      "data": 796,
+      "id": 817,
+      "name": "r_76",
+      "data": 817,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 797,
-      "name": "pvalue_74",
-      "data": 797,
+      "id": 818,
+      "name": "pvalue_76",
+      "data": 818,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 798,
-      "name": "padj_74",
-      "data": 798,
+      "id": 819,
+      "name": "padj_76",
+      "data": 819,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 799,
-      "name": "n_74",
-      "data": 799,
+      "id": 820,
+      "name": "n_76",
+      "data": 820,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 800,
-      "name": "ciLow_74",
-      "data": 800,
+      "id": 821,
+      "name": "ciLow_76",
+      "data": 821,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 801,
-      "name": "ciHigh_74",
-      "data": 801,
+      "id": 822,
+      "name": "ciHigh_76",
+      "data": 822,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 802,
-      "name": "significant_74",
-      "data": 802,
+      "id": 823,
+      "name": "significant_76",
+      "data": 823,
       "type": "number",
-      "tableProcessGUId": "09f83b3a-c992-4190-bd6d-28459e6c4627",
+      "tableProcessGUId": "8b1bced5-edd4-4a83-9485-c6cdda37159d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -338,7 +338,7 @@
   ],
   "plots": [
     {
-      "id": 130,
+      "id": 132,
       "name": "Correlation result",
       "x": 60,
       "y": 255,
@@ -371,18 +371,18 @@
       },
       "plot": {
         "columnRefs": [
-          791,
-          792,
-          793,
-          794,
-          795,
-          796,
-          797,
-          798,
-          799,
-          800,
-          801,
-          802
+          812,
+          813,
+          814,
+          815,
+          816,
+          817,
+          818,
+          819,
+          820,
+          821,
+          822,
+          823
         ],
         "showCol": [
           true,
@@ -407,33 +407,33 @@
   ],
   "tableProcesses": [
     {
-      "id": 74,
+      "id": 76,
       "name": "Correlation",
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          791,
-          792,
-          793
+          812,
+          813,
+          814
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 794,
-          "var_j": 795,
-          "r": 796,
-          "pvalue": 797,
-          "padj": 798,
-          "n": 799,
-          "ciLow": 800,
-          "ciHigh": 801,
-          "significant": 802
+          "var_i": 815,
+          "var_j": 816,
+          "r": 817,
+          "pvalue": 818,
+          "padj": 819,
+          "n": 820,
+          "ciLow": 821,
+          "ciHigh": 822,
+          "significant": 823
         },
         "valid": false,
         "_inputLabels": {
-          "791": "Correlation input 1",
-          "792": "Correlation input 2",
-          "793": "Correlation input 3"
+          "812": "Correlation input 1",
+          "813": "Correlation input 2",
+          "814": "Correlation input 3"
         }
       },
       "refTPId": null
@@ -444,7 +444,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_70",
+      "id": "note_71",
       "text": "Computes every pairwise correlation among the wired columns and reports them one row per pair: var_i, var_j, r, p-value, Holm-adjusted p-value (padj, across all the pairs) and n; the significant flag reads padj, not the raw p. Choose Pearson (linear) or Spearman (rank / monotonic), or leave it on Auto, which uses Spearman if any column fails a Jarque-Bera normality check, so the whole matrix stays on one comparable method. Uses pairwise-complete rows (a missing value drops only that pair-row), and warns on small samples and, for Spearman, on ties. Quick-plot draws the correlation heatmap.",
       "x": 40,
       "y": 24,
@@ -478,27 +478,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_791": {
+    "data_812": {
       "x": 60,
       "y": 314
     },
-    "data_792": {
+    "data_813": {
       "x": 60,
       "y": 814
     },
-    "data_793": {
+    "data_814": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_74": {
+    "tableprocess_76": {
       "x": 440,
       "y": 314
     },
-    "plot_130": {
+    "plot_132": {
       "x": 820,
       "y": 314
     },
-    "note_70": {
+    "note_71": {
       "x": 40,
       "y": 24
     }
@@ -562,5 +562,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "738": [
+    "759": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "739": [
+    "760": [
       1,
       3,
       5,
@@ -104,64 +104,64 @@
       97,
       99
     ],
-    "740": [
+    "761": [
       "Describe Data input 1",
       "Describe Data input 2"
     ],
-    "741": [
+    "762": [
       50,
       50
     ],
-    "742": [
+    "763": [
       48.42725933896873,
       50
     ],
-    "743": [
+    "764": [
       49.99999999999998,
       50
     ],
-    "744": [
+    "765": [
       29.056294644061907,
       29.154759474226502
     ],
-    "745": [
+    "766": [
       10,
       1
     ],
-    "746": [
+    "767": [
       90,
       99
     ],
-    "747": [
+    "768": [
       80,
       98
     ],
-    "748": [
+    "769": [
       21.715728752538084,
       25.5
     ],
-    "749": [
+    "770": [
       78.28427124746192,
       74.5
     ],
-    "750": [
+    "771": [
       56.56854249492383,
       49
     ],
-    "751": [
+    "772": [
       0.06387191582287348,
       0
     ],
-    "752": [
+    "773": [
       -1.5514528241552457,
       -1.2
     ]
   },
   "data": [
     {
-      "id": 738,
+      "id": 759,
       "name": "Describe Data input 1",
-      "data": 738,
+      "data": 759,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 739,
+      "id": 760,
       "name": "Describe Data input 2",
-      "data": 739,
+      "data": 760,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,143 +181,143 @@
       "processes": []
     },
     {
-      "id": 740,
-      "name": "variable_69",
-      "data": 740,
+      "id": 761,
+      "name": "variable_71",
+      "data": 761,
       "type": "category",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 741,
-      "name": "n_69",
-      "data": 741,
+      "id": 762,
+      "name": "n_71",
+      "data": 762,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 742,
-      "name": "mean_69",
-      "data": 742,
+      "id": 763,
+      "name": "mean_71",
+      "data": 763,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 743,
-      "name": "median_69",
-      "data": 743,
+      "id": 764,
+      "name": "median_71",
+      "data": 764,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 744,
-      "name": "sd_69",
-      "data": 744,
+      "id": 765,
+      "name": "sd_71",
+      "data": 765,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 745,
-      "name": "min_69",
-      "data": 745,
+      "id": 766,
+      "name": "min_71",
+      "data": 766,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 746,
-      "name": "max_69",
-      "data": 746,
+      "id": 767,
+      "name": "max_71",
+      "data": 767,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 747,
-      "name": "range_69",
-      "data": 747,
+      "id": 768,
+      "name": "range_71",
+      "data": 768,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 748,
-      "name": "q1_69",
-      "data": 748,
+      "id": 769,
+      "name": "q1_71",
+      "data": 769,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 749,
-      "name": "q3_69",
-      "data": 749,
+      "id": 770,
+      "name": "q3_71",
+      "data": 770,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 750,
-      "name": "iqr_69",
-      "data": 750,
+      "id": 771,
+      "name": "iqr_71",
+      "data": 771,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 751,
-      "name": "skewness_69",
-      "data": 751,
+      "id": 772,
+      "name": "skewness_71",
+      "data": 772,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 752,
-      "name": "kurtosis_69",
-      "data": 752,
+      "id": 773,
+      "name": "kurtosis_71",
+      "data": 773,
       "type": "number",
-      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
+      "tableProcessGUId": "84eb88f6-8a7c-4f84-9115-2deb9127546e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -326,7 +326,7 @@
   ],
   "plots": [
     {
-      "id": 124,
+      "id": 126,
       "name": "Describe Data result",
       "x": 60,
       "y": 255,
@@ -359,21 +359,21 @@
       },
       "plot": {
         "columnRefs": [
-          738,
-          739,
-          740,
-          741,
-          742,
-          743,
-          744,
-          745,
-          746,
-          747,
-          748,
-          749,
-          750,
-          751,
-          752
+          759,
+          760,
+          761,
+          762,
+          763,
+          764,
+          765,
+          766,
+          767,
+          768,
+          769,
+          770,
+          771,
+          772,
+          773
         ],
         "showCol": [
           true,
@@ -401,33 +401,33 @@
   ],
   "tableProcesses": [
     {
-      "id": 69,
+      "id": 71,
       "name": "DescribeData",
       "displayName": "Describe Data",
       "args": {
         "yIN": [
-          738,
-          739
+          759,
+          760
         ],
         "out": {
-          "variable": 740,
-          "n": 741,
-          "mean": 742,
-          "median": 743,
-          "sd": 744,
-          "min": 745,
-          "max": 746,
-          "range": 747,
-          "q1": 748,
-          "q3": 749,
-          "iqr": 750,
-          "skewness": 751,
-          "kurtosis": 752
+          "variable": 761,
+          "n": 762,
+          "mean": 763,
+          "median": 764,
+          "sd": 765,
+          "min": 766,
+          "max": 767,
+          "range": 768,
+          "q1": 769,
+          "q3": 770,
+          "iqr": 771,
+          "skewness": 772,
+          "kurtosis": 773
         },
         "valid": false,
         "_inputLabels": {
-          "738": "Describe Data input 1",
-          "739": "Describe Data input 2"
+          "759": "Describe Data input 1",
+          "760": "Describe Data input 2"
         }
       },
       "refTPId": null
@@ -438,7 +438,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_65",
+      "id": "note_66",
       "text": "Reports summary statistics for each wired column, one row per variable: n, mean, median, standard deviation, min, max, range, first and third quartiles, IQR, skewness and (excess) kurtosis. Skewness and kurtosis use the bias-corrected sample formulae (matching scipy). Quick-plot draws a histogram of each column so you can see the distribution behind the numbers.",
       "x": 40,
       "y": 24,
@@ -472,23 +472,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_738": {
+    "data_759": {
       "x": 60,
       "y": 314
     },
-    "data_739": {
+    "data_760": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_69": {
+    "tableprocess_71": {
       "x": 440,
       "y": 314
     },
-    "plot_124": {
+    "plot_126": {
       "x": 820,
       "y": 314
     },
-    "note_65": {
+    "note_66": {
       "x": 40,
       "y": 24
     }
@@ -552,5 +552,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

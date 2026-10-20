@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "779": [
+    "800": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "780": [
+    "801": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -104,7 +104,7 @@
       50.000000000000014,
       39.64723819589919
     ],
-    "781": [
+    "802": [
       -12,
       -11,
       -10,
@@ -131,7 +131,7 @@
       11,
       12
     ],
-    "782": [
+    "803": [
       -0.02397460631115133,
       -0.28574860140576386,
       -0.5241981547253294,
@@ -158,7 +158,7 @@
       0.23409193418983582,
       -0.023974606311150955
     ],
-    "783": [
+    "804": [
       0.9706407477729591,
       0.11561144801305756,
       0.0010540293263445483,
@@ -188,9 +188,9 @@
   },
   "data": [
     {
-      "id": 779,
+      "id": 800,
       "name": "Cross-correlation input 1",
-      "data": 779,
+      "data": 800,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -199,9 +199,9 @@
       "processes": []
     },
     {
-      "id": 780,
+      "id": 801,
       "name": "Cross-correlation input 2",
-      "data": 780,
+      "data": 801,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -210,33 +210,33 @@
       "processes": []
     },
     {
-      "id": 781,
-      "name": "lag_72",
-      "data": 781,
+      "id": 802,
+      "name": "lag_74",
+      "data": 802,
       "type": "number",
-      "tableProcessGUId": "1a4a5ceb-2b3c-4013-a24a-8166067f1be4",
+      "tableProcessGUId": "fdac3bee-37f3-4a72-a338-e99def4eb104",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 782,
-      "name": "correlation_72",
-      "data": 782,
+      "id": 803,
+      "name": "correlation_74",
+      "data": 803,
       "type": "number",
-      "tableProcessGUId": "1a4a5ceb-2b3c-4013-a24a-8166067f1be4",
+      "tableProcessGUId": "fdac3bee-37f3-4a72-a338-e99def4eb104",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 783,
-      "name": "pvalue_72",
-      "data": 783,
+      "id": 804,
+      "name": "pvalue_74",
+      "data": 804,
       "type": "number",
-      "tableProcessGUId": "1a4a5ceb-2b3c-4013-a24a-8166067f1be4",
+      "tableProcessGUId": "fdac3bee-37f3-4a72-a338-e99def4eb104",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -245,7 +245,7 @@
   ],
   "plots": [
     {
-      "id": 128,
+      "id": 130,
       "name": "Cross-correlation result",
       "x": 60,
       "y": 255,
@@ -278,11 +278,11 @@
       },
       "plot": {
         "columnRefs": [
-          779,
-          780,
-          781,
-          782,
-          783
+          800,
+          801,
+          802,
+          803,
+          804
         ],
         "showCol": [
           true,
@@ -300,18 +300,18 @@
   ],
   "tableProcesses": [
     {
-      "id": 72,
+      "id": 74,
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 779,
-        "yIN": 780,
+        "xIN": 800,
+        "yIN": 801,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 781,
-          "correlation": 782,
-          "pvalue": 783
+          "lag": 802,
+          "correlation": 803,
+          "pvalue": 804
         },
         "valid": false
       },
@@ -323,7 +323,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_68",
+      "id": "note_69",
       "text": "Computes the cross-correlogram of two series (A = the first input, B = the second): the correlation between A and B at each lag from -maxLag to +maxLag, using the overlapping segment only. The peak lag is the delay between the signals: a peak at a positive lag means B repeats A that many samples later, so A leads (B[t] = A[t - 3] peaks at +3); a negative lag means B leads. Use it to find the phase relationship between two rhythms, or the response delay between a driver and a follower. The p-value at each lag tests the prewhitened correlation (an AR model fitted to A filters both series), because the raw correlations of two autocorrelated series vary far more than an independence test assumes; each p is for one lag, and the panel also gives the smallest p corrected for the number of lags. Choose Pearson (linear) or Spearman (rank); leave max lag at 0 to auto-pick a quarter of the shorter series. Quick-plot draws the correlogram (lag vs r). Chatfield, The Analysis of Time Series.",
       "x": 40,
       "y": 24,
@@ -357,23 +357,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_779": {
+    "data_800": {
       "x": 60,
       "y": 314
     },
-    "data_780": {
+    "data_801": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_72": {
+    "tableprocess_74": {
       "x": 440,
       "y": 314
     },
-    "plot_128": {
+    "plot_130": {
       "x": 820,
       "y": 314
     },
-    "note_68": {
+    "note_69": {
       "x": 40,
       "y": 24
     }
@@ -437,5 +437,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

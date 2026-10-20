@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "604": [
+    "625": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "605": [
+    "626": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 604,
+      "id": 625,
       "name": "x",
-      "data": 604,
+      "data": 625,
       "type": "number",
-      "tableProcessGUId": "747065f7-4539-467b-ada3-1e9ec9884430",
+      "tableProcessGUId": "1ee34f63-10da-448f-8f0b-e125bef0de4a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 605,
+      "id": 626,
       "name": "y",
-      "data": 605,
+      "data": 626,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 606,
+      "id": 627,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_605",
+      "producerPort": "out_626",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 95,
+      "id": 97,
       "name": "Remove Outliers: before vs after",
       "x": 60,
       "y": 255,
@@ -219,9 +219,9 @@
         "data": [
           {
             "x": {
-              "id": 607,
+              "id": 628,
               "name": "x",
-              "refId": 604,
+              "refId": 625,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -230,9 +230,9 @@
               "processes": []
             },
             "y": {
-              "id": 608,
+              "id": 629,
               "name": "y",
-              "refId": 605,
+              "refId": 626,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -243,14 +243,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -258,9 +258,9 @@
           },
           {
             "x": {
-              "id": 609,
+              "id": 630,
               "name": "x",
-              "refId": 604,
+              "refId": 625,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -269,9 +269,9 @@
               "processes": []
             },
             "y": {
-              "id": 610,
+              "id": 631,
               "name": "Remove Outliers result",
-              "refId": 606,
+              "refId": 627,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -282,14 +282,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -313,7 +313,7 @@
       }
     },
     {
-      "id": 96,
+      "id": 98,
       "name": "Remove Outliers: values",
       "x": 630,
       "y": 255,
@@ -346,8 +346,8 @@
       },
       "plot": {
         "columnRefs": [
-          605,
-          606
+          626,
+          627
         ],
         "showCol": [
           true,
@@ -362,7 +362,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 45,
+      "id": 47,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -372,7 +372,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 604
+          "result": 625
         }
       },
       "refTPId": null
@@ -383,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_45",
+      "id": "note_46",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -402,7 +402,7 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          605
+          626
         ]
       }
     }
@@ -430,11 +430,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_605": {
+    "data_626": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_45": {
+    "tableprocess_47": {
       "x": 60,
       "y": 814
     },
@@ -442,15 +442,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_95": {
+    "plot_97": {
       "x": 820,
       "y": 314
     },
-    "plot_96": {
+    "plot_98": {
       "x": 820,
       "y": 814
     },
-    "note_45": {
+    "note_46": {
       "x": 40,
       "y": 24
     }
@@ -514,5 +514,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

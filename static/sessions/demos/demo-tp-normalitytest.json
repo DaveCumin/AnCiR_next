@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "784": [
+    "805": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "785": [
+    "806": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,32 +104,32 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "786": [
+    "807": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "787": [
+    "808": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "788": [
+    "809": [
       0.00020472387230591337,
       0.0000012486219889648333
     ],
-    "789": [
+    "810": [
       50,
       50
     ],
-    "790": [
+    "811": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 784,
+      "id": 805,
       "name": "Normality Test input 1",
-      "data": 784,
+      "data": 805,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 785,
+      "id": 806,
       "name": "Normality Test input 2",
-      "data": 785,
+      "data": 806,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -149,55 +149,55 @@
       "processes": []
     },
     {
-      "id": 786,
-      "name": "variable_73",
-      "data": 786,
+      "id": 807,
+      "name": "variable_75",
+      "data": 807,
       "type": "category",
-      "tableProcessGUId": "0dfa9173-eb1d-4307-840c-673b42358261",
+      "tableProcessGUId": "013d1f27-8f93-49af-bb21-2ff0dec44678",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 787,
-      "name": "statistic_73",
-      "data": 787,
+      "id": 808,
+      "name": "statistic_75",
+      "data": 808,
       "type": "number",
-      "tableProcessGUId": "0dfa9173-eb1d-4307-840c-673b42358261",
+      "tableProcessGUId": "013d1f27-8f93-49af-bb21-2ff0dec44678",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 788,
-      "name": "pvalue_73",
-      "data": 788,
+      "id": 809,
+      "name": "pvalue_75",
+      "data": 809,
       "type": "number",
-      "tableProcessGUId": "0dfa9173-eb1d-4307-840c-673b42358261",
+      "tableProcessGUId": "013d1f27-8f93-49af-bb21-2ff0dec44678",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 789,
-      "name": "n_73",
-      "data": 789,
+      "id": 810,
+      "name": "n_75",
+      "data": 810,
       "type": "number",
-      "tableProcessGUId": "0dfa9173-eb1d-4307-840c-673b42358261",
+      "tableProcessGUId": "013d1f27-8f93-49af-bb21-2ff0dec44678",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 790,
-      "name": "normal_73",
-      "data": 790,
+      "id": 811,
+      "name": "normal_75",
+      "data": 811,
       "type": "number",
-      "tableProcessGUId": "0dfa9173-eb1d-4307-840c-673b42358261",
+      "tableProcessGUId": "013d1f27-8f93-49af-bb21-2ff0dec44678",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -206,7 +206,7 @@
   ],
   "plots": [
     {
-      "id": 129,
+      "id": 131,
       "name": "Normality Test result",
       "x": 60,
       "y": 255,
@@ -239,13 +239,13 @@
       },
       "plot": {
         "columnRefs": [
-          784,
-          785,
-          786,
-          787,
-          788,
-          789,
-          790
+          805,
+          806,
+          807,
+          808,
+          809,
+          810,
+          811
         ],
         "showCol": [
           true,
@@ -265,27 +265,27 @@
   ],
   "tableProcesses": [
     {
-      "id": 73,
+      "id": 75,
       "name": "NormalityTest",
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          784,
-          785
+          805,
+          806
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 786,
-          "statistic": 787,
-          "pvalue": 788,
-          "n": 789,
-          "normal": 790
+          "variable": 807,
+          "statistic": 808,
+          "pvalue": 809,
+          "n": 810,
+          "normal": 811
         },
         "valid": false,
         "_inputLabels": {
-          "784": "Normality Test input 1",
-          "785": "Normality Test input 2"
+          "805": "Normality Test input 1",
+          "806": "Normality Test input 2"
         }
       },
       "refTPId": null
@@ -296,7 +296,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_69",
+      "id": "note_70",
       "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test) is recommended up to n = 5000; above that it shows W with no p-value, because Royston's p-value approximation is only validated to 5000; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
@@ -330,23 +330,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_784": {
+    "data_805": {
       "x": 60,
       "y": 314
     },
-    "data_785": {
+    "data_806": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_73": {
+    "tableprocess_75": {
       "x": 440,
       "y": 314
     },
-    "plot_129": {
+    "plot_131": {
       "x": 820,
       "y": 314
     },
-    "note_69": {
+    "note_70": {
       "x": 40,
       "y": 24
     }
@@ -410,5 +410,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

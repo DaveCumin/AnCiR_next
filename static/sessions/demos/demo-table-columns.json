@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "565": [
+    "586": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "566": [
+    "587": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "567": [
+    "588": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 565,
+      "id": 586,
       "name": "hour",
-      "data": 565,
+      "data": 586,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 566,
+      "id": 587,
       "name": "signalA",
-      "data": 566,
+      "data": 587,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 567,
+      "id": 588,
       "name": "signalB",
-      "data": 567,
+      "data": 588,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 84,
+      "id": 86,
       "name": "Signal table",
       "x": 60,
       "y": 255,
@@ -221,9 +221,9 @@
       },
       "plot": {
         "columnRefs": [
-          565,
-          566,
-          567
+          586,
+          587,
+          588
         ],
         "showCol": [
           true,
@@ -243,7 +243,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_39",
+      "id": "note_40",
       "text": "Shows numbers as a plain table, from one of three sources: the columns wired into it (editable), another plot's computed data (a plot's View data action), or an analysis node's result tables (View stats, View permutations), which follow every recompute. Use it to read exact values, sanity-check a transform's output, or present computed results for export. It computes no statistics of its own. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -277,23 +277,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_565": {
+    "data_586": {
       "x": 60,
       "y": 314
     },
-    "data_566": {
+    "data_587": {
       "x": 60,
       "y": 814
     },
-    "data_567": {
+    "data_588": {
       "x": 60,
       "y": 1314
     },
-    "note_39": {
+    "note_40": {
       "x": 40,
       "y": 24
     },
-    "plot_84": {
+    "plot_86": {
       "x": 820,
       "y": 314
     }
@@ -357,5 +357,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "632": [
+    "653": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "633": [
+    "654": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "634": [
+    "655": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "635": [
+    "656": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 632,
+      "id": 653,
       "name": "x",
-      "data": 632,
+      "data": 653,
       "type": "number",
-      "tableProcessGUId": "1a6dbfe8-7ddb-4d8c-b418-8ed137827f95",
+      "tableProcessGUId": "0d9ce267-338d-4a5c-a51c-74f7bf24b018",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 633,
+      "id": 654,
       "name": "y",
-      "data": 633,
+      "data": 654,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 634,
-      "name": "binnedx_50",
-      "data": 634,
+      "id": 655,
+      "name": "binnedx_52",
+      "data": 655,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "ef487756-a731-490a-8ab8-ee79de147ab7",
+      "tableProcessGUId": "0bf9999a-f056-456d-b2e7-4fbcdb6be952",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 635,
-      "name": "binnedy_633_50",
-      "data": 635,
+      "id": 656,
+      "name": "binnedy_654_52",
+      "data": 656,
       "type": "number",
-      "tableProcessGUId": "ef487756-a731-490a-8ab8-ee79de147ab7",
+      "tableProcessGUId": "0bf9999a-f056-456d-b2e7-4fbcdb6be952",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 103,
+      "id": 105,
       "name": "Bin Data: data + fit",
       "x": 60,
       "y": 255,
@@ -285,9 +285,9 @@
         "data": [
           {
             "x": {
-              "id": 636,
+              "id": 657,
               "name": "x",
-              "refId": 632,
+              "refId": 653,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -296,9 +296,9 @@
               "processes": []
             },
             "y": {
-              "id": 637,
+              "id": 658,
               "name": "y",
-              "refId": 633,
+              "refId": 654,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -309,14 +309,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -324,9 +324,9 @@
           },
           {
             "x": {
-              "id": 638,
-              "name": "binnedx_50",
-              "refId": 634,
+              "id": 659,
+              "name": "binnedx_52",
+              "refId": 655,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -336,9 +336,9 @@
               "processes": []
             },
             "y": {
-              "id": 639,
-              "name": "binnedy_633_50",
-              "refId": 635,
+              "id": 660,
+              "name": "binnedy_654_52",
+              "refId": 656,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -349,14 +349,14 @@
             "label": "Bin Data",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -380,7 +380,7 @@
       }
     },
     {
-      "id": 104,
+      "id": 106,
       "name": "Bin Data: values",
       "x": 630,
       "y": 255,
@@ -413,8 +413,8 @@
       },
       "plot": {
         "columnRefs": [
-          633,
-          635
+          654,
+          656
         ],
         "showCol": [
           true,
@@ -429,7 +429,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 49,
+      "id": 51,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -439,19 +439,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 632
+          "result": 653
         }
       },
       "refTPId": null
     },
     {
-      "id": 50,
+      "id": 52,
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 632,
+        "xIN": 653,
         "yIN": [
-          633
+          654
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -462,8 +462,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 634,
-          "binnedy_633": 635
+          "binnedx": 655,
+          "binnedy_654": 656
         }
       },
       "refTPId": null
@@ -474,7 +474,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_49",
+      "id": "note_50",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
       "x": 40,
       "y": 24,
@@ -508,27 +508,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_633": {
+    "data_654": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_49": {
+    "tableprocess_51": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_50": {
+    "tableprocess_52": {
       "x": 440,
       "y": 314
     },
-    "plot_103": {
+    "plot_105": {
       "x": 820,
       "y": 314
     },
-    "plot_104": {
+    "plot_106": {
       "x": 820,
       "y": 814
     },
-    "note_49": {
+    "note_50": {
       "x": 40,
       "y": 24
     }
@@ -592,5 +592,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

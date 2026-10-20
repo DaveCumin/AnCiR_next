@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "537": [
+    "558": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "538": [
+    "559": [
       96.80303970146284,
       90.24703944100128,
       90.63500417308552,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 537,
+      "id": 558,
       "name": "hour",
-      "data": 537,
+      "data": 558,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 538,
+      "id": 559,
       "name": "activity",
-      "data": 538,
+      "data": 559,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 79,
+      "id": 81,
       "name": "Activity correlogram",
       "x": 60,
       "y": 255,
@@ -441,9 +441,9 @@
         "data": [
           {
             "x": {
-              "id": 539,
+              "id": 560,
               "name": "hour",
-              "refId": 537,
+              "refId": 558,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -452,9 +452,9 @@
               "processes": []
             },
             "y": {
-              "id": 540,
+              "id": 561,
               "name": "activity",
-              "refId": 538,
+              "refId": 559,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -498,7 +498,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_37",
+      "id": "note_38",
       "text": "Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.",
       "x": 40,
       "y": 24,
@@ -532,19 +532,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_537": {
+    "data_558": {
       "x": 60,
       "y": 314
     },
-    "data_538": {
+    "data_559": {
       "x": 60,
       "y": 814
     },
-    "note_37": {
+    "note_38": {
       "x": 40,
       "y": 24
     },
-    "plot_79": {
+    "plot_81": {
       "x": 820,
       "y": 314
     }
@@ -608,5 +608,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

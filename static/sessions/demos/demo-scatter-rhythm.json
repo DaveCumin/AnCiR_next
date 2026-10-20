@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "497": [
+    "518": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "498": [
+    "519": [
       15.795844354091358,
       18.101592110952595,
       15.063616671903457,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 497,
+      "id": 518,
       "name": "hour",
-      "data": 497,
+      "data": 518,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 498,
+      "id": 519,
       "name": "activity",
-      "data": 498,
+      "data": 519,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 70,
+      "id": 72,
       "name": "Activity vs hour",
       "x": 60,
       "y": 255,
@@ -442,9 +442,9 @@
         "data": [
           {
             "x": {
-              "id": 499,
+              "id": 520,
               "name": "hour",
-              "refId": 497,
+              "refId": 518,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -453,9 +453,9 @@
               "processes": []
             },
             "y": {
-              "id": 500,
+              "id": 521,
               "name": "activity",
-              "refId": 498,
+              "refId": 519,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -503,7 +503,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_29",
+      "id": "note_30",
       "text": "Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.",
       "x": 40,
       "y": 24,
@@ -537,19 +537,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_497": {
+    "data_518": {
       "x": 60,
       "y": 314
     },
-    "data_498": {
+    "data_519": {
       "x": 60,
       "y": 814
     },
-    "note_29": {
+    "note_30": {
       "x": 40,
       "y": 24
     },
-    "plot_70": {
+    "plot_72": {
       "x": 820,
       "y": 314
     }
@@ -613,5 +613,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

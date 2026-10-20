@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "596": [
+    "617": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "597": [
+    "618": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "598": [
+    "619": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 596,
+      "id": 617,
       "name": "x",
-      "data": 596,
+      "data": 617,
       "type": "number",
-      "tableProcessGUId": "91158eeb-ddde-4b0a-87bb-471a1ef8d212",
+      "tableProcessGUId": "142108d0-184d-4e8e-a88b-9cccad694ee0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 597,
+      "id": 618,
       "name": "y",
-      "data": 597,
+      "data": 618,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 598,
+      "id": 619,
       "name": "reference",
-      "data": 598,
+      "data": 619,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,20 +192,20 @@
       "processes": []
     },
     {
-      "id": 599,
+      "id": 620,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_597",
+      "producerPort": "out_618",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 93,
+      "id": 95,
       "name": "Filter: before vs after",
       "x": 60,
       "y": 255,
@@ -280,9 +280,9 @@
         "data": [
           {
             "x": {
-              "id": 600,
+              "id": 621,
               "name": "x",
-              "refId": 596,
+              "refId": 617,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,9 +291,9 @@
               "processes": []
             },
             "y": {
-              "id": 601,
+              "id": 622,
               "name": "y",
-              "refId": 597,
+              "refId": 618,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -304,14 +304,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -319,9 +319,9 @@
           },
           {
             "x": {
-              "id": 602,
+              "id": 623,
               "name": "x",
-              "refId": 596,
+              "refId": 617,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -330,9 +330,9 @@
               "processes": []
             },
             "y": {
-              "id": 603,
+              "id": 624,
               "name": "Filter result",
-              "refId": 599,
+              "refId": 620,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -343,14 +343,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#BE796B",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -374,7 +374,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 96,
       "name": "Filter: values",
       "x": 630,
       "y": 255,
@@ -407,8 +407,8 @@
       },
       "plot": {
         "columnRefs": [
-          597,
-          599
+          618,
+          620
         ],
         "showCol": [
           true,
@@ -423,7 +423,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 44,
+      "id": 46,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -433,7 +433,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 596
+          "result": 617
         }
       },
       "refTPId": null
@@ -444,7 +444,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_44",
+      "id": "note_45",
       "text": "Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.",
       "x": 40,
       "y": 24,
@@ -461,15 +461,15 @@
       "args": {
         "conditions": [
           {
-            "byColId": 598,
+            "byColId": 619,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          597
+          618
         ],
-        "parentColId": 597
+        "parentColId": 618
       }
     }
   ],
@@ -496,15 +496,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_597": {
+    "data_618": {
       "x": 60,
       "y": 314
     },
-    "data_598": {
+    "data_619": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_44": {
+    "tableprocess_46": {
       "x": 60,
       "y": 1314
     },
@@ -512,15 +512,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_93": {
+    "plot_95": {
       "x": 820,
       "y": 314
     },
-    "plot_94": {
+    "plot_96": {
       "x": 820,
       "y": 814
     },
-    "note_44": {
+    "note_45": {
       "x": 40,
       "y": 24
     }
@@ -584,5 +584,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }

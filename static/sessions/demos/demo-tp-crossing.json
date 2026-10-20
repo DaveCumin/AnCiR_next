@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "660": [
+    "681": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "661": [
+    "682": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "662": [
+    "683": [
       1,
       1,
       1,
@@ -156,20 +156,20 @@
       1,
       1
     ],
-    "663": [
+    "684": [
       1,
       23,
       47
     ],
-    "664": [
+    "685": [
       3
     ]
   },
   "data": [
     {
-      "id": 660,
+      "id": 681,
       "name": "Crossing input 1",
-      "data": 660,
+      "data": 681,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -178,9 +178,9 @@
       "processes": []
     },
     {
-      "id": 661,
+      "id": 682,
       "name": "Crossing input 2",
-      "data": 661,
+      "data": 682,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -189,33 +189,33 @@
       "processes": []
     },
     {
-      "id": 662,
-      "name": "breach_58",
-      "data": 662,
+      "id": 683,
+      "name": "breach_60",
+      "data": 683,
       "type": "number",
-      "tableProcessGUId": "8235995b-ff8a-4457-9886-334062a7da23",
+      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 663,
-      "name": "crossing_58",
-      "data": 663,
+      "id": 684,
+      "name": "crossing_60",
+      "data": 684,
       "type": "number",
-      "tableProcessGUId": "8235995b-ff8a-4457-9886-334062a7da23",
+      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 664,
-      "name": "count_58",
-      "data": 664,
+      "id": 685,
+      "name": "count_60",
+      "data": 685,
       "type": "number",
-      "tableProcessGUId": "8235995b-ff8a-4457-9886-334062a7da23",
+      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -224,7 +224,7 @@
   ],
   "plots": [
     {
-      "id": 112,
+      "id": 114,
       "name": "Crossing: signal + detections",
       "x": 60,
       "y": 255,
@@ -299,9 +299,9 @@
         "data": [
           {
             "x": {
-              "id": 665,
+              "id": 686,
               "name": "Crossing input 1",
-              "refId": 660,
+              "refId": 681,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -310,9 +310,9 @@
               "processes": []
             },
             "y": {
-              "id": 666,
+              "id": 687,
               "name": "Crossing input 2",
-              "refId": 661,
+              "refId": 682,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -323,14 +323,14 @@
             "label": "Signal",
             "yAxis": "left",
             "line": {
-              "colour": null,
+              "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": null,
+              "colour": "#234154",
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -400,7 +400,7 @@
               "at": {
                 "columns": [
                   {
-                    "refId": 663
+                    "refId": 684
                   }
                 ],
                 "typed": []
@@ -411,7 +411,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 115,
       "name": "Crossing result",
       "x": 630,
       "y": 255,
@@ -444,11 +444,11 @@
       },
       "plot": {
         "columnRefs": [
-          660,
-          661,
-          662,
-          663,
-          664
+          681,
+          682,
+          683,
+          684,
+          685
         ],
         "showCol": [
           true,
@@ -466,19 +466,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 58,
+      "id": 60,
       "name": "Crossing",
       "displayName": "Crossing",
       "args": {
-        "xIN": 660,
+        "xIN": 681,
         "yIN": [
-          661
+          682
         ],
         "thresholdIN": [],
         "groups": [
           [
             {
-              "target": 661,
+              "target": 682,
               "isOperator": "<",
               "source": -1,
               "value": 20
@@ -487,9 +487,9 @@
         ],
         "persistence": 2,
         "out": {
-          "breach": 662,
-          "crossing": 663,
-          "count": 664
+          "breach": 683,
+          "crossing": 684,
+          "count": 685
         }
       },
       "refTPId": null
@@ -500,7 +500,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_57",
+      "id": "note_58",
       "text": "Finds when a rule over one or more series first (and next) becomes sustainedly true. It is the detection step for both set-point alerts (e.g. temperature below 33 for 6 h) and baseline-relative monitoring (a rolling rhythm metric outside its baseline mean ± 3 SD). Build the rule from conditions (series above/below a typed value or a wired scalar threshold) combined as OR of AND-groups; a condition on x acts as a gate. Persistence requires the rule to hold continuously (in x units when x is wired, hours when x is a time column, else consecutive values) before a crossing fires, and the rule must go false again before the next one can fire, so one long excursion is one crossing. Outputs: every crossing's x value (or index), their count, and the 0/1 breach series; missing data, or a gap in x of more than 1.5 sampling intervals (rows absent from the file), breaks a persistence run rather than completing it. In the demo, read the crossings as the moments the activity rhythm dips below the cutoff for the required duration: one per trough, re-armed in between. Statistical-process-control style rule detection; see also Threshold for the simple per-sample 0/1 case.",
       "x": 40,
       "y": 24,
@@ -534,27 +534,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_660": {
+    "data_681": {
       "x": 60,
       "y": 314
     },
-    "data_661": {
+    "data_682": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_58": {
+    "tableprocess_60": {
       "x": 440,
       "y": 314
     },
-    "plot_112": {
+    "plot_114": {
       "x": 820,
       "y": 314
     },
-    "plot_113": {
+    "plot_115": {
       "x": 820,
       "y": 814
     },
-    "note_57": {
+    "note_58": {
       "x": 40,
       "y": 24
     }
@@ -618,5 +618,5 @@
       "No"
     ]
   },
-  "version": "β.82.35"
+  "version": "β.82.49"
 }
