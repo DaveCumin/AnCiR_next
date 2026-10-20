@@ -392,7 +392,18 @@ function dataSectionLines(session, dataAsCsv) {
 	// in for back-compat (mirrors the CLI).
 	const tableProcesses = session.tableProcesses ?? [];
 	const legacyTables = session.tables ?? [];
-	const plots = session.plots ?? [];
+	// The colour the app draws each plot series in ({ plotId: [{ line, points }] }), added by
+	// the caller (exportSeriesColours in core/exportSeriesColours.js) because the automatic
+	// colour comes from the session's appearance map, which this file cannot read. Carried on
+	// each plot as `seriesColours` for the runtime's _resolved_series_colours; a saved colour
+	// still wins there.
+	const seriesColours = session.seriesColours ?? {};
+	const plots = (session.plots ?? []).map((plot) => {
+		const colours = plot?.id != null ? seriesColours[plot.id] : null;
+		return Array.isArray(colours) && colours.length > 0
+			? { ...plot, seriesColours: colours }
+			: plot;
+	});
 	const storedValues = session.storedValues ?? {};
 
 	// The names the app SHOWS where they differ from the stored names ({ id: label }, a node

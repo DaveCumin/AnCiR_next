@@ -2,6 +2,7 @@
 	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { exportColumnLabels } from '$lib/core/columnLabels.js';
+	import { exportSeriesColours } from '$lib/core/exportSeriesColours.js';
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { zipSync, strToU8 } from 'fflate';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
@@ -107,6 +108,8 @@
 			const session = JSON.parse(outputCoreAsJson());
 			// The names the app shows, for the script's plot legends (not saved in sessions).
 			session.columnLabels = exportColumnLabels();
+			// The colour each plot series is drawn in (its column's pinned colour when it saved none).
+			session.seriesColours = exportSeriesColours();
 			const mod = await loadPythonExporter();
 			const files = exportFilesFrom(
 				mod,

@@ -8998,6 +8998,434 @@ def _paired_finite(x_vals, y_vals):
     return out_x, out_y
 
 
+# ---- Colour by: colour scales, modes, ranges and buckets ---------------------------------
+#
+# Ports of components/plotbits/colormaps.js (the stop tables and colormapRGB),
+# components/plotbits/encodings.js (modes, range, buckets), encodingHost.js (effective mode
+# and map, colour bar title and ticks) and colouredLine.js (coloured line segments), so an
+# exported plot colours every mark exactly as the app does (colour-by plan 2026-10-20,
+# section 3.10). The colours are the app's 64 BUCKET colours, not a continuous map: bucket
+# b of a map is colormapRGB(map, (b + 0.5) / 64), and a mark's bucket is
+# min(63, floor(t * 64)) of its position t in the range.
+#
+# The stop tables are the app's own (viridis, magma, twilight_shifted and greysCyclic come
+# from src/lib/components/plotbits/colormapStops.json, sampled from matplotlib by
+# tools/gen_colormap_stops.py; greys and rdbu are the app's ramps). They are copied here so
+# the runtime stands alone; tools/test_plot_colour_by.py fails if they drift from the app.
+
+COLOUR_BUCKETS = 64
+NO_COLOUR_VALUE = -1
+
+COLORMAPS = {
+    'viridis': (
+        (68, 1, 84), (70, 7, 90), (71, 13, 96), (71, 19, 101), (72, 24, 106), (72, 29, 111),
+        (72, 35, 116), (72, 40, 120), (71, 45, 123), (70, 50, 126), (69, 55, 129),
+        (68, 59, 132), (66, 64, 134), (64, 69, 136), (62, 73, 137), (61, 78, 138),
+        (59, 82, 139), (57, 86, 140), (55, 91, 141), (53, 95, 141), (51, 99, 141),
+        (49, 103, 142), (47, 107, 142), (46, 111, 142), (44, 114, 142), (42, 118, 142),
+        (41, 122, 142), (39, 126, 142), (38, 130, 142), (37, 133, 142), (35, 137, 142),
+        (34, 141, 141), (33, 145, 140), (31, 148, 140), (31, 152, 139), (30, 156, 137),
+        (31, 160, 136), (32, 163, 134), (34, 167, 133), (37, 171, 130), (40, 174, 128),
+        (45, 178, 125), (50, 182, 122), (56, 185, 119), (63, 188, 115), (70, 192, 111),
+        (78, 195, 107), (86, 198, 103), (94, 201, 98), (103, 204, 92), (112, 207, 87),
+        (122, 209, 81), (132, 212, 75), (142, 214, 69), (152, 216, 62), (162, 218, 55),
+        (173, 220, 48), (184, 222, 41), (194, 223, 35), (205, 225, 29), (216, 226, 25),
+        (226, 228, 24), (236, 229, 27), (246, 230, 32), (253, 231, 37),
+    ),
+    'magma': (
+        (0, 0, 4), (2, 1, 9), (3, 3, 18), (6, 5, 26), (10, 8, 34), (14, 11, 43), (19, 13, 52),
+        (24, 15, 61), (29, 17, 71), (34, 17, 80), (41, 17, 90), (47, 17, 99), (54, 16, 107),
+        (61, 15, 113), (68, 15, 118), (74, 16, 121), (81, 18, 124), (87, 21, 126),
+        (93, 23, 127), (100, 26, 128), (106, 28, 129), (112, 31, 129), (118, 33, 129),
+        (124, 35, 130), (131, 38, 129), (137, 40, 129), (144, 42, 129), (150, 44, 128),
+        (156, 46, 127), (163, 48, 126), (170, 51, 125), (176, 53, 123), (183, 55, 121),
+        (189, 57, 119), (196, 60, 117), (202, 62, 114), (208, 65, 111), (214, 69, 108),
+        (220, 72, 105), (226, 77, 102), (231, 82, 99), (235, 87, 96), (239, 93, 94),
+        (242, 100, 92), (245, 107, 92), (247, 114, 92), (249, 121, 93), (250, 129, 95),
+        (252, 137, 97), (252, 144, 101), (253, 152, 105), (254, 159, 109), (254, 167, 114),
+        (254, 174, 119), (254, 182, 124), (254, 189, 130), (254, 196, 136), (254, 204, 143),
+        (254, 211, 149), (253, 218, 156), (253, 226, 163), (253, 233, 170), (252, 240, 178),
+        (252, 247, 185), (252, 253, 191),
+    ),
+    'greys': (
+        (247, 247, 247), (217, 217, 217), (189, 189, 189), (150, 150, 150), (115, 115, 115),
+        (82, 82, 82), (55, 55, 55), (28, 28, 28), (0, 0, 0),
+    ),
+    'rdbu': (
+        (5, 48, 97), (42, 104, 172), (110, 160, 205), (185, 210, 230), (247, 247, 247),
+        (244, 197, 173), (214, 118, 94), (178, 47, 46), (103, 0, 31),
+    ),
+    'twilight_shifted': (
+        (48, 20, 55), (51, 17, 61), (56, 17, 69), (62, 17, 80), (69, 19, 92), (76, 22, 105),
+        (81, 27, 119), (86, 34, 132), (89, 42, 143), (92, 52, 153), (93, 61, 161),
+        (94, 71, 167), (94, 81, 173), (95, 90, 177), (95, 100, 181), (96, 109, 184),
+        (98, 118, 186), (100, 126, 188), (104, 135, 190), (108, 143, 191), (114, 151, 193),
+        (121, 159, 194), (129, 166, 195), (138, 174, 197), (149, 181, 199), (160, 188, 201),
+        (172, 194, 204), (184, 201, 208), (196, 206, 212), (206, 211, 217), (215, 215, 221),
+        (222, 217, 225), (226, 217, 226), (225, 216, 221), (223, 212, 214), (220, 206, 203),
+        (216, 199, 190), (213, 191, 177), (209, 182, 163), (207, 173, 150), (204, 163, 137),
+        (202, 154, 125), (200, 144, 115), (197, 134, 106), (194, 124, 99), (191, 114, 93),
+        (187, 105, 88), (183, 95, 85), (178, 86, 82), (172, 77, 81), (166, 69, 80),
+        (160, 61, 80), (152, 53, 80), (144, 46, 80), (135, 39, 80), (126, 34, 80),
+        (116, 30, 79), (105, 26, 77), (95, 23, 74), (84, 21, 70), (74, 19, 66), (65, 18, 61),
+        (58, 17, 58), (52, 18, 56), (48, 20, 55),
+    ),
+    'greysCyclic': (
+        (31, 31, 31), (32, 32, 32), (35, 35, 35), (39, 39, 39), (44, 44, 44), (50, 50, 50),
+        (55, 55, 55), (62, 62, 62), (68, 68, 68), (75, 75, 75), (81, 81, 81), (88, 88, 88),
+        (94, 94, 94), (101, 101, 101), (108, 108, 108), (114, 114, 114), (121, 121, 121),
+        (127, 127, 127), (134, 134, 134), (141, 141, 141), (148, 148, 148), (155, 155, 155),
+        (161, 161, 161), (169, 169, 169), (176, 176, 176), (184, 184, 184), (190, 190, 190),
+        (198, 198, 198), (204, 204, 204), (210, 210, 210), (215, 215, 215), (219, 219, 219),
+        (220, 220, 220), (218, 218, 218), (215, 215, 215), (209, 209, 209), (202, 202, 202),
+        (195, 195, 195), (187, 187, 187), (179, 179, 179), (171, 171, 171), (164, 164, 164),
+        (156, 156, 156), (149, 149, 149), (141, 141, 141), (134, 134, 134), (127, 127, 127),
+        (120, 120, 120), (114, 114, 114), (107, 107, 107), (101, 101, 101), (95, 95, 95),
+        (88, 88, 88), (82, 82, 82), (76, 76, 76), (70, 70, 70), (64, 64, 64), (58, 58, 58),
+        (53, 53, 53), (47, 47, 47), (42, 42, 42), (37, 37, 37), (34, 34, 34), (32, 32, 32),
+        (31, 31, 31),
+    ),
+}
+
+# colormaps.js COLORMAP_META: the map monochrome swaps each map to.
+COLORMAP_MONOCHROME = {'viridis': 'greys', 'magma': 'greys', 'greys': 'greys', 'rdbu': 'greys',
+                       'twilight_shifted': 'greysCyclic', 'greysCyclic': 'greysCyclic'}
+CYCLIC_COLORMAPS = ('twilight_shifted', 'greysCyclic')
+DEFAULT_COLORMAP = 'viridis'
+DEFAULT_CYCLIC_COLORMAP = 'twilight_shifted'
+# Scatterplot.svelte COLOUR_BY_SWATCH: the legend swatch of a series coloured by a column.
+COLOUR_BY_SWATCH = 'rgb(140, 140, 140)'
+COLOUR_ENCODING_MODES = ('value', 'hourOfDay', 'dayOfYear', 'daysSinceStart')
+WRAPPED_HOURS_WARNING = ('This column has no clock time, so hour of day is its hours since '
+                         'start, wrapped at 24 h.')
+NO_DATE_WARNING = 'Day of year needs a time column (or hours from a time origin).'
+_HOURS_PER_DAY = 24
+
+
+def _js_round(v):
+    """JS Math.round: halves round up (towards +infinity)."""
+    return math.floor(v + 0.5)
+
+
+def colormap_rgb(name, t):
+    """colormaps.js colormapRGB: the map at t in [0, 1] (clamped; NaN is 0) as (r, g, b)
+    integers, linearly interpolated between the two bracketing stops."""
+    stops = COLORMAPS.get(name) or COLORMAPS[DEFAULT_COLORMAP]
+    u = t if (isinstance(t, (int, float)) and math.isfinite(t)) else 0
+    u = 0 if u < 0 else (1 if u > 1 else u)
+    last = len(stops) - 1
+    scaled = u * last
+    i = min(last - 1, math.floor(scaled))
+    frac = scaled - i
+    a, b = stops[i], stops[i + 1]
+    return tuple(_js_round(a[k] + (b[k] - a[k]) * frac) for k in range(3))
+
+
+def bucket_colours(name, k=COLOUR_BUCKETS):
+    """encodings.js bucketColours: bucket b is the map at its centre, (b + 0.5) / K."""
+    return [colormap_rgb(name, (b + 0.5) / k) for b in range(k)]
+
+
+def _rgb_css(rgb):
+    return f'rgb({rgb[0]}, {rgb[1]}, {rgb[2]})'
+
+
+def _mpl_colour(c, fallback=None):
+    """A colour the app saved ('#rrggbb', '#rrggbbaa', 'rgb(r, g, b)', 'rgba(...)', a CSS
+    name) as matplotlib reads it, or `fallback` when there is none."""
+    if c is None or c == '':
+        return fallback
+    if isinstance(c, (tuple, list)):
+        return tuple(v / 255 for v in c[:3]) if any(v > 1 for v in c[:3]) else tuple(c)
+    s = str(c).strip()
+    m = re.fullmatch(r'rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)', s)
+    if m:
+        rgb = tuple(float(m.group(k)) / 255 for k in (1, 2, 3))
+        return rgb + (float(m.group(4)),) if m.group(4) is not None else rgb
+    return s
+
+
+def is_cyclic_mode(mode):
+    return mode == 'hourOfDay'
+
+
+def _has_clock(col_type, origin_ms):
+    return col_type == 'time' or (origin_ms is not None and math.isfinite(origin_ms))
+
+
+def encoding_modes_for(col_type, origin_ms=None):
+    """encodings.js encodingModesFor: the modes a column can be coloured by."""
+    if col_type == 'time':
+        return ['hourOfDay', 'dayOfYear', 'daysSinceStart']
+    if _has_clock(col_type, origin_ms):
+        return list(COLOUR_ENCODING_MODES)
+    return ['value', 'hourOfDay', 'daysSinceStart']
+
+
+def effective_colour_mode(stored, col_type, origin_ms=None):
+    """encodingHost.js effectiveColourMode: the stored mode when the column offers it, else
+    hour of day for a time column and the first offered mode for anything else."""
+    offered = encoding_modes_for(col_type, origin_ms)
+    if stored and stored != 'auto' and stored in offered:
+        return stored
+    return 'hourOfDay' if col_type == 'time' else offered[0]
+
+
+def effective_colormap(stored, mode, monochrome=False):
+    """encodingHost.js effectiveColormap: a stored map that suits the mode (cyclic for hour of
+    day, not cyclic otherwise), else the mode's default; monochrome swaps it for its grey
+    twin at draw time (the saved map is untouched)."""
+    cyclic = is_cyclic_mode(mode)
+    m = DEFAULT_CYCLIC_COLORMAP if cyclic else DEFAULT_COLORMAP
+    if stored and stored != 'auto' and stored in COLORMAPS and (stored in CYCLIC_COLORMAPS) == cyclic:
+        m = stored
+    return COLORMAP_MONOCHROME.get(m, 'greys') if monochrome else m
+
+
+def _colour_cell_number(v):
+    """encodings.js finiteOrNaN: a cell as a finite number, else NaN (no value)."""
+    if _js_invalid(v):
+        return _NAN
+    n = _js_number(v)
+    return n if math.isfinite(n) else _NAN
+
+
+def _colour_clock_ms(v, col_type, origin_ms):
+    """encodings.js clockMs: a time cell's epoch ms, or a number cell's hours after its time
+    origin, else NaN."""
+    n = _colour_cell_number(v)
+    if not math.isfinite(n):
+        return _NAN
+    if col_type == 'time':
+        return n
+    if origin_ms is not None and math.isfinite(origin_ms):
+        return origin_ms + n * _MS_PER_HOUR
+    return _NAN
+
+
+def day_of_year(ms, zone='utc'):
+    """encodings.js dayOfYear: 1 to 366, from the calendar date in `zone`."""
+    if ms is None or not math.isfinite(ms):
+        return _NAN
+    import datetime as _dt
+    try:
+        if not zone or zone in ('utc', 'UTC'):
+            d = _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc)
+        else:
+            from zoneinfo import ZoneInfo
+            d = _dt.datetime.fromtimestamp(ms / 1000, tz=ZoneInfo(zone))
+    except (OverflowError, OSError, ValueError):
+        return _NAN
+    return d.timetuple().tm_yday
+
+
+def encoding_values(mode, values, col_type='number', origin_ms=None, zone='utc'):
+    """encodings.js encodingValues: (the value each row is coloured by, warning). NaN is no
+    value."""
+    values = list(values or [])
+    if mode == 'hourOfDay':
+        if _has_clock(col_type, origin_ms):
+            return [clock_hour_of_day(_colour_clock_ms(v, col_type, origin_ms), zone)
+                    for v in values], None
+        out = []
+        for v in values:
+            h = _colour_cell_number(v)
+            out.append(math.fmod(math.fmod(h, 24) + 24, 24) if math.isfinite(h) else _NAN)
+        return out, WRAPPED_HOURS_WARNING
+    if mode == 'dayOfYear':
+        if not _has_clock(col_type, origin_ms):
+            return [_NAN] * len(values), NO_DATE_WARNING
+        return [day_of_year(_colour_clock_ms(v, col_type, origin_ms), zone) for v in values], None
+    if mode == 'daysSinceStart':
+        per_day = _MS_PER_DAY if col_type == 'time' else _HOURS_PER_DAY
+        nums = [_colour_cell_number(v) for v in values]
+        finite = [v for v in nums if math.isfinite(v)]
+        first = min(finite) if finite else math.inf
+        return [(v - first) / per_day if math.isfinite(v) else _NAN for v in nums], None
+    return [_colour_cell_number(v) for v in values], None
+
+
+def _number_or_none(v):
+    """Encoding.svelte numberOrNullIn: a finite number, else None (an automatic end)."""
+    if v is None or v == '' or isinstance(v, bool):
+        return None
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return None
+    return n if math.isfinite(n) else None
+
+
+def encoding_domain(value_arrays, mode=None, domain_in=None):
+    """encodings.js encodingDomain: {'lo', 'hi', 'cyclic', 'period'}. Hour of day is fixed
+    at [0, 24) and wraps; otherwise the finite min and max over EVERY array given, a manual
+    end overriding either."""
+    if is_cyclic_mode(mode):
+        return {'lo': 0, 'hi': _HOURS_PER_DAY, 'cyclic': True, 'period': _HOURS_PER_DAY}
+    lo, hi = math.inf, -math.inf
+    for arr in value_arrays or []:
+        for v in arr or []:
+            if isinstance(v, (int, float)) and math.isfinite(v):
+                lo = min(lo, v)
+                hi = max(hi, v)
+    manual = list(domain_in or [])
+    if len(manual) > 0 and _number_or_none(manual[0]) is not None:
+        lo = _number_or_none(manual[0])
+    if len(manual) > 1 and _number_or_none(manual[1]) is not None:
+        hi = _number_or_none(manual[1])
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        return {'lo': _NAN, 'hi': _NAN, 'cyclic': False, 'period': None}
+    return {'lo': lo, 'hi': hi, 'cyclic': False, 'period': None}
+
+
+def domain_position(v, domain):
+    """encodings.js domainPosition: t in [0, 1] (cyclic wraps, else clamps), NaN for no
+    value; a degenerate range puts every value at 0."""
+    if not (isinstance(v, (int, float)) and math.isfinite(v)) or not domain:
+        return _NAN
+    lo, hi = domain['lo'], domain['hi']
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        return _NAN
+    if domain.get('cyclic'):
+        period = domain.get('period') or (hi - lo)
+        if not (period > 0):
+            return _NAN
+        u = (v - lo) / period
+        return u - math.floor(u)
+    span = hi - lo
+    if span == 0:
+        return 0
+    t = (v - lo) / span
+    return 0 if t < 0 else (1 if t > 1 else t)
+
+
+def bucket_index(t, k=COLOUR_BUCKETS):
+    """encodings.js bucketIndex: min(K - 1, floor(t * K)), or NO_COLOUR_VALUE."""
+    if not (isinstance(t, (int, float)) and math.isfinite(t)):
+        return NO_COLOUR_VALUE
+    u = 0 if t < 0 else (1 if t > 1 else t)
+    return min(k - 1, math.floor(u * k))
+
+
+def colour_buckets(values, domain, k=COLOUR_BUCKETS):
+    """encodings.js colourBuckets: the bucket of every row."""
+    return [bucket_index(domain_position(v, domain), k) for v in values or []]
+
+
+def _zone_label(zone):
+    return 'UTC' if not zone or zone == 'utc' else str(zone)
+
+
+def colour_bar_title(mode, column_name='', zone='utc', wrapped=False):
+    """encodingHost.js colourBarTitle."""
+    if mode == 'hourOfDay':
+        return ('Hours since start, wrapped at 24 h' if wrapped
+                else f'Hour of day ({_zone_label(zone)})')
+    if mode == 'dayOfYear':
+        return f'Day of year ({_zone_label(zone)})'
+    if mode == 'daysSinceStart':
+        return 'Days since start'
+    return column_name or 'Value'
+
+
+def _js_number_to_string(x):
+    """JS String(number) for a finite float: the shortest round-trip digits, in positional
+    form for exponents -7 < e < 21 and exponential form outside (ECMA-262 Number::toString)."""
+    import decimal
+    if x == 0:
+        return '0'
+    if not math.isfinite(x):
+        return 'NaN' if math.isnan(x) else ('Infinity' if x > 0 else '-Infinity')
+    sign = '-' if x < 0 else ''
+    d = decimal.Decimal(repr(abs(x))).normalize()
+    _, digits, exp = d.as_tuple()
+    s = ''.join(str(v) for v in digits)
+    k = len(s)
+    n = k + exp
+    if k <= n <= 21:
+        out = s + '0' * (n - k)
+    elif 0 < n <= 21:
+        out = s[:n] + '.' + s[n:]
+    elif -6 < n <= 0:
+        out = '0.' + '0' * (-n) + s
+    else:
+        e = n - 1
+        mant = s if k == 1 else s[0] + '.' + s[1:]
+        out = f"{mant}e{'+' if e >= 0 else '-'}{abs(e)}"
+    return sign + out
+
+
+def _js_to_precision_number(v, p):
+    """Number(v.toPrecision(p)): v rounded to p significant figures, ties away from zero on
+    the exact binary value (as toPrecision rounds)."""
+    import decimal
+    d = decimal.Decimal(v)
+    if d == 0:
+        return 0.0
+    q = decimal.Decimal(1).scaleb(d.adjusted() - p + 1)
+    return float(d.quantize(q, rounding=decimal.ROUND_HALF_UP))
+
+
+def format_colour_value(v, mode):
+    """encodingHost.js formatColourValue: a colour value as the colour bar prints it."""
+    if not (isinstance(v, (int, float)) and math.isfinite(v)):
+        return 'no value'
+    if mode == 'hourOfDay':
+        total = _js_round(v * 60) % (24 * 60)
+        return f'{total // 60:02d}:{total % 60:02d}'
+    if mode == 'dayOfYear':
+        return _js_number_to_string(float(_js_round(v)))
+    if v == 0:
+        return '0'
+    return _js_number_to_string(_js_to_precision_number(v, 3))
+
+
+def colour_bar_ticks(domain, mode, manual_lo=False, manual_hi=False):
+    """encodingHost.js colourBarTicks: [(t, label)], t along the bar. Hour of day reads 0, 6,
+    12, 18, 24; otherwise both ends and the middle, a manual end marked <= or >=."""
+    if domain and domain.get('cyclic'):
+        return [(h / 24, str(h)) for h in (0, 6, 12, 18, 24)]
+    lo, hi = (domain or {}).get('lo', _NAN), (domain or {}).get('hi', _NAN)
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        return []
+    if lo == hi:
+        return [(0.5, format_colour_value(lo, mode))]
+    return [(0, ('≤ ' if manual_lo else '') + format_colour_value(lo, mode)),
+            (0.5, format_colour_value((lo + hi) / 2, mode)),
+            (1, ('≥ ' if manual_hi else '') + format_colour_value(hi, mode))]
+
+
+def coloured_line_segments(xs, ys, idx, k=COLOUR_BUCKETS, join_gaps=False):
+    """colouredLine.js colouredLineSegments: the line's segments as (start row, end row),
+    grouped by the colour of the STARTING row. groups[0] is "no value", groups[b + 1]
+    bucket b. Without joinGaps a segment needs both rows valid (a missing x or y breaks the
+    line); with it, each valid row joins the next valid row."""
+    groups = [[] for _ in range(k + 1)]
+    n = min(len(xs), len(ys))
+    n_idx = len(idx or [])
+
+    def group_of(i):
+        b = idx[i] if i < n_idx else -1
+        return b + 1 if 0 <= b < k else 0
+
+    if join_gaps:
+        prev = -1
+        for i in range(n):
+            if not (_js_plot_valid(xs[i]) and _js_plot_valid(ys[i])):
+                continue
+            if prev >= 0:
+                groups[group_of(prev)].append((prev, i))
+            prev = i
+    else:
+        prev_valid = n > 0 and _js_plot_valid(xs[0]) and _js_plot_valid(ys[0])
+        for i in range(1, n):
+            valid = _js_plot_valid(xs[i]) and _js_plot_valid(ys[i])
+            if valid and prev_valid:
+                groups[group_of(i - 1)].append((i - 1, i))
+            prev_valid = valid
+    return groups
+
+
 # ---- Series marks: a series' line and points as the app draws them -----------------------
 #
 # The app saves them as LineClass.toJSON {colour, strokeWidth, stroke, draw, joinGaps}
@@ -9077,14 +9505,34 @@ def _js_plot_valid(v):
         return False
 
 
-def _draw_series_marks(ax, x, y, series, index, label):
+def _resolved_series_colours(plot, index):
+    """The colours the APP resolved for series `index` of a plot ({'line', 'points'}), which
+    the export carries as `plot['seriesColours']` (core/exportSeriesColours.js): a series
+    with no saved colour takes its column's colour from the session's appearance map, not
+    its position, so matplotlib's positional palette would differ from the app."""
+    cols = (plot or {}).get('seriesColours') or []
+    entry = cols[index] if 0 <= index < len(cols) else None
+    return entry if isinstance(entry, dict) else {}
+
+
+def _x_numbers(ax, xs):
+    """x values as the axis's float coordinates (dates become matplotlib date numbers), for
+    artists such as LineCollection that do not convert units themselves."""
+    if not xs:
+        return []
+    ax.xaxis.update_units(xs)
+    return [float(v) for v in np.asarray(ax.convert_xunits(xs), dtype=float)]
+
+
+def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=None):
     """Draw one series' line, then its points, as Line.svelte and Points.svelte do, and
-    return the drawn artists (gids `series-<index>-line` / `series-<index>-points`).
+    return the drawn artists (gids `series-<index>-line` / `series-<index>-points`, plus
+    `series-<index>-points-novalue` for coloured points with no colour value).
 
     - `draw` false hides a mark; a missing key takes the class default.
-    - A colour left automatic (null) resolves to the same automatic colour for the line and
-      the points (`C<index>`, positional like the app's palette fallback), so one series is
-      one colour as in the app.
+    - Colour: the saved colour, else the colour the app resolved for the series
+      (`resolved`, from the session's appearance map; see _resolved_series_colours), else
+      `C<index>` (positional, as the app's last-resort palette fallback).
     - The line breaks at every row whose x or y is missing (d3 `defined(isValid)`) unless
       `joinGaps` is on, which drops those rows and bridges straight across. Fewer than two
       valid rows draw no line. No other gap rule exists (none in the app).
@@ -9092,16 +9540,56 @@ def _draw_series_marks(ax, x, y, series, index, label):
       butt caps and miter joins. The points have no outline (stroke="none").
     - zorder 2 for both, so series stack in the app's order (each series' line under its
       points) between the bands (0.5) and the reference lines (2.5).
-    The label goes on the line when it is drawn, else on the points."""
+    - Colour by (`colour_by` = {'idx': bucket per row, 'palette': the 64 bucket colours,
+      'line': colour the line too}): each point takes its row's bucket colour; a point with
+      no colour value is drawn in the series colour, underneath (Points.svelte draws "no
+      value" first, then the buckets in order). A coloured line is a LineCollection of
+      segments (colouredLine.js): each takes its starting row's colour (the series line
+      colour when that row has no value), solid, round caps and joins.
+    The label goes on the line when it is drawn, else on the points. That artist carries the
+    app's legend swatch (`_ancir_legend_handle`: the line with the marker on it, the points
+    grey when coloured by a column), which _legend_with_overlays uses in its place."""
+    from matplotlib.lines import Line2D
     line = _with_defaults(series.get('line'), _LINE_DEFAULTS)
     points = _with_defaults(series.get('points'), _POINTS_DEFAULTS)
+    resolved = resolved or {}
     auto = f'C{index}'
-    drawn = {'line': None, 'points': None}
+    line_colour = _mpl_colour((series.get('line') or {}).get('colour')
+                              or resolved.get('line'), auto)
+    points_colour = _mpl_colour((series.get('points') or {}).get('colour')
+                                or resolved.get('points'), auto)
+    drawn = {'line': None, 'points': None, 'points_novalue': None}
     n = min(len(x), len(y))
     valid = [_js_plot_valid(x[i]) and _js_plot_valid(y[i]) for i in range(n)]
     rows = [i for i in range(n) if valid[i]]
-    if line['draw'] and len(rows) >= 2:
-        width = line['strokeWidth']
+    idx = list((colour_by or {}).get('idx') or [])
+    palette = [tuple(v / 255 for v in c) for c in ((colour_by or {}).get('palette') or [])]
+    coloured = colour_by is not None and bool(palette)
+    coloured_line = coloured and bool(colour_by.get('line'))
+
+    def bucket(i):
+        b = idx[i] if i < len(idx) else NO_COLOUR_VALUE
+        return b if 0 <= b < len(palette) else NO_COLOUR_VALUE
+
+    width = line['strokeWidth']
+    if line['draw'] and len(rows) >= 2 and coloured_line:
+        from matplotlib.collections import LineCollection
+        groups = coloured_line_segments(x, y, idx, k=len(palette), join_gaps=line['joinGaps'])
+        used = sorted({i for g in groups for seg in g for i in seg})
+        xnum = dict(zip(used, _x_numbers(ax, [x[i] for i in used])))
+        segs, colours = [], []
+        for g, members in enumerate(groups):
+            c = line_colour if g == 0 else palette[g - 1]
+            for a, b in members:
+                segs.append([(xnum[a], _js_number(y[a])), (xnum[b], _js_number(y[b]))])
+                colours.append(c)
+        lc = LineCollection(segs, colors=colours, linewidths=width * _PX_TO_PT,
+                            linestyles='solid', capstyle='round', joinstyle='round',
+                            zorder=2, gid=f'series-{index}-line', label=label)
+        ax.add_collection(lc, autolim=True)
+        ax.autoscale_view()
+        drawn['line'] = lc
+    elif line['draw'] and len(rows) >= 2:
         if line['joinGaps']:
             lx = [x[i] for i in rows]
             ly = [_js_number(y[i]) for i in rows]
@@ -9118,17 +9606,51 @@ def _draw_series_marks(ax, x, y, series, index, label):
                     lx.append(last)
                     ly.append(float('nan'))
         (drawn['line'],) = ax.plot(
-            lx, ly, color=(series.get('line') or {}).get('colour') or auto,
+            lx, ly, color=line_colour,
             linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(line['stroke'], width),
             solid_capstyle='butt', solid_joinstyle='miter', dash_capstyle='butt',
             dash_joinstyle='miter', zorder=2, gid=f'series-{index}-line', label=label)
+    marker, size = _scatter_marker(points['shape'], points['radius'])
     if points['draw'] and rows:
-        marker, size = _scatter_marker(points['shape'], points['radius'])
-        drawn['points'] = ax.scatter(
-            [x[i] for i in rows], [_js_number(y[i]) for i in rows],
-            color=(series.get('points') or {}).get('colour') or auto, marker=marker, s=size,
-            linewidths=0, edgecolors='none', zorder=2, gid=f'series-{index}-points',
-            label='_nolegend_' if drawn['line'] is not None else label)
+        point_label = '_nolegend_' if drawn['line'] is not None else label
+        common = dict(marker=marker, s=size, linewidths=0, edgecolors='none', zorder=2)
+        if coloured:
+            none_rows = [i for i in rows if bucket(i) == NO_COLOUR_VALUE]
+            # Buckets in index order, rows in data order within a bucket (one path each).
+            col_rows = sorted((i for i in rows if bucket(i) != NO_COLOUR_VALUE), key=bucket)
+            if none_rows:
+                drawn['points_novalue'] = ax.scatter(
+                    [x[i] for i in none_rows], [_js_number(y[i]) for i in none_rows],
+                    color=points_colour, gid=f'series-{index}-points-novalue',
+                    label=point_label if not col_rows else '_nolegend_', **common)
+            if col_rows:
+                drawn['points'] = ax.scatter(
+                    [x[i] for i in col_rows], [_js_number(y[i]) for i in col_rows],
+                    color=[palette[bucket(i)] for i in col_rows],
+                    gid=f'series-{index}-points', label=point_label, **common)
+        else:
+            drawn['points'] = ax.scatter(
+                [x[i] for i in rows], [_js_number(y[i]) for i in rows],
+                color=points_colour, gid=f'series-{index}-points', label=point_label,
+                **common)
+    # The legend swatch (Scatterplot getLegendItem, drawn by Legend.svelte): the line, with
+    # the series' marker at its centre when the points are shown too. Coloured by a column,
+    # the swatch is a neutral grey in the series' shape (the colour bar is the key).
+    show_line = drawn['line'] is not None
+    show_points = drawn['points'] is not None or drawn['points_novalue'] is not None
+    if show_line or show_points:
+        grey = _mpl_colour(COLOUR_BY_SWATCH)
+        handle = Line2D(
+            [], [], color=(grey if coloured_line else line_colour) if show_line else 'none',
+            linewidth=width * _PX_TO_PT if show_line else 0,
+            linestyle=('solid' if coloured_line else _overlay_dashes(line['stroke'], width))
+            if show_line else 'None',
+            marker=marker if show_points else 'None', markersize=math.sqrt(size),
+            markerfacecolor=grey if coloured else points_colour, markeredgecolor='none',
+            markeredgewidth=0)
+        owner = drawn['line'] or drawn['points'] or drawn['points_novalue']
+        owner._ancir_legend_handle = handle
+        drawn['legend_handle'] = handle
     return drawn
 
 
@@ -9804,6 +10326,9 @@ def _legend_with_overlays(ax, overlay_legend, extra_axes=()):
         h, l = other.get_legend_handles_labels()
         handles += h
         labels += l
+    # A series' swatch as the app draws it (line + marker, grey when coloured by a column),
+    # in place of the artist that carries its label (_draw_series_marks).
+    handles = [getattr(h, '_ancir_legend_handle', h) for h in handles]
     for h, l in overlay_legend or []:
         handles.append(h)
         labels.append(l)
@@ -9884,6 +10409,223 @@ def _scatter_x_context(p, columns_index):
     return {'any_time': any_time, 'origin_for': origin_for, 'extent': extent}
 
 
+def scatter_colour_encodings(plot, columns_index, zone=None):
+    """Scatterplot colour by, per series (None where it is off): what the app's
+    ScatterDataclass derives (colourActive, colourMode, colourEncoded, colourDomain,
+    colourIdx, colourMap, colourPalette, colourTitle), from the saved series alone.
+
+    - Active only while switched on AND wired to a column that exists.
+    - A number or bin column reads its clock from its time origin (resolveXOriginMs).
+    - Values in the display zone (`zone`, default the session's DISPLAY_TIMEZONE).
+    - The range spans every coloured series of the plot reading the same column the same
+      way; on a faceted plot (`facet`), every coloured series of that mode, so all panels
+      share one scale (Scatterplotclass.colourDomainFor). A manual end overrides.
+    - The map is resolved at draw time; monochrome (the figure's `style.monochrome`) swaps
+      it for its grey twin without touching the saved map."""
+    zone = DISPLAY_TIMEZONE if zone is None else zone
+    p = plot.get('plot', {}) or {}
+    data = p.get('data', []) or []
+    monochrome = ((plot.get('style') or {}).get('monochrome') is True)
+    facet = plot.get('facet') is True
+    out = []
+    for s in data:
+        enc = s.get('colourEncoding')
+        cb = s.get('colourBy')
+        ref = (cb or {}).get('refId')
+        col = (_resolve_plot_col(cb, columns_index)
+               if enc and isinstance(ref, int) and not isinstance(ref, bool) and ref >= 0
+               else None)
+        if col is None:
+            out.append(None)
+            continue
+        origin = None if col.type == 'time' else _scatter_x_origin_ms(col)
+        mode = effective_colour_mode(enc.get('mode'), col.type, origin)
+        values, warning = encoding_values(mode, col.get_data() or [], col.type, origin, zone)
+        cmap = effective_colormap(enc.get('colormap'), mode, monochrome)
+        out.append({
+            'ref': ref, 'mode': mode, 'values': values, 'warning': warning,
+            'colormap': cmap, 'palette': bucket_colours(cmap),
+            'domain_in': [_number_or_none(enc.get('domainMin')),
+                          _number_or_none(enc.get('domainMax'))],
+            'line': enc.get('colourLine') is True,
+            'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone,
+                                      wrapped=bool(warning) and mode == 'hourOfDay'),
+        })
+    for e in out:
+        if e is None:
+            continue
+        arrays = [o['values'] for o in out
+                  if o is not None and o['mode'] == e['mode'] and (facet or o['ref'] == e['ref'])]
+        e['domain'] = encoding_domain(arrays, mode=e['mode'], domain_in=e['domain_in'])
+        e['idx'] = colour_buckets(e['values'], e['domain'])
+    return out
+
+
+def _colour_drawn_by(series, enc):
+    """Whether a coloured series draws coloured marks: its points, or its line coloured too."""
+    line = _with_defaults(series.get('line'), _LINE_DEFAULTS)
+    points = _with_defaults(series.get('points'), _POINTS_DEFAULTS)
+    return points['draw'] or (line['draw'] and enc['line'])
+
+
+def scatter_colour_key(plot, columns_index, encodings, xy=None):
+    """Scatterplotclass.colourKey: the colour bar's content for the FIRST series whose points
+    (or line, coloured too) are coloured ({'colormap', 'domain', 'title', 'ticks',
+    'no_value'}), or None. `no_value` names the colour of the marks with no colour value on
+    the same scale: the points' colour of the first series with such a point, else the line
+    colour of the first with such a line segment."""
+    p = plot.get('plot', {}) or {}
+    data = p.get('data', []) or []
+    first = next((i for i, e in enumerate(encodings)
+                  if e is not None and _colour_drawn_by(data[i], e)), None)
+    if first is None:
+        return None
+    e = encodings[first]
+
+    def sig(o):
+        return (o['ref'], o['mode'], o['colormap'], repr(o['domain']['lo']),
+                repr(o['domain']['hi']), o['domain']['cyclic'])
+
+    using = [i for i, o in enumerate(encodings)
+             if o is not None and _colour_drawn_by(data[i], o) and sig(o) == sig(e)]
+
+    def point_missing(i):
+        o = encodings[i]
+        if not _with_defaults(data[i].get('points'), _POINTS_DEFAULTS)['draw']:
+            return False
+        xs, ys = (xy or {}).get(i, ([], []))
+        return any(_js_plot_valid(xs[r]) and _js_plot_valid(ys[r])
+                   and (r >= len(o['idx']) or o['idx'][r] == NO_COLOUR_VALUE)
+                   for r in range(min(len(xs), len(ys))))
+
+    def line_missing(i):
+        o = encodings[i]
+        line = _with_defaults(data[i].get('line'), _LINE_DEFAULTS)
+        if not (o['line'] and line['draw']):
+            return False
+        xs, ys = (xy or {}).get(i, ([], []))
+        return len(coloured_line_segments(xs, ys, o['idx'], join_gaps=line['joinGaps'])[0]) > 0
+
+    # A point with no value names the points' colour; else a line segment, the line's.
+    no_value = None
+    hit = next((i for i in using if point_missing(i)), None)
+    part = 'points'
+    if hit is None:
+        hit = next((i for i in using if line_missing(i)), None)
+        part = 'line'
+    if hit is not None:
+        colour = ((data[hit].get(part) or {}).get('colour')
+                  or _resolved_series_colours(plot, hit).get(part) or f'C{hit}')
+        no_value = {'colour': colour, 'label': 'no value'}
+    return {
+        'series': first, 'colormap': e['colormap'], 'palette': e['palette'],
+        'domain': e['domain'], 'title': e['title'],
+        'ticks': colour_bar_ticks(e['domain'], e['mode'],
+                                  manual_lo=e['domain_in'][0] is not None,
+                                  manual_hi=e['domain_in'][1] is not None),
+        'no_value': no_value,
+    }
+
+
+def colour_key_geometry(vertical, thickness, bar_len, font_px, tick_labels, label=None,
+                        no_value_label=None):
+    """ColourScale.svelte colourScaleGeometry: the key's footprint in px (bar, ticks, title
+    and "no value" entry), {'width', 'height', 'swatch'}."""
+    tick_w = max([len(t) for t in tick_labels] + [1]) * font_px * 0.6
+    rotate = bool(label) and len(str(label)) > 2
+    label_gap = ((font_px + 4) if rotate else len(str(label)) * font_px * 0.6 + 4) if label else 0
+    swatch = max(6, _js_round(font_px * 0.8))
+    nv_w = swatch + 4 + len(no_value_label) * font_px * 0.6 if no_value_label else 0
+    nv_h = 6 + max(swatch, font_px) if no_value_label else 0
+    width = max(thickness + 5 + tick_w + label_gap, nv_w) if vertical else max(bar_len, nv_w)
+    height = (bar_len + nv_h) if vertical else thickness + 3 + font_px + label_gap + nv_h
+    return {'width': width, 'height': height, 'swatch': swatch}
+
+
+def _draw_colour_key(ax, key, scale_json, has_right_axis=False):
+    """The colour bar (ColourScale.svelte, placed by encodingHost.placeColourKey) as a
+    matplotlib colorbar over the same 64 bucket colours, ticks and title, with a "no value"
+    swatch under it when a mark had no colour value. Its axes has gid 'colour-key'.
+
+    Lengths keep the app's px (1 CSS px = 1/96 in of the figure, 0.75 pt): bar thickness
+    `barThickness` (10), length `barLength` or the automatic min(150, plot extent). The
+    default position 'right' sits beside the plot at its top (past a right axis); an inside
+    corner or 'custom' sits over the data, inset by the legend margin, on a white backdrop
+    (`padding`, 8 px) as the app draws it. Text is the legend's 8 pt unless the key has its
+    own `fontSize` (px). `show` false draws none."""
+    import matplotlib.cm as mcm
+    from matplotlib.colors import ListedColormap, Normalize
+    from matplotlib.patches import Patch, Rectangle
+    scale = scale_json or {}
+    if key is None or scale.get('show', True) is False:
+        return None
+    fig = ax.figure
+    vertical = scale.get('orientation') != 'horizontal'
+    fw, fh = fig.get_size_inches()
+    pos = ax.get_position()
+    ax_w = max(1.0, pos.width * fw * 96)
+    ax_h = max(1.0, pos.height * fh * 96)
+    thickness = scale.get('barThickness') or 10
+    length = scale.get('barLength')
+    if not isinstance(length, (int, float)) or isinstance(length, bool):
+        length = max(30, min(ax_h if vertical else ax_w, 150))
+    margin = 10
+    font_px = scale.get('fontSize')
+    font_pt = font_px * _PX_TO_PT if isinstance(font_px, (int, float)) and font_px > 0 else 8
+    font_px = font_pt / _PX_TO_PT
+    geom = colour_key_geometry(vertical, thickness, length, font_px,
+                               [lab for _, lab in key['ticks']], key['title'],
+                               key['no_value']['label'] if key['no_value'] else None)
+    position = scale.get('position') or 'right'
+    w = (thickness if vertical else length) / ax_w
+    h = (length if vertical else thickness) / ax_h
+    inside = position != 'right'
+    pad = (scale.get('padding') if isinstance(scale.get('padding'), (int, float)) else 8) \
+        if inside else 0
+    box_w, box_h = (geom['width'] + 2 * pad) / ax_w, (geom['height'] + 2 * pad) / ax_h
+    mx, my = margin / ax_w, margin / ax_h
+    if not inside:
+        gap = (margin + (45 if has_right_axis else 0)) / ax_w
+        rect = [1 + gap, 1 - h, w, h]
+    else:
+        # Place the backdrop (the key plus its padding), then step in to the bar.
+        if position == 'custom':
+            fx = min(1, max(0, scale.get('customX') or 0))
+            fy = min(1, max(0, scale.get('customY') or 0))
+            bx = mx + max(0, 1 - box_w - 2 * mx) * fx
+            by_top = 1 - my - max(0, 1 - box_h - 2 * my) * fy
+        else:
+            left = position in ('topleft', 'bottomleft')
+            bottom = position in ('bottomleft', 'bottomright')
+            bx = mx if left else 1 - mx - box_w
+            by_top = (my + box_h) if bottom else 1 - my
+        ix, iy = pad / ax_w, pad / ax_h
+        rect = [bx + ix, by_top - iy - h, w, h]
+        ax.add_patch(Rectangle((bx, by_top - box_h), box_w, box_h, transform=ax.transAxes,
+                               facecolor='white', alpha=0.9, edgecolor='none', zorder=4.9,
+                               gid='colour-key-backdrop'))
+    cax = ax.inset_axes(rect)
+    cax.set_gid('colour-key')
+    sm = mcm.ScalarMappable(norm=Normalize(0, 1),
+                            cmap=ListedColormap([tuple(v / 255 for v in c)
+                                                 for c in key['palette']]))
+    cbar = fig.colorbar(sm, cax=cax, orientation='vertical' if vertical else 'horizontal')
+    cbar.set_ticks([t for t, _ in key['ticks']], labels=[lab for _, lab in key['ticks']])
+    cbar.ax.tick_params(labelsize=font_pt)
+    cbar.outline.set_linewidth(0.5)
+    if key['title']:
+        cbar.set_label(key['title'], fontsize=font_pt)
+    if key['no_value']:
+        # 6 px under the bar's end (ColourScale NO_VALUE_GAP), past the end tick's label.
+        below = (6 + font_px / 2) / (length if vertical else thickness)
+        cax.legend([Patch(facecolor=_mpl_colour(key['no_value']['colour']), edgecolor='none')],
+                   [key['no_value']['label']], loc='upper left',
+                   bbox_to_anchor=(0, -below) if vertical else (0, -(below + 1.5)),
+                   frameon=False, fontsize=font_pt, handlelength=0.9, handleheight=0.9,
+                   handletextpad=0.4, borderaxespad=0, borderpad=0)
+    return cbar
+
+
 def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     """Series may target the left or right Y axis (`yAxis: 'right'`).
     Each series may show points and/or a line. A number x series on a plot that also has
@@ -9892,6 +10634,8 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     night bands) are drawn as the app draws them (_draw_overlays)."""
     p = plot.get('plot', {})
     xctx = _scatter_x_context(p, columns_index)
+    encodings = scatter_colour_encodings(plot, columns_index)
+    xy = {}
     used_right = False
     for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
@@ -9913,7 +10657,13 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         if series.get('yAxis') == 'right':
             used_right = True
         label = series.get('label') or _display_name(y_col)
-        _draw_series_marks(ax, x, y, series, index, label)
+        xy[index] = (x, y)
+        enc = encodings[index] if index < len(encodings) else None
+        _draw_series_marks(ax, x, y, series, index, label,
+                           resolved=_resolved_series_colours(plot, index),
+                           colour_by=None if enc is None else {
+                               'idx': enc['idx'], 'palette': enc['palette'],
+                               'line': enc['line']})
     # Overlay y channels read on the left axis while it carries data, else on the right
     # (Scatterplot overlayYAxis).
     series_list = p.get('data', []) or []
@@ -9923,6 +10673,8 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     is_time = xctx['any_time']
     xlims_in = p.get('xlimsIN')
     first_line = (series_list[0].get('line') or {}) if series_list else {}
+    first_colour = first_line.get('colour') or first_line.get('color') or (
+        _resolved_series_colours(plot, 0).get('line'))
 
     def x_value_for(col):
         # Scatterplot.overlayXValueFor: an hours-from-origin column lands on the time axis.
@@ -9936,7 +10688,7 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         ylog=bool(p.get('yLogScaleRight' if ov_ax is ax_right and ax_right is not None
                         else 'yLogScaleLeft')),
         legacy_night_bands=True,
-        series_colour=first_line.get('colour') or first_line.get('color'))
+        series_colour=first_colour)
     if is_time and xlims_in:
         # Manual x limits on a time axis are epoch ms; the date axis counts days.
         xlims_in = [None if v is None else _ms_to_datenum(v) for v in xlims_in]
@@ -9956,6 +10708,10 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     if (p.get('legend') or {}).get('show', False):
         _legend_with_overlays(ax_left, ov['legend'],
                               extra_axes=(ax_right,) if ax_right is not None else ())
+    # Colour by: the colour bar for the first coloured series (Scatterplotclass.colourKey).
+    _draw_colour_key(ax_left, scatter_colour_key(plot, columns_index, encodings, xy),
+                     p.get('colourScale'),
+                     has_right_axis=ax_right is not None and used_right)
 
 
 def plot_fft(plot, columns_index, ax):
@@ -9983,7 +10739,8 @@ def plot_fft(plot, columns_index, ax):
         drawn += [m for f, m in zip(fft['frequencies'], fft['magnitudes'])
                   if f > 0 or not show_period]
         _draw_series_marks(ax, xs, fft['magnitudes'], series, index,
-                           series.get('label') or _display_name(y_col))
+                           series.get('label') or _display_name(y_col),
+                           resolved=_resolved_series_colours(plot, index))
     # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
     # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
     # the magnitude axis only.
@@ -10043,8 +10800,10 @@ def plot_periodogram(plot, columns_index, ax):
         result = run_periodogram_calculation({'t': t, 'y': y, **params})
         drawn += list(result['y']) + list(result.get('threshold') or [])
         _draw_series_marks(ax, result['x'], result['y'], series, index,
-                           series.get('label') or _display_name(y_col))
-        colour = (series.get('line') or {}).get('colour')
+                           series.get('label') or _display_name(y_col),
+                           resolved=_resolved_series_colours(plot, index))
+        colour = _mpl_colour((series.get('line') or {}).get('colour')
+                             or _resolved_series_colours(plot, index).get('line'))
         if result.get('threshold') is not None:
             # The Sidak line is per fold (its df follows the occupied columns), so it is a
             # curve over period, not one horizontal value.
@@ -10055,7 +10814,8 @@ def plot_periodogram(plot, columns_index, ax):
     log = bool(p.get('logScale', False))
     first_line = ((p.get('data') or [{}])[0].get('line') or {})
     ov = _draw_overlays(ax, plot, columns_index,
-                        series_colour=first_line.get('colour') or first_line.get('color'),
+                        series_colour=(first_line.get('colour') or first_line.get('color')
+                                       or _resolved_series_colours(plot, 0).get('line')),
                         ylog=log)
     # An empty stored label is the per-method default (Periodogram.svelte defaultYLabel); an
     # inner from before AxisClass (no yAxis) drew a fixed "Power".
@@ -10083,7 +10843,8 @@ def plot_correlogram(plot, columns_index, ax):
             continue
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         _draw_series_marks(ax, ac['lags'], ac['correlations'], series, index,
-                           series.get('label') or _display_name(y_col))
+                           series.get('label') or _display_name(y_col),
+                           resolved=_resolved_series_colours(plot, index))
     ax.axhline(0, color='gray', linewidth=0.5)
     # Overlays widen the correlation axis only: the lag range is an analysis parameter.
     ov = _draw_overlays(ax, plot, columns_index)
