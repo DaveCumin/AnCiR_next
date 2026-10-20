@@ -398,11 +398,19 @@ function dataSectionLines(session, dataAsCsv) {
 	// each plot as `seriesColours` for the runtime's _resolved_series_colours; a saved colour
 	// still wins there.
 	const seriesColours = session.seriesColours ?? {};
+	// A plot saved without a figure style takes the session's template, as the app's Plot
+	// does on load (newFigureStyle(core.figureStyle)); the runtime reads `style` for the
+	// figure's type sizes and family.
+	const template =
+		session.figureStyle && typeof session.figureStyle === 'object' ? session.figureStyle : null;
 	const plots = (session.plots ?? []).map((plot) => {
 		const colours = plot?.id != null ? seriesColours[plot.id] : null;
-		return Array.isArray(colours) && colours.length > 0
-			? { ...plot, seriesColours: colours }
-			: plot;
+		let out = plot;
+		if (Array.isArray(colours) && colours.length > 0) out = { ...out, seriesColours: colours };
+		if (template && plot && typeof plot === 'object' && !plot.style) {
+			out = { ...out, style: template };
+		}
+		return out;
 	});
 	const storedValues = session.storedValues ?? {};
 

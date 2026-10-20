@@ -324,8 +324,20 @@ def test_actogram_export_reads_chosen_start_time(tmp_path):
     try:
         rt.plot_actogram(plot, cols, ax)
         n_rows = int(rows[-1][1])
-        top = [b.get_x() for b in ax.patches if b.get_y() == pytest.approx(n_rows - 1)]
-        assert min(top) == pytest.approx(12.0)
+        # Rows run down the plot area in px (Actogram.svelte); the top row's bars stand on
+        # its foot, one gap plus one row height down.
+        geom = rt.actogram_row_geometry(rt._axes_px(ax)[1], n_rows,
+                                        plot["plot"].get("spaceBetween", 2))
+        bars = next(c for c in ax.collections if c.get_gid() == "actogram-bars")
+        foot = geom["gap"] + geom["height"]
+        top = [p.vertices[:, 0].min() for p in bars.get_paths()
+               if p.vertices[:, 1].max() == pytest.approx(foot)]
+        # A bar rises by its value over the series' range ('overall'), so the series'
+        # smallest value draws nothing: the first drawn bar is the first larger one.
+        y_min = min(float(r[4]) for r in rows)
+        first = min(float(r[2]) for r in rows if r[1] == "1" and float(r[4]) > y_min)
+        assert min(top) >= 12.0
+        assert min(top) == pytest.approx(first)
     finally:
         plt.close(fig)
 

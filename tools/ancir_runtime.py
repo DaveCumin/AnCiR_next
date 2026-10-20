@@ -9524,6 +9524,13 @@ def _x_numbers(ax, xs):
     return [float(v) for v in np.asarray(ax.convert_xunits(xs), dtype=float)]
 
 
+# SVG joins a line's segments with a miter, but past its miter limit (4: a corner sharper
+# than about 29 degrees, the steep peaks and dips of a spectrum) with a bevel. Matplotlib's
+# Agg miter has no such fallback and leaves a spike there, so the bevel is used throughout:
+# exactly SVG's corner where the corner is sharp, and within half a pixel of it elsewhere.
+_SVG_LINE_JOIN = 'bevel'
+
+
 def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=None):
     """Draw one series' line, then its points, as Line.svelte and Points.svelte do, and
     return the drawn artists (gids `series-<index>-line` / `series-<index>-points`, plus
@@ -9537,7 +9544,8 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
       `joinGaps` is on, which drops those rows and bridges straight across. Fewer than two
       valid rows draw no line. No other gap rule exists (none in the app).
     - Widths, dashes and marker sizes keep the app's px lengths (_PX_TO_PT); SVG's default
-      butt caps and miter joins. The points have no outline (stroke="none").
+      butt caps and its miter joins as SVG draws them (_SVG_LINE_JOIN). The points have no
+      outline (stroke="none").
     - zorder 2 for both, so series stack in the app's order (each series' line under its
       points) between the bands (0.5) and the reference lines (2.5).
     - Colour by (`colour_by` = {'idx': bucket per row, 'palette': the 64 bucket colours,
@@ -9608,8 +9616,8 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
         (drawn['line'],) = ax.plot(
             lx, ly, color=line_colour,
             linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(line['stroke'], width),
-            solid_capstyle='butt', solid_joinstyle='miter', dash_capstyle='butt',
-            dash_joinstyle='miter', zorder=2, gid=f'series-{index}-line', label=label)
+            solid_capstyle='butt', solid_joinstyle=_SVG_LINE_JOIN, dash_capstyle='butt',
+            dash_joinstyle=_SVG_LINE_JOIN, zorder=2, gid=f'series-{index}-line', label=label)
     marker, size = _scatter_marker(points['shape'], points['radius'])
     if points['draw'] and rows:
         point_label = '_nolegend_' if drawn['line'] is not None else label
@@ -10169,12 +10177,15 @@ def _datenum_to_ms(num):
 
 def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
                    x_value_for=None, x_is_time=False, x_data_extent=None, xlims_in=None,
-                   xlog=False, ylog=False, legacy_night_bands=False, series_colour=None):
+                   xlog=False, ylog=False, legacy_night_bands=False, series_colour=None,
+                   x_domain=None):
     """Draw a plot's overlays onto `ax` (call it after the series, before the manual limits
     are applied). `host` is the plot type (its OVERLAY_CAPABILITIES entry; defaults to
     plot['type']). Scatterplot only: `x_value_for(col)` (overlayXValueFor), `x_is_time` (x
     is epoch ms, drawn on a date axis), `x_data_extent` (the series' [floor min, ceil max] x,
-    for the repeating-band anchor), `xlims_in` (manual x limits) and `legacy_night_bands`.
+    for the repeating-band anchor), `xlims_in` (manual x limits), `legacy_night_bands` and
+    `x_domain(extent)` (the host's x domain, app units, given the other overlays' extent:
+    the visible range a repeating band is clamped to).
     Positions <= 0 on a log axis draw nothing, as in the app.
 
     Returns {'legend': [(handle, label)], 'artists': {index: [artist, ...]}, 'y_values':
@@ -10187,7 +10198,7 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
     caps = OVERLAY_CAPABILITIES.get(host or plot.get('type'))
     overlays = _overlays_from_plot(p, caps, legacy_night_bands=legacy_night_bands,
                                    x_is_time=x_is_time, series_colour=series_colour)
-    result = {'legend': [], 'artists': {}, 'y_values': []}
+    result = {'legend': [], 'artists': {}, 'y_values': [], 'extent': {}}
     if not overlays:
         return result
     domain = (caps or {}).get('domain', ('x', 'y'))
@@ -10257,6 +10268,15 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
 
     for i, g in geoms.items():
         result['artists'][i] = draw(i, overlays[i], g)
+    # The automatic domain's widening (the host's overlayExtent(axis)): every enabled
+    # overlay's domainExtension, merged per axis.
+    for i, g in geoms.items():
+        e = _overlay_domain_extension(overlays[i], g)
+        for k in ('x', 'y'):
+            if e.get(k):
+                cur = result['extent'].get(k)
+                result['extent'][k] = (list(e[k]) if cur is None
+                                       else [min(cur[0], e[k][0]), max(cur[1], e[k][1])])
 
     # Restore the axes a host never widens (an analysis range such as the period range).
     if saved_xlim is not None:
@@ -10270,14 +10290,17 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
         # The host's overlayContext(): the visible x range (manual limits win) and, for a
         # band that follows the data, the data minimum (Scatterplot xlimsUnpadded[0]: the
         # manual minimum, else the series' extent merged with the other overlays').
-        lo, hi = ax.get_xlim()
-        if x_is_time:
-            lo, hi = _datenum_to_ms(lo), _datenum_to_ms(hi)
         manual = list(xlims_in or [None, None]) + [None, None]
-        if manual[0] is not None:
-            lo = manual[0]
-        if manual[1] is not None:
-            hi = manual[1]
+        if x_domain is not None:
+            lo, hi = x_domain(result['extent'])
+        else:
+            lo, hi = ax.get_xlim()
+            if x_is_time:
+                lo, hi = _datenum_to_ms(lo), _datenum_to_ms(hi)
+            if manual[0] is not None:
+                lo = manual[0]
+            if manual[1] is not None:
+                hi = manual[1]
         # xExtent is null (anchor 0) when no series has a valid x, whatever the overlays say.
         anchor = 0
         if x_data_extent:
@@ -10316,9 +10339,10 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
     return result
 
 
-def _legend_with_overlays(ax, overlay_legend, extra_axes=()):
+def _legend_with_overlays(ax, overlay_legend, extra_axes=(), legend_json=None, look=None):
     """ax.legend over the series' labelled artists (on `ax` and any `extra_axes`, such as a
-    right y axis) followed by the overlays' entries, as the app's legend lists them."""
+    right y axis) followed by the overlays' entries, as the app's legend lists them; placed,
+    sized and boxed as the plot's saved legend says (legend_kwargs)."""
     handles, labels = ax.get_legend_handles_labels()
     for other in extra_axes:
         if other is None:
@@ -10333,7 +10357,10 @@ def _legend_with_overlays(ax, overlay_legend, extra_axes=()):
         handles.append(h)
         labels.append(l)
     if handles:
-        ax.legend(handles, labels, loc='best', fontsize=8)
+        kw = legend_kwargs(legend_json, look or resolve_figure_style(None), len(handles))
+        frame = kw.pop('_frame')
+        leg = ax.legend(handles, labels, **kw)
+        style_legend(leg, frame)
 
 
 def _scatter_x_origin_ms(col):
@@ -10542,17 +10569,20 @@ def colour_key_geometry(vertical, thickness, bar_len, font_px, tick_labels, labe
     return {'width': width, 'height': height, 'swatch': swatch}
 
 
-def _draw_colour_key(ax, key, scale_json, has_right_axis=False):
+def _draw_colour_key(ax, key, scale_json, has_right_axis=False, look=None, padding_right=30):
     """The colour bar (ColourScale.svelte, placed by encodingHost.placeColourKey) as a
     matplotlib colorbar over the same 64 bucket colours, ticks and title, with a "no value"
     swatch under it when a mark had no colour value. Its axes has gid 'colour-key'.
 
-    Lengths keep the app's px (1 CSS px = 1/96 in of the figure, 0.75 pt): bar thickness
-    `barThickness` (10), length `barLength` or the automatic min(150, plot extent). The
-    default position 'right' sits beside the plot at its top (past a right axis); an inside
-    corner or 'custom' sits over the data, inset by the legend margin, on a white backdrop
-    (`padding`, 8 px) as the app draws it. Text is the legend's 8 pt unless the key has its
-    own `fontSize` (px). `show` false draws none."""
+    Laid out as the app lays it out, in its px (1 CSS px = 1/96 in): a bar `barThickness`
+    (10) across and `barLength` (else the plot extent clamped to 30..150) long, no outline
+    and no tick marks, the labels 5 px past the bar (the end labels flush with its ends), the
+    title past the widest label (turned to read upwards when longer than two characters), the
+    "no value" swatch 6 px under the bar. The default position 'right' sits 10 px beside the
+    plot at its top (past the right padding when there is a right axis); an inside corner or
+    'custom' sits over the data, inset by the legend margin, on a white backdrop (`padding`,
+    8 px). Text is the key's own `fontSize` (px), else the figure's legend size (`look`).
+    `show` false draws none."""
     import matplotlib.cm as mcm
     from matplotlib.colors import ListedColormap, Normalize
     from matplotlib.patches import Patch, Rectangle
@@ -10561,20 +10591,16 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False):
         return None
     fig = ax.figure
     vertical = scale.get('orientation') != 'horizontal'
-    fw, fh = fig.get_size_inches()
-    pos = ax.get_position()
-    ax_w = max(1.0, pos.width * fw * 96)
-    ax_h = max(1.0, pos.height * fh * 96)
+    ax_w, ax_h = _axes_px(ax)
     thickness = scale.get('barThickness') or 10
     length = scale.get('barLength')
     if not isinstance(length, (int, float)) or isinstance(length, bool):
         length = max(30, min(ax_h if vertical else ax_w, 150))
     margin = 10
-    font_px = scale.get('fontSize')
-    font_pt = font_px * _PX_TO_PT if isinstance(font_px, (int, float)) and font_px > 0 else 8
-    font_px = font_pt / _PX_TO_PT
-    geom = colour_key_geometry(vertical, thickness, length, font_px,
-                               [lab for _, lab in key['ticks']], key['title'],
+    font_px = _colour_key_font_px(scale, look)
+    font_pt = font_px * _PX_TO_PT
+    labels = [lab for _, lab in key['ticks']]
+    geom = colour_key_geometry(vertical, thickness, length, font_px, labels, key['title'],
                                key['no_value']['label'] if key['no_value'] else None)
     position = scale.get('position') or 'right'
     w = (thickness if vertical else length) / ax_w
@@ -10585,7 +10611,7 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False):
     box_w, box_h = (geom['width'] + 2 * pad) / ax_w, (geom['height'] + 2 * pad) / ax_h
     mx, my = margin / ax_w, margin / ax_h
     if not inside:
-        gap = (margin + (45 if has_right_axis else 0)) / ax_w
+        gap = (margin + (padding_right if has_right_axis else 0)) / ax_w
         rect = [1 + gap, 1 - h, w, h]
     else:
         # Place the backdrop (the key plus its padding), then step in to the bar.
@@ -10610,20 +10636,1064 @@ def _draw_colour_key(ax, key, scale_json, has_right_axis=False):
                             cmap=ListedColormap([tuple(v / 255 for v in c)
                                                  for c in key['palette']]))
     cbar = fig.colorbar(sm, cax=cax, orientation='vertical' if vertical else 'horizontal')
-    cbar.set_ticks([t for t, _ in key['ticks']], labels=[lab for _, lab in key['ticks']])
-    cbar.ax.tick_params(labelsize=font_pt)
-    cbar.outline.set_linewidth(0.5)
+    cbar.set_ticks([t for t, _ in key['ticks']], labels=labels)
+    family = _font_family_list((look or resolve_figure_style(None))['family'])
+    gap_pt = 5 * _PX_TO_PT  # ColourScale TICK_GAP
+    cbar.ax.tick_params(labelsize=font_pt, length=0, pad=gap_pt if vertical else 3 * _PX_TO_PT)
+    cbar.outline.set_visible(False)
+    axis = cax.yaxis if vertical else cax.xaxis
+    for (t, _), lab in zip(key['ticks'], axis.get_ticklabels()):
+        lab.set_fontfamily(family)
+        edge = 'low' if t <= 0 else 'high' if t >= 1 else 'mid'
+        if vertical:
+            lab.set_va({'low': 'bottom', 'high': 'top', 'mid': 'center'}[edge])
+        else:
+            lab.set_ha({'low': 'left', 'high': 'right', 'mid': 'center'}[edge])
+            lab.set_va('top')
     if key['title']:
-        cbar.set_label(key['title'], fontsize=font_pt)
+        cbar.set_label(key['title'], fontsize=font_pt, fontfamily=family)
+        lab = axis.get_label()
+        if vertical:
+            tick_w = max([len(t) for t in labels] + [1]) * font_px * 0.6
+            if geom['width'] and len(str(key['title'])) > 2:
+                lab.set_rotation(90)
+                lab.set_rotation_mode('anchor')
+                lab.set_ha('center')
+                lab.set_va('baseline')
+                axis.set_label_coords((thickness + 5 + tick_w + font_px) / thickness, 0.5)
+            else:
+                lab.set_rotation(0)
+                lab.set_ha('left')
+                lab.set_va('center')
+                axis.set_label_coords((thickness + 5 + tick_w + 4) / thickness, 0.5)
+        else:
+            lab.set_va('top')
+            axis.set_label_coords(0.5, -(3 + font_px + 3) / thickness)
     if key['no_value']:
-        # 6 px under the bar's end (ColourScale NO_VALUE_GAP), past the end tick's label.
-        below = (6 + font_px / 2) / (length if vertical else thickness)
+        # 6 px under the bar (ColourScale NO_VALUE_GAP): a swatch, then the words.
+        sw = geom['swatch']
+        title = key['title']
+        label_gap = (((font_px + 4) if len(str(title)) > 2 else len(str(title)) * font_px * 0.6
+                      + 4) if title else 0)
+        nv_y = length + 6 if vertical else thickness + 3 + font_px + label_gap + 6
         cax.legend([Patch(facecolor=_mpl_colour(key['no_value']['colour']), edgecolor='none')],
                    [key['no_value']['label']], loc='upper left',
-                   bbox_to_anchor=(0, -below) if vertical else (0, -(below + 1.5)),
-                   frameon=False, fontsize=font_pt, handlelength=0.9, handleheight=0.9,
-                   handletextpad=0.4, borderaxespad=0, borderpad=0)
+                   bbox_to_anchor=(0, 1 - nv_y / (length if vertical else thickness)),
+                   frameon=False, prop={'family': family, 'size': font_pt},
+                   handlelength=sw / font_px, handleheight=sw / font_px,
+                   handletextpad=4 / font_px, borderaxespad=0, borderpad=0)
     return cbar
+
+# ----------------------------------------------------------------------
+# The app's figure look: type, axes, ticks, gridlines (figureStyle.js, Axis.svelte, d3)
+#
+# An exported figure is laid out as the app lays the plot out: the plot area is the plot's
+# width and height in CSS px less its padding (96 px = 1 in, so type in px is 0.75 of that in
+# pt), the axes are d3 axes (outward 6 px ticks, 4 px from their labels, a domain line only
+# where the app draws an axis), the ticks are the ticks d3 picks for the saved tick count,
+# labelled as d3 and the app label them (time ticks in the display zone), and the gridlines are
+# the app's dashed grey ones, per axis, at the labelled ticks only. The figure's type comes
+# from its saved style (resolveStyle). The export's title is drawn as the app's export draws
+# it: bold, top left, above the figure.
+# ----------------------------------------------------------------------
+
+# figureStyle.js
+_STYLE_BASE_PT = {'s': 7, 'm': 8.5, 'l': 10}
+_STYLE_ROLE_RATIOS = {'axisLabel': 1, 'legend': 1, 'tick': 0.9, 'sigBar': 0.9,
+                      'annotation': 0.8, 'title': 1.1}
+_STYLE_TRANSITIONAL = {'fontFamily': 'sans', 'fontSize': 'custom', 'fontSizePt': 12,
+                       'roleScale': {'tick': 0.9375, 'legend': 0.75, 'sigBar': 0.6875},
+                       'exportDpi': 300, 'backgroundColour': 'transparent', 'legendBox': True,
+                       'monochrome': False}
+_STYLE_FIELDS = {
+    'fontFamily': ('sans', ('sans', 'serif')), 'fontSize': ('m', ('s', 'm', 'l', 'custom')),
+    'fontSizePt': (None, 'number'), 'exportDpi': (300, 'number'),
+    'monochrome': (False, 'boolean'), 'backgroundColour': ('transparent', 'string'),
+    'legendBox': (True, 'boolean'), 'roleScale': (None, 'object'),
+}
+# The app's stacks (FONT_STACKS) name system fonts a browser has; matplotlib gets the same
+# kind of face from the fonts it can find, ending in the one it always has.
+_STYLE_FONT_FAMILIES = {
+    'sans': ['Helvetica', 'Arial', 'Liberation Sans', 'DejaVu Sans'],
+    'serif': ['Georgia', 'Times New Roman', 'Times', 'Liberation Serif', 'DejaVu Serif'],
+}
+_PX_PER_PT = 96 / 72
+_FIG_PX_PER_IN = 96
+# axisLayout.js AXIS_TICK_LENGTH / AXIS_TICK_PADDING / AXIS_TITLE_BUFFER
+_AXIS_TICK_LENGTH = 6
+_AXIS_TICK_PADDING = 4
+_AXIS_TITLE_BUFFER = 16
+# Axis.svelte GRID_AXIS_CLEAR and the gridline style (stroke grey, 1 px, dash 4, opacity 0.8).
+_GRID_AXIS_CLEAR = 4
+_GRID_COLOUR = '#808080'
+_GRID_ALPHA = 0.8
+# The legend box's border (Legend.svelte: var(--color-lightness-25)).
+_LEGEND_BORDER_DEFAULT = '#404040'
+
+
+def _style_valid(v, kind):
+    if v is None:
+        return False
+    if isinstance(kind, tuple):
+        return v in kind
+    if kind == 'number':
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    if kind == 'boolean':
+        return isinstance(v, bool)
+    if kind == 'string':
+        return isinstance(v, str)
+    if kind == 'object':
+        return isinstance(v, dict)
+    return False
+
+
+def normalise_figure_style(saved):
+    """figureStyle.js: a plot's saved style made complete (normaliseFigureStyle: an invalid or
+    missing field takes the registry default), or, for a plot saved with no style at all, the
+    shipped template (transitionalFigureStyle, which reproduces the historical 16 px axis
+    labels, 15 px ticks and 12 px legend)."""
+    if not isinstance(saved, dict):
+        return dict(_STYLE_TRANSITIONAL)
+    out = {}
+    for key, (default, kind) in _STYLE_FIELDS.items():
+        v = saved.get(key)
+        out[key] = v if _style_valid(v, kind) else default
+    return out
+
+
+def resolve_figure_style(saved):
+    """figureStyle.js resolveStyle for a saved plot style: {'family': 'sans'|'serif', 'base_pt',
+    'px': {role: px}, 'pt': {role: pt}, 'legend_box', 'background', 'dpi', 'monochrome'}.
+    One base point size drives every role at a fixed ratio (ROLE_RATIOS), a role in
+    `roleScale` overrides its ratio, and no role goes under 1 pt."""
+    s = normalise_figure_style(saved)
+    if s['fontSize'] == 'custom':
+        pt = s['fontSizePt']
+        base = max(1.0, float(pt)) if _style_valid(pt, 'number') else _STYLE_BASE_PT['m']
+    else:
+        base = _STYLE_BASE_PT.get(s['fontSize'], _STYLE_BASE_PT['m'])
+    over = s['roleScale'] if isinstance(s['roleScale'], dict) else {}
+    px = {}
+    for role, ratio in _STYLE_ROLE_RATIOS.items():
+        o = over.get(role)
+        eff = o if _style_valid(o, 'number') else ratio
+        px[role] = max(1.0, base * eff) * _PX_PER_PT
+    dpi = s['exportDpi'] if s['exportDpi'] > 0 else 96
+    return {'family': s['fontFamily'], 'base_pt': base, 'px': px,
+            'pt': {r: v * _PX_TO_PT for r, v in px.items()},
+            'legend_box': s['legendBox'] is not False, 'background': s['backgroundColour'],
+            'dpi': dpi, 'monochrome': s['monochrome'] is True}
+
+
+def _font_family_list(family):
+    """The installed faces for a style family, in preference order (no warnings for the
+    ones this machine lacks)."""
+    from matplotlib import font_manager as fm
+    have = {f.name for f in fm.fontManager.ttflist}
+    names = [n for n in _STYLE_FONT_FAMILIES.get(family, _STYLE_FONT_FAMILIES['sans'])
+             if n in have]
+    return names or ['DejaVu Serif' if family == 'serif' else 'DejaVu Sans']
+
+
+# ---- d3-array ticks, d3-scale nice and tickFormat, d3-format (the versions the app ships:
+# d3-array 3.2, d3-scale 4.0, d3-format 3.1, d3-time 3.1) ---------------------------------
+
+_D3_E10, _D3_E5, _D3_E2 = math.sqrt(50), math.sqrt(10), math.sqrt(2)
+
+
+def _d3_tick_spec(start, stop, count):
+    step = (stop - start) / max(0, count)
+    power = math.floor(math.log10(step))
+    error = step / 10 ** power
+    factor = 10 if error >= _D3_E10 else 5 if error >= _D3_E5 else 2 if error >= _D3_E2 else 1
+    if power < 0:
+        inc = 10 ** -power / factor
+        i1, i2 = _js_round(start * inc), _js_round(stop * inc)
+        if i1 / inc < start:
+            i1 += 1
+        if i2 / inc > stop:
+            i2 -= 1
+        inc = -inc
+    else:
+        inc = 10 ** power * factor
+        i1, i2 = _js_round(start / inc), _js_round(stop / inc)
+        if i1 * inc < start:
+            i1 += 1
+        if i2 * inc > stop:
+            i2 -= 1
+    if i2 < i1 and 0.5 <= count < 2:
+        return _d3_tick_spec(start, stop, count * 2)
+    return i1, i2, inc
+
+
+def d3_ticks(start, stop, count):
+    """d3-array ticks(start, stop, count)."""
+    start, stop, count = float(start), float(stop), float(count)
+    if not count > 0:
+        return []
+    if start == stop:
+        return [start]
+    if not (math.isfinite(start) and math.isfinite(stop)):
+        return []
+    reverse = stop < start
+    i1, i2, inc = _d3_tick_spec(stop, start, count) if reverse else \
+        _d3_tick_spec(start, stop, count)
+    if not i2 >= i1:
+        return []
+    n = int(i2 - i1 + 1)
+    if reverse:
+        return [((i2 - i) / -inc) if inc < 0 else ((i2 - i) * inc) for i in range(n)]
+    return [((i1 + i) / -inc) if inc < 0 else ((i1 + i) * inc) for i in range(n)]
+
+
+def d3_tick_increment(start, stop, count):
+    return _d3_tick_spec(float(start), float(stop), float(count))[2]
+
+
+def d3_tick_step(start, stop, count):
+    reverse = stop < start
+    inc = d3_tick_increment(stop, start, count) if reverse else \
+        d3_tick_increment(start, stop, count)
+    return (-1 if reverse else 1) * (1 / -inc if inc < 0 else inc)
+
+
+def d3_nice(lo, hi, count=10):
+    """d3-scale linear .nice(count) on [lo, hi]."""
+    start, stop = float(lo), float(hi)
+    swap = stop < start
+    if swap:
+        start, stop = stop, start
+    prestep = None
+    for _ in range(10):
+        if not (math.isfinite(start) and math.isfinite(stop)) or start == stop:
+            break
+        step = d3_tick_increment(start, stop, count)
+        if step == prestep:
+            break
+        if step > 0:
+            start = math.floor(start / step) * step
+            stop = math.ceil(stop / step) * step
+        elif step < 0:
+            start = math.ceil(start * step) / step
+            stop = math.floor(stop * step) / step
+        else:
+            break
+        prestep = step
+    return (stop, start) if swap else (start, stop)
+
+
+def _js_fixed(x, digits):
+    """Number.prototype.toFixed for a finite x >= 0 (ties go to the larger value)."""
+    from decimal import Decimal, ROUND_HALF_UP
+    q = Decimal(1).scaleb(-digits)
+    return format(Decimal(x).quantize(q, rounding=ROUND_HALF_UP), 'f')
+
+
+def _js_exponential(x, digits):
+    """Number.prototype.toExponential(digits) for a finite x >= 0: 'd.ddde+N'."""
+    from decimal import Decimal, ROUND_HALF_UP
+    if x == 0:
+        return '0' + ('.' + '0' * digits if digits else '') + 'e+0'
+    d = Decimal(x)
+    e = d.adjusted()
+    m = (d.scaleb(-e)).quantize(Decimal(1).scaleb(-digits), rounding=ROUND_HALF_UP)
+    if m >= 10:
+        e += 1
+        m = (d.scaleb(-e)).quantize(Decimal(1).scaleb(-digits), rounding=ROUND_HALF_UP)
+    s = format(m, 'f')
+    return f"{s}e{'+' if e >= 0 else '-'}{abs(e)}"
+
+
+def _js_precision(x, p):
+    """Number.prototype.toPrecision(p) for a finite x >= 0."""
+    if x == 0:
+        return '0' + ('.' + '0' * (p - 1) if p > 1 else '')
+    ex = _js_exponential(x, p - 1)
+    e = int(ex.split('e')[1])
+    if e < -6 or e >= p:
+        return ex
+    return _js_fixed(x, p - 1 - e)
+
+
+def _d3_trim(s):
+    """d3-format formatTrim: drop insignificant trailing zeros (and a bare point)."""
+    if '.' not in s.split('e')[0]:
+        return s
+    head, _, tail = s.partition('e')
+    head = head.rstrip('0').rstrip('.')
+    return head + ('e' + tail if tail else '')
+
+
+_D3_MINUS = '−'
+_D3_SI_PREFIXES = ['y', 'z', 'a', 'f', 'p', 'n', 'µ', 'm', '', 'k', 'M', 'G', 'T', 'P',
+                   'E', 'Z', 'Y']
+
+
+def _d3_group(int_part):
+    out = []
+    while len(int_part) > 3:
+        out.insert(0, int_part[-3:])
+        int_part = int_part[:-3]
+    out.insert(0, int_part)
+    return ','.join(out)
+
+
+def d3_format(value, spec):
+    """d3-format for the specifiers the app's axes use: ',.Nf' (a linear axis), '~g' (the
+    Periodogram and FFT log axis) and '~s' (a log axis with d3's own format, SI prefixes)."""
+    v = float(value)
+    if not math.isfinite(v):
+        return 'NaN' if math.isnan(v) else ('-' if v < 0 else '') + 'Infinity'
+    neg = v < 0 or (v == 0 and math.copysign(1, v) < 0)
+    a = abs(v)
+    m = re.match(r'^(,)?(?:\.(\d+))?(~)?([fgs])$', spec)
+    group, prec, trim, kind = m.group(1), m.group(2), m.group(3), m.group(4)
+    suffix = ''
+    if kind == 'f':
+        body = _js_fixed(a, int(prec) if prec is not None else 6)
+    elif kind == 'g':
+        body = _js_precision(a, max(1, min(21, int(prec) if prec is not None else 6)))
+    else:  # 's'
+        p = max(1, min(21, int(prec) if prec is not None else 6))
+        if a == 0:
+            body, pe = '0', 0
+        else:
+            ex = _js_exponential(a, p - 1)
+            coef = ex.split('e')[0].replace('.', '')
+            exponent = int(ex.split('e')[1])
+            pe = max(-8, min(8, math.floor(exponent / 3))) * 3
+            i = exponent - pe + 1
+            n = len(coef)
+            if i == n:
+                body = coef
+            elif i > n:
+                body = coef + '0' * (i - n)
+            elif i > 0:
+                body = coef[:i] + '.' + coef[i:]
+            else:
+                q = max(0, p + i - 1)
+                # formatDecimalParts(x, 0) is toExponential(): the shortest digits.
+                digits = (_js_exponential(a, q - 1).split('e')[0] if q > 0
+                          else repr(a).split('e')[0].lstrip('0'))
+                body = '0.' + '0' * (-i) + digits.replace('.', '')
+        suffix = _D3_SI_PREFIXES[8 + pe // 3]
+    if trim:
+        body = _d3_trim(body)
+    if neg and float(body.split('e')[0] or 0) == 0 and 'e' not in body:
+        neg = False
+    if group:
+        ip, dot, frac = body.partition('.')
+        body = _d3_group(ip) + dot + frac
+    return (_D3_MINUS if neg else '') + body + suffix
+
+
+def d3_linear_tick_format(lo, hi, count):
+    """d3-scale linear scale.tickFormat(count): ',.Nf' with N from the tick step."""
+    step = d3_tick_step(lo, hi, count)
+    a = abs(step)
+    precision = max(0, -math.floor(math.log10(a))) if a > 0 and math.isfinite(a) else 0
+    spec = f',.{precision}f'
+    return lambda v: d3_format(v, spec)
+
+
+def d3_log_ticks(lo, hi, count=10):
+    """d3-scale log (base 10) scale.ticks(count), for a positive domain."""
+    u, v = float(lo), float(hi)
+    r = v < u
+    if r:
+        u, v = v, u
+    i, j = math.log10(u), math.log10(v)
+    n = 10 if count is None else float(count)
+    z = []
+    pows = lambda e: float(f'1e{int(e)}')  # noqa: E731
+
+    if j - i < n:
+        i, j = math.floor(i), math.ceil(j)
+        for e in range(int(i), int(j) + 1):
+            for k in range(1, 10):
+                t = k / pows(-e) if e < 0 else k * pows(e)
+                if t < u:
+                    continue
+                if t > v:
+                    break
+                z.append(t)
+        if len(z) * 2 < n:
+            z = d3_ticks(u, v, n)
+    else:
+        z = [pows(e) if float(e).is_integer() else 10 ** e
+             for e in d3_ticks(i, j, min(j - i, n))]
+    return z[::-1] if r else z
+
+
+def d3_log_tick_format(lo, hi, count=10, spec='~s'):
+    """d3-scale log scale.tickFormat(count, spec): the label of a labelled tick, '' for the
+    ticks between (k = 10 * count / ticks().length of them per decade keep a label)."""
+    n_default = len(d3_log_ticks(lo, hi, 10))
+    k = max(1, 10 * (10 if count is None else count) / max(1, n_default))
+
+    def fmt(d):
+        if not d > 0:
+            return ''
+        i = d / float(f'1e{_js_round(math.log10(d))}')
+        if i * 10 < 10 - 0.5:
+            i *= 10
+        return d3_format(d, spec) if i <= k else ''
+    return fmt
+
+
+# ---- d3-time utcTicks (d3-scale scaleUtc().ticks(count)) -------------------------------
+
+_MS_S, _MS_MIN, _MS_H, _MS_D = 1000, 60000, 3600000, 86400000
+_UTC_TICK_INTERVALS = [
+    ('second', 1, _MS_S), ('second', 5, 5 * _MS_S), ('second', 15, 15 * _MS_S),
+    ('second', 30, 30 * _MS_S), ('minute', 1, _MS_MIN), ('minute', 5, 5 * _MS_MIN),
+    ('minute', 15, 15 * _MS_MIN), ('minute', 30, 30 * _MS_MIN), ('hour', 1, _MS_H),
+    ('hour', 3, 3 * _MS_H), ('hour', 6, 6 * _MS_H), ('hour', 12, 12 * _MS_H),
+    ('day', 1, _MS_D), ('day', 2, 2 * _MS_D), ('week', 1, 7 * _MS_D),
+    ('month', 1, 30 * _MS_D), ('month', 3, 90 * _MS_D), ('year', 1, 365 * _MS_D),
+]
+
+
+def _utc_dt(ms):
+    import datetime as _dt
+    return _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc) + _dt.timedelta(milliseconds=ms)
+
+
+def _utc_ms(d):
+    import datetime as _dt
+    delta = d - _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
+    return delta.days * _MS_D + delta.seconds * 1000 + delta.microseconds // 1000
+
+
+def _utc_floor(unit, ms):
+    if unit == 'second':
+        return ms - ms % _MS_S
+    if unit == 'minute':
+        return ms - ms % _MS_MIN
+    if unit == 'hour':
+        return ms - ms % _MS_H
+    if unit == 'day':
+        return ms - ms % _MS_D
+    if unit == 'week':  # utcSunday
+        day = ms - ms % _MS_D
+        return day - ((day // _MS_D + 4) % 7) * _MS_D  # 1 Jan 1970 was a Thursday
+    d = _utc_dt(ms)
+    if unit == 'month':
+        return _utc_ms(d.replace(day=1, hour=0, minute=0, second=0, microsecond=0))
+    return _utc_ms(d.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0))
+
+
+def _utc_offset(unit, ms, step=1):
+    fixed = {'second': _MS_S, 'minute': _MS_MIN, 'hour': _MS_H, 'day': _MS_D,
+             'week': 7 * _MS_D}
+    if unit in fixed:
+        return ms + step * fixed[unit]
+    d = _utc_dt(ms)
+    if unit == 'month':
+        m = d.month - 1 + step
+        return _utc_ms(d.replace(year=d.year + m // 12, month=m % 12 + 1))
+    return _utc_ms(d.replace(year=d.year + step))
+
+
+def _utc_field(unit, ms):
+    d = _utc_dt(ms)
+    return {'second': d.second, 'minute': d.minute, 'hour': d.hour,
+            'day': ms // _MS_D,  # unixDay: days since the epoch
+            'month': d.month - 1}.get(unit, 0)
+
+
+def d3_utc_ticks(start_ms, stop_ms, count=10):
+    """d3-time utcTicks(start, stop, count) as epoch ms: the interval (1, 5, 15, 30 s or min;
+    1, 3, 6, 12 h; 1, 2 days; a week from Sunday; 1, 3 months; years) nearest the span over
+    `count`, every instant of it from start to stop inclusive, in UTC."""
+    start, stop = float(start_ms), float(stop_ms)
+    if not (math.isfinite(start) and math.isfinite(stop)):
+        return []
+    rev = stop < start
+    if rev:
+        start, stop = stop, start
+    target = abs(stop - start) / count if count else math.inf
+    steps = [s for _, _, s in _UTC_TICK_INTERVALS]
+    import bisect
+    i = bisect.bisect_right(steps, target)
+    end = stop + 1  # inclusive stop
+    out = []
+    if i == len(_UTC_TICK_INTERVALS):
+        k = math.floor(d3_tick_step(start / (365 * _MS_D), stop / (365 * _MS_D), count))
+        if k > 0:
+            def yfloor(ms):
+                d = _utc_dt(ms)
+                return _utc_ms(d.replace(year=(d.year // k) * k, month=1, day=1, hour=0,
+                                         minute=0, second=0, microsecond=0))
+            t = yfloor(_utc_offset('year', yfloor(int(math.floor(start)) - 1), k))
+            while t < end:
+                out.append(t)
+                t = yfloor(_utc_offset('year', t, k))
+    elif i == 0:
+        k = max(math.floor(d3_tick_step(start, stop, count)), 1)
+        t = math.floor((start - 1) / k) * k + k
+        while t < end:
+            out.append(t)
+            t += k
+    else:
+        unit, step, _ = _UTC_TICK_INTERVALS[
+            i - 1 if target / steps[i - 1] < steps[i] / target else i]
+        t = _utc_floor(unit, _utc_offset(unit, _utc_floor(unit, int(math.floor(start)) - 1)))
+        while t < end:
+            if step <= 1 or _utc_field(unit, t) % step == 0:
+                out.append(t)
+            t = _utc_floor(unit, _utc_offset(unit, t))
+    return out[::-1] if rev else out
+
+
+# ---- dayjs format (core tokens, English) and the app's time tick labels -----------------
+
+_DAYJS_FORMAT_RE = re.compile(
+    r'\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS')
+_EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+              'September', 'October', 'November', 'December']
+_EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+
+def _zoned(ms, zone):
+    """The instant `ms` as a datetime in the display zone ('utc' or an IANA name)."""
+    import datetime as _dt
+    if not zone or zone == 'utc':
+        return _utc_dt(ms)
+    from zoneinfo import ZoneInfo
+    return _utc_dt(ms).astimezone(ZoneInfo(zone))
+
+
+def dayjs_format(ms, fmt, zone='utc'):
+    """dayjs(ms) in `zone` .format(fmt) for the core tokens (dayjs 1.11, English locale): a
+    [bracketed] run is literal, an unknown token prints the zone offset as dayjs does."""
+    d = _zoned(int(ms) if float(ms).is_integer() else ms, zone)
+    off = d.utcoffset()
+    mins = int(off.total_seconds() // 60) if off is not None else 0
+    sign = '+' if mins >= 0 else '-'
+    zstr = f'{sign}{abs(mins) // 60:02d}:{abs(mins) % 60:02d}'
+    wd = (d.weekday() + 1) % 7
+    h12 = d.hour % 12 or 12
+    table = {
+        'YY': str(d.year)[-2:], 'YYYY': f'{d.year:04d}', 'M': str(d.month),
+        'MM': f'{d.month:02d}', 'MMM': _EN_MONTHS[d.month - 1][:3],
+        'MMMM': _EN_MONTHS[d.month - 1], 'D': str(d.day), 'DD': f'{d.day:02d}',
+        'd': str(wd), 'dd': _EN_WEEKDAYS[wd][:2], 'ddd': _EN_WEEKDAYS[wd][:3],
+        'dddd': _EN_WEEKDAYS[wd], 'H': str(d.hour), 'HH': f'{d.hour:02d}', 'h': str(h12),
+        'hh': f'{h12:02d}', 'a': 'am' if d.hour < 12 else 'pm',
+        'A': 'AM' if d.hour < 12 else 'PM', 'm': str(d.minute), 'mm': f'{d.minute:02d}',
+        's': str(d.second), 'ss': f'{d.second:02d}',
+        'SSS': f'{d.microsecond // 1000:03d}', 'Z': zstr, 'ZZ': zstr.replace(':', ''),
+    }
+
+    def rep(m):
+        if m.group(1):
+            return m.group(1)
+        return table.get(m.group(0), zstr.replace(':', ''))
+    return _DAYJS_FORMAT_RE.sub(rep, fmt)
+
+
+def time_tick_pattern(ms, zone='utc'):
+    """displayTime.js autoTickPattern: the most concise format that still says what this tick
+    is, read in the display zone."""
+    d = _zoned(ms, zone)
+    if d.microsecond // 1000:
+        return '[.]SSS'
+    if d.second:
+        return '[:]ss'
+    if d.minute or d.hour:
+        return 'HH:mm'
+    if d.day != 1:
+        return 'D MMM'
+    if d.month != 1:
+        return 'MMM'
+    return 'YYYY'
+
+
+def time_tick_label(ms, zone='utc', fmt=''):
+    """A time axis tick label as the app draws it: the user's dayjs pattern when the plot has
+    one (Scatterplot xTickFormat), else the per-tick cascade (formatTimeAxisTick), both in the
+    display zone."""
+    if isinstance(fmt, str) and fmt.strip():
+        return dayjs_format(ms, fmt, zone)
+    return dayjs_format(ms, time_tick_pattern(ms, zone), zone)
+
+
+# ---- axisDomain.js ----------------------------------------------------------------------
+
+def padded_domain(lo, hi, pad=0.05, lower_bound=-math.inf, upper_bound=math.inf, nice=None):
+    """axisDomain.js paddedDomain."""
+    if not (_finite(lo) and _finite(hi)):
+        return 0.0, 1.0
+    mn, mx = (lo, hi) if lo <= hi else (hi, lo)
+    span = (mx - mn) or abs(mx) or 1
+    a, b = mn - span * pad, mx + span * pad
+    if mn >= lower_bound:
+        a = max(a, lower_bound)
+    if mx <= upper_bound:
+        b = min(b, upper_bound)
+    if nice:
+        na, nb = d3_nice(a, b, nice)
+        a = max(na, lower_bound) if mn >= lower_bound else na
+        b = min(nb, upper_bound) if mx <= upper_bound else nb
+    return a, b
+
+
+def marker_padded_domain(lo, hi, pad_px, length_px, log=False):
+    """axisDomain.js markerPaddedDomain: room for a mark `pad_px` wide at each end."""
+    if not (_finite(lo) and _finite(hi)) or not pad_px > 0 or not length_px > 0:
+        return lo, hi
+    f = min(pad_px / length_px, 0.25)
+
+    def widen(a, b):
+        span = (b - a) or abs(b) or 1
+        extra = (span / (1 - 2 * f) - span) / 2
+        return a - extra, b + extra
+    if log:
+        if not (lo > 0 and hi > 0):
+            return lo, hi
+        a, b = widen(math.log10(lo), math.log10(hi))
+        return 10 ** a, 10 ** b
+    return widen(lo, hi)
+
+
+def nice_axis_limit(value, direction):
+    """Boxplot.svelte niceAxisLimit: round out to the value's leading decade."""
+    if not _finite(value) or value == 0:
+        return value
+    step = 10 ** math.floor(math.log10(abs(value)))
+    if direction == 'floor':
+        return -math.ceil(abs(value) / step) * step if value < 0 else \
+            math.floor(value / step) * step
+    return -math.floor(abs(value) / step) * step if value < 0 else math.ceil(value / step) * step
+
+
+def clear_ends(lo, hi, mn, mx, gap_px, length_px, auto_lo=True, auto_hi=True):
+    """axisDomain.js clearEnds."""
+    if not all(_finite(v) for v in (lo, hi, mn, mx)) or not hi > lo:
+        return lo, hi
+    L = length_px
+    g = min(gap_px, L / 4)
+    if not (g > 0 and L > 0):
+        return lo, hi
+
+    def px(v, a, b):
+        return (v - a) / (b - a) * L
+    for _ in range(2):
+        if auto_lo and px(mn, lo, hi) < g:
+            lo = (mn * L - g * hi) / (L - g)
+        if auto_hi and L - px(mx, lo, hi) < g:
+            hi = (mx * L - g * lo) / (L - g)
+    return lo, hi
+
+
+def _manual_or(manual, auto):
+    m = list(manual or [None, None]) + [None, None]
+    return (m[0] if _number_or_none(m[0]) is not None else auto[0],
+            m[1] if _number_or_none(m[1]) is not None else auto[1])
+
+
+# ---- one axis, as Axis.svelte draws it --------------------------------------------------
+
+def app_axis_ticks(spec):
+    """The (value, label) pairs Axis.svelte draws for an axis `spec`:
+      kind     'linear' | 'log' | 'time' | 'category'
+      domain   (lo, hi) in the app's units (epoch ms on a time axis)
+      axis     the saved AxisClass ({'nticks', 'manualTicks', 'gridlines', 'label'})
+      format   optional label function (a plot's own tickFormat)
+      log_spec the log axis's d3 specifier ('~s' is d3's own, '~g' the Periodogram/FFT's)
+      ticks    category axes: the tick values
+    Manual ticks (a numeric axis with a non-empty list) replace d3's, inside the domain only,
+    labelled by the scale's default format (d3-axis calls tickFormat() with no count, i.e.
+    10). Otherwise d3 picks `nticks` ticks."""
+    axis = spec.get('axis') or {}
+    lo, hi = spec['domain']
+    kind = spec.get('kind', 'linear')
+    nticks = axis.get('nticks')
+    nticks = nticks if _style_valid(nticks, 'number') else 5
+    manual = axis.get('manualTicks')
+    fmt = spec.get('format')
+    if kind == 'category':
+        vals = list(spec.get('ticks') or [])
+        return [(v, fmt(v) if fmt else str(v)) for v in vals]
+    use_manual = (kind in ('linear', 'log') and spec.get('tick_mode', 'numeric') == 'numeric'
+                  and isinstance(manual, list) and len(manual) > 0)
+    if kind == 'time':
+        vals = d3_utc_ticks(lo, hi, nticks)
+        zone = spec.get('zone', DISPLAY_TIMEZONE)
+        label = fmt or (lambda v: time_tick_label(v, zone, spec.get('time_format', '')))
+        return [(v, label(v)) for v in vals]
+    if use_manual:
+        a, b = min(lo, hi), max(lo, hi)
+        eps = (b - a) * 1e-9
+        vals = [float(t) for t in manual if _style_valid(t, 'number') and a - eps <= t <= b + eps]
+        count = 10
+    else:
+        vals = d3_log_ticks(lo, hi, nticks) if kind == 'log' else d3_ticks(lo, hi, nticks)
+        count = nticks
+    if fmt is None:
+        if kind == 'log':
+            fmt = d3_log_tick_format(lo, hi, count, spec.get('log_spec', '~s'))
+        else:
+            fmt = d3_linear_tick_format(lo, hi, count)
+    return [(v, fmt(v)) for v in vals]
+
+
+def _to_axis_units(kind, v):
+    return _ms_to_datenum(v) if kind == 'time' else v
+
+
+def apply_app_axis(ax, which, position, spec, look, *, draw_label=True, grid_ax=None):
+    """Draw one of the app's axes onto a matplotlib axes: limits = the app's domain, ticks and
+    labels from app_axis_ticks, outward 6 px tick marks 4 px from their labels in the figure's
+    tick size, the axis title in its axis-label size, and the dashed grey gridlines (when the
+    axis has them on) at the LABELLED ticks, skipping one that would lie on the axis line
+    crossing this one (within 4 px, Axis.svelte onAxisLine). `which` is 'x' or 'y';
+    `position` 'bottom' | 'top' | 'left' | 'right'. `grid_ax` is the axes the gridlines go in
+    (default `ax`): a right axis's gridlines go in the left axes, beneath every series, as the
+    app draws every axis before the data. Returns the drawn ticks and gridline values."""
+    from matplotlib.ticker import FixedLocator, FixedFormatter, NullLocator
+    from matplotlib.lines import Line2D
+    kind = spec.get('kind', 'linear')
+    lo, hi = spec['domain']
+    ticks = app_axis_ticks(spec)
+    axis_obj = ax.xaxis if which == 'x' else ax.yaxis
+    if kind == 'log':
+        (ax.set_xscale if which == 'x' else ax.set_yscale)('log')
+    lims = (_to_axis_units(kind, lo), _to_axis_units(kind, hi))
+    (ax.set_xlim if which == 'x' else ax.set_ylim)(*lims)
+    locs = [_to_axis_units(kind, v) for v, _ in ticks]
+    axis_obj.set_major_locator(FixedLocator(locs))
+    axis_obj.set_major_formatter(FixedFormatter([lab for _, lab in ticks]))
+    axis_obj.set_minor_locator(NullLocator())
+    family = _font_family_list(look['family'])
+    tick_pt = look['pt']['tick']
+    side = {'bottom': 'bottom', 'top': 'top', 'left': 'left', 'right': 'right'}[position]
+    params = dict(which='major', direction='out', length=_AXIS_TICK_LENGTH * _PX_TO_PT,
+                  width=1 * _PX_TO_PT, pad=_AXIS_TICK_PADDING * _PX_TO_PT, labelsize=tick_pt,
+                  colors='black')
+    if which == 'x':
+        params.update(bottom=side == 'bottom', labelbottom=side == 'bottom',
+                      top=side == 'top', labeltop=side == 'top')
+    else:
+        params.update(left=side == 'left', labelleft=side == 'left',
+                      right=side == 'right', labelright=side == 'right')
+    ax.tick_params(axis=which, **params)
+    for t in axis_obj.get_ticklabels():
+        t.set_fontfamily(family)
+    if which == 'x':
+        axis_obj.set_label_position('top' if side == 'top' else 'bottom')
+    else:
+        axis_obj.set_label_position('right' if side == 'right' else 'left')
+    ax.spines[side].set_visible(True)
+    ax.spines[side].set_linewidth(1 * _PX_TO_PT)
+    ax.spines[side].set_color('black')
+    label = spec.get('label')
+    if label is None:
+        label = (spec.get('axis') or {}).get('label') or spec.get('default_label') or ''
+    lab_px = look['px']['axisLabel']
+    if draw_label:
+        (ax.set_xlabel if which == 'x' else ax.set_ylabel)(
+            label, fontsize=look['pt']['axisLabel'], fontfamily=family, color='black')
+        # Axis.svelte puts the title's BASELINE at tick padding + the largest tick label
+        # (its height on an x axis, its width on a y axis) + 16 px from the axis line,
+        # centred along it; a y title is turned to read upwards (left) or downwards (right).
+        w_px, h_px = _axes_px(ax)
+        if which == 'x':
+            extent = _TICK_LABEL_BOX_EM * look['px']['tick']
+        else:
+            extent = max([_text_width_px(ax.figure, lab, tick_pt, family)
+                          for _, lab in ticks] + [0])
+        off = _AXIS_TICK_PADDING + extent + _AXIS_TITLE_BUFFER
+        lab_artist = axis_obj.label
+        lab_artist.set_rotation_mode('anchor')
+        lab_artist.set_ha('center')
+        lab_artist.set_va('baseline')
+        if which == 'x':
+            lab_artist.set_rotation(0)
+            axis_obj.set_label_coords(0.5, 1 + off / h_px if side == 'top' else -off / h_px)
+        else:
+            lab_artist.set_rotation(-90 if side == 'right' else 90)
+            axis_obj.set_label_coords(1 + off / w_px if side == 'right' else -off / w_px, 0.5)
+    # Gridlines: the axis's own, at its labelled ticks, beneath everything drawn.
+    from matplotlib.transforms import blended_transform_factory
+    host = grid_ax if grid_ax is not None else ax
+    for old in [a for a in host.lines if a.get_gid() == f'gridline-{position}']:
+        old.remove()
+    grid = (spec.get('axis') or {}).get('gridlines')
+    grid = spec.get('gridlines', grid)
+    drawn_grid = []
+    if grid:
+        ax_w, ax_h = _axes_px(ax)
+        span = ax_w if which == 'x' else ax_h
+        for v, lab in ticks:
+            if not str(lab).strip():
+                continue
+            c = _to_axis_units(kind, v)
+            if span > 0:
+                lo_u, hi_u = lims
+                if kind == 'log':
+                    if not (c > 0 and lo_u > 0 and hi_u > 0):
+                        continue
+                    frac = (math.log10(c) - math.log10(lo_u)) / (math.log10(hi_u) - math.log10(lo_u))
+                else:
+                    frac = (c - lo_u) / (hi_u - lo_u) if hi_u != lo_u else 0
+                # bottom/top axes are crossed by the y axis at x = 0; left/right axes by the
+                # x axis at the plot's bottom (y = lo).
+                if abs(frac * span) < _GRID_AXIS_CLEAR:
+                    continue
+            style = dict(color=_GRID_COLOUR, alpha=_GRID_ALPHA, linewidth=1 * _PX_TO_PT,
+                         linestyle=(0, (4.0, 4.0)), dash_capstyle='butt', zorder=0.4,
+                         gid=f'gridline-{position}')
+            if which == 'x':
+                tr = blended_transform_factory(ax.transData, host.transAxes)
+                ln = Line2D([c, c], [0, 1], transform=tr, **style)
+            else:
+                tr = blended_transform_factory(host.transAxes, ax.transData)
+                ln = Line2D([0, 1], [c, c], transform=tr, **style)
+            host.add_line(ln)
+            drawn_grid.append(v)
+    return {'ticks': ticks, 'grid': drawn_grid}
+
+
+# The height a browser gives a line of tick text (getBoundingClientRect: the face's ascent
+# plus descent; about 1.19 em for the system UI face the app's sans stack starts with).
+_TICK_LABEL_BOX_EM = 1.19
+
+
+def _text_width_px(fig, text, size_pt, family):
+    """The width of `text` in figure px as matplotlib sets it (for a y axis's widest tick
+    label, which the app measures in the browser)."""
+    from matplotlib.font_manager import FontProperties
+    if not text:
+        return 0.0
+    renderer = fig.canvas.get_renderer()
+    w, _h, _d = renderer.get_text_width_height_descent(
+        str(text), FontProperties(family=family, size=size_pt), ismath=False)
+    return w / fig.dpi * _FIG_PX_PER_IN
+
+
+def app_axes_frame(ax, sides, *, twin=False):
+    """Only the axis lines the app draws (d3's domain path), no box. A `twin` (a right y axis
+    sharing x) leaves the shared x axis's ticks alone: its locator is the host's."""
+    for s in ('bottom', 'top', 'left', 'right'):
+        ax.spines[s].set_visible(s in sides)
+    if twin:
+        ax.tick_params(axis='x', bottom=False, top=False, labelbottom=False, labeltop=False)
+        ax.set_facecolor('none')
+        return
+    if 'bottom' not in sides and 'top' not in sides:
+        ax.xaxis.set_major_locator(__import__('matplotlib.ticker', fromlist=['NullLocator'])
+                                   .NullLocator())
+        ax.tick_params(axis='x', bottom=False, top=False, labelbottom=False, labeltop=False)
+    if 'left' not in sides and 'right' not in sides:
+        ax.yaxis.set_major_locator(__import__('matplotlib.ticker', fromlist=['NullLocator'])
+                                   .NullLocator())
+        ax.tick_params(axis='y', left=False, right=False, labelleft=False, labelright=False)
+    ax.set_facecolor('none')
+
+
+def plot_figure_geometry(plot, padding=None, band=0):
+    """The figure in px and the plot area as figure fractions: the plot's saved width and
+    height (plus a title band of `band` px above), less its padding (the app's
+    plotwidth / plotheight)."""
+    w = plot.get('width')
+    h = plot.get('height')
+    w = float(w) if _style_valid(w, 'number') and w > 0 else 520.0
+    h = float(h) if _style_valid(h, 'number') and h > 0 else 300.0
+    pad = padding or (plot.get('plot') or {}).get('padding') or \
+        {'top': 15, 'right': 30, 'bottom': 30, 'left': 30}
+    t, r, b, l_ = (float(pad.get(k) or 0) for k in ('top', 'right', 'bottom', 'left'))
+    pw, ph = max(1.0, w - l_ - r), max(1.0, h - t - b)
+    fh = h + band
+    return {'w': w, 'h': h, 'band': band, 'fig_h': fh, 'plot_w': pw, 'plot_h': ph,
+            'rect': [l_ / w, b / fh, pw / w, ph / fh],
+            'padding': {'top': t, 'right': r, 'bottom': b, 'left': l_}}
+
+
+def new_plot_figure(plot, padding=None, band=0):
+    """A matplotlib figure the plot's size (96 px to the inch; `band` px taller for the
+    export's title) with one axes on the app's plot area. Returns (fig, ax, geometry)."""
+    import matplotlib.pyplot as plt
+    g = plot_figure_geometry(plot, padding, band)
+    # At 96 dpi the figure is exactly the plot's px (matplotlib rounds a figure to whole
+    # pixels at its own dpi); the PNG is saved at the export dpi.
+    fig = plt.figure(figsize=(g['w'] / _FIG_PX_PER_IN, g['fig_h'] / _FIG_PX_PER_IN),
+                     dpi=_FIG_PX_PER_IN)
+    ax = fig.add_axes(g['rect'])
+    fig._ancir_geometry = g
+    return fig, ax, g
+
+
+# exportStyle.js title band
+_TITLE_LINE_HEIGHT = 1.25
+_TITLE_PAD = 0.6
+_TITLE_MAX_LINES = 2
+_TITLE_CHAR_WIDTH = 0.58
+
+
+def wrap_title(text, max_chars, max_lines=_TITLE_MAX_LINES):
+    """exportStyle.js wrapTitle."""
+    words = [w for w in str(text or '').strip().split() if w]
+    if not words:
+        return []
+    cap = max(1, math.floor(max_chars))
+    lines, line = [], ''
+    for word in words:
+        nxt = line + ' ' + word if line else word
+        if len(nxt) <= cap:
+            line = nxt
+            continue
+        if line:
+            lines.append(line)
+        line = word[:cap] if len(word) > cap else word
+        if len(lines) == max_lines:
+            break
+    if len(lines) < max_lines:
+        lines.append(line)
+    overflow = len(lines) == max_lines and re.sub(r'\s+', ' ', ' '.join(lines)) != ' '.join(words)
+    if overflow:
+        last = lines[max_lines - 1]
+        lines[max_lines - 1] = (last[:cap - 1] if len(last) >= cap else last).rstrip() + '…'
+    return lines
+
+
+def export_title_band(plot, look):
+    """(band px, lines) of the export's title (exportStyle.js addTitle): the plot's name
+    wrapped to two lines at the figure's title size; (0, []) for a plot with no name."""
+    name = str(plot.get('name') or '').strip()
+    if not name:
+        return 0, []
+    w = plot.get('width')
+    w = float(w) if _style_valid(w, 'number') and w > 0 else 520.0
+    fs = look['px']['title']
+    pad = fs * _TITLE_PAD
+    lines = wrap_title(name, (w - 2 * pad) / (fs * _TITLE_CHAR_WIDTH))
+    return _js_round(pad + len(lines) * fs * _TITLE_LINE_HEIGHT + pad / 2), lines
+
+
+def draw_export_title(fig, plot, look):
+    """The export's title (exportStyle.js addTitle): the plot's name, bold, at the figure's
+    title size, top left, in the band above the figure, its first baseline 0.6 + 0.9 of the
+    font size down."""
+    band, lines = export_title_band(plot, look)
+    if not lines:
+        return None
+    g = getattr(fig, '_ancir_geometry', None) or plot_figure_geometry(plot, band=band)
+    fs = look['px']['title']
+    pad = fs * _TITLE_PAD
+    fh = g.get('fig_h', g['h'])
+    return fig.text(pad / g['w'], 1 - (pad + fs * 0.9) / fh, '\n'.join(lines), ha='left',
+                    va='baseline', fontsize=fs * _PX_TO_PT, fontweight='bold',
+                    fontfamily=_font_family_list(look['family']), color='black',
+                    linespacing=_TITLE_LINE_HEIGHT, gid='export-title')
+
+
+_LEGEND_LOC = {'topright': 'upper right', 'topleft': 'upper left',
+               'bottomright': 'lower right', 'bottomleft': 'lower left', 'auto': 'best'}
+
+
+def legend_kwargs(legend_json, look, n_items=0):
+    """ax.legend keyword arguments for the plot's saved legend (Legend.svelte, legendLayout.js):
+    its corner (or custom position, or beside the plot) 10 px in, its type size (its own
+    `fontSize` px, else the figure's legend size), a 25 px swatch 4 px from its label, rows
+    `itemSpacing` + 4 px apart, `padding` px inside a white box with its border unless the
+    figure style turns the box off; horizontal puts the entries in one row."""
+    lj = legend_json or {}
+    fs = lj.get('fontSize')
+    fs_px = fs if _style_valid(fs, 'number') and fs > 0 else look['px']['legend']
+    pos = lj.get('position') or 'topright'
+    kw = {'prop': {'family': _font_family_list(look['family']), 'size': fs_px * _PX_TO_PT}}
+    if pos == 'outsideright':
+        kw.update(loc='upper left', bbox_to_anchor=(1, 1))
+    elif pos == 'custom':
+        fx = min(1, max(0, float(lj.get('customX') or 0)))
+        fy = min(1, max(0, float(lj.get('customY') or 0)))
+        kw.update(loc='upper left', bbox_to_anchor=(0.02 + 0.96 * fx, 0.98 - 0.96 * fy))
+    else:
+        kw['loc'] = _LEGEND_LOC.get(pos, 'best')
+    pad = lj.get('padding')
+    pad = pad if _style_valid(pad, 'number') else 8
+    spacing = lj.get('itemSpacing')
+    spacing = spacing if _style_valid(spacing, 'number') else 4
+    kw['borderaxespad'] = 10 / fs_px  # LEGEND_MARGIN
+    kw['borderpad'] = pad / fs_px
+    kw['handlelength'] = 25 / fs_px  # LEGEND_ICON_W
+    kw['handletextpad'] = 4 / fs_px  # LEGEND_ICON_GAP
+    # matplotlib's row is the text's own height (about 1.2 em) plus labelspacing.
+    kw['labelspacing'] = max(0.0, (fs_px + spacing + 4 - 1.2 * fs_px) / fs_px)
+    if lj.get('orientation') == 'horizontal' and n_items:
+        kw['ncols'] = n_items
+        kw['columnspacing'] = 10 / fs_px  # LEGEND_H_SPACING
+    show_box = look['legend_box'] and (lj.get('borderWidth', 1) or 0) > 0
+    kw['frameon'] = True
+    kw['fancybox'] = True
+    kw['_frame'] = {
+        'facecolor': _css_colour(lj.get('backgroundColor'), (1, 1, 1, 0.9)),
+        'edgecolor': (_css_colour(lj.get('borderColor'), _LEGEND_BORDER_DEFAULT)
+                      if show_box else 'none'),
+        'linewidth': (float(lj.get('borderWidth', 1) or 0) * _PX_TO_PT) if show_box else 0,
+        'radius': 3 / fs_px,
+    }
+    return kw
+
+
+def _css_colour(c, fallback):
+    """A saved CSS colour as matplotlib reads it; `fallback` for one it cannot (a CSS custom
+    property such as var(--color-lightness-25), which only a stylesheet resolves)."""
+    from matplotlib.colors import is_color_like
+    m = _mpl_colour(c, None)
+    return m if m is not None and is_color_like(m) else fallback
+
+
+def style_legend(leg, frame):
+    if leg is None:
+        return
+    f = leg.get_frame()
+    f.set_facecolor(frame['facecolor'])
+    f.set_edgecolor(frame['edgecolor'])
+    f.set_linewidth(frame['linewidth'])
+    f.set_alpha(None)
+    f.set_boxstyle(f'round,pad=0,rounding_size={frame.get("radius", 0.2)}')
+
+
+def _axes_px(ax):
+    """The axes' (width, height) in figure px (96 to the inch)."""
+    fw, fh = ax.figure.get_size_inches()
+    pos = ax.get_position()
+    return max(1.0, pos.width * fw * _FIG_PX_PER_IN), max(1.0, pos.height * fh * _FIG_PX_PER_IN)
+
+
+def plot_look(plot):
+    """resolve_figure_style for one exported plot."""
+    return resolve_figure_style((plot or {}).get('style'))
+
+
+def _finite_values(values):
+    out = []
+    for v in values or []:
+        if v is None or _js_invalid(v):
+            continue
+        f = _js_number(v)
+        if math.isfinite(f):
+            out.append(f)
+    return out
+
+
+def _extent_of(*arrays):
+    lo, hi = math.inf, -math.inf
+    for a in arrays:
+        for v in _finite_values(a):
+            lo, hi = min(lo, v), max(hi, v)
+    return (lo, hi) if lo <= hi else (None, None)
+
+
+def _merge_extent(ext, other):
+    if not other:
+        return ext
+    lo, hi = ext
+    return (other[0] if lo is None else min(lo, other[0]),
+            other[1] if hi is None else max(hi, other[1]))
 
 
 def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
@@ -10631,8 +11701,11 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     Each series may show points and/or a line. A number x series on a plot that also has
     time x data counts hours from its column's time origin (the app's xOriginFor), so it
     shares the date axis; the overlays (reference lines and bands, including migrated legacy
-    night bands) are drawn as the app draws them (_draw_overlays)."""
+    night bands) are drawn as the app draws them (_draw_overlays). The axes are the app's
+    (scatter_axis_specs): its domains, d3's ticks for the saved tick counts, time ticks in the
+    display zone, gridlines per axis and the figure's type sizes."""
     p = plot.get('plot', {})
+    look = plot_look(plot)
     xctx = _scatter_x_context(p, columns_index)
     encodings = scatter_colour_encodings(plot, columns_index)
     xy = {}
@@ -10681,6 +11754,15 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         origin = xctx['origin_for'](col)
         return (lambda h: origin + h * _MS_PER_HOUR) if origin is not None else None
 
+    # Colour by: the colour bar for the first coloured series (Scatterplotclass.colourKey),
+    # whose room beside the plot comes off the plot area first.
+    key = scatter_colour_key(plot, columns_index, encodings, xy)
+    _reserve_colour_key_room(ax_left, ax_right, key, p.get('colourScale'), look,
+                             has_right_axis=ax_right is not None and used_right)
+
+    def x_domain(extent):
+        return scatter_axis_specs(plot, columns_index, ax_left, xctx, extent)['bottom']['domain']
+
     ov = _draw_overlays(
         ov_ax, plot, columns_index, host='scatterplot', x_value_for=x_value_for,
         x_is_time=is_time, x_data_extent=xctx['extent'], xlims_in=xlims_in,
@@ -10688,36 +11770,179 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         ylog=bool(p.get('yLogScaleRight' if ov_ax is ax_right and ax_right is not None
                         else 'yLogScaleLeft')),
         legacy_night_bands=True,
-        series_colour=first_colour)
-    if is_time and xlims_in:
-        # Manual x limits on a time axis are epoch ms; the date axis counts days.
-        xlims_in = [None if v is None else _ms_to_datenum(v) for v in xlims_in]
-    _apply_axes(ax_left,
-                xlims=xlims_in,
-                ylims=p.get('ylimsLeftIN'),
-                xlog=p.get('xLogScale', False) and not is_time,
-                ylog=p.get('yLogScaleLeft', False),
-                xlabel=(p.get('xAxis') or {}).get('label', ''),
-                ylabel=(p.get('yAxisLeft') or {}).get('label', ''),
-                title=plot.get('name', ''))
-    if ax_right is not None and used_right:
-        _apply_axes(ax_right,
-                    ylims=p.get('ylimsRightIN'),
-                    ylog=p.get('yLogScaleRight', False),
-                    ylabel=(p.get('yAxisRight') or {}).get('label', ''))
+        series_colour=first_colour, x_domain=x_domain)
+    specs = scatter_axis_specs(plot, columns_index, ax_left, xctx, ov.get('extent'),
+                               key=key, has_right_axis=ax_right is not None and used_right)
+    _draw_app_axes(ax_left, ax_right if used_right else None, specs, look)
+    if ax_right is not None and not used_right:
+        ax_right.set_axis_off()
     if (p.get('legend') or {}).get('show', False):
         _legend_with_overlays(ax_left, ov['legend'],
-                              extra_axes=(ax_right,) if ax_right is not None else ())
-    # Colour by: the colour bar for the first coloured series (Scatterplotclass.colourKey).
-    _draw_colour_key(ax_left, scatter_colour_key(plot, columns_index, encodings, xy),
-                     p.get('colourScale'),
-                     has_right_axis=ax_right is not None and used_right)
+                              extra_axes=(ax_right,) if ax_right is not None else (),
+                              legend_json=p.get('legend'), look=look)
+    _draw_colour_key(ax_left, key, p.get('colourScale'),
+                     has_right_axis=ax_right is not None and used_right, look=look,
+                     padding_right=float(((p.get('padding') or {}).get('right')) or 30))
+
+
+def _reserve_colour_key_room(ax, ax_right, key, scale_json, look, has_right_axis=False):
+    """Scatterplotclass.colourKeyReserveW: a colour bar beside the plot takes its width, a
+    10 px margin (and another past a right axis) from the plot area."""
+    scale = scale_json or {}
+    if key is None or scale.get('show', True) is False or \
+            (scale.get('position') or 'right') != 'right':
+        return
+    vertical = scale.get('orientation') != 'horizontal'
+    w_px, h_px = _axes_px(ax)
+    length = scale.get('barLength')
+    if not _style_valid(length, 'number'):
+        length = max(30, min(h_px if vertical else w_px, 150))
+    fpx = _colour_key_font_px(scale, look)
+    geom = colour_key_geometry(vertical, scale.get('barThickness') or 10, length, fpx,
+                               [lab for _, lab in key['ticks']], key['title'],
+                               key['no_value']['label'] if key['no_value'] else None)
+    reserve = geom['width'] + 10 + (10 if has_right_axis else 0)
+    for a in (ax, ax_right):
+        if a is None:
+            continue
+        pos = a.get_position()
+        fw = a.figure.get_size_inches()[0] * _FIG_PX_PER_IN
+        a.set_position([pos.x0, pos.y0, max(1.0, pos.width * fw - reserve) / fw, pos.height])
+
+
+def _colour_key_font_px(scale_json, look):
+    """ColourScale.svelte: the key's own `fontSize` (px), else the figure's legend size."""
+    fs = (scale_json or {}).get('fontSize')
+    if _style_valid(fs, 'number') and fs > 0:
+        return float(fs)
+    return (look or resolve_figure_style(None))['px']['legend']
+
+
+def _draw_app_axes(ax, ax_right, specs, look):
+    """Every axis in `specs` ({'bottom'|'top'|'left'|'right': spec}) onto `ax` (the right one
+    onto `ax_right`, its gridlines into `ax`), with only those axis lines drawn."""
+    sides = set(specs)
+    app_axes_frame(ax, sides - {'right'} if ax_right is not None else sides)
+    ax._ancir_axes = {s: (ax_right if s == 'right' and ax_right is not None else ax)
+                      for s in sides}
+    for pos in ('bottom', 'top'):
+        if pos in specs:
+            apply_app_axis(ax, 'x', pos, specs[pos], look)
+    if 'left' in specs:
+        apply_app_axis(ax, 'y', 'left', specs['left'], look)
+    if 'right' in specs:
+        if ax_right is not None:
+            app_axes_frame(ax_right, {'right'}, twin=True)
+            apply_app_axis(ax_right, 'y', 'right', specs['right'], look, grid_ax=ax)
+        else:
+            apply_app_axis(ax, 'y', 'right', specs['right'], look)
+
+
+def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, key=None,
+                       has_right_axis=False):
+    """Scatterplotclass's axes: x (xlims, XScale: time when any x is time, log when asked
+    and both ends are positive) and the left and right y (ylimsLeft/Right, YScaleLeft/Right).
+    Automatic ends are the data's range (x floored and ceiled to whole units) widened by the
+    overlays on that axis, then by room for the widest marker (markerPaddedDomain); a manual
+    end wins as typed."""
+    p = plot.get('plot', {}) or {}
+    xctx = xctx or _scatter_x_context(p, columns_index)
+    w_px, h_px = _axes_px(ax)
+    series = []
+    for s in p.get('data', []) or []:
+        x_col = _resolve_plot_col(s.get('x'), columns_index)
+        y_col = _resolve_plot_col(s.get('y'), columns_index)
+        if x_col is None or y_col is None:
+            continue
+        series.append((s, x_col, y_col))
+
+    def pad_px(ss):
+        pad = 0.0
+        for s, _, _ in ss:
+            line = _with_defaults(s.get('line'), _LINE_DEFAULTS)
+            pts = _with_defaults(s.get('points'), _POINTS_DEFAULTS)
+            if pts['draw']:
+                pad = max(pad, _js_number(pts['radius']) or 0)
+            if line['draw']:
+                pad = max(pad, (_js_number(line['strokeWidth']) or 0) / 2)
+        return pad + 1 if pad > 0 else 0
+    ov_ext = overlay_extent or {}
+    is_time = xctx['any_time']
+    xlog = bool(p.get('xLogScale')) and not is_time
+    # x
+    ext = xctx['extent']
+    xin = list(p.get('xlimsIN') or [None, None]) + [None, None]
+    if not series:
+        xd = (0.0, 0.0)
+    elif ext is None:
+        xd = (xin[0] if xin[0] is not None else 0, xin[1] if xin[1] is not None else 1)
+    else:
+        lo, hi = _merge_extent(tuple(ext), ov_ext.get('x'))
+        xd = _manual_or(xin, marker_padded_domain(lo, hi, pad_px(series), w_px, log=xlog))
+    x_kind = 'time' if is_time else ('log' if xlog and xd[0] > 0 and xd[1] > 0 else 'linear')
+    x_axis = p.get('xAxis') or {}
+    specs = {'bottom': {
+        'kind': x_kind, 'domain': xd, 'axis': x_axis,
+        'zone': DISPLAY_TIMEZONE, 'time_format': p.get('xTickFormat') or '',
+        'tick_mode': 'time' if is_time else 'numeric'}}
+    has_left = any((s.get('yAxis') or 'left') == 'left' for s, _, _ in series)
+    has_right = any(s.get('yAxis') == 'right' for s, _, _ in series)
+    ov_side = 'left' if has_left or not has_right else 'right'
+    for side in ('left', 'right'):
+        ss = [t for t in series if (t[0].get('yAxis') or 'left') == side]
+        log = bool(p.get('yLogScaleLeft' if side == 'left' else 'yLogScaleRight'))
+        manual = p.get('ylimsLeftIN' if side == 'left' else 'ylimsRightIN')
+        if not ss:
+            dom = (0.0, 0.0)
+        else:
+            lo, hi = _extent_of(*[y.get_data() for _, _, y in ss])
+            if side == ov_side:
+                lo, hi = _merge_extent((lo, hi), ov_ext.get('y'))
+            if lo is None:
+                lo, hi = math.inf, -math.inf
+            dom = _manual_or(manual, marker_padded_domain(lo, hi, pad_px(ss), h_px, log=log))
+        if side == 'right' and not ss:
+            continue
+        axis_json = p.get('yAxisLeft' if side == 'left' else 'yAxisRight') or (
+            {'gridlines': side == 'left'})
+        specs[side] = {'kind': 'log' if log and dom[0] > 0 and dom[1] > 0 else 'linear',
+                       'domain': dom, 'axis': axis_json}
+    if 'left' not in specs:
+        specs['left'] = {'kind': 'linear', 'domain': (0.0, 0.0),
+                         'axis': p.get('yAxisLeft') or {}}
+    for s in specs.values():
+        if s['domain'][0] == s['domain'][1]:
+            # d3 draws a zero-span domain at one tick; matplotlib needs a span.
+            s['domain'] = (s['domain'][0] - 0.5, s['domain'][1] + 0.5) if s['kind'] != 'time' \
+                else (s['domain'][0] - _MS_PER_HOUR, s['domain'][1] + _MS_PER_HOUR)
+    return specs
+
+
+# fftAxis.js: the x title follows the mode while it is one the plot generated itself.
+FFT_PERIOD_LABEL = 'Period (h)'
+FFT_FREQUENCY_LABEL = 'Frequency (cycles/h)'
+_FFT_AUTO_LABELS = {'Frequency', 'Period', 'Period (hours)', FFT_PERIOD_LABEL,
+                    FFT_FREQUENCY_LABEL, 'Frequency (cycles/hr)'}
+
+
+def fft_x_axis_label(x_axis, show_period):
+    """The FFT's x title (FFTclass.fromJSON + syncXAxisLabel): a saved automatic label (or
+    none saved, a legacy plot) is the mode's; the user's own wording, even empty, is kept."""
+    auto = FFT_PERIOD_LABEL if show_period else FFT_FREQUENCY_LABEL
+    if not isinstance(x_axis, dict):
+        return auto
+    label = x_axis.get('label')
+    label = '' if label is None else str(label)
+    return auto if label.strip() in _FFT_AUTO_LABELS else label
 
 
 def plot_fft(plot, columns_index, ax):
     p = plot.get('plot', {})
+    look = plot_look(plot)
     show_period = p.get('showPeriod', False)
     drawn = []
+    mags_all = []
+    nyquists, min_periods, valid_freqs = [], [], []
     for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
@@ -10731,6 +11956,10 @@ def plot_fft(plot, columns_index, ax):
         if not t:
             continue
         fft = compute_fft(t, y, series.get('freqStep'))
+        nyquists.append(fft.get('nyquistFreq') or 0)
+        min_periods.append(fft.get('minPeriod') or 0.1)
+        valid_freqs += [f for f in fft['frequencies'] if f > 0]
+        mags_all += list(fft['magnitudes'])
         if not fft['frequencies']:
             continue
         xs = ([1.0 / f if f else float('nan') for f in fft['frequencies']]
@@ -10744,23 +11973,46 @@ def plot_fft(plot, columns_index, ax):
     # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
     # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
     # the magnitude axis only.
+    log = bool(p.get('logScale', False))
     ov = _draw_overlays(ax, plot, columns_index,
                         x_transform=lambda v: (None if not (v > 0)
                                                else (v if show_period else 1.0 / v)),
-                        ylog=bool(p.get('logScale', False)))
-    xlabel = ('Period' if show_period
-              else (p.get('xAxis') or {}).get('label', 'Frequency'))
-    # The app's `logScale` is the MAGNITUDE axis (FFT.svelte: "Log scale", group Y-axis).
-    _apply_axes(ax,
-                xlims=p.get('xlimsIN'),
-                ylims=p.get('ylimsIN'),
-                ylog=p.get('logScale', False),
-                xlabel=xlabel,
-                ylabel=(p.get('yAxisMag') or {}).get('label', 'Magnitude'),
-                title=plot.get('name', ''))
-    if p.get('logScale', False):
-        _apply_log_axis(ax, p.get('ylimsIN'), drawn + ov['y_values'])
-    _legend_with_overlays(ax, ov['legend'])
+                        ylog=log)
+    # FFTclass.xlims: frequency 0 .. Nyquist, or period from the shortest resolvable one
+    # (2 dt) to the longest drawn, the user's ends winning within those bounds.
+    n_series = len(p.get('data', []) or [])
+    max_f = max(nyquists) if nyquists else 1
+    min_p = max(min_periods) if min_periods else 0.1
+    xin = list(p.get('xlimsIN') or [None, None]) + [None, None]
+    if n_series == 0:
+        xd = (0.1, 100) if show_period else (0, 1)
+    elif show_period:
+        d0, d1 = ((max(1 / max(valid_freqs), min_p), 1 / min(valid_freqs)) if valid_freqs
+                  else (min_p, 100))
+        xd = (max(xin[0], min_p) if xin[0] is not None else d0,
+              xin[1] if xin[1] is not None else d1)
+    else:
+        xd = (max(xin[0], 0) if xin[0] is not None else 0,
+              min(xin[1], max_f) if xin[1] is not None else max_f)
+    y_axis = p.get('yAxisMag') or {}
+    lo, hi = _merge_extent(_extent_of(mags_all), ov.get('extent', {}).get('y'))
+    yd = (0.0, 1.0) if lo is None else padded_domain(lo, hi, lower_bound=0,
+                                                     nice=y_axis.get('nticks') or 5)
+    yd = _manual_or(p.get('ylimsIN'), yd)
+    if log:
+        yd = log_axis_domain(_number_or_none((p.get('ylimsIN') or [None])[0]),
+                             _min_positive(drawn, ov['y_values']), yd[1])
+    x_axis = p.get('xAxis') or {}
+    specs = {
+        'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
+                   'label': fft_x_axis_label(p.get('xAxis'), show_period)},
+        'left': {'kind': 'log' if log else 'linear', 'domain': yd, 'axis': y_axis,
+                 'log_spec': '~g',
+                 'label': y_axis.get('label') or 'Magnitude'},
+    }
+    _draw_app_axes(ax, None, specs, look)
+    if (p.get('legend') or {}).get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
 
 
 # Periodogram.svelte PERIODOGRAM_Y_LABELS / periodogramYLabel: the y title while the stored
@@ -10781,6 +12033,7 @@ def periodogram_y_label(methods):
 
 def plot_periodogram(plot, columns_index, ax):
     p = plot.get('plot', {})
+    look = plot_look(plot)
     # Method and bin size are per series, as in the app (_periodogram_series_params). They
     # used to be read from the plot, where the app never stores them, so every exported
     # periodogram was drawn as Lomb-Scargle.
@@ -10823,44 +12076,116 @@ def plot_periodogram(plot, columns_index, ax):
     ylabel = ((y_axis or {}).get('label') or
               (periodogram_y_label([d.get('method') or 'Lomb-Scargle' for d in p.get('data', [])])
                if (y_axis is not None or 'ygridlines' not in p) else 'Power'))
-    _apply_axes(ax,
-                xlims=p.get('periodlimsIN') or p.get('xlimsIN'),
-                ylims=p.get('ylimsIN'),
-                ylog=log,
-                xlabel=(p.get('xAxis') or {}).get('label', 'Period'),
-                ylabel=ylabel,
-                title=plot.get('name', ''))
+    # Periodogramclass.ylims: the drawn power (and threshold) padded 5%, never below 0, out
+    # to a nice tick; the period axis is the analysis range (periodlimsIN).
+    lo, hi = _merge_extent(_extent_of(drawn), ov.get('extent', {}).get('y'))
+    y_axis = y_axis or {}
+    if not (p.get('data') or []):
+        yd = (0.0, 0.0)
+    elif lo is None:
+        yd = (0.0, 0.0)
+    else:
+        yd = _manual_or(p.get('ylimsIN'),
+                        padded_domain(lo, hi, lower_bound=0, nice=y_axis.get('nticks') or 5))
     if log:
-        _apply_log_axis(ax, p.get('ylimsIN'), drawn + ov['y_values'])
-    _legend_with_overlays(ax, ov['legend'])
+        yd = log_axis_domain(_number_or_none((p.get('ylimsIN') or [None])[0]),
+                             _min_positive(drawn, ov['y_values']), yd[1])
+    if yd[0] == yd[1]:
+        yd = (yd[0], yd[0] + 1)
+    xd = list(p.get('periodlimsIN') or p.get('xlimsIN') or [1, 30])
+    xd = (float(xd[0] if xd[0] is not None else 1), float(xd[1] if xd[1] is not None else 30))
+    w_px, _ = _axes_px(ax)
+    x_axis = p.get('xAxis') or {}
+    specs = {
+        'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
+                   'label': x_axis.get('label') or 'Period'},
+        'left': {'kind': 'log' if log else 'linear', 'domain': yd, 'axis': y_axis,
+                 'log_spec': '~g', 'label': ylabel},
+    }
+    _draw_app_axes(ax, None, specs, look)
+    if (p.get('legend') or {}).get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
 
 
 def plot_correlogram(plot, columns_index, ax):
     p = plot.get('plot', {})
+    look = plot_look(plot)
+    lags_max, corrs = 0, []
+    bounds = []
     for index, series in enumerate(p.get('data', [])):
         ac = correlogram_series_acf(series, columns_index)
         if ac is None or not ac['lags']:
             continue
+        m = max(_finite_values(ac['lags']) or [0])
+        lags_max = max(lags_max, m)
+        corrs += list(ac['correlations'])
         y_col = _resolve_plot_col(series.get('y'), columns_index)
+        resolved = _resolved_series_colours(plot, index)
         _draw_series_marks(ax, ac['lags'], ac['correlations'], series, index,
                            series.get('label') or _display_name(y_col),
-                           resolved=_resolved_series_colours(plot, index))
-    ax.axhline(0, color='gray', linewidth=0.5)
+                           resolved=resolved)
+        bounds.append((index, series, ac, y_col, resolved))
+    # CorrelogramDataclass confidence bounds: +/- z / sqrt(n) (n the y values present, z 1.96
+    # or 2.576 at 99%), each a line over the lags in the series' confidence line (default
+    # '5, 5' dashes, 1 px, the series' colour).
+    n_series_drawn = len(bounds)
+    for index, series, ac, y_col, resolved in bounds:
+        conf = series.get('confidenceLine') or {}
+        if series.get('showConfidenceBounds', True) is False or conf.get('draw', True) is False:
+            continue
+        n = len(_finite_values(y_col.get_data() if y_col is not None else []))
+        if n < 2:
+            continue
+        z = 1.96 if series.get('confidenceLevel', 0.95) == 0.95 else 2.576
+        width = conf.get('strokeWidth')
+        width = width if _style_valid(width, 'number') else 1
+        stroke = conf.get('stroke') or '5, 5'
+        colour = _mpl_colour(conf.get('colour') or (series.get('line') or {}).get('colour')
+                             or resolved.get('line'), f'C{index}')
+        pct = round((series.get('confidenceLevel') or 0.95) * 100)
+        name = series.get('label') or _display_name(y_col)
+        label = f'{name} {pct}% bounds' if n_series_drawn > 1 else f'{pct}% confidence bounds'
+        for k, b in enumerate((z / math.sqrt(n), -z / math.sqrt(n))):
+            ax.plot(ac['lags'], [b] * len(ac['lags']), color=colour,
+                    linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(stroke, width),
+                    dash_capstyle='butt', zorder=2.1, gid=f'confidence-{index}',
+                    label=label if k == 0 else '_nolegend_')
     # Overlays widen the correlation axis only: the lag range is an analysis parameter.
     ov = _draw_overlays(ax, plot, columns_index)
-    # The app saves the visible lag range as `laglimsIN` (Correlogram.svelte); `xlimsIN` is
-    # kept as a fallback for hand-written plots.
-    _apply_axes(ax,
-                xlims=p.get('laglimsIN') or p.get('xlimsIN'),
-                ylims=p.get('ylimsIN'),
-                xlabel=(p.get('xAxis') or {}).get('label', 'Lag (hrs)'),
-                ylabel=(p.get('yAxis') or {}).get('label', 'Correlation'),
-                title=plot.get('name', ''))
-    _legend_with_overlays(ax, ov['legend'])
+    # Correlogramclass: lags 0 .. the longest lag (laglimsIN wins; `xlimsIN` is a fallback
+    # for hand-written plots); correlation padded 5%, not capped at +/-1.
+    n_series = len(p.get('data', []) or [])
+    xd = (0, 10) if n_series == 0 else _manual_or(p.get('laglimsIN') or p.get('xlimsIN'),
+                                                   (0, lags_max))
+    lo, hi = _merge_extent(_extent_of(corrs), ov.get('extent', {}).get('y'))
+    yd = (-1, 1) if (n_series == 0 or lo is None) else \
+        _manual_or(p.get('ylimsIN'), padded_domain(lo, hi, pad=0.05))
+    # The zero line (Correlogram.svelte): dashed 4 2, 1 px, the muted text colour at half
+    # opacity, when 0 is in range.
+    if n_series and yd[0] <= 0 <= yd[1]:
+        ax.axhline(0, color='#666666', alpha=0.5, linewidth=_PX_TO_PT,
+                   linestyle=(0, (4.0, 2.0)), zorder=0.7, gid='zero-line')
+    w_px, _ = _axes_px(ax)
+    x_axis, y_axis = p.get('xAxis') or {}, p.get('yAxis') or {}
+    specs = {
+        'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
+                   'label': x_axis.get('label') or 'Lag (hrs)'},
+        'left': {'kind': 'linear', 'domain': yd, 'axis': y_axis,
+                 'label': y_axis.get('label') or 'Correlation'},
+    }
+    _draw_app_axes(ax, None, specs, look)
+    if (p.get('legend') or {}).get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
 
 
 def plot_boxplot(plot, columns_index, ax):
+    """One box per series (matplotlib's box: type-7 quartiles, whiskers at 1.5 IQR), on the
+    app's value axis (Boxplotclass.ylims: the data's range rounded out to its leading decade,
+    then kept 4 px clear of a whisker cap) with its ticks, gridlines and type. The app's
+    categorical layout (one box per category per series, violins, significance bars) is not
+    reproduced."""
     p = plot.get('plot', {})
+    look = plot_look(plot)
     data = []
     labels = []
     for series in p.get('data', []):
@@ -10878,62 +12203,197 @@ def plot_boxplot(plot, columns_index, ax):
         ax.boxplot(data, tick_labels=labels, whis=1.5)
     # Horizontal lines and bands only (the x axis is categorical); they widen the y axis.
     ov = _draw_overlays(ax, plot, columns_index)
-    _apply_axes(ax,
-                ylims=p.get('ylimsIN'),
-                ylabel=(p.get('yAxis') or {}).get('label', ''),
-                title=plot.get('name', ''))
-    if ov['legend'] and (p.get('legend') or {}).get('show', False):
-        _legend_with_overlays(ax, ov['legend'])
+    lo, hi = _merge_extent(_extent_of(*data), ov.get('extent', {}).get('y'))
+    yin = list(p.get('ylimsIN') or [None, None]) + [None, None]
+    _, h_px = _axes_px(ax)
+    w_px, _ = _axes_px(ax)
+    if lo is None:
+        yd = (0, 10)
+    else:
+        bot = yin[0] if yin[0] is not None else nice_axis_limit(lo, 'floor')
+        top = yin[1] if yin[1] is not None else nice_axis_limit(hi, 'ceil')
+        yd = clear_ends(bot, top, lo, hi, 4, h_px, auto_lo=yin[0] is None,
+                        auto_hi=yin[1] is None)
+    if yd[0] == yd[1]:
+        yd = (yd[0] - 0.5, yd[1] + 0.5)
+    y_axis = p.get('yAxis') or {}
+    n = len(data)
+    specs = {
+        'bottom': {'kind': 'category', 'domain': (0.5, n + 0.5) if n else (0, 1),
+                   'axis': {**(p.get('xAxis') or {}), 'gridlines': False},
+                   'ticks': list(range(1, n + 1)),
+                   'format': lambda v: labels[int(v) - 1] if 1 <= int(v) <= n else '',
+                   },
+        'left': {'kind': 'linear', 'domain': yd, 'axis': y_axis,
+                 'label': y_axis.get('label') or ''},
+    }
+    _draw_app_axes(ax, None, specs, look)
+    leg = p.get('legend') or {}
+    if ov['legend'] and leg.get('show', True):
+        _legend_with_overlays(ax, ov['legend'], legend_json=leg, look=look)
+
+
+def actogram_row_geometry(plot_h, n_rows, space_between):
+    """rowHeight.js rowGeometry: ({'gap', 'height'}) of each row in px."""
+    sb = space_between if _style_valid(space_between, 'number') and space_between > 0 else 0
+
+    def row_h(gap):
+        if not n_rows > 0:
+            return 0
+        h = (plot_h - (n_rows - 1) * gap) / n_rows
+        return h if math.isfinite(h) and h > 0 else 0
+    as_set = row_h(sb)
+    if as_set >= 1 or not n_rows > 0 or not plot_h > 0:
+        return {'gap': sb, 'height': as_set}
+    if plot_h >= n_rows:
+        gap = min(sb, (plot_h - n_rows) / (n_rows - 1)) if n_rows > 1 else 0
+        return {'gap': gap, 'height': row_h(gap)}
+    return {'gap': 0, 'height': plot_h / n_rows}
+
+
+def actogram_labelled_rows(n_rows):
+    """rowLabels.js labelledRows: every row up to 20, else d3's ticks over [0, n)."""
+    n = max(0, math.floor(n_rows or 0))
+    if n <= 20:
+        return list(range(n))
+    return [int(t) for t in d3_ticks(0, n, 10) if 0 <= t < n]
+
+
+def actogram_row_label_px(tick_px, plot_h, n_rows, space_between=0):
+    """rowLabels.js rowLabelFontPx: the tick size, capped at the labelled-row pitch."""
+    size = tick_px if tick_px and tick_px > 0 else 10
+    n = math.floor(n_rows or 0)
+    if not (n > 0 and plot_h > 0):
+        return size
+    rows = actogram_labelled_rows(n)
+    step = rows[1] - rows[0] if len(rows) > 1 else 1
+    pitch = (plot_h + (space_between or 0)) / n * step
+    return max(1, min(size, pitch))
+
+
+def actogram_row_label_text(day, mode, start_ms, period_hrs, date_format, zone):
+    """rowLabels.js rowLabelText."""
+    ordinal = str(day + 1)
+    if mode != 'date' or start_ms is None or not math.isfinite(start_ms):
+        return ordinal
+    hrs = period_hrs if period_hrs and period_hrs > 0 else 24
+    text = dayjs_format(start_ms + day * hrs * _MS_PER_HOUR, date_format or 'DD MMM', zone)
+    return text if text.strip() else dayjs_format(start_ms + day * hrs * _MS_PER_HOUR,
+                                                  'DD MMM', zone)
+
+
+def _actogram_row_labels_mode(p):
+    """rowLabels.js migrateRowLabels."""
+    mode = p.get('rowLabels')
+    if mode in ('none', 'period', 'date'):
+        return mode
+    if 'showDayNumbers' not in p:
+        return 'none'
+    if not p.get('showDayNumbers'):
+        return 'none'
+    return 'date' if p.get('rowLabelMode') == 'date' else 'period'
+
+
+def _js_min_max(values):
+    lo, hi = _extent_of(values)
+    return (lo, hi)
 
 
 def plot_actogram(plot, columns_index, ax, zone=None):
     """Double-plotted actogram drawn from the SAME rows as the plot-data CSV
     (actogram_download_data), so the PNG folds where the app does: every series at the
     plot's one startTime (the user's chosen `startTimeIN`, else midnight in the display
-    zone before the earliest sample). Row r shows periods r .. r + doublePlot - 1; each bar
-    spans its bin and rises by its value over the series' largest value. `zone` defaults to
+    zone before the earliest sample). Row r shows periods r .. r + doublePlot - 1, laid out
+    as Actogram.svelte lays them (rowGeometry: the user's gap, rows sharing the rest), with
+    the hours axis on top and the row labels it is set to show.
+
+    renderMode 'bars': each bar rises from its row's foot by its value over the row's range
+    (ylimsOption: 'overall' the series' range, 'manual' ylimsIN, 'byperiod' the range of the
+    periods the row shows). 'heatmap': every bin fills its row in the plot's colormap at its
+    value over the series' range (intensityDomain; a missing value is the map's low end), with
+    the app's scale bar (top right, or top left beside a top-right legend). `zone` defaults to
     the session's display zone (DISPLAY_TIMEZONE)."""
+    from matplotlib.patches import Rectangle
+    from matplotlib.collections import PatchCollection
     p = plot.get('plot', {})
+    look = plot_look(plot)
+    zone = DISPLAY_TIMEZONE if zone is None else zone
     period_hrs = float(p.get('periodHrs', 24) or 24)
     double = max(1, int(p.get('doublePlot', 2) or 1))
-    _, rows = actogram_download_data(plot, columns_index,
-                                     DISPLAY_TIMEZONE if zone is None else zone)
-    if not rows:
-        return
-    n_rows = max(r[1] for r in rows)
-    series_data = p.get('data', [])
-    ymax = {}
-    for d, _per, _xs, _xe, v in rows:
-        if _finite(v):
-            ymax[d] = max(ymax.get(d, 0.0), float(v))
-    # One bar call for every bar (a long record has tens of thousands).
-    xs, hs, ws, bs, cs = [], [], [], [], []
+    span = period_hrs * double
+    _, rows = actogram_download_data(plot, columns_index, zone)
+    series_data = p.get('data', []) or []
+    heat = p.get('renderMode') == 'heatmap'
+    w_px, h_px = _axes_px(ax)
+    n_rows = max((r[1] for r in rows), default=0)
+    geom = actogram_row_geometry(h_px, n_rows, p.get('spaceBetween', 2))
+    gap, row_h = geom['gap'], geom['height']
+    # y runs down the plot area in px, as the app's SVG does.
+    ax.set_xlim(0, span)
+    ax.set_ylim(h_px, 0)
+    cmap = p.get('colormap') or DEFAULT_COLORMAP
+    # Ranges: per series (overall / heatmap intensity), per row (byperiod) or manual.
+    raw_y = {}
+    for d, s in enumerate(series_data):
+        y_col = _resolve_plot_col(s.get('y'), columns_index)
+        raw_y[d] = _js_min_max(y_col.get_data() if y_col is not None else [])
+    option = p.get('ylimsOption') or 'overall'
+    ylims_in = list(p.get('ylimsIN') or [0, 100]) + [None, None]
+    by_period = {}
+    if option == 'byperiod':
+        for d, per, _xs, _xe, v in rows:
+            if _finite(v):
+                for tile in range(double):
+                    row = per - 1 - tile
+                    if row >= 0:
+                        lo, hi = by_period.get((d, row), (math.inf, -math.inf))
+                        by_period[(d, row)] = (min(lo, float(v)), max(hi, float(v)))
+
+    def row_range(d, row):
+        if option == 'manual':
+            return _number_or_none(ylims_in[0]) or 0.0, _number_or_none(ylims_in[1])
+        if option == 'byperiod':
+            return by_period.get((d, row), (None, None))
+        return raw_y.get(d, (None, None))
+    rects, colours = [], []
     for d, per, x_start, x_end, v in rows:
-        if not _finite(v):
-            continue
-        scale = ymax.get(d) or 1.0
         sd = series_data[d] if d < len(series_data) else {}
-        colour = sd.get('colour') or sd.get('color') or '#234154'
+        if sd.get('draw') is False:
+            continue
         x0 = x_start - (per - 1) * period_hrs
+        width = x_end - x_start
         # Period `per` sits in row per - 1 at tile 0, row per - 2 at tile 1, and so on.
         for tile in range(double):
             row = per - 1 - tile
             if row < 0:
                 break
-            xs.append(x0 + tile * period_hrs)
-            hs.append(max(0.0, float(v)) / scale * 0.9)
-            ws.append(x_end - x_start)
-            bs.append(n_rows - 1 - row)  # row 1 at the top
-            cs.append(colour)
-    if xs:
-        ax.bar(xs, hs, width=ws, bottom=bs, align='edge', color=cs, linewidth=0)
-    ax.set_xlim(0, period_hrs * double)
-    ax.set_ylim(-0.5, n_rows - 0.5 + 0.9)
-    ax.set_xlabel((p.get('xAxis') or {}).get('label', 'Hours'))
-    ax.set_ylabel('Day')
-    ax.set_yticks(range(n_rows))
-    ax.set_yticklabels([str(n_rows - i) for i in range(n_rows)])
-    ax.set_title(plot.get('name', ''))
+            if row >= n_rows:
+                continue
+            top = row * (gap + row_h) + gap
+            xs = x0 + tile * period_hrs
+            if heat:
+                lo, hi = raw_y.get(d, (None, None))
+                t = 0.0
+                if _finite(v) and lo is not None and hi is not None and hi > lo:
+                    t = min(1.0, max(0.0, (float(v) - lo) / (hi - lo)))
+                w = max(width, 0.5 / w_px * span)
+                rects.append(Rectangle((xs, top), w, row_h))
+                colours.append(tuple(c / 255 for c in colormap_rgb(cmap, t)))
+            else:
+                if not _finite(v):
+                    continue
+                lo, hi = row_range(d, row)
+                if lo is None or hi is None or not math.isfinite(hi - lo) or hi == lo:
+                    continue
+                h = (float(v) - lo) / (hi - lo) * row_h
+                if h <= 0:
+                    continue
+                rects.append(Rectangle((xs, top + row_h - h), width, h))
+                colours.append(_mpl_colour(sd.get('colour') or sd.get('color'), '#234154'))
+    if rects:
+        pc = PatchCollection(rects, facecolors=colours, edgecolors='none', linewidths=0,
+                             zorder=1, gid='actogram-heatmap' if heat else 'actogram-bars')
+        ax.add_collection(pc)
     # Light bands
     for band in ((p.get('lightBands') or {}).get('bands', [])):
         start = float(band.get('start', 0))
@@ -10944,6 +12404,91 @@ def plot_actogram(plot, columns_index, ax, zone=None):
         if double > 1:
             ax.axvspan(start + period_hrs, end + period_hrs,
                        color=colour_b, alpha=alpha, zorder=0)
+    x_axis = p.get('xAxis') or {'gridlines': False, 'nticks': 6}
+    specs = {'top': {'kind': 'linear', 'domain': (0, span), 'axis': x_axis,
+                     'label': x_axis.get('label') or ''}}
+    _draw_app_axes(ax, None, specs, look)
+    ax.set_ylim(h_px, 0)
+    # Row labels (Actogram.svelte): 10 px left of the rows, centred on each labelled row.
+    mode = _actogram_row_labels_mode(p)
+    if mode != 'none' and n_rows > 0:
+        start = None
+        if mode == 'date':
+            resolved = []
+            for s in series_data:
+                x_col = _resolve_plot_col(s.get('x'), columns_index)
+                y_col = _resolve_plot_col(s.get('y'), columns_index)
+                if x_col is not None and y_col is not None:
+                    resolved.append({'xType': x_col.type, 'x': x_col.get_data() or [],
+                                     'y': y_col.get_data() or [],
+                                     'rawBinStart0': x_col.raw_first,
+                                     'originTime_ms': x_col.eff_origin_time_ms})
+            start = actogram_plot_start_time(p, resolved, zone)
+        fpx = actogram_row_label_px(look['px']['tick'], h_px, n_rows, p.get('spaceBetween', 2))
+        from matplotlib.transforms import blended_transform_factory
+        tr = blended_transform_factory(ax.transAxes, ax.transData)
+        for day in actogram_labelled_rows(n_rows):
+            ax.text(-10 / w_px, day * (row_h + gap) + row_h / 2,
+                    actogram_row_label_text(day, mode, start, period_hrs,
+                                            p.get('dateFormat'), zone),
+                    transform=tr, ha='right', va='center', fontsize=fpx * _PX_TO_PT,
+                    fontfamily=_font_family_list(look['family']), color='black',
+                    gid='actogram-row-label')
+    if heat:
+        _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look)
+
+
+def _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look):
+    """The heatmap's scale bar (Actogram.svelte): 96 x 8 px, the map through six stops, the
+    first drawn series' range at its ends (3 significant figures, 9 px #555), on a white
+    backdrop 10 px in from the plot's top right (top left while a shown top-right legend
+    has entries), 6 px down."""
+    from matplotlib.patches import FancyBboxPatch
+    fdi = next((i for i, s in enumerate(series_data) if s.get('draw') is not False), None)
+    if fdi is None:
+        return
+    lo, hi = raw_y.get(fdi, (None, None))
+    lo, hi = (0, 1) if lo is None else (lo, hi)
+    w_px, h_px = _axes_px(ax)
+    leg = p.get('legend') or {}
+    step_aside = leg.get('show') is True and leg.get('position', 'topright') == 'topright' \
+        and len(series_data) > 0
+    leg_w = 96
+    lx = 10 if step_aside else w_px - leg_w - 10
+    ly = 6
+
+    def fx(px):
+        return px / w_px
+
+    def fy(px):
+        return 1 - px / h_px
+    ax.add_patch(FancyBboxPatch((fx(lx - 5), fy(ly - 4 + 26)), fx(leg_w + 10) - fx(0),
+                                fy(0) - fy(26), boxstyle='round,pad=0,rounding_size=0.004',
+                                transform=ax.transAxes, facecolor=(1, 1, 1, 0.82),
+                                edgecolor='#cccccc', linewidth=0.5 * _PX_TO_PT, zorder=5,
+                                gid='actogram-heat-legend'))
+    stops = [colormap_rgb(cmap, t) for t in (0, 0.2, 0.4, 0.6, 0.8, 1)]
+    grad = []
+    for k in range(256):
+        u = k / 255 * 5
+        i = min(4, int(u))
+        f = u - i
+        grad.append([(stops[i][c] + (stops[i + 1][c] - stops[i][c]) * f) / 255 for c in range(3)])
+    ax.imshow([grad], extent=(fx(lx), fx(lx + leg_w), fy(ly + 8), fy(ly)), aspect='auto',
+              transform=ax.transAxes, zorder=5.1, interpolation='bilinear')
+    family = _font_family_list(look['family'])
+    for x, val, ha in ((lx, lo, 'left'), (lx + leg_w, hi, 'right')):
+        ax.text(fx(x), fy(ly + 20), _js_to_precision_signed(val, 3), transform=ax.transAxes,
+                ha=ha, va='baseline', fontsize=9 * _PX_TO_PT, color='#555555',
+                fontfamily=family, zorder=5.2, gid='actogram-heat-legend-label')
+
+
+def _js_to_precision_signed(v, p):
+    """Number(v).toPrecision(p)."""
+    v = float(v)
+    if not math.isfinite(v):
+        return 'NaN' if math.isnan(v) else ('-' if v < 0 else '') + 'Infinity'
+    return ('-' if v < 0 else '') + _js_precision(abs(v), p)
 
 
 PLOT_TYPE_DISPATCH = {
@@ -10954,6 +12499,125 @@ PLOT_TYPE_DISPATCH = {
     'boxplot': 'boxplot',
     'actogram': 'actogram',
 }
+
+
+def _plot_padding(plot, columns_index=None):
+    """The plot area's padding in px as the app lays the plot out: the saved `padding`; for
+    the actogram its `paddingIN`, plus room for its row labels (rowLabelGutter) and light
+    bands (twice their height on top)."""
+    p = plot.get('plot', {}) or {}
+    if plot.get('type') != 'actogram':
+        pad = p.get('padding')
+        return pad if isinstance(pad, dict) else {'top': 15, 'right': 30, 'bottom': 30,
+                                                  'left': 50}
+    pad = dict(p.get('paddingIN') or {'top': 30, 'right': 20, 'bottom': 10, 'left': 20})
+    bands = (p.get('lightBands') or {})
+    if bands.get('bands'):
+        height = bands.get('height')
+        pad['top'] = (pad.get('top') or 0) + 2 * (height if _style_valid(height, 'number')
+                                                  else 0)
+    mode = _actogram_row_labels_mode(p)
+    if mode in ('period', 'date') and columns_index is not None:
+        _, rows = actogram_download_data(plot, columns_index, DISPLAY_TIMEZONE)
+        n_rows = max((r[1] for r in rows), default=0)
+        look = plot_look(plot)
+        h = float(plot.get('height') or 440)
+        fpx = actogram_row_label_px(look['px']['tick'], h - pad['top'] - pad['bottom'], n_rows,
+                                    p.get('spaceBetween', 2))
+        sample = (re.sub(r'[A-Za-z]', 'M', p.get('dateFormat') or 'DD MMM') if mode == 'date'
+                  else str(max(1, n_rows)))
+        pad['left'] = (pad.get('left') or 0) + math.ceil(len(sample) * fpx * 0.6) + 4
+    return pad
+
+
+# The plots whose padding the app measures from what it drew (viewBox.autoPadWhenDrawn).
+AUTO_PADDED_PLOTS = {'scatterplot', 'periodogram', 'fft', 'correlogram', 'boxplot'}
+# getAutoScaleValues: room past each axis's outer edge (more under the x axis).
+_AUTO_PAD_EXTRA = {'left': 6, 'right': 6, 'top': 6, 'bottom': 12}
+
+
+def _draw_plot_kind(kind, plot, columns_index, ax):
+    if kind == 'scatter':
+        has_right = any((s.get('yAxis') == 'right')
+                        for s in plot.get('plot', {}).get('data', []))
+        ax_right = ax.twinx() if has_right else None
+        plot_scatterplot(plot, columns_index, ax, ax_right)
+    elif kind == 'fft':
+        plot_fft(plot, columns_index, ax)
+    elif kind == 'periodogram':
+        plot_periodogram(plot, columns_index, ax)
+    elif kind == 'correlogram':
+        plot_correlogram(plot, columns_index, ax)
+    elif kind == 'boxplot':
+        plot_boxplot(plot, columns_index, ax)
+    elif kind == 'actogram':
+        plot_actogram(plot, columns_index, ax)
+
+
+def measured_padding(fig, ax, padding):
+    """The app's automatic padding for what this figure drew (getAutoScaleValues): on each
+    side that has an axis, the distance from its axis line to the outer edge of everything
+    the axis drew (ticks, labels, title), rounded, plus 6 px (12 under the x axis); a side
+    with no axis keeps its padding."""
+    renderer = fig.canvas.get_renderer()
+    out = dict(padding)
+    sides = getattr(ax, '_ancir_axes', {}) or {}
+    for side, owner in sides.items():
+        axis = owner.xaxis if side in ('bottom', 'top') else owner.yaxis
+        box = axis.get_tightbbox(renderer)
+        frame = owner.get_window_extent(renderer)
+        if box is None:
+            continue
+        k = _FIG_PX_PER_IN / fig.dpi
+        width = {'left': frame.x0 - box.x0, 'right': box.x1 - frame.x1,
+                 'bottom': frame.y0 - box.y0, 'top': box.y1 - frame.y1}[side] * k
+        out[side] = float(_js_round(width + _AUTO_PAD_EXTRA[side]))
+    return out
+
+
+def render_plot_figure(plot, columns_index, *, auto_pad=True):
+    """One plot as the exported PNG draws it: (fig, ax), or None for a plot type this
+    runtime does not render. The figure is the plot's size with the export's title band
+    above; the plot area is what the app's would be: for the plots that size their padding
+    from their own axes (AUTO_PADDED_PLOTS), drawn, measured (measured_padding) and redrawn
+    until the padding settles (at most four passes, as autoPadWhenDrawn), else the saved
+    padding. `auto_pad=False` keeps the saved padding."""
+    import copy as _copy
+    import matplotlib.pyplot as plt
+    kind = PLOT_TYPE_DISPATCH.get(plot.get('type', ''))
+    if kind is None:
+        return None
+    look = plot_look(plot)
+    band, _lines = export_title_band(plot, look)
+    padding = dict(_plot_padding(plot, columns_index))
+    passes = 4 if (auto_pad and plot.get('type') in AUTO_PADDED_PLOTS) else 1
+    for i in range(passes):
+        fig, ax, _g = new_plot_figure(plot, padding=padding, band=band)
+        try:
+            _draw_plot_kind(kind, _copy.deepcopy(plot), columns_index, ax)
+        except Exception:
+            plt.close(fig)
+            raise
+        if i == passes - 1:
+            break
+        fig.canvas.draw()
+        nxt = measured_padding(fig, ax, padding)
+        if all(abs(nxt[k] - padding[k]) < 0.5 for k in padding):
+            break
+        plt.close(fig)
+        padding = nxt
+    draw_export_title(fig, plot, look)
+    return fig, ax
+
+
+def save_plot_figure(fig, path, plot):
+    """Save as the app's PNG export does: the figure's size at its export DPI, on its
+    background (transparent unless the style sets a colour)."""
+    look = plot_look(plot)
+    bg = look['background']
+    transparent = not isinstance(bg, str) or bg.strip() in ('', 'transparent', 'none')
+    fig.savefig(path, dpi=look['dpi'], transparent=transparent,
+                facecolor='none' if transparent else _mpl_colour(bg, 'white'))
 
 
 def render_plots(plots, columns_index, output_dir):
@@ -10970,38 +12634,19 @@ def render_plots(plots, columns_index, output_dir):
     written = []
     for plot in plots:
         ptype = plot.get('type', '')
-        kind = PLOT_TYPE_DISPATCH.get(ptype)
-        if kind is None:
+        if PLOT_TYPE_DISPATCH.get(ptype) is None:
             print(f"[ancir-plot] skipped unsupported plot: {ptype} "
                   f"({plot.get('name')})")
             continue
-        fig, ax = plt.subplots(figsize=(8, 5))
         try:
-            if kind == 'scatter':
-                # Does any series target the right axis?
-                has_right = any((s.get('yAxis') == 'right')
-                                for s in plot.get('plot', {}).get('data', []))
-                ax_right = ax.twinx() if has_right else None
-                plot_scatterplot(plot, columns_index, ax, ax_right)
-            elif kind == 'fft':
-                plot_fft(plot, columns_index, ax)
-            elif kind == 'periodogram':
-                plot_periodogram(plot, columns_index, ax)
-            elif kind == 'correlogram':
-                plot_correlogram(plot, columns_index, ax)
-            elif kind == 'boxplot':
-                plot_boxplot(plot, columns_index, ax)
-            elif kind == 'actogram':
-                plot_actogram(plot, columns_index, ax)
+            fig, _ax = render_plot_figure(plot, columns_index)
         except Exception as e:
             print(f"[ancir-plot] error rendering {plot.get('name')}: {e}")
-            plt.close(fig)
             continue
-        fig.tight_layout()
         safe_name = ''.join(c if c.isalnum() or c in '-_' else '_'
                             for c in str(plot.get('name', f'plot_{plot.get("id", "?")}')))
         path = out / f"plot_{plot.get('id', '?')}_{safe_name}.png"
-        fig.savefig(path, dpi=120)
+        save_plot_figure(fig, path, plot)
         plt.close(fig)
         written.append(path)
         print(f"[ancir-plot] wrote {path}")

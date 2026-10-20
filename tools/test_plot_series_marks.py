@@ -18,7 +18,8 @@ toJSON) and pin what the app draws:
     96 dpi, where 1 px on the canvas is 1 CSS px.
   - Marker shapes are the app's own geometry (pointShapes.js getPointPath, evaluated by
     node when it is available).
-  - Dashes keep the app's absolute lengths; SVG default caps and joins (butt, miter).
+  - Dashes keep the app's absolute lengths; SVG default caps (butt) and joins (a miter that
+    falls back to a bevel past miter-limit 4; drawn as a bevel, see _SVG_LINE_JOIN).
   - Gaps: a missing x or y breaks the line (d3 `defined(isValid)`) unless `joinGaps` is on,
     which bridges straight across; fewer than two valid points draw no line.
   - FFT, Periodogram and Correlogram draw their line and points by the same rules.
@@ -159,9 +160,9 @@ def test_line_only_series_draws_its_line_at_the_saved_width_and_no_points():
         assert a["points"] == []
         (line,) = a["line"]
         assert line.get_linewidth() == pytest.approx(2.5 * 0.75)
-        # SVG's default stroke ends and corners.
+        # SVG's default stroke ends, and its corners as drawn (rt._SVG_LINE_JOIN).
         assert line.get_solid_capstyle() == "butt"
-        assert line.get_solid_joinstyle() == "miter"
+        assert line.get_solid_joinstyle() == "bevel"
     finally:
         plt.close(fig)
 

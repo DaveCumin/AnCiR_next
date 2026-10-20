@@ -428,14 +428,14 @@ def test_scatterplot_time_axis_and_migrated_night_bands(fig_ax):
     # A typed position on a time axis is already epoch ms.
     assert vline_x(by_gid(ax, 2)["lines"][0]) == pytest.approx(num(t0 + 30 * h))
     # The legacy night band (no id) is migrated behind the overlays: 12 h from the data
-    # minimum t0, every 24 h, clamped to the axis (whose margin reaches past t0 + 48 h).
+    # minimum t0, every 24 h, clamped to the axis. The axis is the app's: the data's range
+    # (t0 .. t0 + 47 h) widened only by the room the markers need, so a third night, which
+    # would start at t0 + 48 h, is past its end and not drawn.
     night = [a for a in ax.patches if (a.get_gid() or "").startswith("overlay-")]
     lo, hi = ax.get_xlim()
-    assert lo < num(t0) and hi > num(t0 + 48 * h)
-    assert [p.get_x() for p in night] == pytest.approx(
-        [num(t0), num(t0 + 24 * h), num(t0 + 48 * h)])
-    assert [p.get_width() for p in night[:2]] == pytest.approx([0.5, 0.5])
-    assert night[2].get_x() + night[2].get_width() == pytest.approx(hi)
+    assert lo < num(t0) and num(t0 + 47 * h) < hi < num(t0 + 48 * h)
+    assert [p.get_x() for p in night] == pytest.approx([num(t0), num(t0 + 24 * h)])
+    assert [p.get_width() for p in night] == pytest.approx([0.5, 0.5])
     assert legend_texts(ax) == ["activity", "alert"]
 
 
@@ -472,6 +472,7 @@ def test_periodogram_overlays_widen_power_but_never_the_period_range(fig_ax):
     fig, ax = fig_ax
     plot, cols = load_demo("demo-periodogram-rhythm", "periodogram")
     inner = plot["plot"]
+    inner["legend"] = {"show": True}  # off by default in the app (LegendClass.withDefaults)
     del inner["periodlimsIN"]  # default [1, 30] range, and no manual x limits to hide a widening
     inner["overlays"] = [
         ov(1, "line", "vertical", at=[24, 80], label="24 h"),
@@ -525,6 +526,7 @@ def test_fft_vertical_marks_are_periods_in_both_modes(fig_ax, show_period):
     fig, ax = fig_ax
     plot, cols = load_demo("demo-fft-rhythm", "fft")
     inner = plot["plot"]
+    inner["legend"] = {"show": True}  # off by default in the app (LegendClass.withDefaults)
     inner["showPeriod"] = show_period
     inner["xlimsIN"] = [4, 30] if show_period else [None, None]
     inner["overlays"] = [
@@ -588,7 +590,9 @@ def test_log_axis_starts_at_the_smallest_value_drawn_with_plain_labels(fig_ax, s
     fig.canvas.draw()
     labels = [t.get_text() for t in ax.get_yticklabels() if t.get_text()]
     assert labels and all("^" not in t and "$" not in t for t in labels)
-    assert "0.001" in labels and "1" in labels
+    # d3's log ticks for 5 ticks over these seven decades: every second power of ten
+    # (test_plot_axes_style.py pins the labels against the app's own drawing).
+    assert "0.01" in labels and "1" in labels
     # A user minimum wins.
     ax.cla()
     plot["plot"]["overlays"] = []
