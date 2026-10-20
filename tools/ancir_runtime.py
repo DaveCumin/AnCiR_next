@@ -8952,6 +8952,140 @@ def _paired_finite(x_vals, y_vals):
     return out_x, out_y
 
 
+# ---- Series marks: a series' line and points as the app draws them -----------------------
+#
+# The app saves them as LineClass.toJSON {colour, strokeWidth, stroke, draw, joinGaps}
+# (components/plotbits/Line.svelte) and PointsClass.toJSON {colour, radius, shape, draw}
+# (Points.svelte). No writer ever saved `show`, `width` or `size` (checked over the
+# history of both classes and the MCP normaliser), which is what this port used to read,
+# so every exported scatterplot drew a width-1 line and no points.
+#
+# Units: the app draws in CSS px, matplotlib in typographic points; 1 in = 96 px = 72 pt.
+
+_PX_TO_PT = 0.75
+
+# The class constructors' defaults (`dataIN?.x ?? default`), for a series saved without them.
+_LINE_DEFAULTS = {'strokeWidth': 3, 'stroke': 'solid', 'draw': True, 'joinGaps': False}
+_POINTS_DEFAULTS = {'radius': 4, 'shape': 'circle', 'draw': True}
+
+# pointShapes.js POINT_SHAPES.
+POINT_SHAPES = ('circle', 'triangle', 'square', 'star', 'cross', 'x')
+
+
+def _with_defaults(saved, defaults):
+    saved = saved or {}
+    return {k: (saved.get(k) if saved.get(k) is not None else d) for k, d in defaults.items()}
+
+
+def _app_marker_vertices(shape):
+    """pointShapes.js getPointPath(shape, 0, 0, 1) as vertices, y UP (matplotlib), for the
+    polygon shapes; None for the circle (an SVG arc, matplotlib's 'o')."""
+    if shape == 'square':
+        pts = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+    elif shape == 'triangle':
+        h = math.sqrt(3) / 2
+        pts = [(0, -1), (h, 0.5), (-h, 0.5)]
+    elif shape == 'star':
+        inner = 0.3819660113
+        pts = []
+        for i in range(10):
+            rad = 1 if i % 2 == 0 else inner
+            ang = -math.pi / 2 + i * math.pi / 5
+            pts.append((rad * math.cos(ang), rad * math.sin(ang)))
+    elif shape in ('cross', 'x'):
+        t = 1 / 3
+        base = [(-t, -t), (-t, -1), (t, -1), (t, -t), (1, -t), (1, t), (t, t), (t, 1),
+                (-t, 1), (-t, t), (-1, t), (-1, -t)]
+        sin, cos = (math.sqrt(0.5), math.sqrt(0.5)) if shape == 'x' else (0.0, 1.0)
+        pts = [(px * cos - py * sin, px * sin + py * cos) for px, py in base]
+    else:
+        return None
+    return [(x, -y) for x, y in pts]  # SVG y points down
+
+
+def _scatter_marker(shape, radius_px):
+    """(marker, s) for ax.scatter so a marker of the app's `radius` (px) lands at the app's
+    size. matplotlib scales a marker to `sqrt(s)` points across its unit box: the circle 'o'
+    has radius sqrt(s) / 2, and a custom vertex list is rescaled so its largest |coordinate|
+    is 0.5. The app's radius r px is 0.75 r pt, so s = (1.5 r m)^2, m being the largest
+    |coordinate| of the shape at r = 1 (1 for the circle; below 1 for the rotated 'x')."""
+    verts = _app_marker_vertices(shape if shape in POINT_SHAPES else 'circle')
+    r_pt = radius_px * _PX_TO_PT
+    if verts is None:
+        return 'o', (2 * r_pt) ** 2
+    m = max(max(abs(x), abs(y)) for x, y in verts)
+    return verts, (2 * r_pt * m) ** 2
+
+
+def _js_plot_valid(v):
+    """One coordinate of Line.svelte's isValid (and the Points filter): `v != null &&
+    !isNaN(v)`. isNaN coerces with Number(), as _js_number does; a datetime is valid unless
+    it is NaT."""
+    if v is None:
+        return False
+    if isinstance(v, (pd.Timestamp, np.datetime64)) or hasattr(v, 'tzinfo'):
+        return not pd.isna(v)
+    try:
+        return not math.isnan(_js_number(v))
+    except (TypeError, ValueError):
+        return False
+
+
+def _draw_series_marks(ax, x, y, series, index, label):
+    """Draw one series' line, then its points, as Line.svelte and Points.svelte do, and
+    return the drawn artists (gids `series-<index>-line` / `series-<index>-points`).
+
+    - `draw` false hides a mark; a missing key takes the class default.
+    - A colour left automatic (null) resolves to the same automatic colour for the line and
+      the points (`C<index>`, positional like the app's palette fallback), so one series is
+      one colour as in the app.
+    - The line breaks at every row whose x or y is missing (d3 `defined(isValid)`) unless
+      `joinGaps` is on, which drops those rows and bridges straight across. Fewer than two
+      valid rows draw no line. No other gap rule exists (none in the app).
+    - Widths, dashes and marker sizes keep the app's px lengths (_PX_TO_PT); SVG's default
+      butt caps and miter joins. The points have no outline (stroke="none").
+    - zorder 2 for both, so series stack in the app's order (each series' line under its
+      points) between the bands (0.5) and the reference lines (2.5).
+    The label goes on the line when it is drawn, else on the points."""
+    line = _with_defaults(series.get('line'), _LINE_DEFAULTS)
+    points = _with_defaults(series.get('points'), _POINTS_DEFAULTS)
+    auto = f'C{index}'
+    drawn = {'line': None, 'points': None}
+    n = min(len(x), len(y))
+    valid = [_js_plot_valid(x[i]) and _js_plot_valid(y[i]) for i in range(n)]
+    rows = [i for i in range(n) if valid[i]]
+    if line['draw'] and len(rows) >= 2:
+        width = line['strokeWidth']
+        if line['joinGaps']:
+            lx = [x[i] for i in rows]
+            ly = [_js_number(y[i]) for i in rows]
+        else:
+            # A missing row keeps a placeholder x (the nearest earlier valid one, so a time
+            # axis never sees NaT) and a NaN y, which is where matplotlib breaks the line.
+            lx, ly, last = [], [], x[rows[0]]
+            for i in range(n):
+                if valid[i]:
+                    last = x[i]
+                    lx.append(x[i])
+                    ly.append(_js_number(y[i]))
+                else:
+                    lx.append(last)
+                    ly.append(float('nan'))
+        (drawn['line'],) = ax.plot(
+            lx, ly, color=(series.get('line') or {}).get('colour') or auto,
+            linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(line['stroke'], width),
+            solid_capstyle='butt', solid_joinstyle='miter', dash_capstyle='butt',
+            dash_joinstyle='miter', zorder=2, gid=f'series-{index}-line', label=label)
+    if points['draw'] and rows:
+        marker, size = _scatter_marker(points['shape'], points['radius'])
+        drawn['points'] = ax.scatter(
+            [x[i] for i in rows], [_js_number(y[i]) for i in rows],
+            color=(series.get('points') or {}).get('colour') or auto, marker=marker, s=size,
+            linewidths=0, edgecolors='none', zorder=2, gid=f'series-{index}-points',
+            label='_nolegend_' if drawn['line'] is not None else label)
+    return drawn
+
+
 def _apply_axes(ax, xlims=None, ylims=None, xlog=False, ylog=False,
                 xlabel='', ylabel='', title=''):
     if xlims and any(v is not None for v in xlims):
@@ -9508,7 +9642,9 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
         arts = []
         if g['kind'] == 'line':
             width = ov['strokeWidth']
-            style = dict(color=_overlay_colour(ov['colour'], '#2C2C2C'), linewidth=width,
+            # Widths are the app's px (Line.svelte), drawn at the same length as the series.
+            style = dict(color=_overlay_colour(ov['colour'], '#2C2C2C'),
+                         linewidth=width * _PX_TO_PT,
                          linestyle=_overlay_dashes(ov['stroke'], width), zorder=2.5,
                          label='_nolegend_', gid=gid)
             for v in g['positions']:
@@ -9521,7 +9657,8 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
             return arts
         fill = _overlay_colour(ov['fill'], _OVERLAY_BAND_FILL_DEFAULT)
         edge = dict(color=_overlay_colour(ov['edgeColour'], _OVERLAY_EDGE_COLOUR_DEFAULT),
-                    linewidth=ov['edgeWidth'], zorder=0.6, label='_nolegend_', gid=gid)
+                    linewidth=ov['edgeWidth'] * _PX_TO_PT, zorder=0.6, label='_nolegend_',
+                    gid=gid)
         band = dict(facecolor=fill, edgecolor='none', linewidth=0, zorder=0.5,
                     label='_nolegend_', gid=gid)
         if g['form'] == 'ribbon':
@@ -9599,13 +9736,14 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
         if ov['kind'] == 'line':
             width = ov['strokeWidth']
             handle = Line2D([], [], color=_overlay_colour(ov['colour'], '#2C2C2C'),
-                            linewidth=width, linestyle=_overlay_dashes(ov['stroke'], width))
+                            linewidth=width * _PX_TO_PT,
+                            linestyle=_overlay_dashes(ov['stroke'], width))
         else:
             handle = Patch(facecolor=_overlay_colour(ov['fill'], _OVERLAY_BAND_FILL_DEFAULT),
                            edgecolor=(_overlay_colour(ov['edgeColour'],
                                                       _OVERLAY_EDGE_COLOUR_DEFAULT)
                                       if ov['edge'] else 'none'),
-                           linewidth=ov['edgeWidth'] if ov['edge'] else 0)
+                           linewidth=ov['edgeWidth'] * _PX_TO_PT if ov['edge'] else 0)
         result['legend'].append((handle, label))
     return result
 
@@ -9709,7 +9847,7 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     p = plot.get('plot', {})
     xctx = _scatter_x_context(p, columns_index)
     used_right = False
-    for series in p.get('data', []):
+    for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
@@ -9721,24 +9859,15 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         else:
             x = _x_for_plot(x_col)
         y = y_col.get_data()
-        x, y = _paired_finite(x, y)
-        if not x:
+        # Rows stay aligned (not _paired_finite): a missing row is where the line breaks.
+        if not any(_js_plot_valid(a) and _js_plot_valid(b) for a, b in zip(x, y)):
             continue
         ax = ax_right if (series.get('yAxis') == 'right'
                           and ax_right is not None) else ax_left
         if series.get('yAxis') == 'right':
             used_right = True
-        line = series.get('line') or {}
-        points = series.get('points') or {}
         label = series.get('label') or _display_name(y_col)
-        colour = (line.get('colour') or line.get('color')
-                  or points.get('colour') or points.get('color') or None)
-        if line.get('show', True):
-            ax.plot(x, y, color=colour, linewidth=line.get('width', 1),
-                    label=label)
-        if points.get('show'):
-            ax.scatter(x, y, color=colour, s=(points.get('size', 3) ** 2),
-                       label=None if line.get('show') else label)
+        _draw_series_marks(ax, x, y, series, index, label)
     # Overlay y channels read on the left axis while it carries data, else on the right
     # (Scatterplot overlayYAxis).
     series_list = p.get('data', []) or []
@@ -9787,7 +9916,7 @@ def plot_fft(plot, columns_index, ax):
     p = plot.get('plot', {})
     show_period = p.get('showPeriod', False)
     drawn = []
-    for series in p.get('data', []):
+    for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
@@ -9807,11 +9936,8 @@ def plot_fft(plot, columns_index, ax):
         # Period mode draws f > 0 only (the f = 0 term has no period), as the app does.
         drawn += [m for f, m in zip(fft['frequencies'], fft['magnitudes'])
                   if f > 0 or not show_period]
-        line = series.get('line') or {}
-        colour = line.get('colour') or line.get('color')
-        ax.plot(xs, fft['magnitudes'], color=colour,
-                linewidth=line.get('width', 1),
-                label=series.get('label') or _display_name(y_col))
+        _draw_series_marks(ax, xs, fft['magnitudes'], series, index,
+                           series.get('label') or _display_name(y_col))
     # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
     # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
     # the magnitude axis only.
@@ -9856,7 +9982,7 @@ def plot_periodogram(plot, columns_index, ax):
     # used to be read from the plot, where the app never stores them, so every exported
     # periodogram was drawn as Lomb-Scargle.
     drawn = []
-    for series in p.get('data', []):
+    for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
@@ -9870,11 +9996,9 @@ def plot_periodogram(plot, columns_index, ax):
             continue
         result = run_periodogram_calculation({'t': t, 'y': y, **params})
         drawn += list(result['y']) + list(result.get('threshold') or [])
-        line = series.get('line') or {}
-        colour = line.get('colour') or line.get('color')
-        ax.plot(result['x'], result['y'], color=colour,
-                linewidth=line.get('width', 1),
-                label=series.get('label') or _display_name(y_col))
+        _draw_series_marks(ax, result['x'], result['y'], series, index,
+                           series.get('label') or _display_name(y_col))
+        colour = (series.get('line') or {}).get('colour')
         if result.get('threshold') is not None:
             # The Sidak line is per fold (its df follows the occupied columns), so it is a
             # curve over period, not one horizontal value.
@@ -9907,16 +10031,13 @@ def plot_periodogram(plot, columns_index, ax):
 
 def plot_correlogram(plot, columns_index, ax):
     p = plot.get('plot', {})
-    for series in p.get('data', []):
+    for index, series in enumerate(p.get('data', [])):
         ac = correlogram_series_acf(series, columns_index)
         if ac is None or not ac['lags']:
             continue
         y_col = _resolve_plot_col(series.get('y'), columns_index)
-        line = series.get('line') or {}
-        colour = line.get('colour') or line.get('color')
-        ax.plot(ac['lags'], ac['correlations'], color=colour,
-                linewidth=line.get('width', 1),
-                label=series.get('label') or _display_name(y_col))
+        _draw_series_marks(ax, ac['lags'], ac['correlations'], series, index,
+                           series.get('label') or _display_name(y_col))
     ax.axhline(0, color='gray', linewidth=0.5)
     # Overlays widen the correlation axis only: the lag range is an analysis parameter.
     ov = _draw_overlays(ax, plot, columns_index)

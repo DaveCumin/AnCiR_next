@@ -110,7 +110,11 @@ def legend_texts(ax):
 
 
 def series_zorders(ax):
-    return [a.get_zorder() for a in ax.lines if not (a.get_gid() or "").startswith("overlay")]
+    """Every series mark (line or points; gid `series-<i>-line` / `series-<i>-points`)."""
+    marks = [a for a in list(ax.lines) + list(ax.collections)
+             if (a.get_gid() or "").startswith("series-")]
+    assert marks, "no series marks drawn"
+    return [a.get_zorder() for a in marks]
 
 
 @pytest.fixture
@@ -362,7 +366,7 @@ def test_scatterplot_draws_every_form(fig_ax):
     assert starts[:3] == [0, 24, 48] or starts[0] == round(lo, 9)
     assert all(lo - 1e-9 <= p.get_x() and p.get_x() + p.get_width() <= hi + 1e-9 for p in rep)
     assert ax.get_ylim()[1] >= 200
-    # Layers: bands under every series line, lines over them.
+    # Layers: bands under every series mark, lines over them.
     top_series = max(series_zorders(ax))
     for oid in (10, 11, 13):
         assert all(p.get_zorder() < 1 for p in by_gid(ax, oid)["patches"])
