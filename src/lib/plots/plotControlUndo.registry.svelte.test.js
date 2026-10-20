@@ -237,10 +237,11 @@ async function typeThenEscape(el) {
 	await settle();
 }
 
-async function mountPanel(type, tab) {
+async function mountPanel(type, tab, prepare = null) {
 	resetSession();
 	cleanup();
 	const plot = sessionPlot(type);
+	prepare?.(plot);
 	appState.currentControlTab = tab;
 	const r = render(ControlDisplay);
 	await settle();
@@ -248,16 +249,16 @@ async function mountPanel(type, tab) {
 }
 
 /** Run every control of every tab of `type`; returns { key: outcome }. */
-async function auditType(type) {
+async function auditType(type, prepare = null) {
 	const out = {};
 	const headers = appConsts.plotMap.get(type).controlHeaders ?? ['Properties'];
 	for (const header of headers) {
 		const tab = header.toLowerCase();
-		const first = await mountPanel(type, tab);
+		const first = await mountPanel(type, tab, prepare);
 		const keys = controlKeys(type, tab, panelControls(first.container));
 		for (let i = 0; i < keys.length; i++) {
 			const key = keys[i];
-			const { plot, container } = await mountPanel(type, tab);
+			const { plot, container } = await mountPanel(type, tab, prepare);
 			const el = panelControls(container)[i];
 			if (!el) {
 				out[key] = 'gone';
@@ -296,7 +297,7 @@ async function auditType(type) {
 			if (out[key] !== 'ok' || !isTyped(el)) continue;
 
 			// Escape cancels a typed edit.
-			const again = await mountPanel(type, tab);
+			const again = await mountPanel(type, tab, prepare);
 			const box = panelControls(again.container)[i];
 			history.clear();
 			const start = json(again.plot.id);
@@ -324,6 +325,33 @@ describe('every plot control panel edit is one exact undo step', () => {
 		},
 		120000
 	);
+
+	// Colour by (colour-by plan 2026-10-20, phase 1b): its controls only show once it is on and
+	// wired, so audit a Scatterplot in that state too. Every control there (the switch, the
+	// column, how it is read, the colours, the range, the colour bar's settings) must be one
+	// exact undo step like the rest.
+	it('scatterplot with Colour by on (its own controls and the colour bar)', async () => {
+		const prepare = (plot) => {
+			const c = mkCol(
+				'c',
+				Array.from({ length: N }, (_, i) => i % 7)
+			);
+			const d = plot.plot.data[0];
+			d.enableColourBy();
+			d.colourBy.refId = c;
+		};
+		const results = await auditType('scatterplot', prepare);
+		const failures = Object.fromEntries(
+			Object.entries(results).filter(
+				([k, v]) => v !== 'ok' && !(k in EXCLUSIONS) && !(k in NO_SAVED_CHANGE)
+			)
+		);
+		expect(failures).toEqual({});
+		// Not vacuous: the colour-by controls were found and recorded.
+		const keys = Object.keys(results).join('\n');
+		for (const want of ['Colour points by a column', 'Read as', 'Colours', 'Bar width'])
+			expect(keys).toContain(want);
+	}, 240000);
 
 	it('records something for every plot type (guards a harness that edits nothing)', () => {
 		for (const type of PLOT_TYPES) {

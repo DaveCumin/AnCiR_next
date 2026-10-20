@@ -57,6 +57,7 @@ export class LegendAutoLayout {
 	#host;
 	#obstacles;
 	#outside;
+	#area;
 
 	/**
 	 * @param {object} host the plot class instance (see the contract above)
@@ -66,12 +67,21 @@ export class LegendAutoLayout {
 	 * @param {((box: {width:number,height:number,margin:number}, o: {explicit: boolean}) =>
 	 *   {reserveW:number, reserveH:number, x:number, y:number, side:string}) | null} [opts.outside]
 	 *   where an outside legend goes and what it costs; null when the plot cannot make room
+	 * @param {(() => {w: number, h: number}) | null} [opts.area] the plot area an INSIDE legend
+	 *   is placed over, when something else already takes room from it (a colour bar beside the
+	 *   plot, encodingHost.js). Must not depend on this layout's decision. Default: the host's
+	 *   `basePlotWidth` x `basePlotHeight`.
 	 */
-	constructor(host, { obstacles, outside = null }) {
+	constructor(host, { obstacles, outside = null, area = null }) {
 		this.#host = host;
 		this.#obstacles = obstacles;
 		this.#outside = outside;
+		this.#area = area;
 	}
+
+	/** The area the inside placement is decided over (see `area` above). */
+	areaW = $derived(this.#area ? this.#area().w : this.#host.basePlotWidth);
+	areaH = $derived(this.#area ? this.#area().h : this.#host.basePlotHeight);
 
 	get canPlaceOutside() {
 		return !!this.#outside;
@@ -124,8 +134,8 @@ export class LegendAutoLayout {
 	/** Where the marks are, over the plot area before any reservation. */
 	occupancy = $derived.by(() => {
 		if (this.#host.legend?.position !== 'auto' || !this.box) return null;
-		const w = this.#host.basePlotWidth;
-		const h = this.#host.basePlotHeight;
+		const w = this.areaW;
+		const h = this.areaH;
 		if (!(w > 0) || !(h > 0)) return null;
 		return buildOccupancy({ width: w, height: h, series: this.#obstacles(w, h) ?? [] });
 	});
@@ -135,8 +145,8 @@ export class LegendAutoLayout {
 		if (!this.occupancy) return null;
 		return chooseLegendPlacement({
 			occupancy: this.occupancy,
-			plotW: this.#host.basePlotWidth,
-			plotH: this.#host.basePlotHeight,
+			plotW: this.areaW,
+			plotH: this.areaH,
 			boxW: this.box.width,
 			boxH: this.box.height,
 			margin: this.margin,

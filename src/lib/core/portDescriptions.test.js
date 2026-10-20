@@ -16,6 +16,7 @@ import {
 	PROCESS_PORT_DESCRIPTIONS,
 	PLOT_PORT_DESCRIPTIONS,
 	OVERLAY_CHANNEL_DESCRIPTIONS,
+	COLOUR_BY_DESCRIPTION,
 	STAT_DESCRIPTIONS,
 	manifestPortDescription,
 	outputDescription,
@@ -307,6 +308,10 @@ describe('describeNodePort: one resolver for every node card', () => {
 		);
 		expect(describeNodePort(node, { name: 'ov3_start' }, 'in', env)).toMatch(/Start of each/);
 		expect(describeNodePort(node, { name: 'ovnew_line' }, 'in', env)).toMatch(/reference line/);
+		// A series' colour-by port (components/plotbits/encodingHost.js).
+		expect(describeNodePort(node, { name: 'enc2_colour' }, 'in', env)).toMatch(
+			/colours this series’ points/
+		);
 		expect(describeNodePort(node, { name: 'col_9' }, 'out', env)).toMatch(/^Period of/);
 		expect(describeNodePort(node, { name: 'col_5', passthrough: true }, 'out', env)).toMatch(
 			/passed on/
@@ -360,6 +365,7 @@ function allTexts() {
 		for (const [k, v] of Object.entries({ ...t.inputs, ...t.outputs })) push(`${n}.${k}`, v);
 	}
 	for (const [k, v] of Object.entries(OVERLAY_CHANNEL_DESCRIPTIONS)) push(k, v);
+	push('encoding.colour', COLOUR_BY_DESCRIPTION);
 	for (const k of Object.keys(STAT_DESCRIPTIONS))
 		push(`stat.${k}`, (ctx) => statDescription(k, ctx));
 	for (const k of ['H2_amplitude', 'H2_acrophase', 'C1_period', 'C1_phase', 'C1_acrophase', 'c3'])

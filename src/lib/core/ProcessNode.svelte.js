@@ -9,7 +9,8 @@ import {
 } from '$lib/plots/plotMetricDefs.js';
 import { createColumnNamer } from './outputLabels.js';
 import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
-import { seriesChannelRefs, plotInnerUsesColumn } from './seriesChannelRefs.js';
+import { seriesChannelRefs, plotInnerUsesColumn, isWiredRef } from './seriesChannelRefs.js';
+import { encodingPortName, colourEncodedSeries } from '$lib/components/plotbits/encodingHost.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -145,14 +146,19 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	const overlayGroups = [];
 	const plainInputs = [];
 	for (const p of inputs) {
-		if (p?.overlay) {
+		if (p?.encoding) {
+			// A series' colour-by port (`enc<id>_colour`): a row of ITS series block, under y.
+			const s = series.find((ss) => ss.n === p.series);
+			if (s) s.enc.push(p);
+			else plainInputs.push(p);
+		} else if (p?.overlay) {
 			let g = overlayGroups.find((og) => og.id === p.overlay.id);
 			if (!g) {
 				g = { id: p.overlay.id, label: p.overlay.name, ports: [] };
 				overlayGroups.push(g);
 			}
 			g.ports.push(p);
-		} else if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null });
+		} else if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null, enc: [] });
 		else if (p?.axis === 'y' && series.length > 0) series[series.length - 1].ys = p;
 		else if (!p?.axis) plainInputs.push(p);
 	}
@@ -192,6 +198,9 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 		if (s.ys) inputRows.push({ slot, kind: 'port', port: s.ys });
 		outs.ys.forEach((yPort, i) => outputRows.push({ slot: slot + i, port: yPort }));
 		slot += Math.max(s.ys ? 1 : 0, outs.ys.length);
+		// Colour-by ports close the series block, under the y row and its passthroughs (beside
+		// a y passthrough they would read as its colour).
+		s.enc.forEach((p) => inputRows.push({ slot: slot++, kind: 'port', port: p }));
 	}
 	// Orphan series-tagged outputs (series not among the input sets — shouldn't
 	// happen, but never drop a port silently) join the tail.
@@ -840,6 +849,31 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				};
 				groups.forEach((_, i) => addSeriesPorts(i + 1, false));
 				addSeriesPorts(groups.length + 1, true);
+
+				// Colour by (components/plotbits/encodingHost.js): one `enc<id>_colour` port per
+				// series with Colour by on, in its series block. Named after the series it colours
+				// when the set has several.
+				groups.forEach((g, i) => {
+					for (const dp of g.dataPoints) {
+						if (!colourEncodedSeries({ data: [dp] }).length) continue;
+						const yCol = isWiredRef(dp?.y?.refId)
+							? (core.data ?? []).find((c) => c.id === dp.y.refId)
+							: null;
+						// The series as its legend names it (a label, else its y), the shorter handle.
+						const seriesName = dp.label || (yCol ? displayName(yCol) : '');
+						inputs.push({
+							...makeNodePort(
+								encodingPortName(dp.colourEncoding.id, 'colour'),
+								'input',
+								'column',
+								false
+							),
+							series: i + 1,
+							display: g.dataPoints.length > 1 && seriesName ? `colour: ${seriesName}` : 'colour',
+							encoding: { id: dp.colourEncoding.id, channel: 'colour' }
+						});
+					}
+				});
 			}
 
 			// Overlays (reference lines / bands): one input port per channel of the
@@ -919,6 +953,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				const seriesN = i + 1;
 				for (const dp of group.dataPoints) {
 					for (const ch of seriesChannelRefs(dp)) {
+						// An encoding column (colour by) has its own `enc<id>_<channel>` input port
+						// and no passthrough, as overlays have none.
+						if (!ch.passthrough) continue;
 						if (ch.perSeries) addPassthrough(ch.refId, ch.display, seriesN, ch.axis);
 						else addPassthrough(ch.refId, ch.display);
 					}
@@ -1202,6 +1239,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					if (g.xRefId != null && g.xRefId >= 0) addPlotCol(g.xRefId, portX);
 					for (const dp of g.dataPoints) {
 						if (dp?.y?.refId != null && dp.y.refId >= 0) addPlotCol(dp.y.refId, portYs);
+						// Colour by: the colour column into the series' own colour port.
+						if (dp?.colourEncoding && isWiredRef(dp?.colourBy?.refId)) {
+							addPlotCol(dp.colourBy.refId, encodingPortName(dp.colourEncoding.id, 'colour'));
+						}
 					}
 				});
 			}

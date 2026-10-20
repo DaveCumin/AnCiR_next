@@ -20,7 +20,7 @@ import { facetGridCells } from '$lib/core/facetGrid.js';
 import { setByPath } from '$lib/utils/objectPath.js';
 import { COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
 import { applyOverride } from '$lib/core/facetOverrides.js';
-import { seriesChannelRefs } from '$lib/core/seriesChannelRefs.js';
+import { seriesChannelRefs, SERIES_COLUMN_FIELDS } from '$lib/core/seriesChannelRefs.js';
 
 // ---------------------------------------------------------------------------
 // Units (plan 1.2)
@@ -370,8 +370,9 @@ const isPlainObject = (v) =>
 	Object.getPrototypeOf(v) === Object.prototype;
 
 // Subtrees the leaf diff never enters: covered by the structural signature instead.
+const SERIES_WIRING_PATH = new RegExp(`^data\\[\\d+\\]\\.(${SERIES_COLUMN_FIELDS.join('|')})$`);
 function skipSubtree(path) {
-	return /^data\[\d+\]\.(x|y|column)$/.test(path) || /^overlays\[\d+\]\.channels$/.test(path);
+	return SERIES_WIRING_PATH.test(path) || /^overlays\[\d+\]\.channels$/.test(path);
 }
 
 /**

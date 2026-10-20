@@ -284,7 +284,10 @@ describe('the colour-scale control', () => {
 		.filter(({ src }) => /<ColourScale\b[^>]*which="plot"/s.test(src));
 
 	it('finds the plots that draw one (so the assertions below are not vacuous)', () => {
-		expect(sources.map((s) => s.name).sort()).toEqual(['CWT', 'CorrelationHeatmap'].sort());
+		// Scatterplot: the colour bar of Colour by (colour-by plan 2026-10-20, phase 1b).
+		expect(sources.map((s) => s.name).sort()).toEqual(
+			['CWT', 'CorrelationHeatmap', 'Scatterplot'].sort()
+		);
 	});
 
 	it('every plot that draws a colour scale also offers the control that switches it on', () => {
@@ -294,12 +297,16 @@ describe('the colour-scale control', () => {
 		expect(missing, 'drawn but with no way to enable it').toEqual([]);
 	});
 
-	it('puts the colour-scale control first in the Properties tab', () => {
+	it('puts the colour-scale control first in the Properties tab (after a series legend)', () => {
+		// A plot that also has a series legend (the Scatterplot, whose colour bar keys Colour
+		// by) puts the two keys together: the series legend first, the colour scale next.
 		const late = [];
 		for (const { name, src } of sources) {
 			const scaleAt = src.search(/<ColourScale\b[^>]*which="controls"/s);
-			const firstAt = src.search(/<[A-Z][A-Za-z]*\b[^>]*which="controls"/s);
-			if (scaleAt !== firstAt) late.push(`${name}: colour-scale control is not the first one`);
+			const controls = [...src.matchAll(/<([A-Z][A-Za-z]*)\b[^>]*which="controls"/gs)];
+			const order = controls.map((m) => m[1]);
+			const expectedAt = order[0] === 'Legend' ? controls[1]?.index : controls[0]?.index;
+			if (scaleAt !== expectedAt) late.push(`${name}: colour-scale control is not the first one`);
 		}
 		expect(late).toEqual([]);
 	});

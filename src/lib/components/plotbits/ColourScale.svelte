@@ -75,6 +75,73 @@
 		return String(Number(v.toPrecision(3)));
 	}
 
+	/** Gap between the bar and its tick labels, px. */
+	export const TICK_GAP = 5;
+	/** Side of the "no value" swatch relative to the font size, and its gap below the bar. */
+	const NO_VALUE_GAP = 6;
+
+	/**
+	 * The colour scale's geometry, shared by the component (which draws it) and a host that
+	 * must reserve room for it or place it (the Scatterplot's colour by, encodingHost.js).
+	 * Pure, so a host's reservation and the drawn key cannot disagree.
+	 *
+	 * Tick label widths are ESTIMATED from the character count rather than measured with a
+	 * canvas: the bar only needs to know how much room to leave beside itself, an
+	 * average-width estimate is within a character of the truth for the short numbers it
+	 * prints, and it keeps the geometry testable (jsdom's measureText returns 0).
+	 *
+	 * @param {object} o
+	 * @param {boolean} o.vertical
+	 * @param {number} o.thickness bar width across its own axis
+	 * @param {number} o.barLen bar length along its own axis
+	 * @param {number} o.fontSize
+	 * @param {string[]} o.tickLabels
+	 * @param {string|null} [o.label]
+	 * @param {string|null} [o.noValueLabel] the "no value" entry's text, or null for none
+	 */
+	export function colourScaleGeometry({
+		vertical,
+		thickness,
+		barLen,
+		fontSize,
+		tickLabels,
+		label = null,
+		noValueLabel = null
+	}) {
+		const tickTextW = Math.max(...tickLabels.map((t) => t.length), 1) * fontSize * 0.6;
+		// A one- or two-character label ('r', '\u03c1') rotated onto its side reads as a stray
+		// mark rather than a word, so only a real word is turned. Short ones stay upright.
+		const rotateLabel = !!label && String(label).length > 2;
+		const labelGap = label
+			? rotateLabel
+				? fontSize + 4
+				: String(label).length * fontSize * 0.6 + 4
+			: 0;
+		const swatch = Math.max(6, Math.round(fontSize * 0.8));
+		const noValueW = noValueLabel ? swatch + 4 + noValueLabel.length * fontSize * 0.6 : 0;
+		const noValueH = noValueLabel ? NO_VALUE_GAP + Math.max(swatch, fontSize) : 0;
+		const width = vertical
+			? Math.max(thickness + TICK_GAP + tickTextW + labelGap, noValueW)
+			: Math.max(barLen, noValueW);
+		const height = vertical ? barLen + noValueH : thickness + 3 + fontSize + labelGap + noValueH;
+		return {
+			width,
+			height,
+			tickTextW,
+			rotateLabel,
+			labelGap,
+			swatch,
+			noValueY: vertical
+				? barLen + NO_VALUE_GAP
+				: thickness + 3 + fontSize + labelGap + NO_VALUE_GAP
+		};
+	}
+
+	/** The bar's automatic length: the plot's extent, between 30 and 150 px. */
+	export function autoBarLength(extent) {
+		return Math.max(30, Math.min(extent, 150));
+	}
+
 	/**
 	 * The persisted colour-scale legend.
 	 *
@@ -136,6 +203,19 @@
 		/** Unique per plot, so a combined export cannot cross-wire two gradients. */
 		idPrefix = 'plot',
 		figureStyle = null,
+		// Explicit ticks `{ t, label }` (t in [0, 1] along the bar), for a key whose labels are
+		// not the domain's ends and middle (hour of day: 0, 6, 12, 18, 24). null keeps the
+		// three domain ticks.
+		ticks = null,
+		// `{ colour, label }`: a swatch for the marks that have no colour value and are drawn in
+		// their series colour instead (colour by). null draws none.
+		noValue = null,
+		// `{ x, y }` relative to the plot area, set by a host that places the key itself
+		// (encodingHost.placeColourKey). null lets the position presets place it.
+		placement = null,
+		// The bar's length when a host sizes it (it reserved the room), or null for the
+		// stored length or the automatic one.
+		length = null,
 		which = 'plot'
 	} = $props();
 
@@ -148,39 +228,35 @@
 
 	const vertical = $derived(scaleData?.orientation !== 'horizontal');
 	const thickness = $derived(scaleData?.barThickness ?? 10);
-	const barLen = $derived(
-		scaleData?.barLength ?? Math.max(30, Math.min(vertical ? boxH : boxW, 150))
-	);
+	const barLen = $derived(length ?? scaleData?.barLength ?? autoBarLength(vertical ? boxH : boxW));
 
 	const stops = $derived(gradientStops(colormap));
-	const ticks = $derived(scaleTickValues(domain).map(formatScaleValue));
-	const verticalTicks = $derived(ticks.slice().reverse());
-	const gradId = $derived(`colour-scale-${idPrefix}`);
-
-	// Tick label widths are ESTIMATED from the character count rather than measured
-	// with a canvas. The bar only needs to know how much room to leave beside
-	// itself, an average-width estimate is within a character of the truth for the
-	// short numbers this prints, and it keeps the geometry a pure function that a
-	// test can assert on (jsdom's measureText returns 0 for everything).
-	const tickTextW = $derived(Math.max(...ticks.map((t) => t.length), 1) * fontSize * 0.6);
-	const gap = 5;
-	// A one- or two-character label ('r', '\u03c1') rotated onto its side reads as a
-	// stray mark rather than a word, so only a real word is turned. Short ones stay
-	// upright beside the ticks, which is also how a correlation key is usually set.
-	const rotateLabel = $derived(!!label && String(label).length > 2);
-	const labelGap = $derived(
-		label ? (rotateLabel ? fontSize + 4 : String(label).length * fontSize * 0.6 + 4) : 0
+	// Low end first, as `t` runs. The default three are the domain's ends and middle.
+	const tickItems = $derived(
+		ticks ?? scaleTickValues(domain).map((v, i) => ({ t: i / 2, label: formatScaleValue(v) }))
 	);
+	const gradId = $derived(`colour-scale-${idPrefix}`);
+	const gap = TICK_GAP;
+
+	const geom = $derived(
+		colourScaleGeometry({
+			vertical,
+			thickness,
+			barLen,
+			fontSize,
+			tickLabels: tickItems.map((t) => t.label),
+			label,
+			noValueLabel: noValue ? (noValue.label ?? 'no value') : null
+		})
+	);
+	const tickTextW = $derived(geom.tickTextW);
+	const rotateLabel = $derived(geom.rotateLabel);
 
 	/** The whole key's footprint, used for placement and for the backdrop. */
-	const dims = $derived.by(() => {
-		if (vertical) {
-			return { width: thickness + gap + tickTextW + labelGap, height: barLen };
-		}
-		return { width: barLen, height: thickness + 3 + fontSize + labelGap };
-	});
+	const dims = $derived({ width: geom.width, height: geom.height });
 
 	const pos = $derived.by(() => {
+		if (placement) return placement;
 		const margin = LEGEND_MARGIN;
 		const { width, height } = dims;
 		switch (scaleData?.position) {
@@ -213,6 +289,9 @@
 	// nothing to sit over, and a box round it there would add furniture to two
 	// figures that never had any.
 	const overData = $derived(scaleData?.position !== 'right');
+	// Where a tick sits along the bar: vertical bars run low at the BOTTOM.
+	const tickAlong = (t) => (vertical ? (1 - t) * barLen : t * barLen);
+	const edgeOf = (t) => (t <= 0 ? 'low' : t >= 1 ? 'high' : 'mid');
 	const pad = $derived(scaleData?.padding ?? 8);
 
 	let lastCorner = $state('topright');
@@ -275,19 +354,19 @@
 				<rect x={0} y={0} width={thickness} height={barLen} fill={'url(#' + gradId + ')'} />
 				<!-- Top to bottom, so the DOM order matches the reading order: a vertical
 				     bar runs high at the top. -->
-				{#each verticalTicks as tick, i (i)}
+				{#each tickItems.slice().reverse() as tick, i (i)}
 					<text
 						class="colour-scale-tick"
 						x={thickness + gap}
-						y={(i * barLen) / (verticalTicks.length - 1)}
-						dominant-baseline={i === 0
+						y={tickAlong(tick.t)}
+						dominant-baseline={edgeOf(tick.t) === 'high'
 							? 'hanging'
-							: i === verticalTicks.length - 1
+							: edgeOf(tick.t) === 'low'
 								? 'auto'
 								: 'central'}
 						font-size={fontSize}
 						font-family={resolved.fontFamily}
-						fill="black">{tick}</text
+						fill="black">{tick.label}</text
 					>
 				{/each}
 				{#if label && rotateLabel}
@@ -313,16 +392,20 @@
 				{/if}
 			{:else}
 				<rect x={0} y={0} width={barLen} height={thickness} fill={'url(#' + gradId + ')'} />
-				{#each ticks as tick, i (i)}
+				{#each tickItems as tick, i (i)}
 					<text
 						class="colour-scale-tick"
-						x={(i * barLen) / (ticks.length - 1)}
+						x={tickAlong(tick.t)}
 						y={thickness + 3}
 						dominant-baseline="hanging"
-						text-anchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
+						text-anchor={edgeOf(tick.t) === 'low'
+							? 'start'
+							: edgeOf(tick.t) === 'high'
+								? 'end'
+								: 'middle'}
 						font-size={fontSize}
 						font-family={resolved.fontFamily}
-						fill="black">{tick}</text
+						fill="black">{tick.label}</text
 					>
 				{/each}
 				{#if label}
@@ -337,6 +420,27 @@
 						fill="black">{label}</text
 					>
 				{/if}
+			{/if}
+			{#if noValue}
+				<!-- The marks with no colour value are drawn in their series colour: say so. -->
+				<g class="colour-scale-novalue" transform="translate(0, {geom.noValueY})">
+					<rect
+						x={0}
+						y={0}
+						width={geom.swatch}
+						height={geom.swatch}
+						fill={noValue.colour}
+						stroke="none"
+					/>
+					<text
+						x={geom.swatch + 4}
+						y={geom.swatch / 2}
+						dominant-baseline="central"
+						font-size={fontSize}
+						font-family={resolved.fontFamily}
+						fill="black">{noValue.label ?? 'no value'}</text
+					>
+				</g>
 			{/if}
 		</g>
 	{/if}

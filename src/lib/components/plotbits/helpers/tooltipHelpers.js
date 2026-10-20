@@ -129,7 +129,10 @@ export function buildAggregatedContent({
 	xtype = 'number',
 	xFormatter = null,
 	series = [],
-	dp = 3
+	dp = 3,
+	// Further rows about the hovered mark, `{ label, value }` with `value` already a string
+	// (the colour-by value: "Hour of day (UTC): 14:30").
+	extra = []
 }) {
 	// EVERY interpolated value is escaped at the point of interpolation, including the
 	// formatted x/y strings: `safeFormat` returns a non-number as-is, so a text or
@@ -147,6 +150,9 @@ export function buildAggregatedContent({
 		const label = escapeHtml(s.label || 'Data');
 		const yStr = escapeHtml(safeFormat(s.yValue, dp));
 		content += `<br/>${dot}<strong>${label}:</strong> ${yStr}`;
+	}
+	for (const row of extra ?? []) {
+		content += `<br/><span style="opacity:0.7">${escapeHtml(row.label)}:</span> ${escapeHtml(String(row.value ?? ''))}`;
 	}
 	return content;
 }

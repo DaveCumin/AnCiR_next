@@ -41,9 +41,18 @@ export const PLOT_SPECS = [
 		type: 'scatterplot',
 		inputs: [
 			{ type: 'number', data: SAMPLE.index },
-			{ type: 'number', data: SAMPLE.linear }
+			{ type: 'number', data: SAMPLE.linear },
+			{ type: 'time', data: SAMPLE.isoHours }
 		],
-		wire: (p, [x, y]) => p.plot.addData({ x: { refId: x }, y: { refId: y } })
+		// Points coloured by the hour of day of a time column (colour by, encodingHost.js), so
+		// every registry guard that builds this catalogue also covers the colour channel and its
+		// `enc<id>_colour` port.
+		wire: (p, [x, y, c]) => {
+			p.plot.addData({ x: { refId: x }, y: { refId: y } });
+			const series = p.plot.data[p.plot.data.length - 1];
+			series.enableColourBy();
+			series.colourBy.refId = c;
+		}
 	},
 	{
 		type: 'boxplot',

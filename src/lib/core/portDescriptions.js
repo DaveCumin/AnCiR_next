@@ -1109,6 +1109,9 @@ export const OVERLAY_CHANNEL_DESCRIPTIONS = {
 	'band.vertical.start': 'Start of each vertical band (x), paired row by row with the ends.',
 	'band.vertical.end': 'End of each vertical band (x), paired row by row with the starts.'
 };
+// A series' colour-by port, `enc<id>_colour` (components/plotbits/encodingHost.js).
+export const COLOUR_BY_DESCRIPTION =
+	'Column that colours this series’ points: a number by its value, a time by its hour of day (or day of year, or days since start; set in the panel). Rows with no value keep the series colour.';
 const NEW_LINE_DESCRIPTION =
 	'Each drop adds a reference line at the column’s values; set vertical or horizontal in the panel.';
 
@@ -1235,6 +1238,7 @@ export function portEnv(getColumnById) {
 const PLOT_X_PORT = /^x\d+$/;
 const PLOT_Y_PORT = /^ys\d+$/;
 const OVERLAY_PORT = /^ov(\d+)_([A-Za-z]\w*)$/;
+const ENCODING_PORT = /^enc\d+_colour$/;
 
 /**
  * What a port on a canvas node card expects (dir 'in') or produces (dir 'out'), or null.
@@ -1267,6 +1271,7 @@ export function describeNodePort(node, port, dir, env = {}) {
 		const plotType = plot?.type;
 		if (dir === 'in') {
 			if (name === 'ovnew_line') return NEW_LINE_DESCRIPTION;
+			if (ENCODING_PORT.test(name)) return COLOUR_BY_DESCRIPTION;
 			const ov = OVERLAY_PORT.exec(name);
 			if (ov) {
 				const overlay = (plot?.plot?.overlays ?? []).find((o) => String(o?.id) === ov[1]);

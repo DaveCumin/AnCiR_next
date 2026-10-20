@@ -62,6 +62,14 @@
 		rerouteOverlayWire,
 		overlayPortSelection
 	} from './overlayWiring.js';
+	import {
+		isEncodingPort,
+		applyEncodingWire,
+		clearEncodingPort,
+		removeEncodingWire,
+		rerouteEncodingWire,
+		encodingPortSelection
+	} from './encodingWiring.js';
 	import { recordChainRef } from '$lib/core/chainRefs.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
@@ -1977,6 +1985,16 @@
 		return resolveOverlayPort(target.plotObj.plot, portName) != null;
 	}
 
+	// Is this a series' colour-by port (`enc<id>_colour`, components/plotbits/encodingHost.js)
+	// of this plot node? Every wire path gates on it before the overlay gate, and writes through
+	// encodingWiring.js (the series' colour column wrapper, refId in place).
+	function isEncodingPortOn(target, portName) {
+		if (target?.type !== 'plot' || !target.plotObj || target.plotObj.type === 'tableplot') {
+			return false;
+		}
+		return isEncodingPort(target.plotObj.plot, portName);
+	}
+
 	/** Mirrors groupPlotData in ProcessNode.svelte.js. Keep in sync. */
 	function groupPlotData(data) {
 		const groups = [];
@@ -2348,6 +2366,10 @@
 		// the column.
 		// Either way it is recorded through the same setPlotInner op as series
 		// wiring, so it is one undo step (overlay + wire together).
+		if (isEncodingPortOn(target, toPort)) {
+			recordPlotEdit(target.plotObj, () => applyEncodingWire(target.plotObj.plot, toPort, colId));
+			return;
+		}
 		if (isOverlayPortOn(target, toPort)) {
 			recordPlotEdit(target.plotObj, () => applyOverlayWire(target.plotObj.plot, toPort, colId));
 			return;
@@ -2470,6 +2492,10 @@
 
 		// Overlay channel port: clearing the port removes the wire on that channel
 		// (typed values, if any, are untouched: a wired channel has none).
+		if (isEncodingPortOn(target, portName)) {
+			recordPlotEdit(target.plotObj, () => clearEncodingPort(target.plotObj.plot, portName));
+			return;
+		}
 		if (isOverlayPortOn(target, portName)) {
 			recordPlotEdit(target.plotObj, () => clearOverlayPort(target.plotObj.plot, portName));
 			return;
@@ -2654,6 +2680,9 @@
 			return { many: true, ids: (target.plotObj.plot.columnRefs ?? []).filter((n) => n >= 0) };
 		}
 		// Overlay channel port: its one wired column; never many (see overlayWiring).
+		if (isEncodingPortOn(target, portName)) {
+			return encodingPortSelection(target.plotObj.plot, portName);
+		}
 		if (isOverlayPortOn(target, portName)) {
 			return overlayPortSelection(target.plotObj.plot, portName);
 		}
@@ -2714,6 +2743,12 @@
 			return;
 		}
 		// Overlay channel port (picker un-tick): drop that wire.
+		if (isEncodingPortOn(target, portName)) {
+			recordPlotEdit(target.plotObj, () =>
+				removeEncodingWire(target.plotObj.plot, portName, colId)
+			);
+			return;
+		}
 		if (isOverlayPortOn(target, portName)) {
 			recordPlotEdit(target.plotObj, () => removeOverlayWire(target.plotObj.plot, portName, colId));
 			return;
@@ -3136,6 +3171,12 @@
 		}
 
 		// Overlay channel port: swap the one wire when it matches.
+		if (isEncodingPortOn(target, edge.toPort)) {
+			recordPlotEdit(target.plotObj, () =>
+				rerouteEncodingWire(target.plotObj.plot, edge.toPort, oldColId, newColId)
+			);
+			return;
+		}
 		if (isOverlayPortOn(target, edge.toPort)) {
 			recordPlotEdit(target.plotObj, () =>
 				rerouteOverlayWire(target.plotObj.plot, edge.toPort, oldColId, newColId)
@@ -3428,6 +3469,12 @@
 		}
 
 		// Overlay channel port: deleting the wire drops that one column.
+		if (isEncodingPortOn(target, edge.toPort)) {
+			recordPlotEdit(target.plotObj, () =>
+				removeEncodingWire(target.plotObj.plot, edge.toPort, colId)
+			);
+			return;
+		}
 		if (isOverlayPortOn(target, edge.toPort)) {
 			recordPlotEdit(target.plotObj, () =>
 				removeOverlayWire(target.plotObj.plot, edge.toPort, colId)

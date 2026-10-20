@@ -508,7 +508,10 @@
 
 {#snippet legendPlot()}
 	{#if legendData.show && items.length > 0}
-		<g transform="translate({legendPosition.x + padding.left}, {legendPosition.y + padding.top})">
+		<g
+			class="plot-legend"
+			transform="translate({legendPosition.x + padding.left}, {legendPosition.y + padding.top})"
+		>
 			<!-- background + box. `legendBox: false` drops the stroke but keeps the fill,
 			     so an unboxed legend over data is still readable. -->
 			<rect

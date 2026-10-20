@@ -119,13 +119,22 @@
 		// When provided, the tooltip aggregates and displays the y value at the
 		// hovered x for every sibling series. Shape: [{label, colour, findYAt(x)}]
 		siblings = null,
-		hideOnAlt = false
+		hideOnAlt = false,
+		// Colour by (colour-by plan 2026-10-20, section 3.5; encodingHost.js). null draws the
+		// series as ONE path in its colour, exactly as before. Otherwise
+		//   { idx, colours, noValueColour, values, label, format }
+		// `idx` is the colour bucket of each ROW (row-aligned with x and y; -1, or a row past
+		// its end, is "no value"), `colours` the bucket colours, `noValueColour` what a mark
+		// with no value is drawn in (the series colour), `values` the colour value of each row
+		// and `label` / `format(v)` how the tooltip names and prints it. One path per non-empty
+		// bucket, "no value" first (underneath), then bucket order (decision 9).
+		colourBy = null
 	} = $props();
 
 	let qt;
 
-	//MAKE THE POINTS PATH
-	let points = $derived.by(() => {
+	//MAKE THE POINTS PATH(S): [{ key, fill, d }]
+	let paths = $derived.by(() => {
 		// Props read ONCE into locals: every prop read is a getter (a signal read when the parent
 		// passed an expression), and the loops below run once per sample (ROB-9).
 		const pd = pointsData;
@@ -146,7 +155,7 @@
 		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
 
 		const filteredData = [];
-		const n = xv.length;
+		const n = Math.min(xv.length, yv.length);
 		for (let i = 0; i < n; i++) {
 			const px = xv[i];
 			const py = yv[i];
@@ -160,13 +169,10 @@
 				!isNaN(py) &&
 				!isNaN(px)
 			) {
-				filteredData.push({ x: px, y: py });
+				// The row travels with the point: the colour bucket and the tooltip's colour
+				// value are read by row.
+				filteredData.push({ x: px, y: py, i });
 			}
-		}
-
-		let out = '';
-		for (const p of filteredData) {
-			out += getPointPath(shape, sx(p.x), sy(p.y), radius) + ' ';
 		}
 
 		//Set up the quadtree for hovering
@@ -177,6 +183,33 @@
 				.addAll(filteredData);
 		}
 
+		const cb = colourBy;
+		if (!cb?.idx || !cb?.colours) {
+			let out = '';
+			for (const p of filteredData) {
+				out += getPointPath(shape, sx(p.x), sy(p.y), radius) + ' ';
+			}
+			return [{ key: 'all', fill: pd.colour, d: out }];
+		}
+
+		// One list of path pieces per bucket (index 0 is "no value"), joined once.
+		const K = cb.colours.length;
+		const idx = cb.idx;
+		const nIdx = idx.length;
+		const parts = Array.from({ length: K + 1 }, () => []);
+		for (const p of filteredData) {
+			const b = p.i < nIdx ? idx[p.i] : -1;
+			parts[b >= 0 && b < K ? b + 1 : 0].push(getPointPath(shape, sx(p.x), sy(p.y), radius));
+		}
+		const out = [];
+		for (let g = 0; g <= K; g++) {
+			if (parts[g].length === 0) continue;
+			out.push({
+				key: g === 0 ? 'none' : `b${g - 1}`,
+				fill: g === 0 ? (cb.noValueColour ?? pd.colour) : cb.colours[g - 1],
+				d: parts[g].join(' ') + ' '
+			});
+		}
 		return out;
 	});
 
@@ -212,11 +245,24 @@
 					}
 				];
 
+		const cb = colourBy;
+		const extra =
+			cb?.values && cb.label
+				? [
+						{
+							label: cb.label,
+							value: cb.format
+								? cb.format(cb.values[closest.i])
+								: String(cb.values[closest.i] ?? 'no value')
+						}
+					]
+				: [];
 		const content = buildAggregatedContent({
 			xLabel: xLabel || 'x',
 			xValue: closest.x,
 			xtype,
-			series
+			series,
+			extra
 		});
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(e.clientX, e.clientY);
@@ -277,15 +323,18 @@
 
 {#snippet plot(pointsData)}
 	{#if pointsData?.draw}
-		<path
-			d={points}
-			fill={pointsData.colour}
-			stroke="none"
-			style={`transform: translate( ${xoffset}px, ${yoffset}px );`}
-			role={tooltip ? 'presentation' : undefined}
-			onmousemove={tooltip ? handleHover : undefined}
-			onmouseleave={tooltip ? handleMouseLeave : undefined}
-		/>
+		{#each paths ?? [] as p (p.key)}
+			<path
+				d={p.d}
+				fill={p.fill}
+				stroke="none"
+				data-colour-bucket={colourBy ? p.key : undefined}
+				style={`transform: translate( ${xoffset}px, ${yoffset}px );`}
+				role={tooltip ? 'presentation' : undefined}
+				onmousemove={tooltip ? handleHover : undefined}
+				onmouseleave={tooltip ? handleMouseLeave : undefined}
+			/>
+		{/each}
 	{/if}
 {/snippet}
 

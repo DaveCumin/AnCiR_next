@@ -32,6 +32,34 @@
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
 	import { markerPaddedDomain } from '$lib/plots/axisDomain.js';
+	import { ColourEncodingClass } from '$lib/components/plotbits/Encoding.svelte';
+	import {
+		ColourScaleClass,
+		colourScaleGeometry,
+		autoBarLength
+	} from '$lib/components/plotbits/ColourScale.svelte';
+	import {
+		encodingValues,
+		encodingDomain,
+		colourBuckets,
+		bucketColours,
+		NO_VALUE
+	} from '$lib/components/plotbits/encodings.js';
+	import {
+		effectiveColourMode,
+		effectiveColormap,
+		colourBarTitle,
+		colourBarTicks,
+		formatColourValue,
+		nextEncodingId,
+		placeColourKey,
+		colourKeyReserveW,
+		colourKeyObstacle
+	} from '$lib/components/plotbits/encodingHost.js';
+	import { isWiredRef } from '$lib/core/seriesChannelRefs.js';
+	import { displayNameById } from '$lib/core/columnLabels.js';
+	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	// Tab keys derive from these headers lower-cased (controlTabsCoverage.test.js):
@@ -49,13 +77,26 @@
 		return [];
 	}
 
+	/**
+	 * A saved wrapper column reduced to what may go through Column.fromJSON (see
+	 * ScatterDataclass.fromJSON for why the rest must not).
+	 */
+	function slimWrapper(json) {
+		return json?.refId != null
+			? { id: json.id, refId: json.refId, processes: json.processes }
+			: json;
+	}
+
 	export class ScatterDataclass {
 		static descriptors = {
 			yAxis: { label: 'Y-axis', input: 'select', options: ['left', 'right'] },
 			// Surface per-series line/points style (colour, marker, width …) in the
 			// multi-select shared-data UI. Leaf metadata comes from Line/PointsClass.
 			line: { descend: true, label: 'Line' },
-			points: { descend: true, label: 'Points' }
+			points: { descend: true, label: 'Points' },
+			// Colour by (encodingHost.js): how the colour column is read and drawn. The column
+			// itself is wiring (`colourBy`, a Column), like x and y.
+			colourEncoding: { descend: true, label: 'Colour by' }
 		};
 
 		parentPlot = $state();
@@ -71,6 +112,152 @@
 		// render does not re-run getData() for each prop that passes it on.
 		xData = $derived(safeColumnData(this.x));
 		yData = $derived(safeColumnData(this.y));
+
+		// ---- Colour by (encoding host contract, components/plotbits/encodingHost.js) ----
+		// Both null while Colour by is off, so a plain series carries no extra channel, port or
+		// saved field. `colourBy` is the wired colour column (a series channel in
+		// core/seriesChannelRefs.js); `colourEncoding` how it is read and drawn.
+		//
+		// Setters take plain JSON as well as instances: the panel's undo recorder writes changed
+		// paths in place (plots/plotEdits.js setPlotFields), so switching Colour by on or off
+		// writes `colourBy` / `colourEncoding` as saved JSON, and that must become the classes
+		// again, not a plain object with no getData().
+		#colourBy = $state(null);
+		#colourEncoding = $state(null);
+		get colourBy() {
+			return this.#colourBy;
+		}
+		set colourBy(v) {
+			this.#colourBy =
+				v == null ? null : v instanceof ColumnClass ? v : ColumnClass.fromJSON(slimWrapper(v));
+		}
+		get colourEncoding() {
+			return this.#colourEncoding;
+		}
+		set colourEncoding(v) {
+			this.#colourEncoding =
+				v == null ? null : v instanceof ColourEncodingClass ? v : ColourEncodingClass.fromJSON(v);
+		}
+
+		/** On AND wired to a column that exists: the points are coloured. */
+		colourActive = $derived(
+			!!this.colourEncoding &&
+				isWiredRef(this.colourBy?.refId) &&
+				getColumnById(this.colourBy.refId) != null
+		);
+		// A number or bin column's time origin, so hour of day reads its clock (as x does).
+		colourOrigin = $derived(
+			this.colourBy && this.colourBy.type !== 'time'
+				? (this.parentPlot?.resolveXOriginMs?.(this.colourBy) ?? null)
+				: null
+		);
+		colourMode = $derived(
+			this.colourBy
+				? effectiveColourMode(this.colourEncoding?.mode, {
+						type: this.colourBy.type,
+						originTime_ms: this.colourOrigin
+					})
+				: null
+		);
+		/** The value each row is coloured by ({ values, warning }), or null while inactive. */
+		colourEncoded = $derived.by(() => {
+			if (!this.colourActive) return null;
+			return encodingValues(this.colourMode, safeColumnData(this.colourBy), {
+				type: this.colourBy.type,
+				originTime_ms: this.colourOrigin,
+				zone: getDisplayZone()
+			});
+		});
+		colourWarning = $derived(this.colourEncoded?.warning ?? null);
+		/** The range over every series (and facet panel) sharing this column and mode. */
+		colourAutoDomain = $derived(
+			this.colourActive ? this.parentPlot.colourDomainFor(this, { manual: false }) : null
+		);
+		colourDomain = $derived(this.colourActive ? this.parentPlot.colourDomainFor(this) : null);
+		colourIdx = $derived(
+			this.colourActive ? colourBuckets(this.colourEncoded.values, this.colourDomain) : null
+		);
+		colourMonochrome = $derived(this.parentPlot?.parentBox?.style?.monochrome === true);
+		/** The map as chosen (before monochrome), and the map drawn. */
+		colourMapBase = $derived(
+			this.colourMode ? effectiveColormap(this.colourEncoding?.colormap, this.colourMode) : null
+		);
+		colourMap = $derived(
+			this.colourMode
+				? effectiveColormap(this.colourEncoding?.colormap, this.colourMode, this.colourMonochrome)
+				: null
+		);
+		colourPalette = $derived(this.colourMap ? bucketColours(this.colourMap) : null);
+		colourTitle = $derived(
+			this.colourActive
+				? colourBarTitle(this.colourMode, {
+						// As the user sees the column (a node output's label, "Binned: ambient temp").
+						columnName: displayNameById(this.colourBy.refId, ''),
+						zone: getDisplayZone(),
+						wrapped: !!this.colourWarning && this.colourMode === 'hourOfDay'
+					})
+				: ''
+		);
+		/** Drawn points (valid x and y) with no colour value: drawn in the series colour. */
+		colourNoValueCount = $derived.by(() => {
+			if (!this.colourActive) return 0;
+			const xs = this.xData;
+			const ys = this.yData;
+			const idx = this.colourIdx;
+			const n = Math.min(xs.length, ys.length);
+			let count = 0;
+			for (let i = 0; i < n; i++) {
+				const xv = xs[i];
+				const yv = ys[i];
+				if (xv == null || yv == null || Number.isNaN(xv) || Number.isNaN(yv)) continue;
+				if (i >= idx.length || idx[i] === NO_VALUE) count++;
+			}
+			return count;
+		});
+		/** What Points draws with (its `colourBy` prop), or null for one series-coloured path. */
+		colourRender = $derived.by(() => {
+			if (!this.colourActive || !this.points?.draw) return null;
+			const mode = this.colourMode;
+			return {
+				idx: this.colourIdx,
+				colours: this.colourPalette,
+				noValueColour: this.points.colour,
+				values: this.colourEncoded.values,
+				label: this.colourTitle,
+				format: (v) => formatColourValue(v, mode)
+			};
+		});
+		/** The colour column is shorter than the series: say how many rows it covers. */
+		get colourLengthNote() {
+			if (!this.colourActive) return null;
+			const nc = this.colourEncoded.values.length;
+			const n = Math.min(this.xData.length, this.yData.length);
+			return nc < n
+				? `The colour column has ${nc} rows and this series ${n}; the rest have no colour value.`
+				: null;
+		}
+
+		/** A note for the panel when this series' scale is not the one the colour bar shows. */
+		get colourKeyNote() {
+			const key = this.parentPlot?.colourKey;
+			if (!this.colourActive || !key || key.series === this) return null;
+			return key.sameAs(this)
+				? null
+				: 'The colour bar shows the first coloured series; this one uses a different scale.';
+		}
+
+		/** Switch Colour by on: an empty colour port appears on the canvas. */
+		enableColourBy() {
+			if (this.colourEncoding) return;
+			this.colourBy = new ColumnClass({ refId: -1 });
+			this.colourEncoding = new ColourEncodingClass({ id: nextEncodingId(this.parentPlot) });
+		}
+
+		/** Switch Colour by off: the port and its wire go; the series colour returns. */
+		disableColourBy() {
+			this.colourBy = null;
+			this.colourEncoding = null;
+		}
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -100,6 +287,11 @@
 				this.line.draw = false;
 			}
 			this.points = new PointsClass(dataIN?.points, this);
+			// Colour by: restored only when it was on (both halves present).
+			if (dataIN?.colourEncoding && dataIN?.colourBy) {
+				this.colourBy = dataIN.colourBy;
+				this.colourEncoding = dataIN.colourEncoding;
+			}
 		}
 
 		// Effective label for display: the user's label if set, else the y column
@@ -132,11 +324,13 @@
 				});
 			}
 
-			// Add points representation if points are visible
+			// Add points representation if points are visible. Coloured by a column, the
+			// swatch is a neutral grey in the series' shape: the colour bar is the key to the
+			// colours (plan 3.8).
 			if (this.points.draw) {
 				item.elements.push({
 					type: 'points',
-					color: this.points.colour,
+					color: this.colourActive ? COLOUR_BY_SWATCH : this.points.colour,
 					size: this.points.radius,
 					shape: this.points.shape
 				});
@@ -154,7 +348,11 @@
 				label: this.label,
 				yAxis: this.yAxis,
 				line: this.line.toJSON(),
-				points: this.points.toJSON()
+				points: this.points.toJSON(),
+				// Only while Colour by is on, so a plain series saves exactly as before.
+				...(this.colourEncoding && this.colourBy
+					? { colourBy: this.colourBy, colourEncoding: this.colourEncoding.toJSON() }
+					: {})
 			};
 		}
 
@@ -186,21 +384,35 @@
 				json.y?.refId != null
 					? { id: json.y.id, refId: json.y.refId, processes: json.y.processes }
 					: json.y;
+			// The colour column is a wrapper like x and y: the same slimming applies.
+			const slimColour = slimWrapper(json.colourBy);
 			return new ScatterDataclass(parent, {
 				x: slimX,
 				y: slimY,
 				label: json.label,
 				yAxis: json.yAxis,
 				line: LineClass.fromJSON(json.line),
-				points: PointsClass.fromJSON(json.points)
+				points: PointsClass.fromJSON(json.points),
+				colourBy: slimColour,
+				colourEncoding: json.colourEncoding
 			});
 		}
 	}
+
+	/**
+	 * The series legend swatch of a series coloured by a column (plan 3.8): a neutral mid grey.
+	 * Figure ink, not interface chrome, so a literal rather than a CSS token: a saved SVG or PNG
+	 * cannot resolve var(--…) outside the app.
+	 */
+	const COLOUR_BY_SWATCH = 'rgb(140, 140, 140)';
 
 	export class Scatterplotclass {
 		// The overlay host contract (components/plotbits/overlayHost.js). The scatterplot is
 		// the reference host: every line and band form, a legend, and a time-capable x axis.
 		static overlayCapabilities = ALL_OVERLAY_FORMS;
+		// The colour-by host contract (components/plotbits/encodingHost.js): points only in
+		// phase 1b (coloured lines are phase 1c).
+		static encodingCapabilities = { colour: true, lines: false };
 
 		static descriptors = {
 			padding: { group: 'Padding' },
@@ -276,19 +488,188 @@
 		// placement is decided at THIS width: deciding at `plotwidth` would be circular, since
 		// the decision is what sets `plotwidth`.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
-		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+		// The room on the right is the wider of the series legend (when outside) and a colour
+		// bar beside the plot: they stack, legend on top (encodingHost.placeColourKey).
+		plotwidth = $derived(
+			this.basePlotWidth - Math.max(this.legendLayout.reserveW, this.colourKeyReserveW)
+		);
 		basePlotHeight = $derived(this.plotheight);
 
-		// Legend placement: 'auto' avoids the marks, and moves outside on the right when no
-		// inside spot is clear. See components/plotbits/legendAuto.svelte.js.
+		// Legend placement: 'auto' avoids the marks (and an inside colour bar), and moves outside
+		// on the right when no inside spot is clear. See components/plotbits/legendAuto.svelte.js.
+		// An inside legend is placed over the plot area left beside a colour bar.
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w, h) => this.legendObstacles(w, h),
-			outside: rightOfPlot(() => ({
-				baseWidth: this.basePlotWidth,
-				hasRightAxis: this.hasRightAxisData,
-				paddingRight: this.padding.right
-			}))
+			outside: (box, o) => {
+				const placed = rightOfPlot(() => ({
+					baseWidth: this.basePlotWidth,
+					hasRightAxis: this.hasRightAxisData,
+					paddingRight: this.padding.right
+				}))(box, o);
+				// A wider colour bar under it sets the room; the legend sits at its left edge.
+				const extra = this.colourKeyReserveW - placed.reserveW;
+				return extra > 0
+					? { ...placed, reserveW: this.colourKeyReserveW, x: placed.x - extra }
+					: placed;
+			},
+			area: () => ({ w: this.basePlotWidth - this.colourKeyReserveW, h: this.basePlotHeight })
 		});
+
+		// ---- Colour by: the colour bar (plan 3.8) ----
+		// One bar per plot, for the first coloured series; settings saved with the plot.
+		// A setter that takes saved JSON too, for the same reason as a series' colourBy.
+		#colourScale = $state(ColourScaleClass.withDefaults(null, { show: true }));
+		get colourScale() {
+			return this.#colourScale;
+		}
+		set colourScale(v) {
+			this.#colourScale =
+				v instanceof ColourScaleClass
+					? v
+					: ColourScaleClass.withDefaults(v ?? null, { show: true });
+		}
+
+		/**
+		 * The colour bar's content: the first series whose points are coloured, or null. `sameAs`
+		 * says whether another series draws with the same scale (else the panel says so).
+		 */
+		colourKey = $derived.by(() => {
+			const series = this.data.find((d) => d.colourActive && d.points?.draw);
+			if (!series) return null;
+			const domain = series.colourDomain;
+			const enc = series.colourEncoding;
+			const sig = (d) =>
+				JSON.stringify([d.colourBy?.refId, d.colourMode, d.colourMap, d.colourDomain]);
+			const mine = sig(series);
+			const using = this.data.filter((d) => d.colourActive && d.points?.draw && sig(d) === mine);
+			const noValueSeries = using.find((d) => d.colourNoValueCount > 0);
+			return {
+				series,
+				colormap: series.colourMap,
+				domain,
+				title: series.colourTitle,
+				ticks: colourBarTicks(domain, series.colourMode, {
+					manualLo: enc.domainMin != null,
+					manualHi: enc.domainMax != null
+				}),
+				noValue: noValueSeries ? { colour: noValueSeries.points.colour, label: 'no value' } : null,
+				sameAs: (d) => sig(d) === mine
+			};
+		});
+
+		/** The key's font size, as ColourScale.svelte draws it. */
+		colourKeyFontPx = $derived(
+			this.colourScale?.fontSize ?? resolveStyle(this.viewStyle).sizes.legend
+		);
+
+		/** The bar's geometry at a length (ColourScale.colourScaleGeometry), or null. */
+		colourKeyGeometry(length) {
+			const key = this.colourKey;
+			if (!key || !this.colourScale?.show) return null;
+			return colourScaleGeometry({
+				vertical: this.colourScale.orientation !== 'horizontal',
+				thickness: this.colourScale.barThickness ?? 10,
+				barLen: length,
+				fontSize: this.colourKeyFontPx,
+				tickLabels: key.ticks.map((t) => t.label),
+				label: key.title,
+				noValueLabel: key.noValue ? key.noValue.label : null
+			});
+		}
+
+		/** The backdrop ColourScale draws round a key over the data (its padding), in px. */
+		colourKeyInset = $derived(
+			this.colourScale?.position === 'right' ? 0 : (this.colourScale?.padding ?? 8)
+		);
+
+		/** The bar's length before any legend shortens it: stored, else the plot height's. */
+		colourKeyLength0 = $derived(this.colourScale?.barLength ?? autoBarLength(this.basePlotHeight));
+		colourKeyBase = $derived(this.colourKeyGeometry(this.colourKeyLength0));
+
+		/** Room a beside-the-plot bar takes from the plot width (independent of the legend). */
+		colourKeyReserveW = $derived(
+			this.colourKeyBase && this.colourScale.position === 'right'
+				? colourKeyReserveW(
+						this.colourKeyBase.width,
+						this.legendLayout.margin,
+						this.hasRightAxisData
+					)
+				: 0
+		);
+
+		/** The series legend as drawn, for the bar to keep clear of. */
+		legendPlaced = $derived.by(() => {
+			const box = this.legendLayout.box;
+			if (!box) return null;
+			const pos = this.legend.position;
+			const out = this.legendLayout.outsidePosition;
+			if (out) return { x: out.x, y: out.y, width: box.width, height: box.height, outside: true };
+			const m = this.legendLayout.margin;
+			const corner =
+				pos === 'auto' ? (this.legendLayout.auto?.name ?? null) : pos === 'custom' ? null : pos;
+			const bottom = corner === 'bottomright' || corner === 'bottomleft';
+			const y =
+				pos === 'auto' && this.legendLayout.auto
+					? this.legendLayout.auto.y
+					: bottom
+						? this.plotheight - box.height - m
+						: m;
+			return { x: 0, y, width: box.width, height: box.height, outside: false, corner };
+		});
+
+		/** Where the bar is drawn and how long it is: { x, y, length }, or null. */
+		colourKeyPlacement = $derived.by(() => {
+			if (!this.colourKeyBase) return null;
+			const vertical = this.colourScale.orientation !== 'horizontal';
+			const args = {
+				position: this.colourScale.position,
+				plotW: this.plotwidth,
+				plotH: this.plotheight,
+				margin: this.legendLayout.margin,
+				hasRightAxis: this.hasRightAxisData,
+				paddingRight: this.padding.right,
+				legend: this.legendPlaced,
+				custom: { customX: this.colourScale.customX, customY: this.colourScale.customY },
+				inset: this.colourKeyInset
+			};
+			const first = placeColourKey({ ...args, box: this.colourKeyBase });
+			let length = this.colourKeyLength0;
+			// An automatic vertical bar shortens to the room left beside / under the legend (the
+			// room is for the whole key: the bar plus its "no value" entry).
+			const besides = this.colourKeyBase.height - length;
+			if (vertical && this.colourScale.barLength == null && first.maxLength < length + besides) {
+				length = Math.max(20, first.maxLength - besides);
+				const placed = placeColourKey({ ...args, box: this.colourKeyGeometry(length) });
+				return { x: placed.x, y: placed.y, length };
+			}
+			return { x: first.x, y: first.y, length };
+		});
+
+		/**
+		 * The range a series' colours span (plan 3.5, decision 8): the full data range of every
+		 * coloured series of this plot reading the same column the same way (on a faceted plot,
+		 * see below). `manual: false` gives the automatic range (the panel's placeholder).
+		 */
+		colourDomainFor(datum, { manual = true } = {}) {
+			const ref = datum.colourBy?.refId;
+			const mode = datum.colourMode;
+			// A faceted plot shares ONE scale across its panels (plan 3.9): every coloured series
+			// of the generator read the same way, whichever column each panel colours by. A panel
+			// reads its generator's series; the generator its own.
+			const facetSeries =
+				this.parentBox?.generator?.plot?.data ?? (this.parentBox?.facet ? this.data : null);
+			const pool = facetSeries ?? this.data;
+			const arrays = [];
+			for (const d of pool) {
+				if (!d?.colourActive || d.colourMode !== mode) continue;
+				if (!facetSeries && d.colourBy.refId !== ref) continue;
+				arrays.push(d.colourEncoded.values);
+			}
+			return encodingDomain(arrays, {
+				mode,
+				domainIN: manual ? datum.colourEncoding?.domainIN : null
+			});
+		}
 
 		// The drawn marks in px over a w x h plot area, using scales built here from the
 		// domains rather than XScale/YScale*, whose ranges depend on `plotwidth` (see the
@@ -332,6 +713,18 @@
 				}
 				series.push({ px, py, line, radius: pts ? (d.points.radius ?? 0) : 0 });
 			}
+			// A colour bar inside the plot area is an obstacle too, so an 'auto' legend never
+			// lands on it (plan 3.8).
+			const bar = colourKeyObstacle(
+				this.colourScale?.position,
+				this.colourKeyBase,
+				w,
+				h,
+				this.legendLayout.margin,
+				{ customX: this.colourScale?.customX, customY: this.colourScale?.customY },
+				this.colourKeyInset
+			);
+			if (bar) series.push({ rects: [bar] });
 			return series;
 		}
 
@@ -495,7 +888,11 @@
 			const mayGoOutside =
 				box && (this.legend?.position === 'auto' || this.legend?.position === 'outsideright');
 			const lengthPx =
-				this.basePlotWidth - (mayGoOutside ? box.width + 2 * (box.margin ?? LEGEND_MARGIN) : 0);
+				this.basePlotWidth -
+				Math.max(
+					mayGoOutside ? box.width + 2 * (box.margin ?? LEGEND_MARGIN) : 0,
+					this.colourKeyReserveW
+				);
 			const [plo, phi] = markerPaddedDomain(xmin, xmax, this.markerPadPx(this.data), lengthPx, {
 				log: this.xLogScale && !this.anyXdataTime
 			});
@@ -731,6 +1128,22 @@
 
 		addData(dataIN) {
 			this.data.push(new ScatterDataclass(this, dataIN));
+			this.ensureUniqueEncodingIds();
+		}
+
+		/**
+		 * Give every colour encoding a distinct id (its canvas port is named by it). A pasted
+		 * series or a hand-written session can repeat one; the first keeps it.
+		 */
+		ensureUniqueEncodingIds() {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local de-duplication set, never read reactively
+			const seen = new Set();
+			for (const d of this.data) {
+				const enc = d.colourEncoding;
+				if (!enc) continue;
+				if (seen.has(enc.id)) enc.id = nextEncodingId(this);
+				seen.add(enc.id);
+			}
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
@@ -806,6 +1219,11 @@
 				const yData = datum.yData;
 				headers.push(`x_${label}`, `y_${label}`);
 				columns.push(xData, yData);
+				// Colour by: the value each point is coloured by (plan 3.9), e.g. its hour of day.
+				if (datum.colourActive) {
+					headers.push(`c_${label}`);
+					columns.push(datum.colourEncoded.values.map((v) => (Number.isFinite(v) ? v : '')));
+				}
 			});
 			// Overlays: each enabled one's resolved positions/edges, under its name.
 			const isoX = (v) => (this.anyXdataTime ? new Date(v).toISOString() : v);
@@ -835,7 +1253,11 @@
 				yAxisRight: this.yAxisRight.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON(),
-				overlays: overlaysToJSON(this.overlays)
+				overlays: overlaysToJSON(this.overlays),
+				// The colour bar's settings, while any series is coloured by a column.
+				...(this.data.some((d) => d.colourEncoding)
+					? { colourScale: this.colourScale.toJSON() }
+					: {})
 			};
 		}
 		static fromJSON(parent, json) {
@@ -884,8 +1306,12 @@
 				});
 			}
 
+			// `show` defaults on: a bar that is absent from the file (the plot was not coloured
+			// when saved) must come back visible.
+			scatter.colourScale = json.colourScale ?? null;
 			if (json.data) {
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+				scatter.ensureUniqueEncodingIds();
 			} else if (json.dataIn) {
 				// Creation-time hint: wire raw column refs via the live addData path so
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
@@ -933,6 +1359,8 @@
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
+	import Encoding from '$lib/components/plotbits/Encoding.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 	import {
 		limitsFromBrush,
 		toLimitNumber,
@@ -1093,6 +1521,16 @@
 			canPlaceOutside={true}
 			which="controls"
 		/>
+
+		{#if theData.colourKey}
+			<div class="div-line"></div>
+			<!-- The colour bar of Colour by (a series' Data settings). -->
+			<ColourScale
+				scaleData={theData.colourScale}
+				figureStyle={theData.parentBox?.style}
+				which="controls"
+			/>
+		{/if}
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1366,6 +1804,9 @@
 						</div>
 
 						<Points pointsData={datum.points} which="controls" />
+						{#if datum.points.draw}
+							<Encoding {datum} />
+						{/if}
 						<Line
 							lineData={datum.line}
 							x={datum.xData}
@@ -1493,6 +1934,7 @@
 						: theData.plot.yAxisRight.label || 'y'}
 					siblings={scatterSiblings}
 					hideOnAlt={true}
+					colourBy={datum.colourRender}
 					which="plot"
 				/>
 			{/if}
@@ -1529,6 +1971,27 @@
 			outsidePosition={theData.plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
+		<!-- Colour by: the colour bar, placed clear of the legend (encodingHost.placeColourKey). -->
+		{#if theData.plot.colourKey && theData.plot.colourKeyPlacement}
+			{@const key = theData.plot.colourKey}
+			{@const at = theData.plot.colourKeyPlacement}
+			<ColourScale
+				scaleData={theData.plot.colourScale}
+				colormap={key.colormap}
+				domain={[key.domain.lo, key.domain.hi]}
+				label={key.title}
+				ticks={key.ticks}
+				noValue={key.noValue}
+				plotWidth={theData.plot.plotwidth}
+				plotHeight={theData.plot.plotheight}
+				padding={theData.plot.padding}
+				idPrefix={'colourby-' + String(theData.plot.parentBox.id).replace(/[^\w-]/g, '_')}
+				figureStyle={theData.plot.viewStyle}
+				placement={{ x: at.x, y: at.y }}
+				length={at.length}
+				which="plot"
+			/>
+		{/if}
 	</svg>
 	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />
 {/snippet}
