@@ -24,7 +24,7 @@ import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
-import { colormapRGB, DEFAULT_COLORMAP } from './colormaps.js';
+import { colormapRGB, DEFAULT_COLORMAP } from '$lib/components/plotbits/colormaps.js';
 import Actogram, { Actogramclass } from './Actogram.svelte';
 
 const SESSION = join(

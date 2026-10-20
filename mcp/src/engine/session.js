@@ -15,6 +15,7 @@ import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelt
 import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { seriesChannelRefs } from '$lib/core/seriesChannelRefs.js';
 import { evaluateCosinor } from '$lib/tableProcesses/Cosinor.svelte';
 import { getOutputKeys as rhythmicityOutputKeys } from '$lib/tableProcesses/RhythmicityAnalysis.svelte';
 import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysis.svelte';
@@ -909,10 +910,10 @@ export class AncirSession {
 		// `name` later (e.g. during export's graph build) otherwise mutates state and
 		// can silently blank the canvas edges — mirrors prewarmWrapperNames() in
 		// nodeCatalog.js / generateDemos.
+		// (`time` / `values` are the public input names; the series store them as x / y.)
 		for (const series of p.plot?.data ?? []) {
-			for (const field of ['x', 'y', 'z', 'column', 'time', 'values']) {
-				const w = series?.[field];
-				if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
+			for (const { holder: w } of seriesChannelRefs(series)) {
+				if ('refId' in w && w.customName == null) {
 					const real = getColumnById(w.refId);
 					w.customName = real ? `${real.name}` : 'col';
 				}

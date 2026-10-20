@@ -17,6 +17,7 @@
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { displayNameOf } from '$lib/core/columnLabels.js';
+	import { remapSeriesRefs, seriesHasData } from '$lib/core/seriesChannelRefs.js';
 
 	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
 	// Returning a fresh integer gives us cheap !== equality for cache invalidation
@@ -240,19 +241,17 @@
 				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
 			}
 
-			// x/y plots: scrub the removed column from each data point so it can't
-			// linger as an orphan series. Clearing a field to -1 (in place, to keep
-			// the Column instance) leaves a data point's shared x as a re-usable
-			// seed; drop points that end up with neither a valid x nor y.
+			// Series plots: scrub the removed column from every channel of each data point
+			// (seriesChannelRefs, the one list) so it can't linger as an orphan series.
+			// Clearing a channel to -1 (in place, to keep the Column instance) leaves a data
+			// point's shared x as a re-usable seed; drop points left with no wired data
+			// channel. (The scrub once knew x/y/z only, so a Histogram's `column` was never
+			// cleared and every column-based series was dropped on ANY delete.)
 			if (Array.isArray(plot.plot?.data)) {
 				for (const dp of plot.plot.data) {
-					if (dp?.x?.refId === columnId) dp.x.refId = -1;
-					if (dp?.y?.refId === columnId) dp.y.refId = -1;
-					if (dp?.z?.refId === columnId) dp.z.refId = -1;
+					remapSeriesRefs(dp, (id) => (id === columnId ? -1 : id));
 				}
-				plot.plot.data = plot.plot.data.filter(
-					(dp) => (dp?.x?.refId ?? -1) >= 0 || (dp?.y?.refId ?? -1) >= 0
-				);
+				plot.plot.data = plot.plot.data.filter(seriesHasData);
 			}
 		});
 

@@ -37,7 +37,12 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
-	import { colormapRGB, normaliseTo01, COLORMAP_LABELS, DEFAULT_COLORMAP } from './colormaps.js';
+	import {
+		colormapRGB,
+		normaliseTo01,
+		COLORMAP_LABELS,
+		DEFAULT_COLORMAP
+	} from '$lib/components/plotbits/colormaps.js';
 	import { rowGeometry, MAX_ACTOGRAM_ROWS } from './rowHeight.js';
 	import { rasterizeRows, rasterImageURI, parseColour } from './actogramRaster.js';
 	import { core } from '$lib/core/core.svelte.js';

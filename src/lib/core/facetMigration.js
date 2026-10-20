@@ -37,6 +37,7 @@
 //    ids were reserved); it is kept, the rest are dropped with a warning.
 import { COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
 import { isOverridablePath } from '$lib/core/facetOverrides.js';
+import { SERIES_COLUMN_FIELDS } from '$lib/core/seriesChannelRefs.js';
 
 const deepCopy = (v) => JSON.parse(JSON.stringify(v));
 const fmt = (v) => JSON.stringify(v === undefined ? null : v);
@@ -56,7 +57,7 @@ function titleCase(key) {
 // overlays, which are generator-owned and replicated, plan 1.6).
 const TOP_LEVEL_SKIP = new Set(['data', 'annotations', 'parentBox', 'overlays']);
 // Series keys that are wiring or handled separately, never a per-series style difference.
-const SERIES_SKIP = new Set(['x', 'y', 'column', 'phaseMarkers']);
+const SERIES_SKIP = new Set([...SERIES_COLUMN_FIELDS, 'phaseMarkers']);
 // `padding` leaves the point plots re-fit from the rendered axis labels (rule 2 above).
 const AUTOSCALED_PADDING = new Set(['left', 'bottom']);
 

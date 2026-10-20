@@ -20,6 +20,7 @@ import { facetGridCells } from '$lib/core/facetGrid.js';
 import { setByPath } from '$lib/utils/objectPath.js';
 import { COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
 import { applyOverride } from '$lib/core/facetOverrides.js';
+import { seriesChannelRefs } from '$lib/core/seriesChannelRefs.js';
 
 // ---------------------------------------------------------------------------
 // Units (plan 1.2)
@@ -308,8 +309,6 @@ function snapshotInner(inner) {
 	return JSON.parse(JSON.stringify(inner, (k, v) => (typeof v === 'function' ? undefined : v)));
 }
 
-const WRAPPER_KEYS = ['x', 'y', 'column'];
-
 /**
  * The wiring of a series' wrapper columns: what the panel's copy must reproduce (the
  * underlying column and the plot-column processes on it). Display fields of the wrapper
@@ -317,9 +316,7 @@ const WRAPPER_KEYS = ['x', 'y', 'column'];
  */
 function wiringOf(seriesJson) {
 	const out = {};
-	for (const k of WRAPPER_KEYS) {
-		const w = seriesJson?.[k];
-		if (w == null || typeof w !== 'object') continue;
+	for (const { field: k, holder: w } of seriesChannelRefs(seriesJson)) {
 		const entry = { refId: w.refId ?? null, processes: w.processes ?? [] };
 		if (w.refUpToProcessId != null) entry.refUpToProcessId = w.refUpToProcessId;
 		if (w.isTap) entry.isTap = true;
@@ -335,12 +332,10 @@ function wiringOf(seriesJson) {
  */
 function seriesJsonForPanel(seriesJson) {
 	const copy = { ...seriesJson };
-	for (const k of WRAPPER_KEYS) {
-		if (copy[k] != null && typeof copy[k] === 'object') {
-			const rest = { ...copy[k] };
-			delete rest.id;
-			copy[k] = rest;
-		}
+	for (const { field: k, holder } of seriesChannelRefs(seriesJson)) {
+		const rest = { ...holder };
+		delete rest.id;
+		copy[k] = rest;
 	}
 	return copy;
 }

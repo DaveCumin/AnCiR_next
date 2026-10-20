@@ -15,7 +15,11 @@
 	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { correlationGrid } from '$lib/utils/correlationGrid.js';
-	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import {
+		colormapRGB,
+		normaliseTo01,
+		COLORMAP_LABELS
+	} from '$lib/components/plotbits/colormaps.js';
 	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
 
 	export const CorrelationHeatmap_defaultDataInputs = ['column'];

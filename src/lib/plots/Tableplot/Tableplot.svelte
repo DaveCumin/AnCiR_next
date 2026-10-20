@@ -292,6 +292,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
 	import { allPanels } from '$lib/core/facetPanels.svelte.js';
+	import { plotColumnIds } from '$lib/core/seriesChannelRefs.js';
 	import {
 		listNodeResultTables,
 		nodeResultTableTitle,
@@ -602,24 +603,12 @@
 	}
 
 	function isPlotSelected(plot) {
-		let cols = [];
-		if (plot?.data && Array.isArray(plot.plot.data)) {
-			cols = plot.plot.data.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId]).filter(Boolean);
-		} else if (plot?.columnRefs) {
-			cols = plot.plot.columnRefs;
-		}
+		const cols = getPlotColumns(plot);
 		return cols.length > 0 && cols.every(isColumnSelected);
 	}
 
 	function togglePlotSelection(plot) {
-		let cols = [];
-		if (plot?.data && Array.isArray(plot.data)) {
-			cols = [
-				...new Set(plot.data.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId]).filter(Boolean))
-			];
-		} else if (plot?.columnRefs) {
-			cols = plot.columnRefs;
-		}
+		const cols = getPlotColumns(plot);
 		const isSel = isPlotSelected(plot);
 		if (isSel) {
 			cols.forEach((colId) => {
@@ -642,19 +631,14 @@
 		}
 	}
 
+	// The columns a plot in the picker shows (seriesChannelRefs, the one list): a Table's
+	// columns, else every series channel. This used to read `plot.data` / `plot.columnRefs`
+	// on the Plot itself, which has neither (they live on `plot.plot`), so the Plots section
+	// never listed anything. The Table being edited is left out: its columns are the
+	// selection itself.
 	function getPlotColumns(plot) {
-		//console.log('getting columns for plot', plot.name, plot);
-		if (plot?.data && Array.isArray(plot.data)) {
-			return [
-				...new Set(
-					plot.data
-						.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId])
-						.filter((id) => id != null && id !== -1)
-				)
-			];
-		}
-		if (plot?.columnRefs) return plot.columnRefs;
-		return [];
+		if (plot?.id != null && plot.id === theData?.parentBox?.id) return [];
+		return plotColumnIds(plot?.plot);
 	}
 
 	let standaloneColumns = $derived.by(() => {
@@ -1482,6 +1466,8 @@
 
 	.clps-title input[type='checkbox'] {
 		margin: 0;
+		/* Keeps its size beside a name long enough to wrap. */
+		flex-shrink: 0;
 	}
 
 	.clps-title-button {
@@ -1528,6 +1514,9 @@
 		padding: 1px 5px;
 		border-radius: var(--radius-xs);
 		margin-left: var(--space-4);
+		/* Beside a long, wrapping name the badge must not wrap ("Plo / t"). */
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.empty-state {

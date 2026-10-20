@@ -63,9 +63,9 @@
 	// NOTE on field naming: sibling time-optional plots (Periodogram, Actogram,
 	// Correlogram, FFT) all expose 'time'/'values' as the PUBLIC wiring port
 	// names (definition.defaultDataInputs) but store the series columns
-	// internally as generic `x`/`y` — the workflow graph's edge/passthrough
-	// detection (ProcessNode.svelte.js) hardcodes `dp?.x?.refId` / `dp?.y?.refId`
-	// / `dp?.column?.refId` checks and doesn't know about arbitrary field names.
+	// internally as generic `x`/`y`: every reader of a series' columns (edge and
+	// passthrough detection, column delete, ref remapping) goes through
+	// core/seriesChannelRefs.js, which knows the fixed fields only.
 	// CircularPhaseSeries follows the same convention: `x` is the optional time
 	// column, `y` is the phase/measurement column.
 	class CircularPhaseSeries {

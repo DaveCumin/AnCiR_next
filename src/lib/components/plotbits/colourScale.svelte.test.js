@@ -25,7 +25,7 @@ import ColourScale, {
 	formatScaleValue
 } from './ColourScale.svelte';
 import { LegendClass } from './Legend.svelte';
-import { colormapRGB } from '$lib/plots/Actogram/colormaps.js';
+import { colormapRGB } from '$lib/components/plotbits/colormaps.js';
 
 afterEach(() => cleanup());
 

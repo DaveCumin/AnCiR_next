@@ -16,7 +16,11 @@
 	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
-	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import {
+		colormapRGB,
+		normaliseTo01,
+		COLORMAP_LABELS
+	} from '$lib/components/plotbits/colormaps.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
 
 	export const PairsPlot_defaultDataInputs = ['column'];

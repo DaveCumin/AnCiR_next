@@ -22,7 +22,7 @@
 	// switchable, clamped into the figure rather than dropped, and labelled with the
 	// real domain the plot normalises against.
 	import { LegendClass, LEGEND_MARGIN, cornerFraction } from './Legend.svelte';
-	import { colormapRGB } from '$lib/plots/Actogram/colormaps.js';
+	import { colormapRGB } from '$lib/components/plotbits/colormaps.js';
 
 	/** How many stops the SVG gradient is built from. Enough that the eye cannot
 	 *  find the joins in any of the shipped ramps, cheap enough to inline. */

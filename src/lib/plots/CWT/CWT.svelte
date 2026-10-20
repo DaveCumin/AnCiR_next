@@ -18,7 +18,11 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
-	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import {
+		colormapRGB,
+		normaliseTo01,
+		COLORMAP_LABELS
+	} from '$lib/components/plotbits/colormaps.js';
 	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';

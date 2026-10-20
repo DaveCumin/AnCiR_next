@@ -9,6 +9,7 @@ import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 import { recordGraphMutation } from '$lib/core/operations.js';
 import { mergeUnknown } from '$lib/core/unknownFields.js';
 import { placeNoteClear } from '$lib/core/notePlacement.js';
+import { remapSeriesRefs } from '$lib/core/seriesChannelRefs.js';
 
 /**
  * A brand-new, empty session: every slice of `core` at its starting value. The ONE definition of
@@ -489,7 +490,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.82.36',
+	version: 'β.82.37',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -814,9 +815,7 @@ export function replaceColumnRefs(newColId, oldColId) {
 			}
 		} else {
 			plot.plot.data?.forEach((d) => {
-				['x', 'y', 'z'].forEach((axis) => {
-					if (d[axis]?.refId === oldColId) d[axis].refId = newColId;
-				});
+				remapSeriesRefs(d, (id) => (id === oldColId ? newColId : id));
 			});
 		}
 	});
@@ -908,9 +907,7 @@ export function swapColumnRefsBulk(pairs) {
 			}
 		} else {
 			plot.plot.data?.forEach((d) => {
-				for (const axis of ['x', 'y', 'z']) {
-					if (d[axis] && map.has(d[axis].refId)) d[axis].refId = map.get(d[axis].refId);
-				}
+				remapSeriesRefs(d, (id) => (map.has(id) ? map.get(id) : id));
 			});
 		}
 	});

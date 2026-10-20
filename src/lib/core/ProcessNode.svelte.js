@@ -9,6 +9,7 @@ import {
 } from '$lib/plots/plotMetricDefs.js';
 import { createColumnNamer } from './outputLabels.js';
 import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
+import { seriesChannelRefs, plotInnerUsesColumn } from './seriesChannelRefs.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -415,11 +416,10 @@ function buildNodeExecutionKey(core, node) {
 		if (plot.type === 'tableplot') {
 			for (const colId of plot.plot?.columnRefs ?? []) refs.push(_colDataHash(core, colId));
 		} else {
-			// `column` covers single-input plots (Histogram); x/y/z cover every
-			// other plot (including the time-series plots, which store x/y).
+			// Every column channel of every series (seriesChannelRefs, the one list).
 			for (const d of plot.plot?.data ?? []) {
-				for (const axis of ['x', 'y', 'z', 'column']) {
-					if (d?.[axis]?.refId != null) refs.push(_colDataHash(core, d[axis].refId));
+				for (const { refId } of seriesChannelRefs(d)) {
+					if (refId != null) refs.push(_colDataHash(core, refId));
 				}
 			}
 			// Overlay channels read columns too: a reference line wired to an
@@ -508,16 +508,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const entry of core.chainRefs ?? []) {
 		const viaPlot = (core.plots ?? []).find((p) => p.id === entry.viaPlotId);
 		if (!viaPlot) continue;
-		const usesCol =
-			(viaPlot.plot?.columnRefs ?? []).includes(entry.colId) ||
-			(viaPlot.plot?.data ?? []).some(
-				(dp) =>
-					dp?.x?.refId === entry.colId ||
-					dp?.y?.refId === entry.colId ||
-					dp?.z?.refId === entry.colId ||
-					dp?.column?.refId === entry.colId
-			);
-		if (!usesCol) continue;
+		if (!plotInnerUsesColumn(viaPlot.plot, entry.colId)) continue;
 		chainRouteByTarget[`${entry.toId}|${entry.toPort}|${entry.colId}`] = {
 			nodeId: `plot_${viaPlot.id}`,
 			port: `col_${entry.colId}`
@@ -921,17 +912,16 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			}
 		} else {
 			// Iterate by series set (same grouping as the input ports) so each
-			// passthrough carries its series number. Channels are accessed
-			// explicitly — plot data-class fields are $state accessors, so they
-			// don't enumerate. z (bubble-style) and a single-input plot's `column`
-			// (Histogram) have no x/y grouping.
+			// passthrough carries its series number. The channels come from
+			// seriesChannelRefs (the one list); a single-input plot's `column`
+			// (Histogram) has no x/y grouping, so no series number or axis.
 			groupPlotData(plot.plot?.data).forEach((group, i) => {
 				const seriesN = i + 1;
 				for (const dp of group.dataPoints) {
-					addPassthrough(dp?.x?.refId, 'x', seriesN, 'x');
-					addPassthrough(dp?.y?.refId, 'y', seriesN, 'y');
-					addPassthrough(dp?.z?.refId, 'z', seriesN, 'y');
-					addPassthrough(dp?.column?.refId, '');
+					for (const ch of seriesChannelRefs(dp)) {
+						if (ch.perSeries) addPassthrough(ch.refId, ch.display, seriesN, ch.axis);
+						else addPassthrough(ch.refId, ch.display);
+					}
 				}
 			});
 		}

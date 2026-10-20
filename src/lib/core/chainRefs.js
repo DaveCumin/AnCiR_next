@@ -22,22 +22,11 @@
 import { core } from './core.svelte.js';
 import { getColumnById } from './Column.svelte';
 import { groupPlotData, resolveOverlayPort } from './ProcessNode.svelte.js';
+import { plotInnerUsesColumn } from './seriesChannelRefs.js';
 
 /** True while `plot` still shows `colId` on any input channel. */
 export function plotUsesColumn(plot, colId) {
-	if (colId == null || colId < 0) return false;
-	if ((plot?.plot?.columnRefs ?? []).includes(colId)) return true;
-	for (const dp of plot?.plot?.data ?? []) {
-		if (
-			dp?.x?.refId === colId ||
-			dp?.y?.refId === colId ||
-			dp?.z?.refId === colId ||
-			dp?.column?.refId === colId
-		) {
-			return true;
-		}
-	}
-	return false;
+	return plotInnerUsesColumn(plot?.plot, colId);
 }
 
 /** Record (or refresh) a chain entry. Called by the editor's wire-apply. */

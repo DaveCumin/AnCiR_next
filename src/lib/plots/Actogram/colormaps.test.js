@@ -32,9 +32,9 @@ describe('colormapRGB', () => {
 	});
 
 	it('interpolates between stops (midpoint of first segment)', () => {
-		// 9 stops → 8 segments; t = 1/16 is the midpoint of segment 0.
+		// n stops → n - 1 segments; t = 0.5 / (n - 1) is the midpoint of segment 0.
 		const [a, b] = [COLORMAPS.viridis[0], COLORMAPS.viridis[1]];
-		const mid = rgb(colormapRGB('viridis', 1 / 16));
+		const mid = rgb(colormapRGB('viridis', 0.5 / (COLORMAPS.viridis.length - 1)));
 		expect(mid).toEqual([
 			Math.round((a[0] + b[0]) / 2),
 			Math.round((a[1] + b[1]) / 2),

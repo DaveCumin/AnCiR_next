@@ -15,6 +15,7 @@
  */
 import { core } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
+import { seriesChannelRefs } from '$lib/core/seriesChannelRefs.js';
 import { Plot } from '$lib/core/Plot.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 
@@ -840,9 +841,8 @@ function mkCol(type, values, name) {
 function prewarmWrapperNames() {
 	for (const plot of core.plots) {
 		for (const series of plot.plot?.data ?? []) {
-			for (const field of ['x', 'y', 'z', 'column']) {
-				const w = series?.[field];
-				if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
+			for (const { holder: w } of seriesChannelRefs(series)) {
+				if ('refId' in w && w.customName == null) {
 					const real = core.data.find((c) => c.id === w.refId);
 					w.customName = real ? `${real.name}` : 'col';
 				}
