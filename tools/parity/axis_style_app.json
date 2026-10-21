@@ -2379,6 +2379,7 @@
 						"nticks": 5,
 						"manualTicks": null
 					},
+					"phaseYlimsIN": [null, null],
 					"logScale": false,
 					"showPeriod": true,
 					"data": [
@@ -2543,6 +2544,7 @@
 						"nticks": 5,
 						"manualTicks": null
 					},
+					"phaseYlimsIN": [null, null],
 					"logScale": true,
 					"showPeriod": true,
 					"data": [
@@ -3060,7 +3062,7 @@
 					"dateFormat": "DD MMM",
 					"renderMode": "bars",
 					"colormap": "viridis",
-					"lightBands": { "bands": [] },
+					"lightBands": { "bands": [], "height": 10 },
 					"legend": {
 						"show": false,
 						"position": "topright",
@@ -3188,7 +3190,7 @@
 					"dateFormat": "DD MMM",
 					"renderMode": "heatmap",
 					"colormap": "magma",
-					"lightBands": { "bands": [] },
+					"lightBands": { "bands": [], "height": 10 },
 					"legend": {
 						"show": false,
 						"position": "topright",
@@ -4652,7 +4654,7 @@
 					"dateFormat": "DD MMM",
 					"renderMode": "heatmap",
 					"colormap": "viridis",
-					"lightBands": { "bands": [] },
+					"lightBands": { "bands": [], "height": 10 },
 					"legend": {
 						"show": false,
 						"position": "topright",
@@ -4938,7 +4940,7 @@
 					"dateFormat": "D MMM",
 					"renderMode": "bars",
 					"colormap": "viridis",
-					"lightBands": { "bands": [] },
+					"lightBands": { "bands": [], "height": 10 },
 					"legend": {
 						"show": false,
 						"position": "topright",
