@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "d90fd0fe-521c-41de-9c6b-c2b22d960e13",
+      "tableProcessGUId": "2ad7af4b-07cc-47fc-9707-3206f8ffe53a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "d90fd0fe-521c-41de-9c6b-c2b22d960e13",
+      "tableProcessGUId": "2ad7af4b-07cc-47fc-9707-3206f8ffe53a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "d90fd0fe-521c-41de-9c6b-c2b22d960e13",
+      "tableProcessGUId": "2ad7af4b-07cc-47fc-9707-3206f8ffe53a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -956,7 +956,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -1314,6 +1315,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -1339,5 +1341,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

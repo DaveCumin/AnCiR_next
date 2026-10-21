@@ -1818,7 +1818,7 @@
       "name": "stat_peak_period_29",
       "data": 358,
       "type": "number",
-      "tableProcessGUId": "027c13c6-416d-49a8-8beb-1ae966d1bb0e",
+      "tableProcessGUId": "1c49c30d-068e-4a48-b62c-d78c9ccd9c3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1829,7 +1829,7 @@
       "name": "stat_peak_power_29",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "027c13c6-416d-49a8-8beb-1ae966d1bb0e",
+      "tableProcessGUId": "1c49c30d-068e-4a48-b62c-d78c9ccd9c3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1840,7 +1840,7 @@
       "name": "rhythmicityy_353_29",
       "data": 360,
       "type": "number",
-      "tableProcessGUId": "027c13c6-416d-49a8-8beb-1ae966d1bb0e",
+      "tableProcessGUId": "1c49c30d-068e-4a48-b62c-d78c9ccd9c3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1900,7 +1900,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -2258,6 +2259,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -2283,5 +2285,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

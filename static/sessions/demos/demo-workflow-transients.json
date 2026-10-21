@@ -2275,7 +2275,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -2381,7 +2382,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -2763,6 +2765,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -2788,5 +2791,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

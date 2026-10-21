@@ -1548,7 +1548,7 @@
       "name": "stat_peak_period_28",
       "data": 348,
       "type": "number",
-      "tableProcessGUId": "777bb898-7d04-4085-9e1e-b8da3ec9447b",
+      "tableProcessGUId": "5a6b0f79-7fd7-40ec-a34a-6c28b81b757b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1559,7 +1559,7 @@
       "name": "stat_peak_power_28",
       "data": 349,
       "type": "number",
-      "tableProcessGUId": "777bb898-7d04-4085-9e1e-b8da3ec9447b",
+      "tableProcessGUId": "5a6b0f79-7fd7-40ec-a34a-6c28b81b757b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1570,7 +1570,7 @@
       "name": "rhythmicityy_338_28",
       "data": 350,
       "type": "number",
-      "tableProcessGUId": "777bb898-7d04-4085-9e1e-b8da3ec9447b",
+      "tableProcessGUId": "5a6b0f79-7fd7-40ec-a34a-6c28b81b757b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1581,7 +1581,7 @@
       "name": "rhythmicityy_339_28",
       "data": 351,
       "type": "number",
-      "tableProcessGUId": "777bb898-7d04-4085-9e1e-b8da3ec9447b",
+      "tableProcessGUId": "5a6b0f79-7fd7-40ec-a34a-6c28b81b757b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1641,7 +1641,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -2081,6 +2082,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -2106,5 +2108,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

@@ -215,7 +215,7 @@
       "name": "x",
       "data": 877,
       "type": "number",
-      "tableProcessGUId": "a87b7fcc-2f57-4d42-819d-f5ed8e9397a2",
+      "tableProcessGUId": "17201d73-1120-42cd-83ee-3f4d2db2267e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "smoothedx_89",
       "data": 879,
       "type": "number",
-      "tableProcessGUId": "293073e4-517a-4b43-98a1-bc999e400448",
+      "tableProcessGUId": "cececda0-1912-4410-8cc6-c79bf58bdde1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "smoothedy_878_89",
       "data": 880,
       "type": "number",
-      "tableProcessGUId": "293073e4-517a-4b43-98a1-bc999e400448",
+      "tableProcessGUId": "cececda0-1912-4410-8cc6-c79bf58bdde1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -614,6 +614,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -639,5 +640,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

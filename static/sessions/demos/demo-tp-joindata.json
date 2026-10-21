@@ -2093,7 +2093,7 @@
       "data": 907,
       "type": "time",
       "timeFormat": null,
-      "tableProcessGUId": "34a29866-6d15-4cb5-81a1-883cdcd3b923",
+      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2104,7 +2104,7 @@
       "name": "joined_904_94",
       "data": 908,
       "type": "number",
-      "tableProcessGUId": "34a29866-6d15-4cb5-81a1-883cdcd3b923",
+      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2115,7 +2115,7 @@
       "name": "joined_906_94",
       "data": 909,
       "type": "number",
-      "tableProcessGUId": "34a29866-6d15-4cb5-81a1-883cdcd3b923",
+      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2128,7 +2128,7 @@
       "type": "time",
       "timeFormat": null,
       "originTime_ms": 1719792000000,
-      "tableProcessGUId": "1256311a-788d-44df-94c1-1571b31de784",
+      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2139,7 +2139,7 @@
       "name": "binnedy_908_95",
       "data": 911,
       "type": "number",
-      "tableProcessGUId": "1256311a-788d-44df-94c1-1571b31de784",
+      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2150,7 +2150,7 @@
       "name": "binnedy_909_95",
       "data": 912,
       "type": "number",
-      "tableProcessGUId": "1256311a-788d-44df-94c1-1571b31de784",
+      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2394,7 +2394,7 @@
   "notes": [
     {
       "id": "note_84",
-      "text": "Puts every row of two datasets, A and B, onto one time column sorted by time, without matching or merging: rows that share a time stay separate rows (A's first). Use it when two recordings have different clocks or sampling rates (for example 15 min hive sensors and hourly weather), which would otherwise be paired by row position downstream. Value columns with the same name (case and spacing ignored) are the same measurement and share one column, A's values on A's rows and B's on B's; under 'Which column does each B column go into?' any B column can join another A column or get its own column, and every other column is blank on the other dataset's rows. A row with no time is left out and counted. Both time inputs must be times, or both numbers counting from the same origin in the same units; mixing them is refused. Shift B's clock (h) moves B's times before joining, for a logger on a different time zone. An optional Source column says which dataset each row came from. The result usually has no two rows at the same time, so add Bin Data afterwards (the node offers a button when A and B rarely share a time) to average both onto a common grid; the demo joins hourly ambient temperature with a 15 min hive series that lags it by 2 h, bins both at 1 h, and plots them side by side. Leave both time inputs unwired to STACK instead: A's rows, then B's rows, each in their original order, with no time column and Source on by default; use it to concatenate results that are not on a time axis, such as two groups' Cosinor amplitudes, then compare them with Group Comparison or a boxplot using Source as the group. A time for only one dataset is refused. More than 2,000,000 rows is refused.",
+      "text": "Puts every row of two datasets, A and B, onto one time column sorted by time, without matching or merging: rows that share a time stay separate rows (A's first). Use it when two recordings have different clocks or sampling rates (for example 15 min hive sensors and hourly weather), which would otherwise be paired by row position downstream. Value columns with the same name (case and spacing ignored) are the same measurement and share one column, A's values on A's rows and B's on B's; under 'Which column does each B column go into?' any B column can join another A column or get its own column, and every other column is blank on the other dataset's rows. A row with no time is left out and counted. Both time inputs must be times, or both numbers counting from the same origin in the same units; mixing them is refused. Shift B's clock (h) moves B's times before joining, for a logger on a different time zone. The joined time takes A's time zone, which the summary names, and the node warns when A and B are in different zones. An optional Source column says which dataset each row came from. The result usually has no two rows at the same time, so add Bin Data afterwards (the node offers a button when A and B rarely share a time) to average both onto a common grid; the demo joins hourly ambient temperature with a 15 min hive series that lags it by 2 h, bins both at 1 h, and plots them side by side. Leave both time inputs unwired to STACK instead: A's rows, then B's rows, each in their original order, with no time column and Source on by default; use it to concatenate results that are not on a time axis, such as two groups' Cosinor amplitudes, then compare them with Group Comparison or a boxplot using Source as the group. A time for only one dataset is refused. More than 2,000,000 rows is refused.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -2494,6 +2494,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -2519,5 +2520,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

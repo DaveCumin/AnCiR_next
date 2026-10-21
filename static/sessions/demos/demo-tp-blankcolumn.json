@@ -19,7 +19,7 @@
       "name": "result_55",
       "data": 669,
       "type": "category",
-      "tableProcessGUId": "5d4e316d-bd76-4e77-83ad-bc83a4abbfa4",
+      "tableProcessGUId": "c5284ed8-13b0-4016-85a4-bda3f24f9dd6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -174,6 +174,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -199,5 +200,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

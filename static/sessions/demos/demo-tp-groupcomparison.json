@@ -142,7 +142,7 @@
       "name": "statistic_70",
       "data": 754,
       "type": "number",
-      "tableProcessGUId": "df1dc90b-bec2-4b6f-a342-82a4d8ca54e0",
+      "tableProcessGUId": "2a7c86cc-290f-4445-b9ca-6082493c9383",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -153,7 +153,7 @@
       "name": "pvalue_70",
       "data": 755,
       "type": "number",
-      "tableProcessGUId": "df1dc90b-bec2-4b6f-a342-82a4d8ca54e0",
+      "tableProcessGUId": "2a7c86cc-290f-4445-b9ca-6082493c9383",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -164,7 +164,7 @@
       "name": "effectSize_70",
       "data": 756,
       "type": "number",
-      "tableProcessGUId": "df1dc90b-bec2-4b6f-a342-82a4d8ca54e0",
+      "tableProcessGUId": "2a7c86cc-290f-4445-b9ca-6082493c9383",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -427,6 +427,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -452,5 +453,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

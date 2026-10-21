@@ -709,7 +709,7 @@
       "name": "cosinorx_2",
       "data": 16,
       "type": "number",
-      "tableProcessGUId": "7326fbeb-9355-4d91-acb5-2a5d01931179",
+      "tableProcessGUId": "016f9073-c765-4924-a4b4-04becce716a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -720,7 +720,7 @@
       "name": "cosinory_15_2",
       "data": 17,
       "type": "number",
-      "tableProcessGUId": "7326fbeb-9355-4d91-acb5-2a5d01931179",
+      "tableProcessGUId": "016f9073-c765-4924-a4b4-04becce716a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -996,6 +996,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -1021,5 +1022,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

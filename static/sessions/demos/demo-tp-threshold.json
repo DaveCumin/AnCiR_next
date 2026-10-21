@@ -122,7 +122,7 @@
       "name": "binary_59",
       "data": 680,
       "type": "number",
-      "tableProcessGUId": "b7623759-22bd-419d-96ba-1b5b9fa3d250",
+      "tableProcessGUId": "3b6d7ea9-eeef-4a8a-990f-a649b56e48e9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -284,6 +284,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -309,5 +310,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

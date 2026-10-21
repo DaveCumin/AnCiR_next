@@ -216,7 +216,7 @@
       "name": "x",
       "data": 841,
       "type": "number",
-      "tableProcessGUId": "997f5024-18ee-442b-8754-75ef5fe55f01",
+      "tableProcessGUId": "b35acea6-5664-4187-8a28-bbccd102c116",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -238,7 +238,7 @@
       "name": "rectwavex_82",
       "data": 843,
       "type": "number",
-      "tableProcessGUId": "c423c1cb-18e8-42a1-8dc0-5e2196446989",
+      "tableProcessGUId": "532b80b4-02c0-408d-bc06-6456d6cddfea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -249,7 +249,7 @@
       "name": "perm_pvalue_82",
       "data": 844,
       "type": "number",
-      "tableProcessGUId": "c423c1cb-18e8-42a1-8dc0-5e2196446989",
+      "tableProcessGUId": "532b80b4-02c0-408d-bc06-6456d6cddfea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -260,7 +260,7 @@
       "name": "r2_82",
       "data": 845,
       "type": "number",
-      "tableProcessGUId": "c423c1cb-18e8-42a1-8dc0-5e2196446989",
+      "tableProcessGUId": "532b80b4-02c0-408d-bc06-6456d6cddfea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
       "name": "rmse_82",
       "data": 846,
       "type": "number",
-      "tableProcessGUId": "c423c1cb-18e8-42a1-8dc0-5e2196446989",
+      "tableProcessGUId": "532b80b4-02c0-408d-bc06-6456d6cddfea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -282,7 +282,7 @@
       "name": "rectwavey_842_82",
       "data": 847,
       "type": "number",
-      "tableProcessGUId": "c423c1cb-18e8-42a1-8dc0-5e2196446989",
+      "tableProcessGUId": "532b80b4-02c0-408d-bc06-6456d6cddfea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -650,6 +650,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -675,5 +676,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

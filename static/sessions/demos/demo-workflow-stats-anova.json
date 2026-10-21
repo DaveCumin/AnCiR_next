@@ -279,7 +279,7 @@
       "name": "statistic_12",
       "data": 159,
       "type": "number",
-      "tableProcessGUId": "fb678928-850b-4ea3-b177-835b32e1560e",
+      "tableProcessGUId": "7801fdb2-fb03-4de7-8e98-2ee7eb191b48",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "pvalue_12",
       "data": 160,
       "type": "number",
-      "tableProcessGUId": "fb678928-850b-4ea3-b177-835b32e1560e",
+      "tableProcessGUId": "7801fdb2-fb03-4de7-8e98-2ee7eb191b48",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -726,6 +726,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -751,5 +752,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

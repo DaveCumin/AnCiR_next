@@ -1063,7 +1063,7 @@
       "name": "R_34",
       "data": 452,
       "type": "number",
-      "tableProcessGUId": "6933591a-d13f-4e03-8824-aa1e10ac49f4",
+      "tableProcessGUId": "cf8e4e97-dd78-4872-8643-577d7bde2661",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_34",
       "data": 453,
       "type": "number",
-      "tableProcessGUId": "6933591a-d13f-4e03-8824-aa1e10ac49f4",
+      "tableProcessGUId": "cf8e4e97-dd78-4872-8643-577d7bde2661",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_34",
       "data": 454,
       "type": "number",
-      "tableProcessGUId": "6933591a-d13f-4e03-8824-aa1e10ac49f4",
+      "tableProcessGUId": "cf8e4e97-dd78-4872-8643-577d7bde2661",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1145,7 +1145,8 @@
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
-          "bands": []
+          "bands": [],
+          "height": 10
         },
         "legend": {
           "show": false,
@@ -1504,6 +1505,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -1529,5 +1531,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

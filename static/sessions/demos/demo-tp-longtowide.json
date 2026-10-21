@@ -314,7 +314,7 @@
       "name": "time_77",
       "data": 827,
       "type": "number",
-      "tableProcessGUId": "e07e9d27-e54f-4a81-8826-0d74b1289261",
+      "tableProcessGUId": "316b74e9-4561-4361-bf61-0f3c2fb06dee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -325,7 +325,7 @@
       "name": "value_A_77",
       "data": 828,
       "type": "number",
-      "tableProcessGUId": "e07e9d27-e54f-4a81-8826-0d74b1289261",
+      "tableProcessGUId": "316b74e9-4561-4361-bf61-0f3c2fb06dee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -336,7 +336,7 @@
       "name": "value_B_77",
       "data": 829,
       "type": "number",
-      "tableProcessGUId": "e07e9d27-e54f-4a81-8826-0d74b1289261",
+      "tableProcessGUId": "316b74e9-4561-4361-bf61-0f3c2fb06dee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -347,7 +347,7 @@
       "name": "value_C_77",
       "data": 830,
       "type": "number",
-      "tableProcessGUId": "e07e9d27-e54f-4a81-8826-0d74b1289261",
+      "tableProcessGUId": "316b74e9-4561-4361-bf61-0f3c2fb06dee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -531,6 +531,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -556,5 +557,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

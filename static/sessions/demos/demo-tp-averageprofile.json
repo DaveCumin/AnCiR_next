@@ -277,7 +277,7 @@
       "name": "avgprofx_97",
       "data": 925,
       "type": "number",
-      "tableProcessGUId": "5a131d30-d3fa-402a-9363-5717b024bc50",
+      "tableProcessGUId": "e4a50489-1656-4e55-8f07-8de8eed827d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -288,7 +288,7 @@
       "name": "avgprof_924_97",
       "data": 926,
       "type": "number",
-      "tableProcessGUId": "5a131d30-d3fa-402a-9363-5717b024bc50",
+      "tableProcessGUId": "e4a50489-1656-4e55-8f07-8de8eed827d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -463,6 +463,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -488,5 +489,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

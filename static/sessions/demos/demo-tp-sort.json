@@ -237,7 +237,7 @@
       "name": "sortedy_665_54",
       "data": 667,
       "type": "number",
-      "tableProcessGUId": "25b351f5-25bd-482a-9d33-3441824106f2",
+      "tableProcessGUId": "d3094bc1-a945-4ffc-af36-fb88fab24d57",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_666_54",
       "data": 668,
       "type": "number",
-      "tableProcessGUId": "25b351f5-25bd-482a-9d33-3441824106f2",
+      "tableProcessGUId": "d3094bc1-a945-4ffc-af36-fb88fab24d57",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -423,6 +423,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -448,5 +449,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

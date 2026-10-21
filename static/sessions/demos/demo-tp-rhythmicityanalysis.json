@@ -740,7 +740,7 @@
       "name": "x",
       "data": 852,
       "type": "number",
-      "tableProcessGUId": "6d75b546-24ca-4550-b43b-f7b1be702aa1",
+      "tableProcessGUId": "f1a2249a-94c0-4230-88a2-43e729fefc01",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -762,7 +762,7 @@
       "name": "853_period_84",
       "data": 854,
       "type": "number",
-      "tableProcessGUId": "5c84f2a7-5803-4b3c-9b0c-b46374a39451",
+      "tableProcessGUId": "625a693f-c568-4b8e-96c5-f623c6b355bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -773,7 +773,7 @@
       "name": "853_power_84",
       "data": 855,
       "type": "number",
-      "tableProcessGUId": "5c84f2a7-5803-4b3c-9b0c-b46374a39451",
+      "tableProcessGUId": "625a693f-c568-4b8e-96c5-f623c6b355bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,7 +784,7 @@
       "name": "rhythmicityy_853_84",
       "data": 856,
       "type": "number",
-      "tableProcessGUId": "5c84f2a7-5803-4b3c-9b0c-b46374a39451",
+      "tableProcessGUId": "625a693f-c568-4b8e-96c5-f623c6b355bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1197,6 +1197,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -1222,5 +1223,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

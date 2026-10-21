@@ -187,7 +187,7 @@
       "name": "interpx_53",
       "data": 663,
       "type": "number",
-      "tableProcessGUId": "684534cb-704f-4763-90c8-5b62935d5088",
+      "tableProcessGUId": "480ecfd9-854b-44bd-b634-d0f840cdb3c8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_662_53",
       "data": 664,
       "type": "number",
-      "tableProcessGUId": "684534cb-704f-4763-90c8-5b62935d5088",
+      "tableProcessGUId": "480ecfd9-854b-44bd-b634-d0f840cdb3c8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -375,6 +375,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -400,5 +401,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

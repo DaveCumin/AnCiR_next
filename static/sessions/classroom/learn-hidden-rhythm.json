@@ -348,7 +348,7 @@
       "data": 0,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "4cad3797-aa3c-4e81-9d26-ba275cddfe62",
+      "tableProcessGUId": "fce91e61-8631-4d7d-b724-eeeed3edfda5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,7 +359,7 @@
       "name": "values_0",
       "data": 1,
       "type": "number",
-      "tableProcessGUId": "4cad3797-aa3c-4e81-9d26-ba275cddfe62",
+      "tableProcessGUId": "fce91e61-8631-4d7d-b724-eeeed3edfda5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -727,6 +727,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -752,5 +753,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

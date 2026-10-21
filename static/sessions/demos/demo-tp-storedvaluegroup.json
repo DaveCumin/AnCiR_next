@@ -11,7 +11,7 @@
       "name": "group_g1_91",
       "data": 890,
       "type": "number",
-      "tableProcessGUId": "daee86f1-082a-4d0b-9496-cb17cbea5b81",
+      "tableProcessGUId": "e002a026-0e64-4e5e-9e29-b9749f57cd0a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -183,6 +183,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -208,5 +209,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

@@ -479,6 +479,10 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "phaseYlimsIN": [
+          null,
+          null
+        ],
         "logScale": false,
         "showPeriod": true,
         "data": [
@@ -643,6 +647,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -668,5 +673,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

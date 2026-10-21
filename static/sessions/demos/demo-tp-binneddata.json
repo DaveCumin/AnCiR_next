@@ -167,7 +167,7 @@
       "name": "x",
       "data": 653,
       "type": "number",
-      "tableProcessGUId": "0d9ce267-338d-4a5c-a51c-74f7bf24b018",
+      "tableProcessGUId": "aa264b35-2a96-4012-b0bf-fc7a1ea8a2c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 655,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "0bf9999a-f056-456d-b2e7-4fbcdb6be952",
+      "tableProcessGUId": "f38d5dcd-0a85-440c-866b-8ba3ad42adf8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_654_52",
       "data": 656,
       "type": "number",
-      "tableProcessGUId": "0bf9999a-f056-456d-b2e7-4fbcdb6be952",
+      "tableProcessGUId": "f38d5dcd-0a85-440c-866b-8ba3ad42adf8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -567,6 +567,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -592,5 +593,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

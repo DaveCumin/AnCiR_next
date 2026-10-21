@@ -193,7 +193,7 @@
       "name": "breach_60",
       "data": 683,
       "type": "number",
-      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
+      "tableProcessGUId": "e0706213-8a52-48c0-bf97-ab3039aace2c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -204,7 +204,7 @@
       "name": "crossing_60",
       "data": 684,
       "type": "number",
-      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
+      "tableProcessGUId": "e0706213-8a52-48c0-bf97-ab3039aace2c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,7 +215,7 @@
       "name": "count_60",
       "data": 685,
       "type": "number",
-      "tableProcessGUId": "5e736288-0eb5-4c6b-abdf-b31a79dfbb16",
+      "tableProcessGUId": "e0706213-8a52-48c0-bf97-ab3039aace2c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -593,6 +593,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -618,5 +619,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

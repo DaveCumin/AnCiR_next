@@ -48,7 +48,7 @@
       "name": "padj_61",
       "data": 690,
       "type": "number",
-      "tableProcessGUId": "f65f4a0c-db28-48da-90ba-8ba67c360521",
+      "tableProcessGUId": "d742a58a-b5bb-4e1d-856c-1507fbc7ba95",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -59,7 +59,7 @@
       "name": "reject_61",
       "data": 691,
       "type": "number",
-      "tableProcessGUId": "14c0cc1d-8144-4695-853b-7aacff233be6",
+      "tableProcessGUId": "828dc9cc-e661-4c4d-a480-1e016894f067",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -224,6 +224,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -249,5 +250,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }

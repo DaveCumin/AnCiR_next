@@ -546,7 +546,7 @@
       "name": "var_i_26",
       "data": 309,
       "type": "category",
-      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
+      "tableProcessGUId": "f94a5179-fa00-4d27-9ed5-5b3cad0452c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -557,7 +557,7 @@
       "name": "var_j_26",
       "data": 310,
       "type": "category",
-      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
+      "tableProcessGUId": "f94a5179-fa00-4d27-9ed5-5b3cad0452c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -568,7 +568,7 @@
       "name": "r_26",
       "data": 311,
       "type": "number",
-      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
+      "tableProcessGUId": "f94a5179-fa00-4d27-9ed5-5b3cad0452c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -579,7 +579,7 @@
       "name": "pvalue_26",
       "data": 312,
       "type": "number",
-      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
+      "tableProcessGUId": "f94a5179-fa00-4d27-9ed5-5b3cad0452c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -590,7 +590,7 @@
       "name": "n_26",
       "data": 313,
       "type": "number",
-      "tableProcessGUId": "054e1df4-b590-4185-af54-9f0f01c5f311",
+      "tableProcessGUId": "f94a5179-fa00-4d27-9ed5-5b3cad0452c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1196,6 +1196,7 @@
     "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
+    "showTimesIn": "column",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
@@ -1221,5 +1222,5 @@
       "No"
     ]
   },
-  "version": "β.82.49"
+  "version": "β.82.55"
 }
