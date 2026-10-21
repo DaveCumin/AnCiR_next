@@ -206,6 +206,7 @@ run_clock_zone_fixture <- function(fx, rec) {
     hoursSinceStart = col_hours(a, cols, raw),
     counts = list(repeated = cnt("repeated"), secondPass = cnt("secondPass"),
                   unordered = cnt("unordered"), skipped = cnt("skipped")),
+    countWarnings = as.list(dst_count_warnings(counts)),
     clock = clock,
     changes = changes,
     phase = list(clock = ref_p$clock, offsetHours = ref_p$offsetHours,

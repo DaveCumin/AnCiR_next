@@ -25,7 +25,7 @@
 import { clockHourOfDay } from '$lib/utils/phaseReference.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { isMissingCategory } from '$lib/utils/chisquare.js';
-import { dayjsInZone } from '$lib/utils/time/zones.js';
+import { wallClockDayjs } from '$lib/utils/time/zones.js';
 import { colormapRGB } from './colormaps.js';
 
 /** Colour buckets per scale (plan 3.5: no visible banding at 64; at most 64 paths). */
@@ -112,7 +112,7 @@ function hasClock(type, originMs) {
  */
 export function dayOfYear(ms, zone = 'utc') {
 	if (!Number.isFinite(ms)) return NaN;
-	const dt = dayjsInZone(ms, zone || 'utc');
+	const dt = wallClockDayjs(ms, zone || 'utc');
 	if (!dt.isValid()) return NaN;
 	const y = dt.year();
 	return Math.round((Date.UTC(y, dt.month(), dt.date()) - Date.UTC(y, 0, 1)) / MS_PER_DAY) + 1;

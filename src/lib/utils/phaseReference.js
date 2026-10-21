@@ -24,7 +24,7 @@
 // The phase reference only RELABELS a phase: it never changes a fit, a bin or
 // any statistic. Pure: no Svelte, no app state (the caller passes the zone).
 
-import { dayjsInZone } from './time/zones.js';
+import { wallClockDayjs } from './time/zones.js';
 import { min, isInvalidValue } from './stats.js';
 import { wrapToPeriod } from './cosinorAddons.js';
 
@@ -109,7 +109,7 @@ export function fitTimeFrame(tCol, outputXCol = null) {
 export function clockHourOfDay(ms, zone = 'utc') {
 	const n = Number(ms);
 	if (ms == null || !Number.isFinite(n)) return NaN;
-	const dt = dayjsInZone(n, zone || 'utc');
+	const dt = wallClockDayjs(n, zone || 'utc');
 	if (!dt.isValid()) return NaN;
 	return dt.hour() + dt.minute() / 60 + dt.second() / 3600 + dt.millisecond() / 3600000;
 }

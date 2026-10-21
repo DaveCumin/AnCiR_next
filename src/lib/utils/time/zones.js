@@ -385,20 +385,66 @@ export function instantToWallClock(ms, zone) {
 	return ms + zoneOffsetMinutes(zone, ms) * 60000;
 }
 
+// ─── Clock readings that do not depend on the computer's zone (plan 5f) ─────
+//
+// dayjs keeps a zoned time on the MACHINE's local clock: `dayjs.utc(ms).utcOffset(h)` and
+// `dayjs(ms).tz(zone)` read their fields through local Date getters and do `startOf`, `hour()`
+// and `add` in local time, so near a daylight-saving change of the computer's own zone they are
+// an hour off (a '+12:00' column read 01:00 for 02:00 on 29 Sep 2024 on a computer in
+// Auckland; an Auckland actogram starting on 7 Apr 2024 began its rows at 01:00 on a computer
+// anywhere else). Every clock reading goes through these instead: the wall clock is computed
+// with our own offsets (`instantToWallClock`, Intl with an explicit zone) and kept as a UTC
+// dayjs, whose fields never touch the local clock, and a local time is turned back into an
+// instant with the resolver (`wallClockToInstant`).
+
+const OFFSET_TOKENS = /\[([^\]]*)]|ZZ|Z/g;
+
+/** `fmt` with its Z / ZZ tokens replaced by the offset as literal text. */
+function withOffsetText(fmt, minutes) {
+	const plain = formatFixedOffset(minutes);
+	return fmt.replace(OFFSET_TOKENS, (tok, literal) => {
+		if (literal !== undefined) return tok;
+		return `[${tok === 'ZZ' ? plain.replace(':', '') : plain}]`;
+	});
+}
+
 /**
- * A dayjs instance showing the instant `ms` in `zone`, ready to `.format()`.
- * IANA zones go through dayjs's own tz(), as every display did before per-column zones, so
- * a legacy session renders through exactly the same code.
+ * A dayjs whose fields (`hour()`, `date()`, `format('HH:mm')`) are the wall clock `zone` shows
+ * at the instant `ms`, the same on every computer. Read it and format it; do not do clock
+ * arithmetic on it (`startOf`, `hour(h)`, `add`) or take its `valueOf()`: it is a UTC dayjs of
+ * the WALL clock, not the instant. For those use `zoneStartOfDay`, or `instantToWallClock` and
+ * `wallClockToInstant`. `format()` prints a Z or ZZ token as the zone's offset at `ms`.
+ * @param {number} ms epoch ms
+ * @param {string} zone 'utc', a fixed offset or an IANA name (an unknown zone reads as 'utc')
  */
-export function dayjsInZone(ms, zone) {
+export function wallClockDayjs(ms, zone) {
 	const z = normalizeZone(zone) ?? UTC_ZONE;
-	if (z === UTC_ZONE) return dayjs.utc(ms);
-	const fixed = fixedOffsetMinutes(z);
-	if (fixed != null) {
-		// utcOffset() reads -16..16 as HOURS, so whole-hour offsets are passed as hours.
-		return dayjs.utc(ms).utcOffset(fixed % 60 === 0 ? fixed / 60 : fixed);
-	}
-	return dayjs(ms).tz(z);
+	const n = Number(ms);
+	if (ms == null || !Number.isFinite(n)) return dayjs.utc(NaN);
+	const minutes = zoneOffsetMinutes(z, n);
+	const d = dayjs.utc(n + minutes * 60000);
+	// A UTC dayjs already prints +00:00 (and its default format, ISO with "Z").
+	if (minutes === 0) return d;
+	// Only `format` is overridden, on this instance: a clone (which arithmetic makes) is plain.
+	const base = d.format.bind(d);
+	d.format = (fmt) => base(withOffsetText(fmt ?? 'YYYY-MM-DDTHH:mm:ssZ', minutes));
+	return d;
+}
+
+/**
+ * The instant local midnight starts the day that `zone` is in at the instant `ms` (the
+ * actogram's automatic first row). A day whose midnight is repeated starts at the first one;
+ * one whose midnight is skipped (America/Santiago, 8 Sep 2024) at its first instant, 01:00
+ * local (the resolver's rule: the offset before the change). NaN for a non-finite `ms`.
+ * @param {number} ms
+ * @param {string} zone an unknown zone reads as 'utc'
+ */
+export function zoneStartOfDay(ms, zone) {
+	const z = normalizeZone(zone) ?? UTC_ZONE;
+	const n = Number(ms);
+	if (ms == null || !Number.isFinite(n)) return NaN;
+	const wall = instantToWallClock(n, z);
+	return wallClockToInstant(Math.floor(wall / DAY_MS) * DAY_MS, z);
 }
 
 /**

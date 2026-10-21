@@ -47,7 +47,9 @@ import {
 	draftSeriesEncodings,
 	applySeriesEncodings
 } from '$lib/components/plotbits/encodingSpec.js';
-import { dayjsInZone } from '$lib/utils/time/zones.js';
+import { instantToWallClock, normalizeZone, wallClockToInstant } from '$lib/utils/time/zones.js';
+
+const DAY_MS = 86400000;
 import { getClockZone } from '$lib/utils/time/displayTime.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
@@ -802,14 +804,12 @@ export function firstBandStart(inner, fromHour, tz) {
 	const h = Math.floor(fromHour);
 	const m = Math.round((fromHour % 1) * 60);
 	// The same clock hour on the data's own first day, then step forward if that's already past.
-	// dayjsInZone: an IANA zone through dayjs's tz() as before, and a fixed offset ('+05:30').
-	let start = dayjsInZone(minX, tz || 'utc')
-		.hour(h)
-		.minute(m)
-		.second(0)
-		.millisecond(0);
-	if (start.valueOf() < minX) start = start.add(1, 'day');
-	return start.valueOf();
+	// On the wall clock of the zone (zones.js), never the computer's: the same on every machine.
+	const zone = normalizeZone(tz) ?? 'utc';
+	const day = Math.floor(instantToWallClock(minX, zone) / DAY_MS) * DAY_MS;
+	const wall = day + (h * 60 + m) * 60000;
+	const start = wallClockToInstant(wall, zone);
+	return start < minX ? wallClockToInstant(wall + DAY_MS, zone) : start;
 }
 
 /**

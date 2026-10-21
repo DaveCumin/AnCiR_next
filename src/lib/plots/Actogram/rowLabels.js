@@ -5,7 +5,7 @@
 // The arithmetic is the interesting part (period drift, the clock zone, an unusable format
 // string), and none of it is testable while it lives inside a component that needs a wired
 // plot and a browser to render. The component keeps the SVG; this keeps the decisions.
-import { dayjsInZone } from '$lib/utils/time/zones.js';
+import { wallClockDayjs } from '$lib/utils/time/zones.js';
 import { DEFAULT_DATE_FORMAT } from '$lib/utils/time/displayTime.js';
 import { scaleLinear } from 'd3-scale';
 
@@ -56,7 +56,7 @@ export function rowLabelText(day, { mode, startTime, periodHrs, dateFormat, zone
 
 	const hrs = Number.isFinite(periodHrs) && periodHrs > 0 ? periodHrs : 24;
 	const ms = startTime + day * hrs * 3600000;
-	const dt = dayjsInZone(ms, zone || 'utc');
+	const dt = wallClockDayjs(ms, zone || 'utc');
 	if (!dt.isValid()) return ordinal;
 
 	// dayjs echoes tokens it does not know, so a nonsense format produces nonsense rather

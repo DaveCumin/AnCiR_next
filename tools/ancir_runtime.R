@@ -1097,6 +1097,18 @@ tp_binneddata <- function(args, env) {
   } else if (!length(bin_size) || !length(bin_start) || !isTRUE(bin_size > 0)) {
     return(FALSE)
   }
+  if (identical(bin_mode, "uniform") && identical(x_col$type, "time")) {
+    # BinnedData.svelte dstNote: daylight saving inside the record moves the bin edges against
+    # the local clock (bins stay elapsed time); the app says so on the node.
+    xt <- suppressWarnings(as.numeric(unlist(col_data(x_col, env$cols, env$raw_data),
+                                             use.names = FALSE)))
+    xt <- xt[is.finite(xt)]
+    if (length(xt)) {
+      clock <- column_clock(x_col, env$cols, env$raw_data)
+      node_warning("Bin Data", bin_dst_note(clock, clock_dst_changes(clock, min(xt), max(xt)),
+                                            min(xt) + bin_start * 3600000, step, bin_size))
+    }
+  }
   x_data <- t_for_col(x_col, env$cols, env$raw_data)
   cuts_arg <- if (identical(bin_mode, "cuts")) cuts else NULL
   bins_x <- NULL; y_results <- list()
@@ -1521,7 +1533,7 @@ zone_transitions <- function(zone, from_ms, to_ms) {
   out
 }
 
-# dayjsInZone(ms, zone).startOf('day').valueOf(): local midnight of the day `ms` is in.
+# zones.js zoneStartOfDay: local midnight of the day `ms` is in.
 zone_start_of_day <- function(ms, zone) {
   z <- normalize_zone(zone)
   if (is.null(z) || identical(z, .UTC_ZONE)) return(floor(ms / 86400000) * 86400000)
@@ -1546,20 +1558,27 @@ format_has_offset <- function(fmt) {
   if (!is.character(fmt) || length(fmt) != 1 || is.na(fmt) || !nzchar(trimws(fmt))) return(FALSE)
   toks <- c("YYYY", "YY", "MMMM", "MMM", "MM", "M", "DD", "D", "HH", "H", "hh", "h",
             "mm", "m", "ss", "s", "SSS", "A", "a", "ZZ", "Z")
-  i <- 1; n <- nchar(fmt)
+  # offsetFormat.js: a literal [Z] directly after a time of day is ISO 8601's UTC designator
+  # ("...HH:mm:ss[Z]"), so the values are instants, as with a Z token.
+  time_of_day <- c("H", "HH", "h", "hh", "m", "mm", "s", "ss", "SSS", "a", "A")
+  i <- 1; n <- nchar(fmt); prev <- ""
   while (i <= n) {
     if (identical(substr(fmt, i, i), "[")) {
       end <- regexpr("]", substr(fmt, i, n), fixed = TRUE)
-      if (end != -1) { i <- i + end; next }
+      if (end != -1) {
+        if (identical(substr(fmt, i + 1, i + end - 2), "Z") && prev %in% time_of_day) return(TRUE)
+        prev <- ""
+        i <- i + end; next
+      }
     }
     hit <- FALSE
     for (t in toks) {
       if (identical(substr(fmt, i, i + nchar(t) - 1), t)) {
         if (t %in% c("Z", "ZZ")) return(TRUE)
-        i <- i + nchar(t); hit <- TRUE; break
+        i <- i + nchar(t); hit <- TRUE; prev <- t; break
       }
     }
-    if (!hit) i <- i + 1
+    if (!hit) { i <- i + 1; prev <- "" }
   }
   FALSE
 }
@@ -1686,6 +1705,42 @@ note_output_zone_inputs <- function(args, env) {
   more <- if (length(changes) > 2) sprintf(" (and %d more changes)", length(changes) - 2) else ""
   paste0(paste(parts, collapse = " and "), more)
 }
+
+# What the app shows on a node or a column (a warning, or a note such as a daylight-saving
+# note or Join Data's zone summary), printed as a console warning the way the Sequence Column
+# limit is: warning("<node>: <text>"). Nothing for no text.
+node_warning <- function(node, text) {
+  if (is.null(text) || !length(text) || is.na(text[[1]]) || !nzchar(text[[1]])) return(invisible(NULL))
+  warning(paste0(node, ": ", text[[1]]), call. = FALSE)
+  invisible(NULL)
+}
+
+# core/columnWarnings.js dstCountWarnings: what a zoned column's repeated and skipped hours
+# say (a clean in-order repeat says nothing: that is what a DST-following logger writes).
+.FIXED_OFFSET_ADVICE <- "This logger may not follow daylight saving: try a fixed offset."
+.times_text <- function(n) if (n == 1) "1 time" else paste0(.thousands(n), " times")
+dst_count_warnings <- function(counts) {
+  if (is.null(counts)) return(character(0))
+  zone <- zone_label(counts$zone, bare = TRUE)
+  out <- character(0)
+  skipped <- if (is.null(counts$skipped)) 0 else counts$skipped
+  unordered <- if (is.null(counts$unordered)) 0 else counts$unordered
+  if (skipped > 0) {
+    one <- skipped == 1
+    out <- c(out, paste0(.times_text(skipped), " fall in the hour skipped when daylight saving ",
+      "began in ", zone, ", so ", if (one) "it does" else "they do", " not exist there; ",
+      if (one) "it is" else "they are", " moved forward by the change (02:30 reads 03:30 ",
+      "after a 1 h change). ", .FIXED_OFFSET_ADVICE))
+  }
+  if (unordered > 0) {
+    out <- c(out, paste0(.times_text(unordered), " fall in the hour repeated when daylight ",
+      "saving ended in ", zone, ", and do not step back through it in order, so each is read ",
+      "as the earlier (daylight-saving) time. ", .FIXED_OFFSET_ADVICE))
+  }
+  out
+}
+# A column is read many times in a run; its DST warnings are printed once per R session.
+.dst_warned <- new.env(parent = emptyenv())
 
 # dstNotes.js clockPhaseDstWarning, or NULL.
 clock_phase_dst_warning <- function(clock, changes, per_window = FALSE) {
@@ -1827,7 +1882,14 @@ resolve_phase_reference <- function(reference, origin_ms, zone = DISPLAY_TIMEZON
 # in the x column's CLOCK zone (column_clock: its own zone, or a legacy session's one zone), one
 # offset at the first sample; a record crossing a daylight-saving change carries the app's
 # warning (`per_window`, MovingAnalysis: each window uses its own offset).
-node_phase_reference <- function(args, x_col, cols, raw_data, per_window = FALSE) {
+# Given the `node`'s name, the warning is also printed, as the app shows it on the node.
+node_phase_reference <- function(args, x_col, cols, raw_data, per_window = FALSE, node = NULL) {
+  ref <- .node_phase_reference(args, x_col, cols, raw_data, per_window)
+  if (!is.null(node)) node_warning(node, ref$warning)
+  ref
+}
+
+.node_phase_reference <- function(args, x_col, cols, raw_data, per_window) {
   if (!identical(args$phaseReference, "clock")) return(resolve_phase_reference(NULL, NULL))
   clock <- column_clock(x_col, cols, raw_data)
   origin <- time_origin_ms(x_col, cols, raw_data)
@@ -1997,7 +2059,7 @@ tp_cosinor <- function(args, env) {
   t <- t_for_col(x_col, env$cols, env$raw_data)
   # Column or sequence output x (resolve_output_x, outputXSequence.js).
   fr <- resolve_output_x(x_col, args, env$cols, env$raw_data)
-  phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data, node = "Cosinor")
 
   any_valid <- FALSE; curves <- list(); metrics <- list()
   for (y_id in y_ins) {
@@ -2205,7 +2267,8 @@ tp_averageprofile <- function(args, env) {
   period <- as.numeric(if (is.null(args$period)) 24 else args$period)
   n_bins <- as.integer(if (is.null(args$nBins)) 24 else args$nBins)
   x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data,
+                                    node = "Average Profile")
   centres <- NULL; any_valid <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
@@ -2245,7 +2308,8 @@ tp_nonparametricra <- function(args, env) {
   m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
   l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
   x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data,
+                                    node = "Nonparametric RA")
 
   scalar_keys <- c("IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset")
   per_y <- list(); centres <- NULL; any_valid <- FALSE
@@ -4617,7 +4681,8 @@ tp_fitfunction <- function(args, env) {
   # Column or sequence output x (resolve_output_x, outputXSequence.js).
   frm <- resolve_output_x(t_col, args, env$cols, env$raw_data)
   output_x <- frm$out
-  phase_ref <- node_phase_reference(args, t_col, env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, t_col, env$cols, env$raw_data,
+                                    node = "Fit waveform model")
 
   y_results <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
@@ -5927,7 +5992,8 @@ tp_movinganalysis <- function(args, env) {
   if (!length(ids)) return(FALSE)
   # In clock time each window takes the offset in force at its centre when the record crosses
   # a daylight-saving change (decision 6).
-  ref <- node_phase_reference(args, x_col, env$cols, env$raw_data, per_window = TRUE)
+  ref <- node_phase_reference(args, x_col, env$cols, env$raw_data, per_window = TRUE,
+                              node = "Moving Analysis")
   phase <- list(recordStart = x_min, ref = ref,
                 windowOffsetHours = if (is_time) window_clock_offsets(ref, starts + win / 2) else NULL)
   per_y <- compute_moving_windows(t_all, lapply(ids, function(y)
@@ -7290,6 +7356,14 @@ tp_joindata <- function(args, env) {
     message("WARNING: Join Data: ", res$error)
     return(clear())
   }
+  if (mode == "time" && ka == "time") {
+    # JoinData.svelte: the joined times take A's zone (the summary) and different zones are
+    # warned about (joinZoneNotes).
+    notes <- join_zone_notes(column_clock(col_a, env$cols, env$raw_data),
+                             column_clock(col_b, env$cols, env$raw_data), args$shiftB)
+    node_warning("Join Data", notes$summary)
+    node_warning("Join Data", notes$warning)
+  }
   if (mode == "time") {
     t_id <- out_id(args, "jointime")
     set_col(env, env$cols, t_id, res$time, type = if (ka == "time") "time" else "number")
@@ -7614,6 +7688,15 @@ col_data <- function(col, cols, raw_data) {
         parsed <- r$instants
         attr(parsed, "wall_clock_counts") <- list(zone = zone, repeated = r$repeated,
           secondPass = r$secondPass, unordered = r$unordered, skipped = r$skipped)
+        # The app shows these on the column (columnWarnings.js), printed once.
+        for (w in dst_count_warnings(attr(parsed, "wall_clock_counts"))) {
+          node <- sprintf('Column "%s"', if (is.null(col$name)) "" else col$name)
+          key <- paste(col$id, node, w, sep = "\r")
+          if (is.null(.dst_warned[[key]])) {
+            assign(key, TRUE, envir = .dst_warned)
+            node_warning(node, w)
+          }
+        }
       }
       d <- parsed
     }
@@ -8363,7 +8446,7 @@ actogram_start_time <- function(series_list, zone = "utc") {
     }
   }
   if (!is.finite(min_time)) min_time <- 0
-  # dayjsInZone(min, zone).startOf('day'): fixed offsets as well as IANA zones.
+  # zones.js zoneStartOfDay(min, zone): fixed offsets as well as IANA zones.
   zone_start_of_day(min_time, if (is.null(zone)) "utc" else zone)
 }
 

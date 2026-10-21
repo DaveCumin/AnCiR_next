@@ -27605,6 +27605,57 @@
 				]
 			},
 			"note": "Epoch-ms times (already instants) with a zone: no re-parse; clock readings in Pacific/Auckland, across the end of NZDT."
+		},
+		{
+			"id": "tz-nz-dst-day-actogram-start",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-06T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"hostZone": "America/New_York",
+			"note": "The record starts on 7 Apr 2024, the day NZDT ends, emitted as on a computer in New York: the actogram's first row starts at 00:00 NZDT (6 Apr 11:00 UTC), and rows after the change at 23:00. Before plan 5f the app started it at 01:00 on any computer outside New Zealand (dayjs-tz startOf('day'))."
+		},
+		{
+			"id": "tz-fixed-plus-1200-host-nz-spring",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "+12:00",
+				"write": {
+					"start": "2024-09-28T00:00:00Z",
+					"stepMin": 30,
+					"count": 72,
+					"writeZone": "+12:00"
+				}
+			},
+			"hostZone": "Pacific/Auckland",
+			"note": "A fixed +12:00 column across 29 Sep 2024 02:00, the moment NZ daylight saving begins, emitted as on a computer in Auckland: 02:00 and 02:30 read as written. Before plan 5f the app read them 01:00 and 01:30 there (dayjs utcOffset through the local clock)."
+		},
+		{
+			"id": "tz-utc-designator-with-zone",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "utc",
+					"format": "YYYY-MM-DD[T]HH:mm:ss[Z]"
+				}
+			},
+			"note": "Text ending in Z (the UTC designator, written as a literal [Z] as the import guesser writes it) with a zone: the instants are the UTC times written; the zone only names the clock they are read on (since plan 5f; before, the zone moved them 13 h as if they were a wall clock)."
 		}
 	]
 }

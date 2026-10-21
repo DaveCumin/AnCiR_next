@@ -370,6 +370,7 @@ def run_clock_zone(fx, js):
             "hoursSinceStart": a.hours_since_start,
             "counts": {k: counts.get(k, 0)
                        for k in ("repeated", "secondPass", "unordered", "skipped")},
+            "countWarnings": rt.dst_count_warnings(a.wall_clock_counts),
             "clock": clock,
             "changes": changes,
             "phase": {"clock": ref_p["clock"], "offsetHours": ref_p["offsetHours"],

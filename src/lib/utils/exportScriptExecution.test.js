@@ -500,6 +500,19 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 		expect(scalarFromCsv(out, '2_H1_acrophase_3')).toBeCloseTo(MOVING_FIRST_ACROPHASE, 6);
 		expect(scalarFromCsv(out, 'acrophase_5')).toBeCloseTo(AWD_ACROPHASE, 6);
 	};
+	// What the app shows on these nodes, printed by the scripts as console warnings (plan 5f),
+	// word for word (the texts of dstNotes.js and zoneNotes.js for this session).
+	const NODE_MESSAGES = [
+		"Cosinor: Clock time uses the first sample's offset (UTC+13:00, Pacific/Auckland) for the whole record. Daylight saving ended on 7 Apr 2024, so phases after it read 1 h later than the local clock.",
+		"Moving Analysis: Daylight saving ended on 7 Apr 2024 in Pacific/Auckland; each window's clock time uses the offset in force at its centre.",
+		"Join Data: Joined times are in A's zone (Pacific/Auckland).",
+		"Join Data: B's times have no zone, so they are read as UTC. If they were recorded in Pacific/Auckland time, set B's zone (in its column's Properties) and the two line up.",
+		"Cosinor: Clock time uses the first sample's offset (UTC, Europe/London) for the whole record. Daylight saving began on 31 Mar 2024, so phases after it read 1 h earlier than the local clock."
+	];
+	const printsNodeMessages = (stderr) => {
+		const flat = stderr.replace(/\s+/g, ' ');
+		for (const m of NODE_MESSAGES) expect(flat, `stderr:\n${stderr}`).toContain(m);
+	};
 
 	it.runIf(HAVE_PYTHON)(
 		'Python, single file and split + CSV',
@@ -515,6 +528,7 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 				);
 				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
 				check(readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8'));
+				printsNodeMessages(res.stderr);
 			}
 		},
 		240_000
@@ -530,6 +544,7 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 				const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME, opts), 'Rscript', entry);
 				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
 				check(readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8'));
+				printsNodeMessages(res.stderr);
 			}
 		},
 		240_000

@@ -7,11 +7,15 @@
 // as the app does it:
 //   zoneNames.js        which strings are zones and their stored form ('+0530' → '+05:30')
 //   zoneNotes.js        the Join Data warning and the mixed-zone plot notes
+//   offsetFormat.js     whether a time format names instants (Z, +13:00) or a wall clock
 //
 // Used by the normalizer (a draft's `columns`), by the engine's import_data (the same text
 // rules), and by the Worker's check_draft and describe_session (reading a session file).
 
 import { normalizeZone, zoneLabel, UTC_ZONE } from '../../../src/lib/utils/time/zoneNames.js';
+// Whether a format reads an offset (Z / ZZ, or a literal Z after the time: ISO's UTC designator),
+// the app's own rule (TimeUtils.js formatHasOffset).
+import { formatReadsOffset } from '../../../src/lib/utils/time/offsetFormat.js';
 import {
 	joinZoneNotes,
 	actogramMixedZonesNote,
@@ -27,20 +31,13 @@ const blank = (v) => v == null || v === '';
 const isEpoch = (v) =>
 	typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)));
 
-/** Whether a dayjs-style format reads an offset (an unescaped Z token). */
-function formatReadsOffset(fmt) {
-	return String(fmt)
-		.replace(/\[[^\]]*\]/g, '')
-		.includes('Z');
-}
-
 /**
  * The dayjs-style format of one ISO 8601 value (already matched by ISO_RE), in the vocabulary
  * the app's parser reads (utils/time/TimeUtils.js parseTimeStrict): two-digit fields,
  * milliseconds (SSS; the app reads a lone S as Luxon's, so only 3 decimals are taken), and an offset read by the Z token ("Z", "+13:00") or ZZ ("+1300").
  * "Z" is read as what it says, UTC, so such times are instants and a zone on the column only
- * names their clock. (The app's import guesser escapes a trailing Z as a literal; with no zone
- * both read the same instants.)
+ * names their clock. (The app's import guesser writes a trailing Z as a literal "[Z]", which the
+ * app also reads as UTC: offsetFormat.js.)
  */
 function isoFormat(text) {
 	const m =

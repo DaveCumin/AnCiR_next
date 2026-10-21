@@ -30,7 +30,7 @@ import { appState } from '$lib/core/core.svelte';
 import {
 	UTC_ZONE,
 	normalizeZone,
-	dayjsInZone,
+	wallClockDayjs,
 	parseInZone,
 	wallClockToInstant,
 	instantToWallClock,
@@ -122,7 +122,7 @@ export function shownZoneLabel(zoneOf, opts = {}) {
 /** A dayjs instance for the stored time `ms`, in the zone it is shown in. */
 export function zonedDayjs(ms, zoneOf = null) {
 	const at = shownAt(Number(ms), zoneOf);
-	return dayjsInZone(at.ms, at.zone);
+	return wallClockDayjs(at.ms, at.zone);
 }
 
 /**

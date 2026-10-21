@@ -12,7 +12,7 @@ import {
 	zoneOffsetMinutes,
 	wallClockToInstant,
 	instantToWallClock,
-	dayjsInZone,
+	wallClockDayjs,
 	parseInZone,
 	zoneLabel,
 	suggestZoneFromOffsets,
@@ -96,21 +96,21 @@ describe('wall clock and instant', () => {
 	});
 });
 
-describe('dayjsInZone and parseInZone', () => {
+describe('wallClockDayjs and parseInZone', () => {
 	const ms = Date.UTC(2024, 3, 6, 12, 30); // 01:30 NZDT on 7 Apr, before the change
 	it('formats one instant in each kind of zone', () => {
-		expect(dayjsInZone(ms, UTC_ZONE).format(FMT)).toBe('2024-04-06 12:30');
-		expect(dayjsInZone(ms, NZ).format(FMT)).toBe('2024-04-07 01:30');
-		expect(dayjsInZone(ms, 'Asia/Kolkata').format(FMT)).toBe('2024-04-06 18:00');
-		expect(dayjsInZone(ms, '+05:45').format(FMT)).toBe('2024-04-06 18:15');
-		expect(dayjsInZone(ms, '-03:30').format(FMT)).toBe('2024-04-06 09:00');
+		expect(wallClockDayjs(ms, UTC_ZONE).format(FMT)).toBe('2024-04-06 12:30');
+		expect(wallClockDayjs(ms, NZ).format(FMT)).toBe('2024-04-07 01:30');
+		expect(wallClockDayjs(ms, 'Asia/Kolkata').format(FMT)).toBe('2024-04-06 18:00');
+		expect(wallClockDayjs(ms, '+05:45').format(FMT)).toBe('2024-04-06 18:15');
+		expect(wallClockDayjs(ms, '-03:30').format(FMT)).toBe('2024-04-06 09:00');
 	});
 
 	it('parses the text it formats back to the same instant', () => {
 		for (const zone of [UTC_ZONE, NZ, 'Asia/Kolkata', '+05:45', '-03:30']) {
-			const text = dayjsInZone(ms, zone).format('YYYY-MM-DDTHH:mm');
+			const text = wallClockDayjs(ms, zone).format('YYYY-MM-DDTHH:mm');
 			expect(parseInZone(text, null, zone)).toBe(ms);
-			expect(parseInZone(dayjsInZone(ms, zone).format(FMT), FMT, zone)).toBe(ms);
+			expect(parseInZone(wallClockDayjs(ms, zone).format(FMT), FMT, zone)).toBe(ms);
 		}
 		expect(parseInZone('', null, NZ)).toBeNaN();
 		expect(parseInZone('not a time', FMT, NZ)).toBeNaN();

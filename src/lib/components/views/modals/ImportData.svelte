@@ -57,7 +57,7 @@
 		localZone,
 		isFixedOffset,
 		formatFixedOffset,
-		dayjsInZone,
+		wallClockDayjs,
 		resolveWallClocks
 	} from '$lib/utils/time/zones.js';
 	import { dstPatternHint } from '$lib/utils/time/dstHint.js';
@@ -1360,7 +1360,7 @@
 	}
 
 	function changeDate(change, zone) {
-		return dayjsInZone(change.at, zone).format('D MMM YYYY');
+		return wallClockDayjs(change.at, zone).format('D MMM YYYY');
 	}
 	function changeLength(change) {
 		const m = Math.abs(change.after - change.before);
@@ -3864,7 +3864,7 @@
 		result[timeKey] =
 			binZone && Number.isFinite(firstInstant)
 				? binPositions.map((h) =>
-						dayjsInZone(firstInstant + h * 3_600_000, binZone).format('DD MMM YYYY HH:mm:ss')
+						wallClockDayjs(firstInstant + h * 3_600_000, binZone).format('DD MMM YYYY HH:mm:ss')
 					)
 				: binPositions.map((h) => binTimeLabel(firstDt, h));
 

@@ -208,6 +208,24 @@ describe("the Worker's reading of a session agrees with the app", () => {
 		);
 	});
 
+	it("a literal [Z] after the time (the app import guesser's spelling) is UTC instants in both", async () => {
+		// The draft writes the Z token; a session saved by the app's import, Sequence Column or
+		// Simulate Data spells it as a literal "[Z]" (plan 5f): the same instants, a zone on it
+		// only names the clock.
+		const built = normalizeSession(DRAFT);
+		const session = JSON.parse(JSON.stringify(built.session));
+		const z = session.data.find((c) => c.name === 'z_t');
+		z.timeFormat = 'YYYY-MM-DD[T]HH:mm:ss[Z]';
+		await importJson(JSON.parse(JSON.stringify(session)));
+		const app = appCol('z_t');
+		expect(app.getData()[0]).toBe(Date.UTC(2024, 3, 1, 0));
+		expect(readsWallClockText(app)).toBe(false);
+		expect(describeColumnZone(session, z).times).toBe('instants');
+		const mine = sessionColumnClock(session, z.id);
+		expect({ named: mine.named, wall: mine.wall }).toEqual({ named: NZ, wall: false });
+		expect(columnClock(app)).toMatchObject({ named: NZ, wall: false });
+	});
+
 	it("check_draft's mixed-zone warnings are the app's own words", async () => {
 		const { session } = await load(DRAFT);
 		const warnings = mixedZoneWarnings(session);

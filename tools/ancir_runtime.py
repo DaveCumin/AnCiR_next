@@ -2526,14 +2526,14 @@ def zone_transitions(zone, from_ms, to_ms):
 
 
 def zoned_datetime(ms, zone):
-    """dayjsInZone: the instant `ms` as an aware datetime in `zone` (utc, fixed or IANA)."""
+    """zones.js wallClockDayjs: `ms` as an aware datetime in `zone` (utc, fixed or IANA)."""
     import datetime as _dt
     return (_dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
             + _dt.timedelta(milliseconds=ms)).astimezone(zone_tzinfo(zone))
 
 
 def zone_start_of_day(ms, zone):
-    """dayjsInZone(ms, zone).startOf('day').valueOf(): local midnight of the day `ms` is in."""
+    """zones.js zoneStartOfDay: local midnight of the day `ms` is in."""
     import datetime as _dt
     if ms is None or not math.isfinite(ms):
         return _NAN
@@ -2553,17 +2553,27 @@ def zone_start_of_day(ms, zone):
 # A's), which run_table_process records on the output columns (`zone_inputs`), first node
 # wins as the app's owningTableProcess does.
 
+# offsetFormat.js: a literal Z straight after one of these is ISO 8601's UTC designator.
+_TIME_OF_DAY_TOKENS = ('H', 'HH', 'h', 'hh', 'm', 'mm', 's', 'ss', 'SSS', 'a', 'A')
+
+
 def format_has_offset(fmt):
-    """TimeUtils.js formatHasOffset: the format (or any of a list) reads an offset (Z / ZZ)."""
+    """TimeUtils.js formatHasOffset: the format (or any of a list) reads an offset: a Z / ZZ
+    token, or a literal [Z] directly after a time of day ("...HH:mm:ss[Z]", ISO 8601's UTC
+    designator, offsetFormat.js utcDesignatorAsOffset), so its values are instants."""
     if isinstance(fmt, (list, tuple)):
         return any(format_has_offset(f) for f in fmt)
     if not isinstance(fmt, str) or not fmt.strip():
         return False
     i = 0
+    prev = None  # the token that ended exactly at i, or None
     while i < len(fmt):
         if fmt[i] == '[':
             end = fmt.find(']', i)
             if end != -1:
+                if fmt[i + 1:end] == 'Z' and prev in _TIME_OF_DAY_TOKENS:
+                    return True
+                prev = None
                 i = end + 1
                 continue
         for token, _ in _DAYJS_TO_STRPTIME:
@@ -2571,8 +2581,10 @@ def format_has_offset(fmt):
                 if token in ('Z', 'ZZ'):
                     return True
                 i += len(token)
+                prev = token
                 break
         else:
+            prev = None
             i += 1
     return False
 
@@ -2703,6 +2715,14 @@ def shown_zone(col):
     return column_clock(col)['zone']
 
 
+def node_warning(node, text):
+    """Print what the app shows on a node or a column (a warning, or a note such as a
+    daylight-saving note or Join Data's zone summary) as a console warning, as the Sequence
+    Column limit is printed: `WARNING: <node>: <text>` on stderr. Nothing for no text."""
+    if text:
+        print(f'WARNING: {node}: {text}', file=sys.stderr)
+
+
 # --- Daylight-saving notes (utils/time/dstNotes.js) --------------------------------------
 
 def _offset_text(minutes):
@@ -2785,6 +2805,39 @@ def bin_dst_note(clock, changes, first_edge, step_hrs, bin_hrs):
     return (f"Daylight saving {_dst_changes_text([moving], clock['named'])} in "
             f"{zone_label(clock['named'])}. Bins are {_num_text(size, 4)} h of elapsed time, "
             f'so bins after it start at {local} local time.')
+
+
+# core/columnWarnings.js dstCountWarnings: what a zoned column's repeated and skipped hours
+# say (a clean in-order repeat says nothing: that is what a DST-following logger writes).
+_FIXED_OFFSET_ADVICE = 'This logger may not follow daylight saving: try a fixed offset.'
+
+
+def _times_text(n):
+    """columnWarnings.js timesText: '1 time', '1,234 times' (toLocaleString, en-US)."""
+    return '1 time' if n == 1 else f'{n:,} times'
+
+
+def dst_count_warnings(counts):
+    """columnWarnings.js dstCountWarnings: the warnings for a column's wall_clock_counts."""
+    if not counts:
+        return []
+    zone = zone_label(counts.get('zone'), bare=True)
+    out = []
+    skipped = counts.get('skipped') or 0
+    unordered = counts.get('unordered') or 0
+    if skipped > 0:
+        one = skipped == 1
+        out.append(
+            f"{_times_text(skipped)} fall in the hour skipped when daylight saving began in "
+            f"{zone}, so {'it does' if one else 'they do'} not exist there; "
+            f"{'it is' if one else 'they are'} moved forward by the change (02:30 reads 03:30 "
+            f'after a 1 h change). {_FIXED_OFFSET_ADVICE}')
+    if unordered > 0:
+        out.append(
+            f'{_times_text(unordered)} fall in the hour repeated when daylight saving ended in '
+            f'{zone}, and do not step back through it in order, so each is read as the earlier '
+            f'(daylight-saving) time. {_FIXED_OFFSET_ADVICE}')
+    return out
 
 
 def join_zone_notes(a, b, shift_b=0):
@@ -2961,6 +3014,8 @@ class Column:
     # How the last read resolved a zoned column's repeated and skipped hours
     # (columnTimeZone.js noteWallClockCounts), or None.
     wall_clock_counts: dict | None = None
+    # The column warnings those counts give (dst_count_warnings) are printed once.
+    dst_warned: bool = False
 
     def is_referencial(self):
         return self.ref_id is not None
@@ -3073,6 +3128,11 @@ class Column:
                             'zone': zone, 'repeated': r['repeated'],
                             'secondPass': r['secondPass'], 'unordered': r['unordered'],
                             'skipped': r['skipped']}
+                        # The app shows these on the column (columnWarnings.js).
+                        if not self.dst_warned:
+                            self.dst_warned = True
+                            for w in dst_count_warnings(self.wall_clock_counts):
+                                node_warning(f'Column "{self.name}"', w)
         if self.type == 'bin':
             # getData reports bin CENTRES: start + binWidth / 2. A uniform bin column always
             # carries binWidth in the app; 1.0 stands in for one saved without it (the ports'
@@ -3822,7 +3882,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
     t = _t_for_col(x_col)
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
-    phase_ref = node_phase_reference(args, x_col)
+    phase_ref = node_phase_reference(args, x_col, node='Cosinor')
 
     metrics_by_y = {}
     any_valid = False
@@ -3933,6 +3993,16 @@ def tp_binneddata(args, cols, raw_data, _sv):
         return False
     if bin_mode == 'uniform':
         bin_size, bin_start, step = float(bin_size), float(bin_start), float(step)
+        if x_col.type == 'time':
+            # BinnedData.svelte dstNote: daylight saving inside the record moves the bin edges
+            # against the local clock (bins stay elapsed time); the app says so on the node.
+            x_times = x_col.get_data()
+            x_lo, x_hi = _js_min(x_times), _js_max(x_times)
+            if x_lo is not None:
+                clock = column_clock(x_col)
+                node_warning('Bin Data', bin_dst_note(
+                    clock, clock_dst_changes(clock, x_lo, x_hi),
+                    x_lo + bin_start * 3600000, step, bin_size))
 
     x_data = _t_for_col(x_col)
     cuts_arg = cuts if bin_mode == 'cuts' else None
@@ -4118,7 +4188,7 @@ def tp_npcra(args, cols, raw_data, _sv):
     m_window = float(args.get('mWindow', 10))
     l_window = float(args.get('lWindow', 5))
     x_data = _t_for_col(cols[x_in])
-    phase_ref = node_phase_reference(args, cols[x_in])
+    phase_ref = node_phase_reference(args, cols[x_in], node='Nonparametric RA')
 
     scalar_keys = ['IS', 'IV', 'RA', 'M10', 'L5', 'M10onset', 'L5onset']
     per_y = {}
@@ -5685,7 +5755,7 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
         return False
     # One phase frame for every window; in clock time each window takes the offset in force
     # at its centre when the record crosses a daylight-saving change (decision 6).
-    phase_ref = node_phase_reference(args, x_col, per_window=True)
+    phase_ref = node_phase_reference(args, x_col, per_window=True, node='Moving Analysis')
     phase = {'recordStart': x_min, 'ref': phase_ref,
              'windowOffsetHours': (window_clock_offsets(phase_ref, [v + win / 2 for v in starts])
                                    if is_time else None)}
@@ -7494,7 +7564,7 @@ def tp_fitfunction(args, cols, raw_data, _sv):
     t = _t_for_col(t_col)
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(t_col, args, cols)
-    phase_ref = node_phase_reference(args, t_col)
+    phase_ref = node_phase_reference(args, t_col, node='Fit waveform model')
 
     y_results = {}     # JS result.y_results
     any_valid = False
@@ -7862,7 +7932,7 @@ def tp_averageprofile(args, cols, raw_data, _sv):
     period = float(args.get('period', 24))
     n_bins = int(args.get('nBins', 24))
     x_data = _t_for_col(cols[x_in])
-    phase_ref = node_phase_reference(args, cols[x_in])
+    phase_ref = node_phase_reference(args, cols[x_in], node='Average Profile')
 
     bin_centres = None
     any_valid = False
@@ -8315,12 +8385,20 @@ def _time_end_ms(col):
     return max(vals) if vals else None
 
 
-def node_phase_reference(args, x_col, per_window=False):
+def node_phase_reference(args, x_col, per_window=False, node=None):
     """phaseReferenceSupport.js resolveNodePhaseReference: clock time is hours after local
     midnight in the x column's CLOCK zone (column_clock: its own zone, or a legacy session's
     one zone), with ONE offset taken at the first sample. When the record crosses a
     daylight-saving change the result carries the app's warning; `per_window` (MovingAnalysis)
-    words it for windows that each use their own offset (window_clock_offsets)."""
+    words it for windows that each use their own offset (window_clock_offsets). Given the
+    `node`'s name, the warning is also printed, as the app shows it on the node."""
+    ref = _node_phase_reference(args, x_col, per_window)
+    if node:
+        node_warning(node, ref.get('warning'))
+    return ref
+
+
+def _node_phase_reference(args, x_col, per_window):
     if (args or {}).get('phaseReference') != PHASE_REFERENCE_CLOCK:
         return resolve_phase_reference(None, None)
     clock = column_clock(x_col)
@@ -9551,6 +9629,12 @@ def tp_joindata(args, cols, raw_data, _sv):
     if res['error']:
         print(f"WARNING: Join Data: {res['error']}", file=sys.stderr)
         return clear()
+    if mode == 'time' and kind_a == 'time':
+        # JoinData.svelte: the joined times take A's zone (the summary) and different zones
+        # are warned about (joinZoneNotes).
+        notes = join_zone_notes(column_clock(col_a), column_clock(col_b), args.get('shiftB', 0))
+        node_warning('Join Data', notes['summary'])
+        node_warning('Join Data', notes['warning'])
 
     if mode == 'time':
         t_id = _out_id(args, 'jointime')
@@ -15824,6 +15908,10 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     double = max(1, int(p.get('doublePlot', 2) or 1))
     span = period_hrs * double
     entries, start_ms, rows_needed = _actogram_series(plot, columns_index, zone)
+    # Actogram.svelte dstNote: the app says, under Time, that rows after a daylight-saving
+    # change start an hour off local midnight.
+    node_warning(f'Actogram "{plot.get("name", "")}"',
+                 actogram_dst_info(plot, columns_index)['dstNote'])
     series_data = p.get('data', []) or []
     heat = p.get('renderMode') == 'heatmap'
     base_w, h_px = _axes_px(ax)
@@ -18333,6 +18421,15 @@ def _js_min(data):
     return None if out == math.inf else out
 
 
+def _js_max(data):
+    """stats.js max: the largest valid value, or None when there is none."""
+    out = -math.inf
+    for v in data:
+        if not _js_invalid(v) and v > out:
+            out = v
+    return None if out == -math.inf else out
+
+
 def _js_mod(a, b):
     """JS `a % b` (the remainder takes the sign of the dividend)."""
     return math.fmod(a, b)
@@ -18820,7 +18917,7 @@ def actogram_start_time(series_list, zone='utc'):
                 min_time = xv
     if min_time == math.inf:
         min_time = 0
-    # dayjsInZone(min, zone).startOf('day'): fixed offsets as well as IANA zones.
+    # zones.js zoneStartOfDay(min, zone): fixed offsets as well as IANA zones.
     return zone_start_of_day(min_time, zone)
 
 

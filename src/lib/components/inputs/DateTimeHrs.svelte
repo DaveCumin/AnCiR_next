@@ -1,7 +1,7 @@
 <script>
 	import { untrack } from 'svelte';
 	import { getClockZone, zonedDayjs, parseShownTime } from '$lib/utils/time/displayTime.js';
-	import { dayjsInZone, parseInZone } from '$lib/utils/time/zones.js';
+	import { wallClockDayjs, parseInZone } from '$lib/utils/time/zones.js';
 
 	// `label` names the two fields for assistive tech ("Start time (date)", "Start time (time)").
 	// The widget is two inputs, so one wrapping <label> cannot name it; each field gets its own.
@@ -25,9 +25,8 @@
 	function inZone(input) {
 		const ms = input instanceof Date ? input.getTime() : input;
 		if (shown) return zonedDayjs(ms, frame);
-		// dayjsInZone: UTC and fixed offsets without an Intl lookup, an IANA zone through
-		// dayjs's tz() exactly as before.
-		return dayjsInZone(ms, effectiveZone);
+		// wallClockDayjs: the zone's wall clock, the same on every computer.
+		return wallClockDayjs(ms, effectiveZone);
 	}
 
 	// Normalize value (supports Date object or timestamp)
@@ -35,7 +34,7 @@
 		if (value instanceof Date) return inZone(value);
 		if (typeof value === 'number') return inZone(value);
 		if (shown) return zonedDayjs(Date.now(), frame);
-		return dayjsInZone(Date.now(), effectiveZone);
+		return wallClockDayjs(Date.now(), effectiveZone);
 	});
 
 	let displayDate = $derived(dt.format('YYYY-MM-DD'));

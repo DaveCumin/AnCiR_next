@@ -127,23 +127,29 @@ Strings the JS records as `null` (no warning, no note) are recorded as `''`, so 
 says something where the app says nothing fails in R as well as Python (R's `deep_diff`
 compares a `null` numerically, which any string passes).
 
-**The emitter runs these fixtures as on a machine in UTC** (`process.env.TZ = 'UTC'` for the
-fixture, restored after; `PARITY_KEEP_TZ=1` turns it off), and writes the text from the
-zone's offset and dayjs's UTC mode only. dayjs computes zoned times through the MACHINE's
-local clock in two places, and both go wrong near a daylight-saving change, so the app's own
-results depend on where it runs (plan 5d lists the repro):
+**Each fixture is emitted as on a machine in `hostZone`** (`process.env.TZ`, default `'UTC'`,
+restored after; `PARITY_KEEP_TZ=1` keeps the machine's own zone, which must give the same
+results). Until plan 5f the app's results depended on where it ran: dayjs computed zoned times
+through the MACHINE's local clock (`dayjs.utc(ms).utcOffset(fixed)` read an hour off inside the
+machine's own daylight-saving change, and dayjs-tz `startOf('day')` on a DST day of the TARGET
+zone kept the later offset on a machine elsewhere). Every clock reading now goes through
+`zones.js` `wallClockDayjs` / `zoneStartOfDay` (offsets from Intl with an explicit zone, never
+the local clock), and three fixtures pin the cases that used to differ:
+`tz-nz-dst-day-actogram-start` (`hostZone` America/New_York: the actogram starts at 00:00 NZDT
+on 7 Apr 2024, not 01:00), `tz-fixed-plus-1200-host-nz-spring` (`hostZone` Pacific/Auckland: a
++12:00 column reads 02:00 at 29 Sep 2024 02:00, not 01:00) and `tz-utc-designator-with-zone`
+(text ending in a literal `[Z]` is UTC instants, so a zone on it names the clock and does not
+move them). The ports compute all three the same way on any machine.
 
-- `dayjs.utc(ms).utcOffset(fixed)` (zones.js `dayjsInZone`, every fixed-offset zone) reads an
-  hour off when the shifted time falls in the machine's own daylight-saving change (on a
-  Pacific/Auckland machine, a +05:30 row label "07 Apr 01:00" where it should read 00:00, and
-  a +12:00 text written 01:00, 01:30, 01:00, 01:30, 03:00 across 29 Sep).
-- dayjs-tz `startOf('day')` on a day with a change in the TARGET zone keeps the later offset
-  when the machine is in another zone (on a UTC machine, the Auckland actogram day start of
-  7 Apr 2024 reads 01:00 NZDT instead of 00:00).
-
-The ports compute both correctly on any machine. No fixture starts its record on a
-daylight-saving day, so the UTC-machine JS results are correct and pinned; the dayjs paths are
-an open JS item, not a port difference.
+Every `clockZone` fixture also records `countWarnings` (core/columnWarnings.js
+`dstCountWarnings`: the skipped and out-of-order repeated hour warnings), ported as
+`dst_count_warnings`. The ports PRINT what the app shows on a node or column as console
+warnings (`WARNING: <node>: <text>` on stderr in Python, `warning("<node>: <text>")` in R, as
+the Sequence Column limit is): the clock-phase DST warning (Cosinor, Fit waveform model,
+Nonparametric RA, Average Profile, Moving Analysis), Bin Data's DST note, Join Data's zone
+summary and warning, a zoned column's DST count warnings (once per column) and, in Python, the
+actogram's DST note. `tools/test_zone_warnings.py` and the parity-zoned-time block of
+`src/lib/utils/exportScriptExecution.test.js` (both exported scripts) check they are printed.
 
 **Session parity** gained a parity-only session, `tools/parity/sessions/parity-zoned-time.json`
 (read by both session emitters alongside the demos): Auckland zone-less text across 7 Apr 2024

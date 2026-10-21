@@ -47,7 +47,7 @@
 	import { rasterizeRows, rasterImageURI, parseColour } from './actogramRaster.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { columnClock, clockDstChanges } from '$lib/core/columnTimeZone.js';
-	import { dayjsInZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import { wallClockDayjs, zoneLabel, zoneStartOfDay } from '$lib/utils/time/zones.js';
 	import { actogramMixedZonesNote } from '$lib/utils/time/zoneNotes.js';
 	import { actogramDstNote } from '$lib/utils/time/dstNotes.js';
 	import {
@@ -753,7 +753,8 @@
 			const minTime = this.timeRange?.min ?? 0;
 			// Snap to the start of the day in the actogram's clock zone: the first series'
 			// column zone ('utc' for times as written), or a legacy session's one zone.
-			return dayjsInZone(minTime, this.clockZone).startOf('day').valueOf();
+			// zoneStartOfDay, not dayjs startOf('day'): the same midnight on every computer.
+			return zoneStartOfDay(minTime, this.clockZone);
 		});
 
 		spaceBetween = $state(2);
@@ -1125,7 +1126,7 @@
 	function actogramXFormatter(absHrs) {
 		if (absHrs == null || isNaN(absHrs)) return '';
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
-		return dayjsInZone(unixTime, theData.plot.clockZone).format('D MMM, HH:mm');
+		return wallClockDayjs(unixTime, theData.plot.clockZone).format('D MMM, HH:mm');
 	}
 
 	// allBins stores {start, end, y} in offset-corrected absolute hours.

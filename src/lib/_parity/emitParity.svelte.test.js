@@ -69,6 +69,7 @@ import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/student
 import { oneWayAnova, tukeyKramerPostHoc } from '$lib/tableProcesses/GroupComparison.svelte';
 import { mean as sampleMean, sampleStd } from '$lib/utils/sampleStats.js';
 import { columnClock, clockDstChanges, wallClockCountsOf } from '$lib/core/columnTimeZone.js';
+import { dstCountWarnings } from '$lib/core/columnWarnings.js';
 import {
 	resolveNodePhaseReference,
 	windowClockOffsets
@@ -1288,11 +1289,14 @@ function mkZoneCol(spec, name) {
 const clockRecord = (c) => ({ zone: c.zone, named: c.named, wall: c.wall, legacy: c.legacy });
 
 async function runClockZone(fx) {
-	// The app's results must not depend on the machine's zone; dayjs's local-clock arithmetic
-	// does near the machine's own daylight-saving changes (plan 5d), so these fixtures are
-	// emitted as on a machine in UTC. Node re-reads TZ when it changes.
+	// The app's results must not depend on the machine's zone. They did, near the machine's own
+	// daylight-saving changes, until every clock reading stopped going through dayjs's local
+	// clock (plan 5f), so each fixture is emitted as on a machine in `hostZone` (default UTC; a
+	// fixture names another zone to pin a case that used to differ there). PARITY_KEEP_TZ=1
+	// keeps the machine's own zone, which must give the same results. Node re-reads TZ when it
+	// changes.
 	const prevTZ = process.env.TZ;
-	if (!process.env.PARITY_KEEP_TZ) process.env.TZ = 'UTC';
+	if (!process.env.PARITY_KEEP_TZ) process.env.TZ = fx.hostZone ?? 'UTC';
 	const prevLegacy = appState.displayTimezone;
 	const prevShow = appState.showTimesIn;
 	appState.displayTimezone = fx.legacyZone ?? 'utc';
@@ -1389,6 +1393,7 @@ async function runClockZone(fx) {
 			inputs: {
 				column: specA,
 				columnB: specB,
+				hostZone: fx.hostZone ?? 'UTC',
 				legacyZone: fx.legacyZone ?? null,
 				actogramWithB: !!fx.columnB,
 				showTimesIn: fx.showTimesIn ?? 'column',
@@ -1405,6 +1410,8 @@ async function runClockZone(fx) {
 					unordered: counts.unordered ?? 0,
 					skipped: counts.skipped ?? 0
 				},
+				// What the column warns (columnWarnings.js); the ports print these (plan 5f).
+				countWarnings: dstCountWarnings(wallClockCountsOf(data)),
 				clock: clockRecord(clock),
 				changes,
 				phase: {

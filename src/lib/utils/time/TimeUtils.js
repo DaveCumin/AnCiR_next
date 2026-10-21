@@ -4,6 +4,12 @@ import { guessFormat } from './guessTimeFormat';
 import { zonedDayjs } from './displayTime.js';
 import { min, max } from '$lib/utils/MathsStats';
 import { createSequenceArray } from '$lib/utils/MathsStats';
+import {
+	DAYJS_FORMAT_TOKENS,
+	hasOffsetToken,
+	formatReadsOffset,
+	utcDesignatorAsOffset
+} from './offsetFormat.js';
 
 const decimalPlaces = 4;
 
@@ -71,11 +77,6 @@ export function normalizeTimeFormat(fmt) {
 // older versions carry formats such as 'YYYY-MM-DD H:mm:s' over zero-padded data,
 // and that round-trip blanked every row from 00:00 to 09:59.
 const PAD_TOLERANT_TOKENS = new Set(['H', 'h', 'm', 's', 'D', 'M']);
-// The token grammar dayjs's own format() uses (dayjs/esm/constant REGEX_FORMAT),
-// so the per-token round-trip below splits the format exactly as dayjs does.
-const DAYJS_FORMAT_TOKENS =
-	/\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g;
-
 function escapeRegExp(text) {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -122,25 +123,18 @@ function roundTripsPadTolerant(input, dt, fmt, offsetText) {
 // timestamp became missing. The check below compares in the offset the text
 // itself carries instead.
 
-/** Whether a format has a zone offset token (Z or ZZ) outside [literals]. */
-function hasOffsetToken(fmt) {
-	for (const m of fmt.matchAll(DAYJS_FORMAT_TOKENS)) {
-		if (m[1] === undefined && (m[0] === 'Z' || m[0] === 'ZZ')) return true;
-	}
-	return false;
-}
-
 /**
  * Whether a column's time format reads a zone offset from the text (a Z or ZZ token in the
- * format, or in any of a list of formats). Such a column's parsed values are true instants;
- * a format without one stores the wall clock read as UTC ("As written"). See
+ * format, or in any of a list of formats, or a literal Z after the time: the ISO 8601 UTC
+ * designator, offsetFormat.js `utcDesignatorAsOffset`). Such a column's parsed values are
+ * true instants; a format without one stores the wall clock read as UTC ("As written"). See
  * core/columnTimeZone.js.
  * @param {unknown} fmt
  */
 export function formatHasOffset(fmt) {
 	if (Array.isArray(fmt)) return fmt.some((f) => formatHasOffset(f));
 	if (typeof fmt !== 'string' || !fmt.trim()) return false;
-	return hasOffsetToken(normalizeTimeFormat(fmt));
+	return formatReadsOffset(normalizeTimeFormat(fmt));
 }
 
 /**
@@ -154,7 +148,7 @@ export function valueOffsetMinutes(text, fmt) {
 	if (typeof text !== 'string') return null;
 	const fmts = (Array.isArray(fmt) ? fmt : [fmt]).filter((f) => typeof f === 'string' && f.trim());
 	for (const f of fmts) {
-		const norm = normalizeTimeFormat(f);
+		const norm = utcDesignatorAsOffset(normalizeTimeFormat(f));
 		if (!hasOffsetToken(norm)) continue;
 		const off = offsetTextIn(normalizeMeridiemText(text.trim()), norm);
 		if (off !== null) return offsetMinutes(off);
@@ -199,10 +193,11 @@ function parseWithOffset(text, fmt, make, invalid) {
 	if (offsetText === null) return invalid;
 	const loose = make(text, fmt);
 	if (!loose.isValid()) return invalid;
-	// utcOffset() reads a number of -16..16 as HOURS; whole-hour offsets are
-	// passed as hours so the call is unambiguous either way.
+	// The wall clock in the written offset, as a UTC dayjs: `loose.utcOffset(h)` would read it
+	// through the computer's local clock, an hour off near the computer's own daylight-saving
+	// change, and the value was then dropped as not matching (plan 5f).
 	const mins = offsetMinutes(offsetText);
-	const local = loose.utcOffset(mins % 60 === 0 ? mins / 60 : mins);
+	const local = dayjs.utc(loose.valueOf() + mins * 60000);
 	return roundTripsPadTolerant(text, local, fmt, offsetText) ? make(loose.valueOf()) : invalid;
 }
 
@@ -431,11 +426,14 @@ export function guessDateDetails(dates) {
 		}
 		if (candidates.size === 0) return none;
 
-		// Strict parse so a token mismatch counts as a miss.
+		// Strict parse so a token mismatch counts as a miss. In UTC, which has no skipped hour:
+		// read on the computer's clock, a time inside its own daylight-saving gap failed (on a
+		// computer in Auckland a column of times on 29 Sep 2024 02:00 to 02:59 was no time
+		// column at all; plan 5f).
 		const scoreOf = (guess) => {
 			let score = 0;
 			for (const v of text) {
-				if (parseTimeStrict(v, guess, { utc: false }).isValid()) score++;
+				if (parseTimeStrict(v, guess).isValid()) score++;
 			}
 			return score;
 		};

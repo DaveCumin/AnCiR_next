@@ -37,7 +37,7 @@ import {
 	zoneTransitions,
 	zoneOffsetMinutes,
 	zoneLabel,
-	dayjsInZone,
+	wallClockDayjs,
 	parseInZone
 } from '$lib/utils/time/zones.js';
 import { getLegacyZone } from '$lib/utils/time/displayTime.js';
@@ -211,7 +211,7 @@ export function clockZoneOf(col) {
  * hour-of-day colour, light bands, the Bin Data start field) asks this, never "Show times
  * in", so changing how times are shown can never change a result (decision 2).
  *
- *   zone    the zone the stored ms are read in (`dayjsInZone(ms, zone)` is the local clock)
+ *   zone    the zone the stored ms are read in (`wallClockDayjs(ms, zone)` is the local clock)
  *   named   the zone the column's clock belongs to, to name in a label ("Hour of day
  *           (Pacific/Auckland)"). Since phase 3 the same as `zone`: only a 'utc' column is a
  *           wall-clock column (its ms are its wall clock, read in 'utc').
@@ -267,7 +267,7 @@ export function clockDstChanges(clock, minMs, maxMs) {
  */
 export function formatClockInput(ms, col) {
 	if (ms == null || !Number.isFinite(Number(ms))) return '';
-	const dt = dayjsInZone(Number(ms), columnClock(col).zone);
+	const dt = wallClockDayjs(Number(ms), columnClock(col).zone);
 	return dt.isValid() ? dt.format('YYYY-MM-DD[T]HH:mm:ss') : '';
 }
 

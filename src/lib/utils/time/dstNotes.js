@@ -11,7 +11,7 @@
 // keeps the first sample's offset, so later phases are an hour off the local clock. A
 // wall-clock column (zone-less text, 'utc', "as written") is read in UTC, which has none.
 
-import { dayjsInZone, zoneLabel, formatFixedOffset } from './zones.js';
+import { wallClockDayjs, zoneLabel, formatFixedOffset } from './zones.js';
 
 const offsetText = (minutes) => (minutes === 0 ? 'UTC' : `UTC${formatFixedOffset(minutes)}`);
 
@@ -22,7 +22,7 @@ function hoursText(minutes) {
 
 /** "ended on 7 Apr 2024" / "began on 29 Sep 2024", in the zone's own calendar. */
 function changeText(change, named) {
-	const date = dayjsInZone(change.at, named).format('D MMM YYYY');
+	const date = wallClockDayjs(change.at, named).format('D MMM YYYY');
 	return `${change.after < change.before ? 'ended' : 'began'} on ${date}`;
 }
 
@@ -75,7 +75,7 @@ export function actogramDstNote(clock, changes, { startTime, periodHrs }) {
 	// The first row that starts after the change, and the local time it starts at.
 	const k = Math.max(0, Math.ceil((first.at - startTime) / (period * 3600000)));
 	const rowStart = startTime + k * period * 3600000;
-	const local = dayjsInZone(rowStart, clock.zone).format('HH:mm');
+	const local = wallClockDayjs(rowStart, clock.zone).format('HH:mm');
 	return (
 		`Daylight saving ${what} in ${zone}. Rows are ${+period.toFixed(4)} h of elapsed time, so ` +
 		`rows after it start at ${local} local time.`
@@ -103,7 +103,7 @@ export function binDstNote(clock, changes, { firstEdge, stepHrs, binHrs }) {
 	});
 	if (!moving) return null;
 	const k = Math.max(0, Math.ceil((moving.at - firstEdge) / stepMs));
-	const local = dayjsInZone(firstEdge + k * stepMs, clock.zone).format('HH:mm');
+	const local = wallClockDayjs(firstEdge + k * stepMs, clock.zone).format('HH:mm');
 	const size = Number.isFinite(binHrs) && binHrs > 0 ? binHrs : stepHrs;
 	return (
 		`Daylight saving ${changesText([moving], clock.named)} in ${zoneLabel(clock.named)}. ` +
