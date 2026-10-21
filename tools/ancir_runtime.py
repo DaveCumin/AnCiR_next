@@ -9143,6 +9143,15 @@ def bucket_colours(name, k=COLOUR_BUCKETS):
     return [colormap_rgb(name, (b + 0.5) / k) for b in range(k)]
 
 
+def normalise_to_01(value, lo, hi):
+    """colormaps.js normaliseTo01: (value - lo) / (hi - lo) clamped to [0, 1]; 0 for a
+    non-finite input or an empty range."""
+    if not (_finite(value) and _finite(lo) and _finite(hi)) or hi <= lo:
+        return 0.0
+    t = (float(value) - lo) / (hi - lo)
+    return 0.0 if t < 0 else (1.0 if t > 1 else t)
+
+
 def _rgb_css(rgb):
     return f'rgb({rgb[0]}, {rgb[1]}, {rgb[2]})'
 
@@ -9809,7 +9818,7 @@ _SVG_LINE_JOIN = 'bevel'
 
 
 def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=None,
-                       size_by=None):
+                       size_by=None, gid_prefix=None):
     """Draw one series' line, then its points, as Line.svelte and Points.svelte do, and
     return the drawn artists (gids `series-<index>-line` / `series-<index>-points`, plus
     `series-<index>-points-novalue` for coloured points with no colour value).
@@ -9841,6 +9850,7 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
     app's legend swatch (`_ancir_legend_handle`: the line with the marker on it, the points
     grey when coloured by a column), which _legend_with_overlays uses in its place."""
     from matplotlib.lines import Line2D
+    gp = gid_prefix or f'series-{index}'
     line = _with_defaults(series.get('line'), _LINE_DEFAULTS)
     points = _with_defaults(series.get('points'), _POINTS_DEFAULTS)
     resolved = resolved or {}
@@ -9879,7 +9889,7 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
                 colours.append(c)
         lc = LineCollection(segs, colors=colours, linewidths=width * _PX_TO_PT,
                             linestyles='solid', capstyle='round', joinstyle='round',
-                            zorder=2, gid=f'series-{index}-line', label=label)
+                            zorder=2, gid=f'{gp}-line', label=label)
         ax.add_collection(lc, autolim=True)
         ax.autoscale_view()
         drawn['line'] = lc
@@ -9903,7 +9913,7 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
             lx, ly, color=line_colour,
             linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(line['stroke'], width),
             solid_capstyle='butt', solid_joinstyle=_SVG_LINE_JOIN, dash_capstyle='butt',
-            dash_joinstyle=_SVG_LINE_JOIN, zorder=2, gid=f'series-{index}-line', label=label)
+            dash_joinstyle=_SVG_LINE_JOIN, zorder=2, gid=f'{gp}-line', label=label)
     marker, size = _scatter_marker(points['shape'], points['radius'])
     if points['draw'] and rows:
         point_label = '_nolegend_' if drawn['line'] is not None else label
@@ -9924,7 +9934,7 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
             colours = [palette[group(i) - 1] if group(i) > 0 else points_colour for i in order]
             drawn['points'] = ax.scatter(
                 [x[i] for i in order], [_js_number(y[i]) for i in order],
-                color=colours, gid=f'series-{index}-points', label=point_label,
+                color=colours, gid=f'{gp}-points', label=point_label,
                 **{**common, 's': sizes})
         elif coloured:
             none_rows = [i for i in rows if bucket(i) == NO_COLOUR_VALUE]
@@ -9933,17 +9943,17 @@ def _draw_series_marks(ax, x, y, series, index, label, resolved=None, colour_by=
             if none_rows:
                 drawn['points_novalue'] = ax.scatter(
                     [x[i] for i in none_rows], [_js_number(y[i]) for i in none_rows],
-                    color=points_colour, gid=f'series-{index}-points-novalue',
+                    color=points_colour, gid=f'{gp}-points-novalue',
                     label=point_label if not col_rows else '_nolegend_', **common)
             if col_rows:
                 drawn['points'] = ax.scatter(
                     [x[i] for i in col_rows], [_js_number(y[i]) for i in col_rows],
                     color=[palette[bucket(i)] for i in col_rows],
-                    gid=f'series-{index}-points', label=point_label, **common)
+                    gid=f'{gp}-points', label=point_label, **common)
         else:
             drawn['points'] = ax.scatter(
                 [x[i] for i in rows], [_js_number(y[i]) for i in rows],
-                color=points_colour, gid=f'series-{index}-points', label=point_label,
+                color=points_colour, gid=f'{gp}-points', label=point_label,
                 **common)
     # The legend swatch (Scatterplot getLegendItem, drawn by Legend.svelte): the line, with
     # the series' marker at its centre when the points are shown too. Coloured by a column,
@@ -10106,6 +10116,8 @@ OVERLAY_CAPABILITIES = {
     'boxplot': {'line': ('horizontal',),
                 'band': ('horizontal',),
                 'domain': ('y',)},
+    # CWTClass: period marks only, and nothing widens (the period range is the transform's).
+    'cwt': {'line': ('horizontal',), 'band': ('horizontal',), 'domain': ()},
 }
 
 _OVERLAY_LINE_PALETTE = ('#2C2C2C', '#C0392B', '#2980B9', '#27AE60', '#8E44AD')
@@ -10643,10 +10655,9 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
     return result
 
 
-def _legend_with_overlays(ax, overlay_legend, extra_axes=(), legend_json=None, look=None):
-    """ax.legend over the series' labelled artists (on `ax` and any `extra_axes`, such as a
-    right y axis) followed by the overlays' entries, as the app's legend lists them; placed,
-    sized and boxed as the plot's saved legend says (legend_kwargs)."""
+def _series_legend_entries(ax, extra_axes=()):
+    """The series' labelled artists on `ax` and any `extra_axes` (a right y axis), each as the
+    app's swatch (line + marker, grey when coloured by a column; _draw_series_marks)."""
     handles, labels = ax.get_legend_handles_labels()
     for other in extra_axes:
         if other is None:
@@ -10654,17 +10665,51 @@ def _legend_with_overlays(ax, overlay_legend, extra_axes=(), legend_json=None, l
         h, l = other.get_legend_handles_labels()
         handles += h
         labels += l
-    # A series' swatch as the app draws it (line + marker, grey when coloured by a column),
-    # in place of the artist that carries its label (_draw_series_marks).
-    handles = [getattr(h, '_ancir_legend_handle', h) for h in handles]
+    return [getattr(h, '_ancir_legend_handle', h) for h in handles], labels
+
+
+def _legend_with_overlays(ax, overlay_legend, extra_axes=(), legend_json=None, look=None,
+                          layout=None, entries=None, on=None):
+    """ax.legend over the series' labelled artists (on `ax` and any `extra_axes`, such as a
+    right y axis), or `entries` [(handle, label)] in the app's order, followed by the
+    overlays' entries, as the app's legend lists them; sized and boxed as the plot's saved
+    legend says (legend_kwargs) and placed where the app puts it: a fixed corner or custom
+    spot from the saved position, an 'auto' or outside one from `layout` (legend_layout)."""
+    if entries is None:
+        handles, labels = _series_legend_entries(ax, extra_axes)
+    else:
+        handles, labels = [h for h, _ in entries], [lab for _, lab in entries]
     for h, l in overlay_legend or []:
         handles.append(h)
         labels.append(l)
     if handles:
         kw = legend_kwargs(legend_json, look or resolve_figure_style(None), len(handles))
         frame = kw.pop('_frame')
-        leg = ax.legend(handles, labels, **kw)
+        anchor = legend_anchor_kwargs(legend_json, layout, ax) \
+            if layout is not None and layout.get('box') else {}
+        if anchor:
+            kw.pop('bbox_to_anchor', None)
+            kw.update(anchor)
+        # On the top-most axes (`on`: a twin y axis is drawn after `ax` and would otherwise
+        # paint its series over the legend; the app draws the legend after every series).
+        leg = (on or ax).legend(handles, labels, **kw)
         style_legend(leg, frame)
+        return leg
+    return None
+
+
+def _overlay_legend_labels(plot, host=None, legacy_night_bands=False, x_is_time=False):
+    """overlayHost.js overlayLegendItems' labels: every enabled overlay with a label, in
+    order (what the legend lists after the series, read from the saved overlays)."""
+    p = plot.get('plot', {}) or {}
+    caps = OVERLAY_CAPABILITIES.get(host or plot.get('type'))
+    out = []
+    for ov in _overlays_from_plot(p, caps, legacy_night_bands=legacy_night_bands,
+                                  x_is_time=x_is_time):
+        label = (ov['label'] or '').strip() if isinstance(ov['label'], str) else ''
+        if ov['enabled'] and label:
+            out.append(label)
+    return out
 
 
 def _scatter_x_origin_ms(col):
@@ -11013,13 +11058,21 @@ def _key_inset(scale_json):
 
 
 def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
-                        has_right_axis=False, padding_right=30):
-    """EncodingKeyLayout.placement / sizePlacement (no series legend among them): where the
-    colour bar ({'x', 'y', 'length', 'geom'}) and the size key ({'x', 'y', 'geom'}) go, in px
-    from the plot area's top left, or None for a key not shown. The size key stacks after the
-    bar (beside the plot under it, in a shared corner past it), and an automatic vertical bar
-    shortens so both fit (fitVertical)."""
+                        has_right_axis=False, padding_right=30, legend_box=None,
+                        legend_json=None, legend_size=None, base_h=None):
+    """EncodingKeyLayout.placement / sizePlacement: where the colour bar ({'x', 'y', 'length',
+    'geom'}) and the size key ({'x', 'y', 'geom'}) go, in px from the plot area's top left, or
+    None for a key not shown. They stack in reading order after the series legend
+    (`legend_box`, legend_placed_box: outside on the right they go under it, in its inside
+    corner past it): the size key after the bar (beside the plot under it, in a shared corner
+    past it), and an automatic vertical bar shortens so all fit (fitVertical). `legend_size` is
+    the legend's box when `legend_json` places it 'outsideright' (a category key's room starts
+    under it)."""
     ax_w, ax_h = _axes_px(ax)
+    legend_stack = [legend_box] if legend_box else []
+    under = 0
+    if (legend_json or {}).get('position') == 'outsideright' and legend_size:
+        under = legend_size['height'] + LEGEND_MARGIN
     margin = 10
     cs = colour_json or {}
     ss = size_json or {}
@@ -11041,7 +11094,7 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
     bar_box = None
     beside = False
     if colour_on:
-        plan = _colour_key_plan(ax_h, key, cs, look)
+        plan = _colour_key_plan(ax_h, key, cs, look, under=under)
         vertical, fixed, length0 = plan['vertical'], plan['fixed'], plan['length0']
         geom = plan['geom']
         c_pos = cs.get('position') or 'right'
@@ -11049,7 +11102,7 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
         custom = {'customX': cs.get('customX'), 'customY': cs.get('customY')}
         base = geom(length0)
         x, y, max_len = place_key(c_pos, base['width'], base['height'], custom=custom,
-                                  inset=c_inset, **args)
+                                  inset=c_inset, stack=legend_stack, **args)
         length = length0
         shares = size_on and c_pos == s_pos and c_pos != 'custom'
         beside = shares and _keys_side_by_side(ax_h, plan, base, size_geom, c_pos, c_inset,
@@ -11060,7 +11113,7 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
             length = min(length0, max(plan['min_len'], max_len - after - besides))
             g = geom(length)
             x, y, _ = place_key(c_pos, g['width'], g['height'], custom=custom, inset=c_inset,
-                                **args)
+                                stack=legend_stack, **args)
         g = geom(length)
         out['colour'] = {'x': x, 'y': y, 'length': length, 'geom': g}
         bar_box = {'x': x - c_inset, 'y': y - c_inset, 'w': g['width'] + 2 * c_inset,
@@ -11072,7 +11125,7 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
                                 margin, inset=s_inset)
         else:
             x, y, _ = place_key(s_pos, size_geom['width'], size_geom['height'],
-                                stack=[bar_box] if bar_box else [],
+                                stack=legend_stack + ([bar_box] if bar_box else []),
                                 custom={'customX': ss.get('customX'),
                                         'customY': ss.get('customY')},
                                 inset=s_inset, **args)
@@ -11081,13 +11134,13 @@ def encoding_key_layout(ax, key, size_key, colour_json, size_json, look,
     return out
 
 
-def _colour_key_plan(ax_h, key, cs, look):
+def _colour_key_plan(ax_h, key, cs, look, under=0):
     """EncodingKeyLayout's bar before placement: orientation, a stored length (or None), the
     automatic length (long enough for the title where the plot is), the minimum, the
     comfortable minimum, and the geometry at a length. A category key (Category mode): its
     room for its rows instead (category_key_plan)."""
     if key.get('categorical'):
-        return category_key_plan(ax_h, key, cs, look)
+        return category_key_plan(ax_h, key, cs, look, under=under)
     vertical = cs.get('orientation') != 'horizontal'
     thickness = cs.get('barThickness') or 10
     fixed = cs.get('barLength')
@@ -11159,7 +11212,7 @@ def category_key_geometry(items, no_value, title, font_px, length=None):
             'title_lines': title_lines, 'rows': rows}
 
 
-def category_key_plan(ax_h, key, cs, look):
+def category_key_plan(ax_h, key, cs, look, under=0):
     """EncodingKeyLayout for a category key: always vertical, no stored length; the room
     for its rows is one column of them, or the plot's height (less a corner's margins and
     backdrop, and the title) when they do not fit, never under one row."""
@@ -11170,7 +11223,8 @@ def category_key_plan(ax_h, key, cs, look):
     titled = category_key_geometry(items, nv, key['title'], font_px)
     min_len = plain['row_h']
     position = cs.get('position') or 'right'
-    room = ax_h if position == 'right' else ax_h - 2 * 10 - 2 * _key_inset(cs)
+    # Beside the plot under a legend placed 'outsideright', the room starts below it.
+    room = ax_h - under if position == 'right' else ax_h - 2 * 10 - 2 * _key_inset(cs)
     length0 = max(min_len, min(plain['natural'], room - titled['title_h']))
 
     def geom(length):
@@ -12524,6 +12578,357 @@ def style_legend(leg, frame):
     f.set_boxstyle(f'round,pad=0,rounding_size={frame.get("radius", 0.2)}')
 
 
+# ---- Legend placement (components/plotbits/legendLayout.js, legendAuto.svelte.js) ---------
+#
+# The legend box is sized from its label widths (legendBoxSize). A fixed corner sits 10 px in;
+# 'auto' rasterises the plot's drawn marks onto a 4 px grid over the plot area (before any
+# room is taken for an outside legend: the acyclic rule of legendAuto.svelte.js) and takes the
+# first candidate (corners, then edge midpoints, matplotlib's order) that covers under 1% of
+# its cells; when none is clear the legend goes OUTSIDE on the right, where 'outsideright'
+# puts it too: top-aligned with the plot area, 10 px past it (and past a right axis), the
+# plot area giving up the box's width plus that gap.
+
+LEGEND_MARGIN = 10
+LEGEND_ICON_W = 25
+LEGEND_ICON_GAP = 4
+LEGEND_H_SPACING = 10
+LEGEND_CLEAR_FRACTION = 0.01
+_LEGEND_EST_CHAR_EM = 0.55
+# How the label widths that size the legend box are found: 'measure' (matplotlib's own text
+# extents in the figure's family, as the browser measures them on a canvas) or 'estimate'
+# (0.55 em a character, the app's fallback when it has no canvas, as in its jsdom tests).
+LEGEND_LABEL_WIDTHS = 'measure'
+_LEGEND_DEFAULTS = {'show': False, 'position': 'topright', 'orientation': 'vertical',
+                    'padding': 8, 'itemSpacing': 4, 'customX': 0.02, 'customY': 0.02}
+
+
+def legend_font_px(legend_json, look):
+    """Legend.svelte legendFontSize: the legend's own `fontSize` px, else the figure's."""
+    fs = (legend_json or {}).get('fontSize')
+    return float(fs) if _style_valid(fs, 'number') and fs > 0 else look['px']['legend']
+
+
+def _legend_setting(legend_json, key):
+    v = (legend_json or {}).get(key)
+    return _LEGEND_DEFAULTS[key] if v is None else v
+
+
+def legend_label_widths(labels, font_px, family, fig=None, mode=None):
+    """legendLayout.js measureLabelWidths: each label's width in px at `font_px`."""
+    mode = mode or LEGEND_LABEL_WIDTHS
+    if mode == 'measure' and fig is not None:
+        fam = _font_family_list(family)
+        return [_text_width_px(fig, str(lab), font_px * _PX_TO_PT, fam) for lab in labels]
+    return [len(str(lab)) * font_px * _LEGEND_EST_CHAR_EM for lab in labels]
+
+
+def legend_box_size(label_widths, font_px, padding=8, item_spacing=4, orientation='vertical'):
+    """legendLayout.js legendBoxSize (at figure scale): {'width', 'height', 'lineH',
+    'padding'} in px; zero for no labels."""
+    n = len(label_widths)
+    if n == 0:
+        return {'width': 0, 'height': 0, 'lineH': 0, 'padding': 0}
+    pad = float(padding)
+    line_h = font_px + (item_spacing + 4)
+    if orientation == 'horizontal':
+        total = sum(LEGEND_ICON_W + LEGEND_ICON_GAP + w + LEGEND_H_SPACING for w in label_widths)
+        return {'width': total + pad * 2, 'height': line_h + pad * 2, 'lineH': line_h,
+                'padding': pad}
+    max_label_w = max(list(label_widths) + [0]) + 2 + pad / 2
+    return {'width': LEGEND_ICON_W + LEGEND_ICON_GAP + max_label_w + pad * 2,
+            'height': n * line_h + pad * 2, 'lineH': line_h, 'padding': pad}
+
+
+def _ok_number(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def build_occupancy(width, height, series, cell=4):
+    """legendLayout.js buildOccupancy: which `cell` px cells of a width x height plot area hold
+    a drawn mark. `series` are dicts with optional 'px'/'py' (px coordinates, NaN or None for a
+    gap), 'line' (the segments between consecutive points count too), 'radius' and 'rects'
+    ([x0, y0, x1, y1] filled areas). Returns {'cols', 'rows', 'cell', 'grid'} (a bytearray,
+    row-major)."""
+    cols = max(1, math.ceil(width / cell))
+    rows = max(1, math.ceil(height / cell))
+    grid = bytearray(cols * rows)
+
+    def mark(x, y, r):
+        c0 = math.floor((x - r) / cell)
+        c1 = math.floor((x + r) / cell)
+        r0 = math.floor((y - r) / cell)
+        r1 = math.floor((y + r) / cell)
+        for rr in range(max(0, r0), min(rows - 1, r1) + 1):
+            base = rr * cols
+            for cc in range(max(0, c0), min(cols - 1, c1) + 1):
+                grid[base + cc] = 1
+
+    def fill(rect):
+        ax_, ay, bx, by = rect
+        if not all(_ok_number(v) for v in (ax_, ay, bx, by)):
+            return
+        c0 = max(0, math.floor(min(ax_, bx) / cell))
+        c1 = min(cols - 1, math.floor(max(ax_, bx) / cell))
+        r0 = max(0, math.floor(min(ay, by) / cell))
+        r1 = min(rows - 1, math.floor(max(ay, by) / cell))
+        for rr in range(r0, r1 + 1):
+            base = rr * cols
+            for cc in range(c0, c1 + 1):
+                grid[base + cc] = 1
+
+    for s in series or []:
+        for rect in s.get('rects') or []:
+            fill(rect)
+        px, py = s.get('px') or [], s.get('py') or []
+        n = min(len(px), len(py))
+        r = max(0, s.get('radius') or 0)
+        prev = None
+        for i in range(n):
+            x, y = px[i], py[i]
+            if not (_ok_number(x) and _ok_number(y)):
+                prev = None
+                continue
+            mark(x, y, r)
+            if s.get('line') and prev is not None:
+                dx, dy = x - prev[0], y - prev[1]
+                steps = math.ceil(math.hypot(dx, dy) / (cell / 2))
+                for k in range(1, steps):
+                    mark(prev[0] + dx * k / steps, prev[1] + dy * k / steps, 0)
+            prev = (x, y)
+    return {'cols': cols, 'rows': rows, 'cell': cell, 'grid': grid}
+
+
+def covered_fraction(occ, x, y, w, h):
+    """legendLayout.js coveredFraction: the share of the grid cells under a box that hold data."""
+    cols, rows, cell, grid = occ['cols'], occ['rows'], occ['cell'], occ['grid']
+    c0 = max(0, math.floor(x / cell))
+    c1 = min(cols - 1, math.floor((x + w) / cell))
+    r0 = max(0, math.floor(y / cell))
+    r1 = min(rows - 1, math.floor((y + h) / cell))
+    if c1 < c0 or r1 < r0:
+        return 0
+    hit = sum(grid[r * cols + c] for r in range(r0, r1 + 1) for c in range(c0, c1 + 1))
+    return hit / ((c1 - c0 + 1) * (r1 - r0 + 1))
+
+
+def legend_inside_candidates(plot_w, plot_h, box_w, box_h, margin=LEGEND_MARGIN):
+    """legendLayout.js insideCandidates, in preference order."""
+    L, R = margin, plot_w - box_w - margin
+    T, B = margin, plot_h - box_h - margin
+    CX, CY = (plot_w - box_w) / 2, (plot_h - box_h) / 2
+    return [('topright', R, T), ('topleft', L, T), ('bottomright', R, B), ('bottomleft', L, B),
+            ('top', CX, T), ('bottom', CX, B), ('right', R, CY), ('left', L, CY)]
+
+
+def choose_legend_placement(occ, plot_w, plot_h, box_w, box_h, margin=LEGEND_MARGIN,
+                            allow_outside=False):
+    """legendLayout.js chooseLegendPlacement: {'outside', 'name', 'x', 'y', 'covered'}."""
+    fits = box_w + 2 * margin <= plot_w and box_h + 2 * margin <= plot_h
+    best = None
+    for name, x, y in (legend_inside_candidates(plot_w, plot_h, box_w, box_h, margin)
+                       if fits else []):
+        covered = covered_fraction(occ, x, y, box_w, box_h)
+        cand = {'outside': False, 'name': name, 'x': x, 'y': y, 'covered': covered}
+        if covered <= LEGEND_CLEAR_FRACTION:
+            return cand
+        if best is None or covered < best['covered']:
+            best = cand
+    if allow_outside:
+        return {'outside': True, 'name': 'outsideright', 'x': 0, 'y': 0, 'covered': 0}
+    return best or {'outside': False, 'name': 'topright', 'x': plot_w - box_w - margin,
+                    'y': margin, 'covered': 1}
+
+
+def legend_layout(legend_json, labels, look, base_w, base_h, *, obstacles=None, area=None,
+                  has_right_axis=False, padding_right=0, keys_reserve=0, fig=None,
+                  allow_outside=True):
+    """LegendAutoLayout for one plot: the box (None with nothing to draw), the 'auto' choice,
+    the outside placement in force ({'reserveW', 'x', 'y'}: rightOfPlot, sharing the right
+    margin with keys beside the plot, withEncodingKeysOutside) and the room it takes.
+    `obstacles(w, h)` returns the plot's marks in px over a w x h area (buildOccupancy series);
+    `area` is the (w, h) an inside legend is placed over (default the base plot area)."""
+    lj = legend_json or {}
+    font_px = legend_font_px(lj, look)
+    out = {'box': None, 'auto': None, 'outside': None, 'reserveW': 0.0, 'font_px': font_px,
+           'margin': LEGEND_MARGIN, 'occupancy': None, 'area': None,
+           'position': lj.get('position') or 'topright'}
+    if not lj.get('show') or not labels:
+        return out
+    widths = legend_label_widths(labels, font_px, look['family'], fig)
+    out['box'] = legend_box_size(widths, font_px, _legend_setting(lj, 'padding'),
+                                 _legend_setting(lj, 'itemSpacing'),
+                                 _legend_setting(lj, 'orientation'))
+    box = out['box']
+    # The plot area in whole thousandths of a px: matplotlib's figure fractions carry float
+    # dust (440.00000000000006) that would add a column to the occupancy grid.
+    base_w, base_h = round(float(base_w), 6), round(float(base_h), 6)
+    aw, ah = area if area is not None else (base_w, base_h)
+    aw, ah = round(float(aw), 6), round(float(ah), 6)
+    out['area'] = (aw, ah)
+    if out['position'] == 'auto' and aw > 0 and ah > 0:
+        occ = build_occupancy(aw, ah, obstacles(aw, ah) if obstacles else [])
+        out['occupancy'] = occ
+        out['auto'] = choose_legend_placement(occ, aw, ah, box['width'], box['height'],
+                                              LEGEND_MARGIN, allow_outside)
+    outside = allow_outside and (out['position'] == 'outsideright' or (
+        out['position'] == 'auto' and out['auto'] is not None and out['auto']['outside']))
+    if outside:
+        m = LEGEND_MARGIN
+        reserve = box['width'] + m + (m if has_right_axis else 0)
+        x = base_w - reserve + (padding_right if has_right_axis else 0) + m
+        extra = keys_reserve - reserve
+        if extra > 0:
+            reserve, x = keys_reserve, x - extra
+        out['outside'] = {'reserveW': reserve, 'x': x, 'y': 0.0}
+        out['reserveW'] = reserve
+    return out
+
+
+def legend_draw_position(legend_json, layout, plot_w, plot_h):
+    """Legend.svelte legendPosition: the box's top left in px from the plot area's top left,
+    over the plot area as drawn (`plot_w` x `plot_h`)."""
+    lj = legend_json or {}
+    box = layout['box']
+    w, h, m = box['width'], box['height'], LEGEND_MARGIN
+    pos = layout['position']
+    auto = layout.get('auto')
+    if pos == 'auto':
+        if auto and auto['outside'] and layout.get('outside'):
+            return layout['outside']['x'], layout['outside']['y']
+        if auto and not auto['outside']:
+            return auto['x'], auto['y']
+        return plot_w - w - m, m
+    if pos == 'outsideright':
+        if layout.get('outside'):
+            return layout['outside']['x'], layout['outside']['y']
+        return plot_w - w - m, m
+    if pos == 'custom':
+        fx = min(1, max(0, _legend_setting(lj, 'customX') or 0))
+        fy = min(1, max(0, _legend_setting(lj, 'customY') or 0))
+        return m + max(0, plot_w - w - 2 * m) * fx, m + max(0, plot_h - h - 2 * m) * fy
+    return {'topright': (plot_w - w - m, m), 'topleft': (m, m),
+            'bottomright': (plot_w - w - m, plot_h - h - m),
+            'bottomleft': (m, plot_h - h - m)}.get(pos, (m, m))
+
+
+def legend_placed_box(legend_json, layout, plot_w, plot_h):
+    """EncodingKeyLayout.legendPlaced: the series legend as drawn, for the keys to keep clear
+    of ({'x', 'y', 'w', 'h', 'outside', 'corner'}), or None."""
+    box = layout.get('box') if layout else None
+    if not box:
+        return None
+    if layout.get('outside'):
+        o = layout['outside']
+        return {'x': o['x'], 'y': o['y'], 'w': box['width'], 'h': box['height'],
+                'outside': True, 'corner': None}
+    pos = layout['position']
+    m = LEGEND_MARGIN
+    auto = layout.get('auto') if pos == 'auto' else None
+    corner = (auto['name'] if auto else None) if pos == 'auto' else \
+        (None if pos == 'custom' else pos)
+    bottom = corner in ('bottomright', 'bottomleft')
+    left = corner in ('topleft', 'bottomleft')
+    y = auto['y'] if auto else (plot_h - box['height'] - m if bottom else m)
+    x = auto['x'] if auto else (m if left else plot_w - box['width'] - m)
+    return {'x': x, 'y': y, 'w': box['width'], 'h': box['height'], 'outside': False,
+            'corner': corner}
+
+
+def reserve_axes_right(axes, reserve):
+    """Take `reserve` px off the right of every axes in `axes` (the room an outside legend or
+    a key beside the plot takes from the plot area)."""
+    if not reserve or reserve <= 0:
+        return
+    # Every new position from the ORIGINAL ones: twinned axes (twinx) share their position,
+    # so moving one already moves the other.
+    axes = [a for a in axes if a is not None]
+    targets = []
+    for a in axes:
+        pos = a.get_position()
+        fw = a.figure.get_size_inches()[0] * _FIG_PX_PER_IN
+        targets.append([pos.x0, pos.y0, max(1.0, pos.width * fw - reserve) / fw, pos.height])
+    for a, t in zip(axes, targets):
+        a.set_position(t)
+
+
+# Where matplotlib anchors an inside candidate's box (its corner or edge midpoint), so the
+# frame lines up with the plot area's edges as the app's box does whatever its exact size.
+_LEGEND_ANCHOR = {'topright': 'upper right', 'topleft': 'upper left',
+                  'bottomright': 'lower right', 'bottomleft': 'lower left',
+                  'top': 'upper center', 'bottom': 'lower center', 'right': 'center right',
+                  'left': 'center left'}
+
+
+def legend_anchor_kwargs(legend_json, layout, ax):
+    """ax.legend placement keywords for a legend `layout` (legend_layout): an inside candidate
+    or fixed corner by its anchor 10 px in, an outside legend by its top left."""
+    w_px, h_px = _axes_px(ax)
+    pos = layout['position']
+    auto = layout.get('auto')
+    if layout.get('outside'):
+        x, y = layout['outside']['x'], layout['outside']['y']
+        return {'loc': 'upper left', 'bbox_to_anchor': (x / w_px, 1 - y / h_px),
+                'borderaxespad': 0}
+    if pos == 'auto' and auto and not auto['outside']:
+        return {'loc': _LEGEND_ANCHOR.get(auto['name'], 'upper right')}
+    if pos in ('auto', 'outsideright'):
+        return {'loc': 'upper right'}
+    return {}
+
+
+def _axes_frame_px(ax):
+    """The axes' plot area in figure px from the figure's top left: (left, top, w, h)."""
+    fw, fh = ax.figure.get_size_inches()
+    pos = ax.get_position()
+    return (pos.x0 * fw * _FIG_PX_PER_IN, (1 - pos.y1) * fh * _FIG_PX_PER_IN,
+            pos.width * fw * _FIG_PX_PER_IN, pos.height * fh * _FIG_PX_PER_IN)
+
+
+def _px_scale(lo, hi, length, log=False, flip=False):
+    """A d3 linear (or log) scale from [lo, hi] onto [0, length] px ([length, 0] with `flip`),
+    as a function returning NaN for what it cannot place."""
+    if log:
+        if not (lo > 0 and hi > 0) or lo == hi:
+            return lambda v: float('nan')
+        a, b = math.log(lo), math.log(hi)
+
+        def f(v):
+            if not _ok_number(v) or v <= 0:
+                return float('nan')
+            t = (math.log(v) - a) / (b - a)
+            return length - t * length if flip else t * length
+        return f
+    span = hi - lo
+
+    def g(v):
+        if not _ok_number(v):
+            return float('nan')
+        t = (v - lo) / span if span else 0.5
+        return length - t * length if flip else t * length
+    return g
+
+
+def line_series_obstacle(x, y, xs, ys, line_json=None, points_json=None):
+    """legendAuto.svelte.js lineSeriesObstacle: one series' line and/or points in px, or None
+    when neither is drawn."""
+    line = bool(_with_defaults(line_json, _LINE_DEFAULTS)['draw']) if line_json is not None \
+        else False
+    pts_cfg = _with_defaults(points_json, _POINTS_DEFAULTS) if points_json is not None else None
+    pts = bool(pts_cfg['draw']) if pts_cfg else False
+    if not line and not pts:
+        return None
+    n = min(len(x or []), len(y or []))
+    px, py = [], []
+    for i in range(n):
+        xv, yv = x[i], y[i]
+        bad = xv is None or yv is None or (isinstance(xv, float) and math.isnan(xv)) or \
+            (isinstance(yv, float) and math.isnan(yv))
+        px.append(float('nan') if bad else xs(xv))
+        py.append(float('nan') if bad else ys(yv))
+    return {'px': px, 'py': py, 'line': line,
+            'radius': (_js_number(pts_cfg['radius']) or 0) if pts else 0}
+
+
 def _axes_px(ax):
     """The axes' (width, height) in figure px (96 to the inch)."""
     fw, fh = ax.figure.get_size_inches()
@@ -12570,13 +12975,18 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     shares the date axis; the overlays (reference lines and bands, including migrated legacy
     night bands) are drawn as the app draws them (_draw_overlays). The axes are the app's
     (scatter_axis_specs): its domains, d3's ticks for the saved tick counts, time ticks in the
-    display zone, gridlines per axis and the figure's type sizes."""
+    display zone, gridlines per axis and the figure's type sizes. The legend goes where the
+    app puts it (legend_layout: a corner, the 'auto' search over the drawn marks and an inside
+    colour bar, or outside on the right sharing the margin with the keys beside the plot), and
+    the keys stack after it (encoding_key_layout)."""
     p = plot.get('plot', {})
     look = plot_look(plot)
+    base_w, base_h = _axes_px(ax_left)
     xctx = _scatter_x_context(p, columns_index)
     encodings = scatter_colour_encodings(plot, columns_index)
     sizes = scatter_size_encodings(plot, columns_index)
     xy = {}
+    app_xy = []
     used_right = False
     for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
@@ -12587,8 +12997,11 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         if origin is not None:
             x = pd.to_datetime([None if _js_invalid(h) else origin + _js_number(h) * _MS_PER_HOUR
                                 for h in x_col.get_data()], unit='ms', utc=True).tolist()
+            x_app = [None if _js_invalid(h) else origin + _js_number(h) * _MS_PER_HOUR
+                     for h in x_col.get_data()]
         else:
             x = _x_for_plot(x_col)
+            x_app = [None if _js_invalid(v) else _js_number(v) for v in x_col.get_data()]
         y = y_col.get_data()
         # Rows stay aligned (not _paired_finite): a missing row is where the line breaks.
         if not any(_js_plot_valid(a) and _js_plot_valid(b) for a, b in zip(x, y)):
@@ -12609,6 +13022,9 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
                            size_by=None if size is None else {
                                'r': size['r'], 'layer': size['layer'],
                                'no_value_layer': size['no_value_layer']})
+        app_xy.append((index, series, x_app,
+                       [None if _js_invalid(v) else _js_number(v) for v in y],
+                       label, size))
     # Overlay y channels read on the left axis while it carries data, else on the right
     # (Scatterplot overlayYAxis).
     series_list = p.get('data', []) or []
@@ -12620,6 +13036,8 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     first_line = (series_list[0].get('line') or {}) if series_list else {}
     first_colour = first_line.get('colour') or first_line.get('color') or (
         _resolved_series_colours(plot, 0).get('line'))
+    right_axis = ax_right is not None and used_right
+    pad_right = float(((p.get('padding') or {}).get('right')) or 30)
 
     def x_value_for(col):
         # Scatterplot.overlayXValueFor: an hours-from-origin column lands on the time axis.
@@ -12627,17 +13045,30 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         return (lambda h: origin + h * _MS_PER_HOUR) if origin is not None else None
 
     # Colour by / Size by: the colour bar for the first coloured series and the size key for
-    # the first sized one (EncodingKeyLayout), whose room beside the plot comes off the plot
-    # area first.
+    # the first sized one (EncodingKeyLayout); the room they take beside the plot.
     key = scatter_colour_key(plot, columns_index, encodings, xy)
     size_key = scatter_size_key(plot, sizes, xy)
-    _reserve_colour_key_room(ax_left, ax_right, key, p.get('colourScale'), look,
-                             has_right_axis=ax_right is not None and used_right,
-                             size_key=size_key, size_json=p.get('sizeScale'))
+    legend_json = p.get('legend') or {}
+    labels = [lab for _i, s, _x, _y, lab, _z in app_xy
+              if _marks_legend_drawn(s.get('line'), s.get('points'))]
+    labels += _overlay_legend_labels(plot, host='scatterplot', legacy_night_bands=True,
+                                     x_is_time=is_time)
+    box_only = legend_layout({**legend_json, 'position': 'topright'}, labels, look, base_w,
+                             base_h, fig=ax_left.figure)['box']
+    keys = _colour_key_reserve(base_h, key, p.get('colourScale'), look,
+                               has_right_axis=right_axis, size_key=size_key,
+                               size_json=p.get('sizeScale'), legend_json=legend_json,
+                               legend_box=box_only)
+    # The x domain's marker room is decided at the narrowest the plot area can be (the
+    # Scatterplot's xlims): less an outside legend that may be reserved, or the keys.
+    may_go_outside = box_only is not None and legend_json.get('position') in ('auto',
+                                                                              'outsideright')
+    length_px = base_w - max(box_only['width'] + 2 * LEGEND_MARGIN if may_go_outside else 0,
+                             keys['reserveW'])
 
     def x_domain(extent):
         return scatter_axis_specs(plot, columns_index, ax_left, xctx, extent,
-                                  sizes=sizes)['bottom']['domain']
+                                  sizes=sizes, length_px=length_px)['bottom']['domain']
 
     ov = _draw_overlays(
         ov_ax, plot, columns_index, host='scatterplot', x_value_for=x_value_for,
@@ -12648,61 +13079,145 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         legacy_night_bands=True,
         series_colour=first_colour, x_domain=x_domain)
     specs = scatter_axis_specs(plot, columns_index, ax_left, xctx, ov.get('extent'),
-                               key=key, has_right_axis=ax_right is not None and used_right,
-                               sizes=sizes)
+                               key=key, has_right_axis=right_axis, sizes=sizes,
+                               length_px=length_px)
+
+    def obstacles(w, h):
+        xd = specs['bottom']['domain']
+        xs = _px_scale(xd[0], xd[1], w, log=specs['bottom']['kind'] == 'log')
+        yscales = {}
+        for side in ('left', 'right'):
+            if side in specs:
+                d = specs[side]['domain']
+                yscales[side] = _px_scale(d[0], d[1], h, log=specs[side]['kind'] == 'log',
+                                          flip=True)
+        out = []
+        for _i, s, x_app, y_app, _lab, size in app_xy:
+            line = _with_defaults(s.get('line'), _LINE_DEFAULTS)
+            pts = _with_defaults(s.get('points'), _POINTS_DEFAULTS)
+            if not line['draw'] and not pts['draw']:
+                continue
+            ys = yscales.get('right' if s.get('yAxis') == 'right' else 'left') or \
+                yscales['left']
+            n = min(len(x_app), len(y_app))
+            px = [float('nan') if x_app[i] is None or y_app[i] is None else xs(x_app[i])
+                  for i in range(n)]
+            py = [float('nan') if x_app[i] is None or y_app[i] is None else ys(y_app[i])
+                  for i in range(n)]
+            radius = ((size['max_r'] if size is not None else _js_number(pts['radius'])) or 0) \
+                if pts['draw'] else 0
+            out.append({'px': px, 'py': py, 'line': bool(line['draw']), 'radius': radius})
+        bar = _keys_obstacle(w, h, keys)
+        if bar:
+            out.append(bar)
+        return out
+    layout = legend_layout(legend_json, labels, look, base_w, base_h, obstacles=obstacles,
+                           area=(base_w - keys['reserveW'], base_h),
+                           has_right_axis=right_axis, padding_right=pad_right,
+                           keys_reserve=keys['reserveW'], fig=ax_left.figure)
+    reserve_axes_right((ax_left, ax_right), max(layout['reserveW'], keys['reserveW']))
     _draw_app_axes(ax_left, ax_right if used_right else None, specs, look)
     if ax_right is not None and not used_right:
         ax_right.set_axis_off()
-    if (p.get('legend') or {}).get('show', False):
+    if legend_json.get('show', False):
         _legend_with_overlays(ax_left, ov['legend'],
                               extra_axes=(ax_right,) if ax_right is not None else (),
-                              legend_json=p.get('legend'), look=look)
-    pad_right = float(((p.get('padding') or {}).get('right')) or 30)
-    has_right = ax_right is not None and used_right
-    layout = encoding_key_layout(ax_left, key, size_key, p.get('colourScale'),
-                                 p.get('sizeScale'), look, has_right_axis=has_right,
-                                 padding_right=pad_right)
-    if layout['colour'] is not None:
-        _draw_colour_key(ax_left, key, p.get('colourScale'), has_right_axis=has_right,
-                         look=look, padding_right=pad_right, at=layout['colour'])
-    _draw_size_key(ax_left, size_key, p.get('sizeScale'), layout['size'], look=look)
+                              legend_json=legend_json, look=look, layout=layout,
+                              on=ax_right)
+    ax_left._ancir_legend_layout = layout
+    plot_w, plot_h = _axes_px(ax_left)
+    placed = legend_placed_box(legend_json, layout, plot_w, plot_h)
+    klayout = encoding_key_layout(ax_left, key, size_key, p.get('colourScale'),
+                                  p.get('sizeScale'), look, has_right_axis=right_axis,
+                                  padding_right=pad_right, legend_box=placed,
+                                  legend_json=legend_json, legend_size=box_only,
+                                  base_h=base_h)
+    ax_left._ancir_key_layout = klayout
+    if klayout['colour'] is not None:
+        _draw_colour_key(ax_left, key, p.get('colourScale'), has_right_axis=right_axis,
+                         look=look, padding_right=pad_right, at=klayout['colour'])
+    _draw_size_key(ax_left, size_key, p.get('sizeScale'), klayout['size'], look=look)
 
 
-def _reserve_colour_key_room(ax, ax_right, key, scale_json, look, has_right_axis=False,
-                             size_key=None, size_json=None):
-    """EncodingKeyLayout.reserveW: the keys beside the plot (the colour bar, the size key)
-    take the wider one's width, a 10 px margin (and another past a right axis) from the plot
-    area."""
+def _colour_key_reserve(base_h, key, scale_json, look, has_right_axis=False, size_key=None,
+                        size_json=None, legend_json=None, legend_box=None):
+    """EncodingKeyLayout before placement: the bar's plan and base geometry, the size key's
+    geometry, whether they sit side by side, and `reserveW`, the room the keys beside the plot
+    take from the plot area (the wider one's width, or both and the gap between them side by
+    side, plus a 10 px margin and another past a right axis). `legend_box` is the series
+    legend's box (legend_box_size): a category key's room beside the plot starts under a legend
+    placed 'outsideright'."""
     scale = scale_json or {}
-    w_px, h_px = _axes_px(ax)
-    bar_w = size_w = 0
-    plan = base = size_geom = None
-    if key is not None and scale.get('show', True) is not False:
-        plan = _colour_key_plan(h_px, key, scale, look)
-        base = plan['geom'](plan['length0'])
-        if (scale.get('position') or 'right') == 'right':
-            bar_w = base['width']
     ss = size_json or {}
+    out = {'reserveW': 0.0, 'plan': None, 'base': None, 'size_geom': None, 'beside': False,
+           'cs': scale, 'ss': ss, 'look': look}
+    bar_w = size_w = 0
+    under = 0
+    if (legend_json or {}).get('position') == 'outsideright' and legend_box:
+        under = legend_box['height'] + LEGEND_MARGIN
+    if key is not None and scale.get('show', True) is not False:
+        plan = _colour_key_plan(base_h, key, scale, look, under=under)
+        out['plan'], out['base'] = plan, plan['geom'](plan['length0'])
+        if (scale.get('position') or 'right') == 'right':
+            bar_w = out['base']['width']
     if size_key is not None and ss.get('show', True) is not False:
         spacing = ss.get('itemSpacing')
-        size_geom = size_key_geometry(
+        out['size_geom'] = size_key_geometry(
             size_key['items'], size_key['no_value'], size_key['title'], _key_font_px(ss, look),
             spacing if isinstance(spacing, (int, float)) else 4)
         if (ss.get('position') or 'right') == 'right':
-            size_w = size_geom['width']
+            size_w = out['size_geom']['width']
+    c_pos = scale.get('position') or 'right'
+    s_pos = ss.get('position') or 'right'
+    if out['base'] is not None and out['size_geom'] is not None and c_pos == s_pos and \
+            c_pos != 'custom':
+        out['beside'] = _keys_side_by_side(base_h, out['plan'], out['base'], out['size_geom'],
+                                           c_pos, _key_inset(scale), _key_inset(ss),
+                                           LEGEND_MARGIN)
     # Side by side beside the plot (EncodingKeyLayout.sizeBeside): both widths and the margin.
-    beside = bar_w > 0 and size_w > 0 and _keys_side_by_side(
-        h_px, plan, base, size_geom, 'right', 0, 0, 10)
-    width = bar_w + 10 + size_w if beside else max(bar_w, size_w)
-    if width <= 0:
-        return
-    reserve = width + 10 + (10 if has_right_axis else 0)
-    for a in (ax, ax_right):
-        if a is None:
-            continue
-        pos = a.get_position()
-        fw = a.figure.get_size_inches()[0] * _FIG_PX_PER_IN
-        a.set_position([pos.x0, pos.y0, max(1.0, pos.width * fw - reserve) / fw, pos.height])
+    width = bar_w + LEGEND_MARGIN + size_w if (out['beside'] and bar_w > 0) else \
+        max(bar_w, size_w)
+    if width > 0:
+        out['reserveW'] = width + LEGEND_MARGIN + (LEGEND_MARGIN if has_right_axis else 0)
+    return out
+
+
+def _keys_obstacle(w, h, keys):
+    """EncodingKeyLayout.obstacle: the keys inside a w x h plot area as a buildOccupancy
+    series of rectangles (backdrops included), or None when neither is inside."""
+    rects = []
+    cs, ss = keys['cs'], keys['ss']
+    m = LEGEND_MARGIN
+    bar = None
+    base = keys['base']
+    c_pos = cs.get('position') or 'right'
+    s_pos = ss.get('position') or 'right'
+    c_inset, s_inset = _key_inset(cs), _key_inset(ss)
+    if base is not None and c_pos != 'right':
+        x, y, _ = place_key(c_pos, base['width'], base['height'], w, h, m,
+                            custom={'customX': cs.get('customX'), 'customY': cs.get('customY')},
+                            inset=c_inset)
+        bar = [x - c_inset, y - c_inset, x + base['width'] + c_inset,
+               y + base['height'] + c_inset]
+        rects.append(bar)
+    sg = keys['size_geom']
+    if bar and keys['beside'] and sg is not None:
+        x, y = place_beside(s_pos, sg['width'], sg['height'],
+                            {'x': bar[0], 'y': bar[1], 'w': bar[2] - bar[0], 'h': bar[3] - bar[1]},
+                            m, inset=s_inset)
+        rects.append([x - s_inset, y - s_inset, x + sg['width'] + s_inset,
+                      y + sg['height'] + s_inset])
+        return {'rects': rects}
+    shares = bar is not None and sg is not None and c_pos == s_pos and c_pos != 'custom'
+    before = [{'x': bar[0], 'y': bar[1], 'w': bar[2] - bar[0], 'h': bar[3] - bar[1],
+               'outside': False, 'corner': c_pos}] if shares else []
+    if sg is not None and s_pos != 'right':
+        x, y, _ = place_key(s_pos, sg['width'], sg['height'], w, h, m, stack=before,
+                            custom={'customX': ss.get('customX'), 'customY': ss.get('customY')},
+                            inset=s_inset)
+        rects.append([x - s_inset, y - s_inset, x + sg['width'] + s_inset,
+                      y + sg['height'] + s_inset])
+    return {'rects': rects} if rects else None
 
 
 def _colour_key_font_px(scale_json, look):
@@ -12734,7 +13249,7 @@ def _draw_app_axes(ax, ax_right, specs, look):
 
 
 def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, key=None,
-                       has_right_axis=False, sizes=None):
+                       has_right_axis=False, sizes=None, length_px=None):
     """Scatterplotclass's axes: x (xlims, XScale: time when any x is time, log when asked
     and both ends are positive) and the left and right y (ylimsLeft/Right, YScaleLeft/Right).
     Automatic ends are the data's range (x floored and ceiled to whole units) widened by the
@@ -12744,6 +13259,9 @@ def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, 
     p = plot.get('plot', {}) or {}
     xctx = xctx or _scatter_x_context(p, columns_index)
     w_px, h_px = _axes_px(ax)
+    if length_px is not None:
+        # The width the x domain's marker room is decided at (plot_scatterplot).
+        w_px = length_px
     series = []
     max_r = {}
     for i, s in enumerate(p.get('data', []) or []):
@@ -12836,13 +13354,25 @@ def fft_x_axis_label(x_axis, show_period):
 
 
 def plot_fft(plot, columns_index, ax):
+    """The FFT as the app draws it: each series' magnitude line and points on the left axis
+    and, for a series with `showPhase`, its phase line and points (`phaseLine` /
+    `phasePoints`, the series' own colour unless chosen) on the right-hand phase axis
+    (`yAxisPhase`, its range the drawn phases padded 10%, `phaseYlimsIN` winning), all in one
+    plot area; period mode drops the f = 0 term. The legend lists every series' magnitude
+    entry, then its phase entry ("<series> phase"), then the overlays."""
     p = plot.get('plot', {})
     look = plot_look(plot)
     show_period = p.get('showPeriod', False)
+    log = bool(p.get('logScale', False))
+    base_w, base_h = _axes_px(ax)
     drawn = []
     mags_all = []
     nyquists, min_periods, valid_freqs = [], [], []
-    for index, series in enumerate(p.get('data', [])):
+    series_out = []
+    series_list = p.get('data', []) or []
+    any_phase = any(s.get('showPhase') for s in series_list)
+    ax_phase = ax.twinx() if any_phase else None
+    for index, series in enumerate(series_list):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
@@ -12861,25 +13391,38 @@ def plot_fft(plot, columns_index, ax):
         mags_all += list(fft['magnitudes'])
         if not fft['frequencies']:
             continue
-        xs = ([1.0 / f if f else float('nan') for f in fft['frequencies']]
-              if show_period else fft['frequencies'])
+        freqs = fft['frequencies']
+        keep = [i for i, f in enumerate(freqs) if f > 0 or not show_period]
+        xs = [1.0 / freqs[i] if show_period else freqs[i] for i in keep]
+        mags = [fft['magnitudes'][i] for i in keep]
+        phases = [fft['phases'][i] for i in keep]
         # Period mode draws f > 0 only (the f = 0 term has no period), as the app does.
-        drawn += [m for f, m in zip(fft['frequencies'], fft['magnitudes'])
-                  if f > 0 or not show_period]
-        _draw_series_marks(ax, xs, fft['magnitudes'], series, index,
-                           series.get('label') or _display_name(y_col),
-                           resolved=_resolved_series_colours(plot, index))
+        drawn += mags
+        label = series.get('label') or _display_name(y_col)
+        resolved = _resolved_series_colours(plot, index)
+        marks = _draw_series_marks(ax, xs, mags, series, index, label, resolved=resolved)
+        entry = {'index': index, 'series': series, 'label': label, 'x': xs, 'mag': mags,
+                 'phase': phases, 'all_phases': list(fft['phases']), 'marks': marks,
+                 'phase_marks': None}
+        if series.get('showPhase') and ax_phase is not None:
+            # The phase line and points are LineClass / PointsClass of the same series: an
+            # automatic colour is the series' own (the column's), as the magnitude's.
+            phase_series = {'line': series.get('phaseLine'), 'points': series.get('phasePoints')}
+            entry['phase_marks'] = _draw_series_marks(
+                ax_phase, xs, phases, phase_series, index, f'{label} phase',
+                resolved={'line': resolved.get('line'), 'points': resolved.get('points')},
+                gid_prefix=f'series-{index}-phase')
+        series_out.append(entry)
     # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
     # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
     # the magnitude axis only.
-    log = bool(p.get('logScale', False))
     ov = _draw_overlays(ax, plot, columns_index,
                         x_transform=lambda v: (None if not (v > 0)
                                                else (v if show_period else 1.0 / v)),
                         ylog=log)
     # FFTclass.xlims: frequency 0 .. Nyquist, or period from the shortest resolvable one
     # (2 dt) to the longest drawn, the user's ends winning within those bounds.
-    n_series = len(p.get('data', []) or [])
+    n_series = len(series_list)
     max_f = max(nyquists) if nyquists else 1
     min_p = max(min_periods) if min_periods else 0.1
     xin = list(p.get('xlimsIN') or [None, None]) + [None, None]
@@ -12901,6 +13444,7 @@ def plot_fft(plot, columns_index, ax):
     if log:
         yd = log_axis_domain(_number_or_none((p.get('ylimsIN') or [None])[0]),
                              _min_positive(drawn, ov['y_values']), yd[1])
+    phase_d = fft_phase_domain(series_out, series_list, p.get('phaseYlimsIN'))
     x_axis = p.get('xAxis') or {}
     specs = {
         'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
@@ -12909,9 +13453,93 @@ def plot_fft(plot, columns_index, ax):
                  'log_spec': '~g',
                  'label': y_axis.get('label') or 'Magnitude'},
     }
-    _draw_app_axes(ax, None, specs, look)
-    if (p.get('legend') or {}).get('show', False):
-        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
+    if any_phase:
+        phase_axis = p.get('yAxisPhase') or {'label': 'Phase (radians)', 'gridlines': False}
+        specs['right'] = {'kind': 'linear', 'domain': phase_d, 'axis': phase_axis,
+                          'label': phase_axis.get('label') or ''}
+    legend_json = p.get('legend') or {}
+    entries, labels = fft_legend_entries(series_out, series_list, columns_index)
+
+    def obstacles(w, h):
+        xs_ = _px_scale(xd[0], xd[1], w)
+        ys_ = _px_scale(yd[0], yd[1], h, log=log, flip=True)
+        ps_ = _px_scale(phase_d[0], phase_d[1], h, flip=True)
+        out = []
+        for e in series_out:
+            s = e['series']
+            mags = [v if (not log or (_ok_number(v) and v > 0)) else float('nan')
+                    for v in e['mag']]
+            o = line_series_obstacle(e['x'], mags, xs_, ys_, s.get('line') or {},
+                                     s.get('points') or {})
+            if o:
+                out.append(o)
+            if s.get('showPhase'):
+                o = line_series_obstacle(e['x'], e['phase'], xs_, ps_, s.get('phaseLine') or {},
+                                         s.get('phasePoints') or {})
+                if o:
+                    out.append(o)
+        return out
+    pad_right = float(((p.get('padding') or {}).get('right')) or 0)
+    layout = legend_layout(legend_json, labels + _overlay_legend_labels(plot), look,
+                           base_w, base_h, obstacles=obstacles, has_right_axis=any_phase,
+                           padding_right=pad_right, fig=ax.figure)
+    reserve_axes_right((ax, ax_phase), layout['reserveW'])
+    _draw_app_axes(ax, ax_phase, specs, look)
+    if ax_phase is not None:
+        ax_phase.set_ylim(phase_d)
+    if legend_json.get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=legend_json, look=look,
+                              layout=layout, entries=entries, on=ax_phase)
+    ax._ancir_legend_layout = layout
+
+
+def fft_phase_domain(series_out, series_list, phase_in=None):
+    """FFTclass.phaseYlims: over every series with phase shown, its phases (all of them, the
+    f = 0 term included) padded 10% of their range each way; -pi..pi with none; the user's
+    `phaseYlimsIN` ends win."""
+    if not any(s.get('showPhase') for s in series_list):
+        return (-math.pi, math.pi)
+    vals = [v for e in series_out if e['series'].get('showPhase') for v in e['all_phases']]
+    lo, hi = _extent_of(vals)
+    if lo is None:
+        return (-math.pi, math.pi)
+    rng = hi - lo
+    lo, hi = lo - rng * 0.1, hi + rng * 0.1
+    manual = list(phase_in or [None, None]) + [None, None]
+    return (manual[0] if manual[0] is not None else lo,
+            manual[1] if manual[1] is not None else hi)
+
+
+def _marks_legend_drawn(line_json, points_json):
+    """Whether a Line / Points pair puts anything in the legend (their `draw`)."""
+    line = _with_defaults(line_json, _LINE_DEFAULTS)
+    pts = _with_defaults(points_json, _POINTS_DEFAULTS)
+    return bool(line['draw']) or bool(pts['draw'])
+
+
+def fft_legend_entries(series_out, series_list, columns_index):
+    """FFTclass.getLegendItems' series part: ([(handle, label)] for the drawn entries, [labels]
+    of every entry the app lists), each series' magnitude entry then its phase entry."""
+    entries, labels = [], []
+    drawn = {e['index']: e for e in series_out}
+    for index, s in enumerate(series_list):
+        e = drawn.get(index)
+        if e is not None:
+            label = e['label']
+        else:
+            y_col = _resolve_plot_col(s.get('y'), columns_index)
+            label = s.get('label') or (_display_name(y_col) if y_col is not None else '')
+        if _marks_legend_drawn(s.get('line'), s.get('points')):
+            labels.append(label)
+            h = (e or {}).get('marks', {}) or {}
+            if h.get('legend_handle') is not None:
+                entries.append((h['legend_handle'], label))
+        if s.get('showPhase') and _marks_legend_drawn(s.get('phaseLine'), s.get('phasePoints')):
+            labels.append(f'{label} phase')
+            h = (e or {}).get('phase_marks') or {}
+            if h.get('legend_handle') is not None:
+                entries.append((h['legend_handle'], f'{label} phase'))
+    return entries, labels
 
 
 # Periodogram.svelte PERIODOGRAM_Y_LABELS / periodogramYLabel: the y title while the stored
@@ -12937,11 +13565,23 @@ def plot_periodogram(plot, columns_index, ax):
     # used to be read from the plot, where the app never stores them, so every exported
     # periodogram was drawn as Lomb-Scargle.
     drawn = []
+    base_w, base_h = _axes_px(ax)
+    series_out = []
+    labels = []
     for index, series in enumerate(p.get('data', [])):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
             continue
+        label = series.get('label') or _display_name(y_col)
+        method = series.get('method') or 'Lomb-Scargle'
+        threshold_line = series.get('thresholdline') or {}
+        show_threshold = method == 'Chi-squared' and \
+            _with_defaults(threshold_line, _LINE_DEFAULTS)['draw']
+        if _marks_legend_drawn(series.get('line'), series.get('points')):
+            labels.append(label)
+        if show_threshold:
+            labels.append(f'{label} threshold')
         t = (x_col.hours_since_start if x_col.type == 'time'
              else x_col.get_data())
         params = _periodogram_series_params(p, series, t)
@@ -12950,17 +13590,20 @@ def plot_periodogram(plot, columns_index, ax):
         if not t:
             continue
         result = run_periodogram_calculation({'t': t, 'y': y, **params})
-        drawn += list(result['y']) + list(result.get('threshold') or [])
-        _draw_series_marks(ax, result['x'], result['y'], series, index,
-                           series.get('label') or _display_name(y_col),
-                           resolved=_resolved_series_colours(plot, index))
-        colour = _mpl_colour((series.get('line') or {}).get('colour')
-                             or _resolved_series_colours(plot, index).get('line'))
-        if result.get('threshold') is not None:
+        threshold = result.get('threshold') if show_threshold else None
+        drawn += list(result['y']) + list(threshold or [])
+        resolved = _resolved_series_colours(plot, index)
+        _draw_series_marks(ax, result['x'], result['y'], series, index, label,
+                           resolved=resolved)
+        if threshold is not None:
             # The Sidak line is per fold (its df follows the occupied columns), so it is a
-            # curve over period, not one horizontal value.
-            ax.plot(result['x'], result['threshold'], color=colour or 'gray',
-                    linestyle='--', linewidth=0.8, alpha=0.5)
+            # curve over period, not one horizontal value; drawn as the series' threshold
+            # line (`thresholdline`, the series' colour unless chosen), only for Chi-squared.
+            _draw_series_marks(ax, result['x'], threshold,
+                               {'line': threshold_line, 'points': {'draw': False}}, index,
+                               f'{label} threshold', resolved={'line': resolved.get('line')},
+                               gid_prefix=f'series-{index}-threshold')
+        series_out.append((series, result, threshold))
     # Overlays widen the power axis only: the period range is an analysis parameter. The app's
     # `logScale` is the power axis (display only, as FFT's): a mark at or below 0 is skipped.
     log = bool(p.get('logScale', False))
@@ -12993,7 +13636,6 @@ def plot_periodogram(plot, columns_index, ax):
         yd = (yd[0], yd[0] + 1)
     xd = list(p.get('periodlimsIN') or p.get('xlimsIN') or [1, 30])
     xd = (float(xd[0] if xd[0] is not None else 1), float(xd[1] if xd[1] is not None else 30))
-    w_px, _ = _axes_px(ax)
     x_axis = p.get('xAxis') or {}
     specs = {
         'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
@@ -13001,59 +13643,92 @@ def plot_periodogram(plot, columns_index, ax):
         'left': {'kind': 'log' if log else 'linear', 'domain': yd, 'axis': y_axis,
                  'log_spec': '~g', 'label': ylabel},
     }
+
+    def obstacles(w, h):
+        xs = _px_scale(xd[0], xd[1], w)
+        ys = _px_scale(yd[0], yd[1], h, log=log, flip=True)
+        out = []
+        for series, result, threshold in series_out:
+            o = line_series_obstacle(result['x'], result['y'], xs, ys, series.get('line') or {},
+                                     series.get('points') or {})
+            if o:
+                out.append(o)
+            if (series.get('method') or 'Lomb-Scargle') == 'Chi-squared' and \
+                    result.get('threshold') is not None:
+                o = line_series_obstacle(result['x'], result['threshold'], xs, ys,
+                                         series.get('thresholdline') or {})
+                if o:
+                    out.append(o)
+        return out
+    legend_json = p.get('legend') or {}
+    layout = legend_layout(legend_json, labels + _overlay_legend_labels(plot), look, base_w,
+                           base_h, obstacles=obstacles, fig=ax.figure)
+    reserve_axes_right((ax,), layout['reserveW'])
     _draw_app_axes(ax, None, specs, look)
-    if (p.get('legend') or {}).get('show', False):
-        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
+    if legend_json.get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=legend_json, look=look,
+                              layout=layout)
+    ax._ancir_legend_layout = layout
 
 
 def plot_correlogram(plot, columns_index, ax):
+    """The Correlogram as the app draws it: per series its autocorrelation line and points,
+    then its confidence bounds (+/- z / sqrt(n), n the y values present, z 1.96 or 2.576 at
+    99%, each a line over the lags in the series' confidence line: '5, 5' dashes, 1 px, the
+    series' colour); the zero line; the overlays; the legend (each series' entry then its
+    bounds', "<series> <pct>% bounds" once the plot has more than one series) where the app
+    puts it (legend_layout)."""
     p = plot.get('plot', {})
     look = plot_look(plot)
+    base_w, base_h = _axes_px(ax)
     lags_max, corrs = 0, []
-    bounds = []
-    for index, series in enumerate(p.get('data', [])):
+    series_list = p.get('data', []) or []
+    name_series = len(series_list) > 1
+    drawn_series = []
+    labels = []
+    for index, series in enumerate(series_list):
+        y_col = _resolve_plot_col(series.get('y'), columns_index)
+        name = series.get('label') or (_display_name(y_col) if y_col is not None else '')
+        conf = series.get('confidenceLine') or {}
+        bounds_on = series.get('showConfidenceBounds', True) is not False and \
+            conf.get('draw', True) is not False
+        pct = round((series.get('confidenceLevel') or 0.95) * 100)
+        bounds_label = f'{name} {pct}% bounds' if name_series else f'{pct}% confidence bounds'
+        if _marks_legend_drawn(series.get('line'), series.get('points')):
+            labels.append(name)
+        if bounds_on:
+            labels.append(bounds_label)
         ac = correlogram_series_acf(series, columns_index)
         if ac is None or not ac['lags']:
             continue
         m = max(_finite_values(ac['lags']) or [0])
         lags_max = max(lags_max, m)
         corrs += list(ac['correlations'])
-        y_col = _resolve_plot_col(series.get('y'), columns_index)
         resolved = _resolved_series_colours(plot, index)
-        _draw_series_marks(ax, ac['lags'], ac['correlations'], series, index,
-                           series.get('label') or _display_name(y_col),
+        _draw_series_marks(ax, ac['lags'], ac['correlations'], series, index, name,
                            resolved=resolved)
-        bounds.append((index, series, ac, y_col, resolved))
-    # CorrelogramDataclass confidence bounds: +/- z / sqrt(n) (n the y values present, z 1.96
-    # or 2.576 at 99%), each a line over the lags in the series' confidence line (default
-    # '5, 5' dashes, 1 px, the series' colour).
-    n_series_drawn = len(bounds)
-    for index, series, ac, y_col, resolved in bounds:
-        conf = series.get('confidenceLine') or {}
-        if series.get('showConfidenceBounds', True) is False or conf.get('draw', True) is False:
-            continue
-        n = len(_finite_values(y_col.get_data() if y_col is not None else []))
-        if n < 2:
-            continue
-        z = 1.96 if series.get('confidenceLevel', 0.95) == 0.95 else 2.576
-        width = conf.get('strokeWidth')
-        width = width if _style_valid(width, 'number') else 1
-        stroke = conf.get('stroke') or '5, 5'
-        colour = _mpl_colour(conf.get('colour') or (series.get('line') or {}).get('colour')
-                             or resolved.get('line'), f'C{index}')
-        pct = round((series.get('confidenceLevel') or 0.95) * 100)
-        name = series.get('label') or _display_name(y_col)
-        label = f'{name} {pct}% bounds' if n_series_drawn > 1 else f'{pct}% confidence bounds'
-        for k, b in enumerate((z / math.sqrt(n), -z / math.sqrt(n))):
-            ax.plot(ac['lags'], [b] * len(ac['lags']), color=colour,
-                    linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(stroke, width),
-                    dash_capstyle='butt', zorder=2.1, gid=f'confidence-{index}',
-                    label=label if k == 0 else '_nolegend_')
+        level = None
+        if bounds_on:
+            # CorrelogramDataclass.confidenceBounds: under two values present both bounds are 0.
+            n = len(_finite_values(y_col.get_data() if y_col is not None else []))
+            z = 1.96 if series.get('confidenceLevel', 0.95) == 0.95 else 2.576
+            level = z / math.sqrt(n) if n >= 2 else 0.0
+            width = conf.get('strokeWidth')
+            width = width if _style_valid(width, 'number') else 1
+            stroke = conf.get('stroke') or '5, 5'
+            colour = _mpl_colour(conf.get('colour') or (series.get('line') or {}).get('colour')
+                                 or resolved.get('line'), f'C{index}')
+            for k, b in enumerate((level, -level)):
+                ax.plot(ac['lags'], [b] * len(ac['lags']), color=colour,
+                        linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(stroke, width),
+                        dash_capstyle='butt', zorder=2.1, gid=f'confidence-{index}',
+                        label=bounds_label if k == 0 else '_nolegend_')
+        drawn_series.append((series, ac, level))
     # Overlays widen the correlation axis only: the lag range is an analysis parameter.
     ov = _draw_overlays(ax, plot, columns_index)
     # Correlogramclass: lags 0 .. the longest lag (laglimsIN wins; `xlimsIN` is a fallback
     # for hand-written plots); correlation padded 5%, not capped at +/-1.
-    n_series = len(p.get('data', []) or [])
+    n_series = len(series_list)
     xd = (0, 10) if n_series == 0 else _manual_or(p.get('laglimsIN') or p.get('xlimsIN'),
                                                    (0, lags_max))
     lo, hi = _merge_extent(_extent_of(corrs), ov.get('extent', {}).get('y'))
@@ -13064,7 +13739,6 @@ def plot_correlogram(plot, columns_index, ax):
     if n_series and yd[0] <= 0 <= yd[1]:
         ax.axhline(0, color='#666666', alpha=0.5, linewidth=_PX_TO_PT,
                    linestyle=(0, (4.0, 2.0)), zorder=0.7, gid='zero-line')
-    w_px, _ = _axes_px(ax)
     x_axis, y_axis = p.get('xAxis') or {}, p.get('yAxis') or {}
     specs = {
         'bottom': {'kind': 'linear', 'domain': xd, 'axis': x_axis,
@@ -13072,9 +13746,32 @@ def plot_correlogram(plot, columns_index, ax):
         'left': {'kind': 'linear', 'domain': yd, 'axis': y_axis,
                  'label': y_axis.get('label') or 'Correlation'},
     }
+
+    def obstacles(w, h):
+        xs = _px_scale(xd[0], xd[1], w)
+        ys = _px_scale(yd[0], yd[1], h, flip=True)
+        out = []
+        for series, ac, level in drawn_series:
+            o = line_series_obstacle(ac['lags'], ac['correlations'], xs, ys,
+                                     series.get('line') or {}, series.get('points') or {})
+            if o:
+                out.append(o)
+            if level is not None:
+                for v in (level, -level):
+                    o = line_series_obstacle(ac['lags'], [v] * len(ac['lags']), xs, ys,
+                                             series.get('confidenceLine') or {})
+                    if o:
+                        out.append(o)
+        return out
+    legend_json = p.get('legend') or {}
+    layout = legend_layout(legend_json, labels + _overlay_legend_labels(plot), look, base_w,
+                           base_h, obstacles=obstacles, fig=ax.figure)
+    reserve_axes_right((ax,), layout['reserveW'])
     _draw_app_axes(ax, None, specs, look)
-    if (p.get('legend') or {}).get('show', False):
-        _legend_with_overlays(ax, ov['legend'], legend_json=p.get('legend'), look=look)
+    if legend_json.get('show', False):
+        _legend_with_overlays(ax, ov['legend'], legend_json=legend_json, look=look,
+                              layout=layout)
+    ax._ancir_legend_layout = layout
 
 
 # ---- Boxplot (plots/Boxplot/Boxplot.svelte, plotbits/Box.svelte, plotbits/Violin.svelte) ----
@@ -13596,7 +14293,7 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
             'sig_levels': levels, 'legend': legend}
 
 
-def _boxplot_legend(ax, items, overlay_legend, legend_json, look):
+def _boxplot_legend(ax, items, overlay_legend, legend_json, look, layout=None):
     """The Boxplot's legend: each series' swatch as Legend.svelte draws it (a 14 x 12 px box
     3 px into the 25 px icon, filled at the box's fill opacity, 2 px stroke), then the overlays'
     entries."""
@@ -13626,6 +14323,11 @@ def _boxplot_legend(ax, items, overlay_legend, legend_json, look):
         return None
     kw = legend_kwargs(legend_json, look, len(handles))
     frame = kw.pop('_frame')
+    anchor = legend_anchor_kwargs(legend_json, layout, ax) \
+        if layout is not None and layout.get('box') else {}
+    if anchor:
+        kw.pop('bbox_to_anchor', None)
+        kw.update(anchor)
     leg = ax.legend(handles, labels, handler_map={_BoxSwatch: HandlerPatch(patch_func=swatch)},
                     **kw)
     style_legend(leg, frame)
@@ -13648,7 +14350,21 @@ def plot_boxplot(plot, columns_index, ax):
     # Horizontal lines and bands only (the x axis is categorical); they widen the y axis.
     ov = _draw_overlays(ax, plot, columns_index)
     w_px, h_px = _axes_px(ax)
-    lay = boxplot_layout(plot, columns_index, w_px, h_px, ov.get('extent', {}).get('y'))
+    oy = ov.get('extent', {}).get('y')
+    lay = boxplot_layout(plot, columns_index, w_px, h_px, oy)
+    # The legend: 'auto' avoids every category's span of values and the brackets, decided
+    # over the plot area before an outside legend takes its room (legend_layout); the boxes
+    # are then laid out over the plot area that is left.
+    leg = p.get('legend') or {}
+    legend_json = {**leg, 'show': leg.get('show', True) is not False}
+    labels = [it['label'] for it in lay['legend']] + _overlay_legend_labels(plot)
+    layout = legend_layout(legend_json, labels, look, w_px, h_px,
+                           obstacles=lambda w, h: boxplot_obstacles(plot, columns_index, lay),
+                           fig=ax.figure)
+    if layout['reserveW'] > 0:
+        reserve_axes_right((ax,), layout['reserveW'])
+        w_px, h_px = _axes_px(ax)
+        lay = boxplot_layout(plot, columns_index, w_px, h_px, oy)
     xd, yd = lay['x_domain'], lay['y_domain']
     if yd[0] == yd[1]:
         yd = (yd[0] - 0.5, yd[1] + 0.5)
@@ -13762,11 +14478,33 @@ def plot_boxplot(plot, columns_index, ax):
                  'label': y_axis.get('label') or ''},
     }
     _draw_app_axes(ax, None, specs, look)
-    leg = p.get('legend') or {}
     lay['legend_artist'] = None
-    if leg.get('show', True) is not False:
-        lay['legend_artist'] = _boxplot_legend(ax, lay['legend'], ov['legend'], leg, look)
+    if legend_json['show']:
+        lay['legend_artist'] = _boxplot_legend(ax, lay['legend'], ov['legend'], leg, look,
+                                               layout=layout)
     ax._ancir_boxplot = lay
+    ax._ancir_legend_layout = layout
+
+
+def boxplot_obstacles(plot, columns_index, lay):
+    """Boxplotclass.legendObstacles over the plot area `lay` was laid out on: per series, a
+    rectangle 0.45 of a category either side of each category's centre over its values'
+    range, and every significance bracket from 16 px above its bar to 6 px below."""
+    p = plot.get('plot', {}) or {}
+    xd, yd = lay['x_domain'], lay['y_domain']
+    xs = _px_scale(xd[0], xd[1], lay['plot_w'])
+    ys = _px_scale(yd[0], yd[1], lay['plot_h'], flip=True)
+    cat_index = {c: i for i, c in enumerate(lay['categories'])}
+    rects = []
+    for f in _boxplot_series_frames(p, columns_index):
+        for cat, values in _boxplot_groups(f).items():
+            c = cat_index.get(cat)
+            if c is None or not values:
+                continue
+            rects.append([xs(c - 0.45), ys(max(values)), xs(c + 0.45), ys(min(values))])
+    for sb in lay['sig_bars']:
+        rects.append([sb['x1'], sb['y'] - 16, sb['x2'], sb['y'] + 6])
+    return [{'rects': rects}]
 
 
 def actogram_row_geometry(plot_h, n_rows, space_between):
@@ -13835,6 +14573,412 @@ def _js_min_max(values):
     return (lo, hi)
 
 
+# Actogram.svelte: past this many heatmap cells (one per bin per double-plot copy) the
+# heatmap is one image per series, as rows under 1 px always are (MAX_SVG_HEATMAP_CELLS).
+ACTOGRAM_MAX_SVG_HEATMAP_CELLS = 20000
+# rowHeight.js MAX_ACTOGRAM_ROWS: past this many rows the actogram draws nothing and says why.
+MAX_ACTOGRAM_ROWS = 20000
+# LightBandClass: the bar's height in px (not saved by the app, so always its default).
+ACTOGRAM_LIGHT_BAND_HEIGHT = 10
+
+
+def _actogram_series(plot, columns_index, zone):
+    """Every series of an actogram resolved and folded at the plot's ONE startTime:
+    ([{'d', 'series', 'x_col', 'y_col', 'frame', 'bins'} or None], startTime, Ndays)."""
+    p = plot.get('plot', {}) or {}
+    period_hrs = float(p.get('periodHrs', 24) or 24)
+    resolved = []
+    for series in p.get('data', []) or []:
+        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        y_col = _resolve_plot_col(series.get('y'), columns_index)
+        resolved.append(None if x_col is None or y_col is None else (series, x_col, y_col, {
+            'xType': x_col.type, 'x': x_col.get_data() or [], 'y': y_col.get_data() or [],
+            'rawBinStart0': x_col.raw_first, 'originTime_ms': x_col.eff_origin_time_ms}))
+    start = actogram_plot_start_time(p, [r[3] for r in resolved if r is not None], zone)
+    out = []
+    for d, r in enumerate(resolved):
+        if r is None:
+            out.append(None)
+            continue
+        series, x_col, y_col, sd = r
+        frame = actogram_series_frame(sd['x'], sd['y'], sd['xType'], start, period_hrs,
+                                      sd['rawBinStart0'], sd['originTime_ms'])
+        out.append({'d': d, 'series': series, 'x_col': x_col, 'y_col': y_col, 'frame': frame,
+                    'bins': actogram_bins_by_period(frame, period_hrs, x_col.eff_bin_width)})
+    # Actogram rowsNeeded: the highest row any series' samples fall in, + 1.
+    max_period = -1
+    for e in out:
+        if e is not None:
+            for k in e['frame']['xByPeriod']:
+                max_period = max(max_period, k)
+    return out, start, (max_period + 1 if max_period >= 0 else 0)
+
+
+def actogram_row_bins(bins, day, double, period_hrs):
+    """Actogram getBinsForPeriods: the bins row `day` shows (periods day .. day + double - 1),
+    in hours from the row's start: (xStart, xEnd, y) lists."""
+    xs, xe, ys = [], [], []
+    off = day * period_hrs
+    for q in range(day, day + double):
+        for b in bins.get(q, []):
+            xs.append(b['xStart'] - off)
+            xe.append(b['xEnd'] - off)
+            ys.append(b['y'])
+    return xs, xe, ys
+
+
+def actogram_raster(n_rows, width_px, height_px, span, row_bins, mode, y_frac=None, colour=None,
+                    row_h=None, gap=0.0):
+    """actogramRaster.js rasterizeRows: the area every row's bars (or heatmap cells) cover in
+    each pixel of a width x height grid ({'cover': H x W array, 'rgb': H x W x 3 cover-weighted
+    sums or None}). Row `day` occupies [gap + day * (row_h + gap), + row_h) px; a bar of value y
+    the bottom y_frac(day, y) of its row; a heatmap cell the whole row, in colour(y) (0..255)."""
+    W = max(0, math.floor(width_px))
+    H = max(0, math.floor(height_px))
+    cover = np.zeros((H, W), dtype=np.float64)
+    heat = mode == 'heatmap'
+    rgb = np.zeros((H, W, 3), dtype=np.float64) if heat else None
+    if not (n_rows > 0) or W == 0 or H == 0 or not (span > 0):
+        return {'cover': cover, 'rgb': rgb}
+    rh = row_h if row_h is not None else H / n_rows
+    k = W / span
+    for day in range(n_rows):
+        xs, xe, ys = row_bins(day)
+        if not xs:
+            continue
+        row_top = gap + day * (rh + gap)
+        row_bottom = row_top + rh
+        for i in range(len(xs)):
+            y = ys[i]
+            if y is None or _js_invalid(y):
+                continue
+            top = row_top
+            c = None
+            if heat:
+                c = colour(y)
+            else:
+                f = min(1.0, max(0.0, y_frac(day, y)))
+                if not f > 0:
+                    continue
+                top = row_bottom - f * rh
+            x0 = max(0.0, xs[i] * k)
+            x1 = min(float(W), xe[i] * k)
+            if not x1 > x0:
+                continue
+            c0 = math.floor(x0)
+            c1 = min(W - 1, math.ceil(x1) - 1)
+            r0 = max(0, math.floor(top))
+            r1 = min(H - 1, math.ceil(row_bottom) - 1)
+            if c1 < c0 or r1 < r0:
+                continue
+            cols = np.arange(c0, c1 + 1)
+            cx = np.minimum(x1, cols + 1) - np.maximum(x0, cols)
+            rows_ = np.arange(r0, r1 + 1)
+            cy = np.minimum(row_bottom, rows_ + 1) - np.maximum(top, rows_)
+            a = np.clip(cy, 0, None)[:, None] * np.clip(cx, 0, None)[None, :]
+            cover[r0:r1 + 1, c0:c1 + 1] += a
+            if heat:
+                for ch in range(3):
+                    rgb[r0:r1 + 1, c0:c1 + 1, ch] += a * c[ch]
+    return {'cover': cover, 'rgb': rgb}
+
+
+def actogram_raster_rgba(raster, bar_rgb=(0, 0, 0)):
+    """actogramRaster.js rasterToRGBA as an H x W x 4 array of 0..1: bars in the series colour
+    at the covered fraction's opacity; a heatmap in the cover-weighted mean colour."""
+    cover = raster['cover']
+    out = np.zeros(cover.shape + (4,), dtype=np.float64)
+    on = cover > 0
+    if raster['rgb'] is not None:
+        for ch in range(3):
+            out[..., ch] = np.where(on, raster['rgb'][..., ch] / np.where(on, cover, 1), 0)
+    else:
+        for ch in range(3):
+            out[..., ch] = bar_rgb[ch]
+    # Uint8ClampedArray: the channels clamp and round to whole steps.
+    out[..., :3] = np.clip(np.round(out[..., :3]), 0, 255) / 255
+    out[..., 3] = np.where(on, np.round(np.minimum(1, cover) * 255) / 255, 0)
+    return out
+
+
+def _parse_rgb(c):
+    """actogramRaster.js parseColour, then the canvas's own reading of any other CSS colour:
+    (r, g, b) 0..255 (an alpha channel is dropped, as the raster draws opaque bars)."""
+    from matplotlib.colors import to_rgb
+    m = _mpl_colour(c, '#000000')
+    try:
+        return tuple(round(v * 255) for v in to_rgb(m))
+    except ValueError:
+        return (0, 0, 0)
+
+
+def _fig_px_transform(fig):
+    """A transform taking the app's plot px (x right, y down from the plot's own top left) to
+    the figure, past the export's title band."""
+    from matplotlib.transforms import Affine2D
+    g = getattr(fig, '_ancir_geometry', None) or {}
+    band = g.get('band', 0)
+    fh = g.get('fig_h', fig.get_size_inches()[1] * _FIG_PX_PER_IN)
+    # Through inches, so it holds at any dpi the figure is saved at.
+    return Affine2D().scale(1 / _FIG_PX_PER_IN, -1 / _FIG_PX_PER_IN).translate(
+        0, (fh - band) / _FIG_PX_PER_IN) + fig.dpi_scale_trans
+
+
+def _draw_actogram_light_bar(ax, p, total_w):
+    """LightBand.svelte: the light bar above the actogram, each band a rect `pc`% of one
+    period's width in its colour with a 1 px grey outline, side by side from the plot's SAVED
+    left padding, `height` px tall and as far down from the top (it is drawn over the saved
+    padding, not the plot area: a row-label gutter or an outside legend does not move it)."""
+    from matplotlib.patches import Rectangle
+    lb = p.get('lightBands') or {}
+    bands = lb.get('bands') or []
+    if not bands:
+        return []
+    pad_in = p.get('paddingIN') or {'top': 30, 'right': 20, 'bottom': 10, 'left': 20}
+    height = lb.get('height')
+    height = height if _style_valid(height, 'number') else ACTOGRAM_LIGHT_BAND_HEIGHT
+    double = max(1, int(p.get('doublePlot', 2) or 1))
+    single = (total_w - (pad_in.get('left') or 0) - (pad_in.get('right') or 0)) / double
+    tr = _fig_px_transform(ax.figure)
+    x = float(pad_in.get('left') or 0)
+    arts = []
+    for b in bands:
+        pc = _js_number(b.get('pc')) or 0
+        w = single * 0.01 * pc
+        arts.append(ax.figure.add_artist(Rectangle(
+            (x, height), w, height, transform=tr, facecolor=_mpl_colour(b.get('col'), 'none'),
+            edgecolor='gray', linewidth=_PX_TO_PT, clip_on=False, zorder=3,
+            gid='actogram-light-band')))
+        x += w
+    return arts
+
+
+def _actogram_block_style(block, series_colour, rule=None):
+    """The colour, line width, dot radius and show-line of an own marker block
+    (PhaseMarkerClass's `||` defaults) or of a rule's instance (MarkerRule: the rule's colour,
+    else the series')."""
+    if rule is not None:
+        c = rule.get('colour')
+        return {'colour': c if isinstance(c, str) and c else (series_colour or 'black'),
+                'lineWidth': rule.get('lineWidth') if (_finite(rule.get('lineWidth')) and
+                                                      rule.get('lineWidth') > 0) else 1,
+                'markerSize': rule.get('markerSize') if (_finite(rule.get('markerSize')) and
+                                                        rule.get('markerSize') > 0) else 5,
+                'showLine': rule.get('showLine') is not False}
+    return {'colour': block.get('colour') or series_colour or 'black',
+            'lineWidth': block.get('lineWidth') or 1,
+            'markerSize': block.get('markerSize') or 5,
+            'showLine': True if block.get('showLine') is None else bool(block.get('showLine'))}
+
+
+def line_copy_offsets(slope, intercept, period_hrs, span, lo, hi):
+    """onsetUnwrap.js lineCopyOffsets: the multiples of tau at which copies of the fitted line
+    cross [0, span] between the top of row lo - 1 and the bottom of row hi."""
+    if not (slope > 0) or not math.isfinite(intercept) or not (span > 0):
+        return [0]
+    dx = slope - period_hrs
+    xa, xb = intercept + (lo - 1) * dx, intercept + hi * dx
+    min_x, max_x = min(xa, xb), max(xa, xb)
+    m_lo = math.ceil((0 - max_x) / slope)
+    m_hi = math.floor((span - min_x) / slope)
+    out = []
+    m = m_lo
+    while m <= m_hi and len(out) < 1000:
+        out.append(m * slope + 0.0)
+        m += 1
+    return out
+
+
+def actogram_marker_blocks(plot, entries, period_hrs, n_days):
+    """Every marker block each series draws, in the app's order (Actogram.svelte: per series
+    its rule instances, then its own blocks): [(series index, kind, name, style, computed)].
+    A series detached from a rule draws no instance of it (its detached copy is an own
+    block)."""
+    p = plot.get('plot', {}) or {}
+    rules = [r for r in (p.get('markerRules') or []) if isinstance(r, dict) and
+             isinstance(r.get('id'), str) and re.fullmatch(r'r(\d+)', r['id']) and
+             int(r['id'][1:]) > 0]
+    out = []
+    for e in entries:
+        if e is None:
+            continue
+        s, frame = e['series'], e['frame']
+        colour = s.get('colour') or s.get('color')
+        detached = set(s.get('detachedRules') or [])
+        for r in rules:
+            if r['id'] in detached:
+                continue
+            comp = marker_block_compute(marker_rule_cfg(r, period_hrs, n_days),
+                                        _rule_store(s, r['id']), frame, period_hrs, n_days)
+            out.append((e['d'], 'rule', r, _actogram_block_style(None, colour, rule=r), comp,
+                        marker_rule_from_json(r)))
+        for bj in s.get('phaseMarkers') or []:
+            if not isinstance(bj, dict):
+                continue
+            cfg = marker_block_from_json(bj)
+            comp = marker_block_compute(cfg, _block_store(bj, frame), frame, period_hrs,
+                                        n_days)
+            out.append((e['d'], 'block', bj, _actogram_block_style(bj, colour), comp, cfg))
+    return out
+
+
+def _marker_line_segments(comp, cfg, style, period_hrs, double, n_days, eph, gap):
+    """PhaseMarker.svelte's fitted line and its copies, in (hours, px) from the plot area's
+    top left: [(x1, y1, x2, y2)], the primary line LAST (it is drawn after its copies)."""
+    reg = comp['regression']
+    if not style['showLine'] or reg is None or not reg['slope']:
+        return []
+    lo = max(1, cfg.get('lineMinDay') if cfg.get('lineMinDay') is not None else 1)
+    hi = min(n_days, cfg.get('lineMaxDay') if cfg.get('lineMaxDay') is not None else n_days)
+    if hi < lo:
+        return []
+    slope, icpt = reg['slope'], reg['intercept']
+    dx = slope - period_hrs
+    y1 = (lo - 1) * (eph + gap)
+    y2 = (hi - 1) * (eph + gap) + eph
+    segs = [(icpt + off + (lo - 1) * dx, y1, icpt + off + hi * dx, y2)
+            for off in line_copy_offsets(slope, icpt, period_hrs, period_hrs * double, lo, hi)
+            if off != 0]
+    segs.append((icpt + (lo - 1) * dx, y1, icpt + hi * dx, y2))
+    return segs
+
+
+def _marker_dots(comp, style, period_hrs, eph, gap):
+    """PhaseMarker.svelte markerPoints: a dot (radius markerSize) per selected marker, in the
+    row its time falls in, its centre markerSize / 2 above the row's foot (the rows' first gap
+    is not counted): [(hours, px)]."""
+    out = []
+    r = style['markerSize']
+    for m, v in enumerate(comp['markerHours']):
+        if not comp['selectedMask'][m] if m < len(comp['selectedMask']) else True:
+            continue
+        if v is None or (isinstance(v, float) and math.isnan(v)):
+            continue
+        t = comp['markerTimes'][m]
+        row = math.floor(t / period_hrs)
+        hour = t - row * period_hrs
+        cy = eph - r / 2 + row * gap + row * eph
+        if math.isfinite(hour) and math.isfinite(cy):
+            out.append((hour, cy))
+    return out
+
+
+def actogram_annotation_segments(ann, start_ms, period_hrs, eph, gap):
+    """Annotation.svelte segments: the annotation split at every period boundary it crosses,
+    each [(start hour in its row, duration h, top px of its row)] (the row may lie outside the
+    plot: the app does not clip annotations)."""
+    a = ann or {}
+    if a.get('startMs') is not None:
+        start = (_js_number(a['startMs']) - start_ms) / _MS_PER_HOUR
+    elif a.get('startTime') is not None:
+        start = _js_number(a['startTime'])
+    else:
+        start = 1.0
+    if a.get('duration') is not None:
+        dur = _js_number(a['duration'])
+    elif a.get('endTime') is not None and a.get('startTime') is not None:
+        dur = max(0.0, _js_number(a['endTime']) - _js_number(a['startTime']))
+    else:
+        dur = 1.0
+    if not (dur > 0):
+        return []
+    end = start + dur
+    segs = []
+    for per in range(math.floor(start / period_hrs), math.floor(end / period_hrs) + 1):
+        s0 = max(start, per * period_hrs)
+        s1 = min(end, (per + 1) * period_hrs)
+        if s1 > s0:
+            segs.append((_js_mod(s0, period_hrs), s1 - s0, per * (eph + gap)))
+    return segs
+
+
+def actogram_legend_items(plot, entries, blocks, n_days=0):
+    """Actogramclass.getLegendItems: per series its entry (a box swatch in its colour, the
+    colormap's mid stop in heatmap mode) then its marker entries (each rule that follows the
+    series' colour, "<series>: <rule>", then each own block, its name or "<series> marker
+    <n>"), then one entry per FIXED-colour rule. Each item {'label', 'elements'} as
+    Legend.svelte reads it."""
+    p = plot.get('plot', {}) or {}
+    heat = p.get('renderMode') == 'heatmap'
+    cmap = p.get('colormap') or DEFAULT_COLORMAP
+    items = []
+
+    def elements(style, comp, cfg, n_days):
+        els = []
+        if any(comp['selectedMask'][m] and v is not None and not (isinstance(v, float) and
+                                                                  math.isnan(v))
+               for m, v in enumerate(comp['markerHours']) if m < len(comp['selectedMask'])):
+            els.append({'type': 'points', 'color': style['colour'],
+                        'size': min(6, style['markerSize'])})
+        reg = comp['regression']
+        lo = max(1, cfg.get('lineMinDay') if cfg.get('lineMinDay') is not None else 1)
+        hi = min(n_days, cfg.get('lineMaxDay') if cfg.get('lineMaxDay') is not None else n_days)
+        if style['showLine'] and reg is not None and reg['slope'] and hi >= lo:
+            els.append({'type': 'line', 'color': style['colour'],
+                        'strokeWidth': style['lineWidth']})
+        return els
+    for e in entries:
+        if e is None:
+            continue
+        s = e['series']
+        name = s.get('label') or _display_name(e['y_col'])
+        if s.get('draw') is not False:
+            sw = _rgb_css(colormap_rgb(cmap, 0.5)) if heat else (s.get('colour') or
+                                                                   s.get('color'))
+            items.append({'label': name, 'elements': [{'type': 'box', 'color': sw}]})
+        own = 0
+        for d, kind, j, style, comp, cfg in blocks:
+            if d != e['d']:
+                continue
+            if kind == 'rule':
+                if j.get('colour'):
+                    continue
+                els = elements(style, comp, cfg, n_days)
+                if els:
+                    items.append({'label': f"{name}: {cfg.get('name') or ''}", 'elements': els})
+            else:
+                own += 1
+                els = elements(style, comp, cfg, n_days)
+                if els:
+                    nm = j.get('name').strip() if isinstance(j.get('name'), str) else ''
+                    items.append({'label': nm or f'{name} marker {own}', 'elements': els})
+    for r in p.get('markerRules') or []:
+        if not isinstance(r, dict) or not r.get('colour'):
+            continue
+        kinds = {}
+        for d, kind, j, style, comp, cfg in blocks:
+            if kind == 'rule' and j is r:
+                for el in elements(style, comp, cfg, n_days):
+                    kinds[el['type']] = el
+        if kinds:
+            items.append({'label': r.get('name') or '',
+                          'elements': [kinds[k] for k in ('points', 'line') if k in kinds]})
+    return items
+
+
+def _legend_item_handle(item):
+    """A matplotlib handle for a Legend.svelte item: a box swatch (14 x 12 px, 2 px outline)
+    or a line with its marker."""
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    els = item['elements']
+    box = next((e for e in els if e['type'] == 'box'), None)
+    if box is not None:
+        h = Patch(facecolor=_mpl_colour(box['color'], 'none'),
+                  edgecolor=_mpl_colour(box['color'], 'black'), linewidth=2 * _PX_TO_PT)
+        h._ancir_box_swatch = True
+        return h
+    line = next((e for e in els if e['type'] == 'line'), None)
+    pts = next((e for e in els if e['type'] == 'points'), None)
+    colour = _mpl_colour((line or pts)['color'], 'black')
+    return Line2D([], [], color=colour if line else 'none',
+                  linewidth=(line['strokeWidth'] * _PX_TO_PT) if line else 0,
+                  marker='o' if pts else 'None',
+                  markersize=(2 * pts['size'] * _PX_TO_PT) if pts else 0,
+                  markerfacecolor=_mpl_colour(pts['color'], 'black') if pts else 'none',
+                  markeredgecolor='none')
+
+
 def plot_actogram(plot, columns_index, ax, zone=None):
     """Double-plotted actogram drawn from the SAME rows as the plot-data CSV
     (actogram_download_data), so the PNG folds where the app does: every series at the
@@ -13847,26 +14991,33 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     (ylimsOption: 'overall' the series' range, 'manual' ylimsIN, 'byperiod' the range of the
     periods the row shows). 'heatmap': every bin fills its row in the plot's colormap at its
     value over the series' range (intensityDomain; a missing value is the map's low end), with
-    the app's scale bar (top right, or top left beside a top-right legend). `zone` defaults to
-    the session's display zone (DISPLAY_TIMEZONE)."""
+    the app's scale bar (top right, or top left beside a top-right legend). Rows under 1 px, or
+    a heatmap past 20,000 cells, are one image per series (actogramRaster.js: each pixel holds
+    the area its bars or cells cover). Past 20,000 rows nothing is drawn and the plot says why.
+    Over the rows: each series' phase markers (its marker rules' instances, then its own
+    blocks: the fitted line and its copies a tau apart, and a dot per selected marker), the
+    annotations (the lower half of each row they cover), the light bar above the plot, the row
+    labels and the legend (legend_layout, 'auto' avoiding the bars and the scale bar). `zone`
+    defaults to the session's display zone (DISPLAY_TIMEZONE)."""
     from matplotlib.patches import Rectangle
     from matplotlib.collections import PatchCollection
+    from matplotlib.lines import Line2D
     p = plot.get('plot', {})
     look = plot_look(plot)
     zone = DISPLAY_TIMEZONE if zone is None else zone
     period_hrs = float(p.get('periodHrs', 24) or 24)
     double = max(1, int(p.get('doublePlot', 2) or 1))
     span = period_hrs * double
-    _, rows = actogram_download_data(plot, columns_index, zone)
+    entries, start_ms, rows_needed = _actogram_series(plot, columns_index, zone)
     series_data = p.get('data', []) or []
     heat = p.get('renderMode') == 'heatmap'
-    w_px, h_px = _axes_px(ax)
-    n_rows = max((r[1] for r in rows), default=0)
+    base_w, h_px = _axes_px(ax)
+    fig = ax.figure
+    total_w = float(plot.get('width') or 520)
+    refused = rows_needed > MAX_ACTOGRAM_ROWS
+    n_rows = 0 if refused else rows_needed
     geom = actogram_row_geometry(h_px, n_rows, p.get('spaceBetween', 2))
     gap, row_h = geom['gap'], geom['height']
-    # y runs down the plot area in px, as the app's SVG does.
-    ax.set_xlim(0, span)
-    ax.set_ylim(h_px, 0)
     cmap = p.get('colormap') or DEFAULT_COLORMAP
     # Ranges: per series (overall / heatmap intensity), per row (byperiod) or manual.
     raw_y = {}
@@ -13875,71 +15026,144 @@ def plot_actogram(plot, columns_index, ax, zone=None):
         raw_y[d] = _js_min_max(y_col.get_data() if y_col is not None else [])
     option = p.get('ylimsOption') or 'overall'
     ylims_in = list(p.get('ylimsIN') or [0, 100]) + [None, None]
-    by_period = {}
-    if option == 'byperiod':
-        for d, per, _xs, _xe, v in rows:
-            if _finite(v):
-                for tile in range(double):
-                    row = per - 1 - tile
-                    if row >= 0:
-                        lo, hi = by_period.get((d, row), (math.inf, -math.inf))
-                        by_period[(d, row)] = (min(lo, float(v)), max(hi, float(v)))
 
     def row_range(d, row):
         if option == 'manual':
             return _number_or_none(ylims_in[0]) or 0.0, _number_or_none(ylims_in[1])
         if option == 'byperiod':
-            return by_period.get((d, row), (None, None))
+            e = entries[d] if d < len(entries) else None
+            if e is None:
+                return (None, None)
+            _xs, _xe, vals = actogram_row_bins(e['bins'], row, double, period_hrs)
+            vals = [float(v) for v in vals if _finite(v)]
+            return (min(vals), max(vals)) if vals else (None, None)
         return raw_y.get(d, (None, None))
-    rects, colours = [], []
-    for d, per, x_start, x_end, v in rows:
-        sd = series_data[d] if d < len(series_data) else {}
-        if sd.get('draw') is False:
+    # Every bar or cell, in (hours along its row, px down the plot area): drawn below, and
+    # what an 'auto' legend avoids (Actogramclass.legendObstacles).
+    marks = []
+    heat_cells = 0
+    for e in entries:
+        if e is None or e['series'].get('draw') is False:
             continue
-        x0 = x_start - (per - 1) * period_hrs
-        width = x_end - x_start
-        # Period `per` sits in row per - 1 at tile 0, row per - 2 at tile 1, and so on.
-        for tile in range(double):
-            row = per - 1 - tile
-            if row < 0:
-                break
-            if row >= n_rows:
-                continue
-            top = row * (gap + row_h) + gap
-            xs = x0 + tile * period_hrs
-            if heat:
-                lo, hi = raw_y.get(d, (None, None))
-                t = 0.0
-                if _finite(v) and lo is not None and hi is not None and hi > lo:
-                    t = min(1.0, max(0.0, (float(v) - lo) / (hi - lo)))
-                w = max(width, 0.5 / w_px * span)
-                rects.append(Rectangle((xs, top), w, row_h))
-                colours.append(tuple(c / 255 for c in colormap_rgb(cmap, t)))
-            else:
-                if not _finite(v):
+        d = e['d']
+        heat_cells += sum(len(v) for v in e['bins'].values()) * double
+        for day in range(n_rows):
+            xs, xe, vals = actogram_row_bins(e['bins'], day, double, period_hrs)
+            top = day * (gap + row_h) + gap
+            lo = hi = None
+            if not heat and xs:
+                lo, hi = row_range(d, day)
+            for i in range(len(xs)):
+                v = vals[i]
+                finite = _finite(v)
+                if heat:
+                    marks.append((d, xs[i], xe[i], top, top + row_h, v, finite))
                     continue
-                lo, hi = row_range(d, row)
-                if lo is None or hi is None or not math.isfinite(hi - lo) or hi == lo:
+                if not finite or lo is None or hi is None or not math.isfinite(hi - lo) \
+                        or hi == lo:
                     continue
                 h = (float(v) - lo) / (hi - lo) * row_h
                 if h <= 0:
                     continue
-                rects.append(Rectangle((xs, top + row_h - h), width, h))
+                marks.append((d, xs[i], xe[i], top + row_h - h, top + row_h, v, True))
+    raster = n_rows > 0 and (row_h < 1 or (heat and heat_cells > ACTOGRAM_MAX_SVG_HEATMAP_CELLS))
+    # Phase markers, for the legend and the drawing.
+    blocks = actogram_marker_blocks(plot, entries, period_hrs, n_rows) if n_rows > 0 else []
+    items = actogram_legend_items(plot, entries, blocks, n_rows)
+    legend_json = p.get('legend') or {}
+    any_drawn = any(s.get('draw') is not False for s in series_data)
+
+    def obstacles(w, h):
+        rects = [[x0 / span * w, y0, x1 / span * w, y1] for _d, x0, x1, y0, y1, _v, ok in marks
+                 if ok]
+        if heat and any_drawn:
+            rects.append([w - 96 - 15, 2, w - 5, 28])
+        return [{'rects': rects}]
+    layout = legend_layout(legend_json, [it['label'] for it in items], look, base_w, h_px,
+                           obstacles=obstacles, fig=fig)
+    reserve_axes_right((ax,), layout['reserveW'])
+    w_px, _ = _axes_px(ax)
+    # y runs down the plot area in px, as the app's SVG does.
+    ax.set_xlim(0, span)
+    ax.set_ylim(h_px, 0)
+    if raster:
+        rh_total = n_rows * (row_h + gap)
+        scale = min(2.0, max(1.0, float(look.get('dpi') or 96) / _FIG_PX_PER_IN))
+        W = round(w_px * scale)
+        H = round(rh_total * scale)
+        sy = H / rh_total if rh_total > 0 else 1
+        for e in entries:
+            if e is None or e['series'].get('draw') is False:
+                continue
+            d = e['d']
+            dom = raw_y.get(d, (None, None))
+            dom = (0, 1) if dom[0] is None else dom
+            r = actogram_raster(
+                n_rows, W, H, span,
+                lambda day, e=e: actogram_row_bins(e['bins'], day, double, period_hrs),
+                'heatmap' if heat else 'bars',
+                y_frac=lambda day, y, d=d: (
+                    (lambda lo, hi: (float(y) - lo) / (hi - lo)
+                     if (lo is not None and hi is not None and hi > lo) else 0)
+                    (*row_range(d, day))),
+                colour=lambda y, dom=dom: colormap_rgb(cmap, normalise_to_01(y, dom[0], dom[1])),
+                row_h=row_h * sy, gap=gap * sy)
+            rgba = actogram_raster_rgba(r, _parse_rgb(e['series'].get('colour')))
+            ax.imshow(rgba, extent=(0, span, rh_total, 0), aspect='auto', interpolation='nearest',
+                      zorder=1, gid='actogram-raster')
+        ax.set_xlim(0, span)
+        ax.set_ylim(h_px, 0)
+    elif marks:
+        rects, colours = [], []
+        for d, x0, x1, y0, y1, v, ok in marks:
+            sd = series_data[d] if d < len(series_data) else {}
+            if heat:
+                lo, hi = raw_y.get(d, (None, None))
+                t = normalise_to_01(v, lo, hi) if ok else 0.0
+                rects.append(Rectangle((x0, y0), max(x1 - x0, 0.5 / w_px * span), y1 - y0))
+                colours.append(tuple(c / 255 for c in colormap_rgb(cmap, t)))
+            else:
+                rects.append(Rectangle((x0, y0), x1 - x0, y1 - y0))
                 colours.append(_mpl_colour(sd.get('colour') or sd.get('color'), '#234154'))
-    if rects:
         pc = PatchCollection(rects, facecolors=colours, edgecolors='none', linewidths=0,
                              zorder=1, gid='actogram-heatmap' if heat else 'actogram-bars')
         ax.add_collection(pc)
-    # Light bands
-    for band in ((p.get('lightBands') or {}).get('bands', [])):
-        start = float(band.get('start', 0))
-        end = float(band.get('end', 0))
-        colour_b = band.get('colour') or band.get('color') or '#fff8a0'
-        alpha = float(band.get('alpha', 0.3))
-        ax.axvspan(start, end, color=colour_b, alpha=alpha, zorder=0)
-        if double > 1:
-            ax.axvspan(start + period_hrs, end + period_hrs,
-                       color=colour_b, alpha=alpha, zorder=0)
+    # The markers (clipped to the plot area, as the app's marker group is): per block its line
+    # copies, its line, then its dots.
+    z = 2.0
+    for d, kind, j, style, comp, cfg in blocks:
+        colour = _mpl_colour(style['colour'], 'black')
+        gid = f"actogram-marker-{d}-{kind}-{(j.get('id') if kind == 'rule' else j.get('name'))}"
+        for x1, y1, x2, y2 in _marker_line_segments(comp, cfg, style, period_hrs, double,
+                                                    n_rows, row_h, gap):
+            z += 1e-4
+            ax.add_line(Line2D([x1, x2], [y1, y2], color=colour,
+                               linewidth=style['lineWidth'] * _PX_TO_PT, solid_capstyle='butt',
+                               zorder=z, gid=gid + '-line'))
+        dots = _marker_dots(comp, style, period_hrs, row_h, gap)
+        if dots:
+            z += 1e-4
+            ax.scatter([a for a, _ in dots], [b for _, b in dots],
+                       s=(2 * style['markerSize'] * _PX_TO_PT) ** 2, marker='o',
+                       facecolors=colour, edgecolors='none', linewidths=0, zorder=z,
+                       gid=gid + '-dots')
+    # Annotations (not clipped): the lower half of every row they cover.
+    for k, ann in enumerate(p.get('annotations') or []):
+        for hr, dur, y_off in actogram_annotation_segments(ann, start_ms, period_hrs, row_h,
+                                                           gap):
+            ax.add_patch(Rectangle((hr, y_off + gap + row_h / 2), dur, row_h / 2,
+                                   facecolor=_mpl_colour((ann or {}).get('colour'), '#0000FF'),
+                                   edgecolor='none', linewidth=0, clip_on=False, zorder=4,
+                                   gid=f'actogram-annotation-{k}'))
+    if refused:
+        msg = (f"Not drawn: the data span {rows_needed:,} periods of "
+               f"{_js_number(float(f'{period_hrs:.6g}'))} h, and an actogram draws at most "
+               f"{MAX_ACTOGRAM_ROWS:,} rows. A plain number column is read as hours: convert "
+               "seconds or minutes to hours (or import it as time), or set a longer period.")
+        ax.text(0.5, 0.5, msg, transform=ax.transAxes, ha='center', va='center', wrap=True,
+                fontsize=look['px']['tick'] * _PX_TO_PT, color='#555555',
+                gid='actogram-refused')
+    _draw_actogram_light_bar(ax, p, total_w)
     x_axis = p.get('xAxis') or {'gridlines': False, 'nticks': 6}
     specs = {'top': {'kind': 'linear', 'domain': (0, span), 'axis': x_axis,
                      'label': x_axis.get('label') or ''}}
@@ -13948,33 +15172,51 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     # Row labels (Actogram.svelte): 10 px left of the rows, centred on each labelled row.
     mode = _actogram_row_labels_mode(p)
     if mode != 'none' and n_rows > 0:
-        start = None
-        if mode == 'date':
-            resolved = []
-            for s in series_data:
-                x_col = _resolve_plot_col(s.get('x'), columns_index)
-                y_col = _resolve_plot_col(s.get('y'), columns_index)
-                if x_col is not None and y_col is not None:
-                    resolved.append({'xType': x_col.type, 'x': x_col.get_data() or [],
-                                     'y': y_col.get_data() or [],
-                                     'rawBinStart0': x_col.raw_first,
-                                     'originTime_ms': x_col.eff_origin_time_ms})
-            start = actogram_plot_start_time(p, resolved, zone)
         fpx = actogram_row_label_px(look['px']['tick'], h_px, n_rows, p.get('spaceBetween', 2))
         from matplotlib.transforms import blended_transform_factory
         tr = blended_transform_factory(ax.transAxes, ax.transData)
         for day in actogram_labelled_rows(n_rows):
             ax.text(-10 / w_px, day * (row_h + gap) + row_h / 2,
-                    actogram_row_label_text(day, mode, start, period_hrs,
-                                            p.get('dateFormat'), zone),
+                    actogram_row_label_text(day, mode, start_ms if mode == 'date' else None,
+                                            period_hrs, p.get('dateFormat'), zone),
                     transform=tr, ha='right', va='center', fontsize=fpx * _PX_TO_PT,
                     fontfamily=_font_family_list(look['family']), color='black',
                     gid='actogram-row-label')
+    if legend_json.get('show') and items:
+        _actogram_legend(ax, items, legend_json, look, layout)
+    ax._ancir_legend_layout = layout
+    ax._ancir_actogram = {'blocks': blocks, 'raster': raster, 'n_rows': n_rows,
+                          'row_h': row_h, 'gap': gap, 'start': start_ms}
     if heat:
-        _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look)
+        _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look,
+                                   n_items=len(items))
 
 
-def _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look):
+def _actogram_legend(ax, items, legend_json, look, layout):
+    """The actogram's legend: each item's swatch as Legend.svelte draws it (a series' box, a
+    marker block's dot and line)."""
+    from matplotlib.patches import Rectangle
+    from matplotlib.legend_handler import HandlerPatch
+
+    def swatch(legend, orig_handle, xdescent, ydescent, width, height, fontsize):
+        return Rectangle((-xdescent + 3 * _PX_TO_PT, -ydescent + height / 2 - 6 * _PX_TO_PT),
+                         14 * _PX_TO_PT, 12 * _PX_TO_PT)
+    handles = [_legend_item_handle(it) for it in items]
+    labels = [it['label'] for it in items]
+    kw = legend_kwargs(legend_json, look, len(handles))
+    frame = kw.pop('_frame')
+    anchor = legend_anchor_kwargs(legend_json, layout, ax) if layout.get('box') else {}
+    if anchor:
+        kw.pop('bbox_to_anchor', None)
+        kw.update(anchor)
+    hmap = {h: HandlerPatch(patch_func=swatch) for h in handles
+            if getattr(h, '_ancir_box_swatch', False)}
+    leg = ax.legend(handles, labels, handler_map=hmap, **kw)
+    style_legend(leg, frame)
+    return leg
+
+
+def _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look, n_items=None):
     """The heatmap's scale bar (Actogram.svelte): 96 x 8 px, the map through six stops, the
     first drawn series' range at its ends (3 significant figures, 9 px #555), on a white
     backdrop 10 px in from the plot's top right (top left while a shown top-right legend
@@ -13988,7 +15230,7 @@ def _draw_actogram_heat_legend(ax, p, raw_y, series_data, cmap, look):
     w_px, h_px = _axes_px(ax)
     leg = p.get('legend') or {}
     step_aside = leg.get('show') is True and leg.get('position', 'topright') == 'topright' \
-        and len(series_data) > 0
+        and (n_items if n_items is not None else len(series_data)) > 0
     leg_w = 96
     lx = 10 if step_aside else w_px - leg_w - 10
     ly = 6
@@ -14027,6 +15269,464 @@ def _js_to_precision_signed(v, p):
     return ('-' if v < 0 else '') + _js_precision(abs(v), p)
 
 
+# ---- Wavelet scalogram (utils/cwt.js, plots/CWT/CWT.svelte) ----------------------------
+#
+# Torrence & Compo (1998) in the Fourier domain, exactly as cwt.js computes it: the mean
+# removed, gaps zero-filled, zero-padded to a power of two, one forward FFT and one inverse
+# per scale; scales log2-spaced from 2 dt, each converted to its Fourier period; power
+# |W|^2 (divided by the scale when rectified); the cone of influence the e-folding time.
+
+CWT_WAVELETS = ('morlet', 'paul', 'dog')
+_CWT_MAX_N = 1 << 22
+
+
+def _lanczos_gamma(x):
+    """cwt.js gamma: the Lanczos approximation (g = 7, nine coefficients)."""
+    g = 7
+    c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+         -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6,
+         1.5056327351493116e-7]
+    if x < 0.5:
+        return math.pi / (math.sin(math.pi * x) * _lanczos_gamma(1 - x))
+    x -= 1
+    a = c[0]
+    t = x + g + 0.5
+    for i in range(1, g + 2):
+        a += c[i] / (x + i)
+    return math.sqrt(2 * math.pi) * t ** (x + 0.5) * math.exp(-t) * a
+
+
+def cwt_wavelet_props(name, param=None):
+    """cwt.js waveletProps: the scale-to-period factor, the COI factor and the wavelet's
+    energy-normalised Fourier transform psi_hat(omega array, s, dt)."""
+    if name == 'paul':
+        m = 4 if param is None else param
+
+        def psi(w, s, dt):
+            norm = math.sqrt(2 * math.pi * s / dt) * (2 ** m / math.sqrt(m * _lanczos_gamma(2 * m)))
+            out = np.zeros_like(w)
+            pos = w > 0
+            out[pos] = norm * (s * w[pos]) ** m * np.exp(-s * w[pos])
+            return out
+        return {'fourierFactor': 4 * math.pi / (2 * m + 1), 'coiFactor': 1 / math.sqrt(2),
+                'psiHat': psi}
+    if name == 'dog':
+        m = 2 if param is None else param
+
+        def psi(w, s, dt):
+            norm = math.sqrt(2 * math.pi * s / dt) * math.sqrt(1 / _lanczos_gamma(m + 0.5))
+            return norm * (s * np.abs(w)) ** m * np.exp(-((s * w) ** 2) / 2)
+        return {'fourierFactor': 2 * math.pi / math.sqrt(m + 0.5), 'coiFactor': math.sqrt(2),
+                'psiHat': psi}
+    w0 = 6 if param is None else param
+
+    def psi(w, s, dt):
+        norm = math.sqrt(2 * math.pi * s / dt) * math.pi ** -0.25
+        out = np.zeros_like(w)
+        pos = w > 0
+        out[pos] = norm * np.exp(-((s * w[pos] - w0) ** 2) / 2)
+        return out
+    return {'fourierFactor': 4 * math.pi / (w0 + math.sqrt(2 + w0 * w0)),
+            'coiFactor': math.sqrt(2), 'psiHat': psi}
+
+
+def cwt_build_scales(dt, n, dj=0.125, s0=None, j1=None):
+    """cwt.js buildScales: s0 * 2^(j dj), j = 0 .. J (span-limited unless given)."""
+    smallest = s0 if (s0 and s0 > 0) else 2 * dt
+    max_j = j1 if (j1 is not None and j1 > 0) else max(
+        1, math.floor(math.log2((n * dt) / smallest) / dj))
+    return [smallest * 2 ** (j * dj) for j in range(max_j + 1)]
+
+
+def _cwt_empty(reason, dt=0):
+    return {'periods': [], 'scales': [], 'power': [], 'coi': [], 'times': [], 'dt': dt,
+            'nScales': 0, 'valid': False, 'reason': reason}
+
+
+def cwt_transform(values, dt, wavelet='morlet', param=None, dj=0.125, s0=None, j1=None,
+                  period_range=None, rectify=True):
+    """cwt.js cwt: {'periods', 'scales', 'power' (rows = scales), 'coi', 'dt', 'nScales',
+    'valid', 'reason'}."""
+    if not isinstance(values, (list, tuple, np.ndarray)) or len(values) < 4:
+        return _cwt_empty('need at least 4 samples')
+    if not (isinstance(dt, (int, float)) and math.isfinite(dt) and dt > 0):
+        return _cwt_empty('sample interval must be positive and finite')
+    if wavelet not in CWT_WAVELETS:
+        return _cwt_empty(f'unknown wavelet "{wavelet}"')
+    n = len(values)
+    clean = [float(v) if _finite(v) else float('nan') for v in values]
+    finite = [v for v in clean if math.isfinite(v)]
+    if len(finite) < 4:
+        return _cwt_empty('need at least 4 finite samples')
+    mu = kahan_mean(finite)
+    n_pad = 1 if n <= 1 else 2 ** math.ceil(math.log2(n))
+    if n_pad > _CWT_MAX_N:
+        return _cwt_empty('series too long for the transform')
+    x = np.zeros(n_pad, dtype=np.float64)
+    x[:n] = [v - mu if math.isfinite(v) else 0.0 for v in clean]
+    spec = np.fft.fft(x)
+    k = np.arange(n_pad)
+    kk = np.where(k <= n_pad / 2, k, k - n_pad)
+    omega = 2 * math.pi * kk / (n_pad * dt)
+    props = cwt_wavelet_props(wavelet, param)
+    scales, periods = [], []
+    for sc in cwt_build_scales(dt, n, dj, s0, j1):
+        period = sc * props['fourierFactor']
+        if period_range:
+            lo, hi = period_range
+            if _finite(lo) and period < lo:
+                continue
+            if _finite(hi) and period > hi:
+                continue
+        scales.append(sc)
+        periods.append(period)
+    if not scales:
+        return _cwt_empty('no scales fall inside the requested period range')
+    power = []
+    for sc in scales:
+        w = np.fft.ifft(spec * props['psiHat'](omega, sc, dt))[:n]
+        row = (w.real ** 2 + w.imag ** 2) / (sc if rectify else 1)
+        power.append(row)
+    coi_const = props['fourierFactor'] * props['coiFactor']
+    i = np.arange(n)
+    coi = coi_const * dt * (np.minimum(i, n - 1 - i) + 1e-9)
+    return {'periods': periods, 'scales': scales, 'power': power, 'coi': list(coi), 'dt': dt,
+            'nScales': len(scales), 'valid': True, 'reason': ''}
+
+
+def cwt_from_series(times, values, wavelet='morlet', param=None, dj=0.125, period_range=None,
+                    rectify=True, tolerance=0.01):
+    """cwt.js cwtFromSeries: the transform of (times, values) as the app stores them (rows
+    with both present), refused when the sampling is not uniform; adds 'times'."""
+    if times is None or values is None or len(times) != len(values) or len(times) < 4:
+        return _cwt_empty('need at least 4 aligned samples')
+    idx = [i for i in range(len(times)) if not _js_invalid(times[i]) and
+           not _js_invalid(values[i])]
+    if len(idx) < 4:
+        return _cwt_empty('need at least 4 finite samples')
+    t = [_js_number(times[i]) for i in idx]
+    y = [_js_number(values[i]) for i in idx]
+    diffs = [t[i] - t[i - 1] for i in range(1, len(t))]
+    dt = kahan_mean(diffs)
+    if not math.isfinite(dt) or dt <= 0:
+        return _cwt_empty('time axis is not increasing')
+    max_dev = max(abs(d - dt) for d in diffs) / dt
+    if max_dev > tolerance:
+        return _cwt_empty(f'sampling is not uniform (intervals vary by {max_dev * 100:.1f}%). '
+                          'Bin or interpolate first.', dt)
+    out = cwt_transform(y, dt, wavelet, param, dj, period_range=period_range, rectify=rectify)
+    out['times'] = t
+    return out
+
+
+def cwt_ridge(tr):
+    """cwt.js waveletRidge: the period of greatest power at each time, ignoring cells inside
+    the cone of influence: {'ridgePeriod', 'ridgePower'} (NaN where none)."""
+    power = tr.get('power') or []
+    if not len(power):
+        return {'ridgePeriod': [], 'ridgePower': []}
+    P = np.array(power)
+    periods = np.array(tr['periods'])[:, None]
+    coi = np.array(tr['coi'])[None, :] if len(tr.get('coi') or []) else None
+    masked = np.where(np.isfinite(P), P, -np.inf)
+    if coi is not None:
+        masked = np.where(periods > coi, -np.inf, masked)
+    best = masked.argmax(axis=0)
+    val = masked[best, np.arange(P.shape[1])]
+    ok = np.isfinite(val)
+    return {'ridgePeriod': [float(tr['periods'][b]) if o else float('nan')
+                            for b, o in zip(best, ok)],
+            'ridgePower': [float(v) if o else float('nan') for v, o in zip(val, ok)]}
+
+
+SCALOGRAM_MAX_COLUMNS = 4096
+
+
+def downsample_columns(power, max_cols):
+    """CWT.svelte downsampleColumns: each row's time axis binned to at most `max_cols`
+    columns, the mean of the finite values in each bin (NaN for none)."""
+    P = np.asarray(power, dtype=np.float64)
+    n = P.shape[1] if P.ndim == 2 else 0
+    if n <= max_cols:
+        return P
+    out = np.full((P.shape[0], max_cols), np.nan)
+    for c in range(max_cols):
+        i0 = math.floor(c * n / max_cols)
+        i1 = math.floor((c + 1) * n / max_cols)
+        seg = P[:, i0:i1]
+        fin = np.isfinite(seg)
+        cnt = fin.sum(axis=1)
+        tot = np.where(fin, seg, 0).sum(axis=1)
+        out[:, c] = np.where(cnt > 0, tot / np.maximum(cnt, 1), np.nan)
+    return out
+
+
+def cwt_period_to_y(period, periods, h, log_scale):
+    """CWT.svelte periodToY: a period's px down the plot area (longest at the top)."""
+    if len(periods) < 2:
+        return h / 2
+    lo, hi = periods[0], periods[-1]
+    if log_scale:
+        t = (math.log(period) - math.log(lo)) / (math.log(hi) - math.log(lo))
+        return h - t * h
+    return h - (period - lo) / (hi - lo) * h
+
+
+def cwt_period_ticks(periods):
+    """CWT.svelte periodTicks: the readable periods inside the range, else the ends and
+    their geometric mean."""
+    if len(periods) < 2:
+        return []
+    lo, hi = periods[0], periods[-1]
+    inside = [c for c in (0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 36, 48, 72, 96, 168, 336)
+              if lo <= c <= hi]
+    return inside if len(inside) >= 2 else [lo, math.sqrt(lo * hi), hi]
+
+
+def _js_to_fixed(v, digits):
+    """Number.prototype.toFixed for the scalogram's labels."""
+    s = _js_fixed(v, digits)
+    return s
+
+
+def cwt_transform_of_plot(plot, columns_index):
+    """CWTClass.transform for a saved scalogram: its series' hours since the start and values
+    through cwt_from_series with the plot's wavelet, its parameter, dj, rectify and period
+    range."""
+    p = plot.get('plot', {}) or {}
+    data = p.get('data') or []
+    d = data[0] if data else None
+    x_col = _resolve_plot_col((d or {}).get('x') or (d or {}).get('time'), columns_index)
+    y_col = _resolve_plot_col((d or {}).get('y') or (d or {}).get('values'), columns_index)
+    t = x_col.hours_since_start if x_col is not None else []
+    v = y_col.get_data() if y_col is not None else []
+    if not len(t or []) or not len(v or []):
+        return _cwt_empty('no data')
+    return cwt_from_series(list(t), list(v), wavelet=_nn(p.get('wavelet'), 'morlet'),
+                           param=_nn(p.get('waveletParam'), 6), dj=_nn(p.get('dj'), 0.125),
+                           period_range=[_nn(p.get('periodMin'), 1), _nn(p.get('periodMax'), 48)],
+                           rectify=_nn(p.get('rectify'), True))
+
+
+_CWT_GREY_25 = '#333333'   # --color-lightness-25
+_CWT_GREY_50 = '#808080'   # --color-lightness-50
+_CWT_GREY_75 = '#b3b3b3'   # --color-lightness-75
+_CWT_SURFACE = '#ffffff'   # --surface-card
+
+
+def plot_cwt(plot, columns_index, ax):
+    """The wavelet scalogram as CWT.svelte draws it, in the plot area's px (x right, y down):
+    the power field as one image (time across, the longest period at the top, scale rows
+    evenly spaced, at most 4096 columns, each cell the colormap at its power over 0 .. the
+    largest power), the shaded period bands over it, the cone of influence (white dashed
+    curve, everything outside it washed with the card colour at 45%), the ridge (red), the
+    frame, the period ticks and the time ticks (fixed 10 / 11 px type, scaled with the
+    figure only through its view), the reference lines, and the colour scale ("Power", 0 ..
+    largest power) beside the plot. A transform that cannot run draws its reason."""
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Rectangle, Polygon
+    p = plot.get('plot', {}) or {}
+    look = plot_look(plot)
+    family = _font_family_list(look['family'])
+    W, H = _axes_px(ax)
+    ax.set_xlim(0, W)
+    ax.set_ylim(H, 0)
+    ax.set_axis_off()
+    tr = cwt_transform_of_plot(plot, columns_index)
+    ax._ancir_cwt = {'transform': tr}
+    if not tr['valid']:
+        ax.text(0.5, 0.5, 'Wire a time column and a value column.' if tr['reason'] == 'no data'
+                else tr['reason'], transform=ax.transAxes, ha='center', va='center',
+                fontsize=12 * _PX_TO_PT, color='#666666', gid='cwt-reason')
+        return
+    cmap = p.get('colormap') or 'viridis'
+    log_scale = _nn(p.get('logScale'), True)
+    periods = tr['periods']
+    times = tr['times']
+    t0, t1 = times[0], times[-1]
+    P = np.array(tr['power'])
+    fin = P[np.isfinite(P)]
+    pmax = float(fin.max()) if fin.size and fin.max() > 0 else 1.0
+    ax._ancir_cwt['powerMax'] = pmax
+    img = downsample_columns(P, SCALOGRAM_MAX_COLUMNS)[::-1]
+    t = np.where(np.isfinite(img), np.clip(img / pmax, 0, 1), 0.0)
+    rgb = colormap_rgb_array(cmap, t) / 255.0
+    ax.imshow(rgb, extent=(0, W, H, 0), aspect='auto', interpolation='bilinear', zorder=0.2,
+              gid='cwt-power')
+    ax.set_xlim(0, W)
+    ax.set_ylim(H, 0)
+
+    def ypx(period):
+        return cwt_period_to_y(period, periods, H, log_scale)
+
+    def xpx(hours):
+        return (hours - t0) / ((t1 - t0) or 1) * W
+    # Overlays: horizontal lines and bands on the period axis, drawn where the app draws them
+    # (bands over the image, lines above everything but the colour scale); a mark outside the
+    # period range is not drawn.
+    overlays = _overlays_from_plot(p, OVERLAY_CAPABILITIES['cwt'])
+    lines_later = []
+    for i, ov in enumerate(overlays):
+        if not ov['enabled']:
+            continue
+        g = _overlay_geometry(ov, columns_index, {'xDomainMin': t0, 'xDomainMax': t1,
+                                                  'xAnchorMin': t0, 'xIsTime': False})
+        gid = f"overlay-{ov['id'] if ov['id'] is not None else i}"
+        if g['kind'] == 'line':
+            lines_later.append((ov, g, gid))
+            continue
+        for sgm in g.get('segments') or []:
+            if 'y0' not in sgm:
+                continue
+            a, b = sorted((sgm['y0'], sgm['y1']))
+            if not (_finite(a) and _finite(b)) or (log_scale and a <= 0):
+                continue
+            y0, y1 = ypx(b), ypx(a)
+            ax.add_patch(Rectangle((0, y0), W, y1 - y0,
+                                   facecolor=_overlay_colour(ov['fill'],
+                                                             _OVERLAY_BAND_FILL_DEFAULT),
+                                   edgecolor='none', linewidth=0, zorder=0.5, gid=gid))
+            if ov['edge']:
+                for yy in (y0, y1):
+                    ax.add_line(Line2D([0, W], [yy, yy],
+                                       color=_overlay_colour(ov['edgeColour'],
+                                                             _OVERLAY_EDGE_COLOUR_DEFAULT),
+                                       linewidth=ov['edgeWidth'] * _PX_TO_PT, zorder=0.6,
+                                       gid=gid))
+    n = len(times)
+    p_lo, p_hi = periods[0], periods[-1]
+    if _nn(p.get('showCOI'), True) and len(tr['coi']):
+        step = max(1, math.floor(n / 240))
+        pts = [(xpx(times[i]), ypx(max(p_lo, min(p_hi, tr['coi'][i]))))
+               for i in range(n) if i % step == 0 or i == n - 1]
+        ax.add_patch(Polygon([(0, 0)] + pts + [(W, 0)], closed=True, facecolor=_CWT_SURFACE,
+                             alpha=0.45, edgecolor='none', zorder=1.1, gid='cwt-coi-shade'))
+        ax.add_line(Line2D([a for a, _ in pts], [b for _, b in pts], color='#ffffff',
+                           alpha=0.85, linewidth=1.5 * _PX_TO_PT, linestyle=(0, (4, 3)),
+                           dash_capstyle='butt', zorder=1.0, gid='cwt-coi'))
+    if _nn(p.get('showRidge'), False):
+        ridge = cwt_ridge(tr)['ridgePeriod']
+        step = max(1, math.floor(n / 400))
+        pts = [(xpx(times[i]), ypx(ridge[i])) for i in range(n)
+               if i % step == 0 and math.isfinite(ridge[i])]
+        if pts:
+            ax.add_line(Line2D([a for a, _ in pts], [b for _, b in pts], color='#ff3b30',
+                               alpha=0.9, linewidth=1.5 * _PX_TO_PT, zorder=1.2,
+                               gid='cwt-ridge'))
+    ax.add_patch(Rectangle((0, 0), W, H, facecolor='none', edgecolor=_CWT_GREY_75,
+                           linewidth=_PX_TO_PT, zorder=1.3, clip_on=False, gid='cwt-frame'))
+    fs = 1.0  # a figure is drawn at its own size (viewFontScale 1)
+    for per in cwt_period_ticks(periods):
+        y = ypx(per)
+        ax.add_line(Line2D([-4, 0], [y, y], color=_CWT_GREY_50, linewidth=_PX_TO_PT,
+                           clip_on=False, zorder=1.3, gid='cwt-period-tick'))
+        ax.text(-(4 + 3 * fs), y, _js_to_fixed(per, 0) if per >= 10 else _js_to_fixed(per, 1),
+                ha='right', va='center', fontsize=10 * fs * _PX_TO_PT, color=_CWT_GREY_25,
+                fontfamily=family, clip_on=False, gid='cwt-period-label')
+    ax.text(-(4 + 42 * fs), H / 2, 'Period (h)', rotation=90, rotation_mode='anchor',
+            ha='center', va='baseline', fontsize=11 * fs * _PX_TO_PT, color=_CWT_GREY_25,
+            fontfamily=family, clip_on=False, gid='cwt-period-title')
+    for f in (0, 0.25, 0.5, 0.75, 1):
+        x = f * W
+        ax.add_line(Line2D([x, x], [H, H + 4], color=_CWT_GREY_50, linewidth=_PX_TO_PT,
+                           clip_on=False, zorder=1.3, gid='cwt-time-tick'))
+        ax.text(x, H + 4 + 12 * fs, _js_to_fixed(t0 + f * (t1 - t0), 0), ha='center',
+                va='baseline', fontsize=10 * fs * _PX_TO_PT, color=_CWT_GREY_25,
+                fontfamily=family, clip_on=False, gid='cwt-time-label')
+    ax.text(W / 2, H + 4 + 30 * fs, 'Time', ha='center', va='baseline',
+            fontsize=11 * fs * _PX_TO_PT, color=_CWT_GREY_25, fontfamily=family, clip_on=False,
+            gid='cwt-time-title')
+    for ov, g, gid in lines_later:
+        width = ov['strokeWidth']
+        for v in g.get('positions') or []:
+            if not _finite(v) or (log_scale and v <= 0) or not (p_lo <= v <= p_hi):
+                continue
+            y = ypx(v)
+            ax.add_line(Line2D([0, W], [y, y], color=_overlay_colour(ov['colour'], '#2C2C2C'),
+                               linewidth=width * _PX_TO_PT,
+                               linestyle=_overlay_dashes(ov['stroke'], width), zorder=2.5,
+                               gid=gid))
+    # The power key: ColourScale over the gradient of the colormap's 11 stops, ticks at both
+    # ends and the middle of 0 .. the largest power, placed by its own position presets.
+    cs = p.get('colourScale') or {}
+    if cs.get('show', True) is not False:
+        _draw_cwt_colour_key(ax, cs, cmap, pmax, look, p.get('padding') or {})
+
+
+def colormap_rgb_array(name, t):
+    """colormap_rgb over an array of t in [0, 1]: (..., 3) floats 0..255, rounded as the app
+    rounds each channel."""
+    t = np.asarray(t, dtype=np.float64)
+    flat = t.ravel()
+    out = np.empty((flat.size, 3))
+    cache = {}
+    for i, v in enumerate(flat):
+        key = round(float(v), 12)
+        c = cache.get(key)
+        if c is None:
+            c = cache[key] = colormap_rgb(name, float(v))
+        out[i] = c
+    return out.reshape(t.shape + (3,))
+
+
+_GRADIENT_STOPS = 11
+
+
+def _draw_cwt_colour_key(ax, cs, cmap, pmax, look, padding):
+    """ColourScale.svelte on the scalogram: the colormap's 11 stops as a gradient, ticks
+    '0', the middle and the largest power (3 significant figures), titled "Power"; beside
+    the plot ('right': 10 px past it, clamped to the figure's right edge) or in a corner over
+    the data."""
+    stops = [colormap_rgb(cmap, i / (_GRADIENT_STOPS - 1)) for i in range(_GRADIENT_STOPS)]
+    palette = []
+    for k in range(256):
+        u = k / 255 * (_GRADIENT_STOPS - 1)
+        i = min(_GRADIENT_STOPS - 2, int(u))
+        f = u - i
+        palette.append(tuple(stops[i][c] + (stops[i + 1][c] - stops[i][c]) * f
+                             for c in range(3)))
+    vals = [0.0, pmax / 2, pmax]
+    ticks = [(i / 2, _format_scale_value(v)) for i, v in enumerate(vals)]
+    key = {'palette': palette, 'ticks': ticks, 'title': 'Power', 'no_value': None}
+    font_px = _colour_key_font_px(cs, look)
+    w_px, h_px = _axes_px(ax)
+    vertical = cs.get('orientation') != 'horizontal'
+    thickness = cs.get('barThickness') or 10
+    length = cs.get('barLength')
+    if not _style_valid(length, 'number'):
+        length = colour_key_auto_length(h_px if vertical else w_px,
+                                        colour_key_title_run('Power', font_px, vertical))
+    geom = colour_key_geometry(vertical, thickness, length, font_px, [lab for _, lab in ticks],
+                               'Power', None)
+    position = cs.get('position') or 'right'
+    m = LEGEND_MARGIN
+    gw, gh = geom['width'], geom['height']
+    if position == 'right':
+        limit = w_px + (padding.get('right') or 0) - gw
+        x, y = max(0, min(w_px + m, limit)), 0
+    elif position == 'custom':
+        fx = min(1, max(0, cs.get('customX') or 0))
+        fy = min(1, max(0, cs.get('customY') or 0))
+        x = m + max(0, w_px - gw - 2 * m) * fx
+        y = m + max(0, h_px - gh - 2 * m) * fy
+    else:
+        x = m if position in ('topleft', 'bottomleft') else w_px - gw - m
+        y = h_px - gh - m if position in ('bottomleft', 'bottomright') else m
+    at = {'x': x, 'y': y, 'length': length}
+    cbar = _draw_colour_key(ax, key, {**cs, 'barLength': length}, look=look, at=at)
+    ax._ancir_cwt['key'] = {'at': at, 'length': length, 'ticks': ticks}
+    return cbar
+
+
+def _format_scale_value(v):
+    """ColourScale.svelte formatScaleValue: 3 significant figures, '0' for zero."""
+    if not math.isfinite(v):
+        return ''
+    if v == 0:
+        return '0'
+    return _js_number_to_string(float(_js_to_precision_signed(v, 3)))
+
+
 PLOT_TYPE_DISPATCH = {
     'scatterplot': 'scatter',
     'fft': 'fft',
@@ -14034,6 +15734,7 @@ PLOT_TYPE_DISPATCH = {
     'correlogram': 'correlogram',
     'boxplot': 'boxplot',
     'actogram': 'actogram',
+    'cwt': 'cwt',
 }
 
 
@@ -14042,6 +15743,10 @@ def _plot_padding(plot, columns_index=None):
     the actogram its `paddingIN`, plus room for its row labels (rowLabelGutter) and light
     bands (twice their height on top)."""
     p = plot.get('plot', {}) or {}
+    if plot.get('type') == 'cwt':
+        pad = p.get('padding')
+        return pad if isinstance(pad, dict) else {'top': 20, 'right': 70, 'bottom': 46,
+                                                  'left': 62}
     if plot.get('type') != 'actogram':
         pad = p.get('padding')
         return pad if isinstance(pad, dict) else {'top': 15, 'right': 30, 'bottom': 30,
@@ -14049,9 +15754,10 @@ def _plot_padding(plot, columns_index=None):
     pad = dict(p.get('paddingIN') or {'top': 30, 'right': 20, 'bottom': 10, 'left': 20})
     bands = (p.get('lightBands') or {})
     if bands.get('bands'):
+        # LightBandClass.height is not saved: the bar is always its default height.
         height = bands.get('height')
         pad['top'] = (pad.get('top') or 0) + 2 * (height if _style_valid(height, 'number')
-                                                  else 0)
+                                                  else ACTOGRAM_LIGHT_BAND_HEIGHT)
     mode = _actogram_row_labels_mode(p)
     if mode in ('period', 'date') and columns_index is not None:
         _, rows = actogram_download_data(plot, columns_index, DISPLAY_TIMEZONE)
@@ -14088,6 +15794,8 @@ def _draw_plot_kind(kind, plot, columns_index, ax):
         plot_boxplot(plot, columns_index, ax)
     elif kind == 'actogram':
         plot_actogram(plot, columns_index, ax)
+    elif kind == 'cwt':
+        plot_cwt(plot, columns_index, ax)
 
 
 def measured_padding(fig, ax, padding):
@@ -14486,17 +16194,43 @@ def actogram_download_data(plot, columns_index, zone='utc'):
     return headers, rows
 
 
+CWT_EXPORT_MAX_ROWS = 250000
+
+
+def cwt_download_data(plot, columns_index):
+    """CWT.svelte scalogramExport: the scalogram as a long table (time, period, power), one
+    row per cell, periods outer; past CWT_EXPORT_MAX_ROWS cells the time axis is binned
+    (power averaged, each row's time its bin's mean time) to the most time points that fit."""
+    headers = ['time', 'period', 'power']
+    tr = cwt_transform_of_plot(plot, columns_index)
+    if not tr['valid']:
+        return headers, []
+    n_p, n_t = len(tr['periods']), len(tr['times'])
+    max_cols = max(1, math.floor(CWT_EXPORT_MAX_ROWS / max(1, n_p)))
+    times = np.asarray(tr['times'], dtype=np.float64)
+    power = np.asarray(tr['power'], dtype=np.float64)
+    if n_t > max_cols:
+        times = downsample_columns([times], max_cols)[0]
+        power = downsample_columns(power, max_cols)
+    rows = []
+    for j in range(n_p):
+        for i in range(len(times)):
+            rows.append([float(times[i]), tr['periods'][j], float(power[j][i])])
+    return headers, rows
+
+
 PLOT_DATA_BUILDERS = {
     'periodogram': periodogram_download_data,
     'fft': fft_download_data,
     'correlogram': correlogram_download_data,
     'actogram': actogram_download_data,
+    'cwt': cwt_download_data,
 }
 
 
 def export_plot_data(plots, columns_index, output_dir, zone='utc'):
     """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
-    correlogram, actogram). Each CSV mirrors the plot's in-app "Show/Save data"
+    correlogram, actogram, wavelet scalogram). Each CSV mirrors the plot's in-app "Show/Save data"
     output. Returns the list of paths written; non-calculating plots
     (scatter, boxplot, tableplot) are skipped. `zone` is the session's
     display time zone (appState.displayTimezone); only the actogram reads it, to

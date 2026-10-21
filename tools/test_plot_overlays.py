@@ -714,9 +714,9 @@ def test_render_plots_draws_every_type_with_overlays(tmp_path):
 
 
 def test_unrendered_overlay_hosts_stay_unrendered():
-    """Histogram, Q-Q plot, Mean +/- SEM and CWT carry overlays in the app, but the runtime
-    renders none of them (no plot function): confirm, so adding one is a conscious step
-    that must also call _draw_overlays."""
-    for ptype in ("histogram", "qqplot", "meansem", "cwt"):
+    """Histogram, Q-Q plot and Mean +/- SEM carry overlays in the app, but the runtime renders
+    none of them (no plot function): confirm, so adding one is a conscious step that must
+    also draw its overlays. (The CWT draws its period overlays itself: test_plot_cwt.py.)"""
+    for ptype in ("histogram", "qqplot", "meansem"):
         assert ptype not in rt.PLOT_TYPE_DISPATCH
         assert ptype not in rt.OVERLAY_CAPABILITIES

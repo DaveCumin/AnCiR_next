@@ -223,8 +223,9 @@ def test_type_sizes_and_family_are_the_figure_styles(name):
     title = [t for t in fig.texts if t.get_gid() == "export-title"]
     assert len(title) == 1 and title[0].get_text() == case["plotJSON"]["name"]
     assert title[0].get_fontsize() == pytest.approx(exp["sizes"]["title"] * 0.75)
-    # The legend, when shown, at the app's size.
-    leg = ax.get_legend()
+    # The legend, when shown, at the app's size (on the top-most axes when a right y axis is
+    # twinned, so the right axis's series do not paint over it).
+    leg = next((a.get_legend() for a in fig.axes if a.get_legend() is not None), None)
     if exp["legend"]:
         assert leg is not None
         got = [(t.get_text(), t.get_fontsize()) for t in leg.get_texts()]

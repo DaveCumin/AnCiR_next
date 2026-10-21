@@ -746,6 +746,7 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxisMag: this.yAxisMag.toJSON(),
 				yAxisPhase: this.yAxisPhase.toJSON(),
+				phaseYlimsIN: this.phaseYlimsIN,
 				logScale: this.logScale,
 				showPeriod: this.showPeriod,
 				data: this.data,
@@ -769,6 +770,11 @@
 			fft.freqlimsIN = json.freqlimsIN ?? fft.freqlimsIN;
 			fft.xlimsIN = json.xlimsIN || [null, null];
 			fft.ylimsIN = json.ylimsIN ?? fft.ylimsIN;
+			// The phase axis's manual ends (Properties > Phase). Saved with the plot; a session
+			// saved before they were keeps the automatic range.
+			fft.phaseYlimsIN = Array.isArray(json.phaseYlimsIN)
+				? [numberOrNull(json.phaseYlimsIN[0]), numberOrNull(json.phaseYlimsIN[1])]
+				: [null, null];
 			fft.logScale = json.logScale ?? false;
 			fft.showPeriod = json.showPeriod ?? false;
 

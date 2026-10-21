@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""
+The exported legend's place checked against the APP (tools/parity/plot_extras_app.json, the
+'legend' cases of src/lib/_parity/emitPlotExtras.svelte.test.js): scatterplots (with and
+without Colour by keys), periodograms, the FFT with its phase axis, the correlogram, box plots
+and actograms, each with an 'auto' legend (inside, or pushed outside by its marks) or one set
+'outsideright'.
+
+Pinned here, with the label widths the app's tests measure (0.55 em a character):
+  - the legend box (legendBoxSize), its label list and font size, exactly;
+  - the occupancy grid of the marks 'auto' avoids, cell for cell (legendLayout.buildOccupancy
+    over the plot area before any outside reservation, from the export's own marks);
+  - the candidate 'auto' picks (corner or edge midpoint, its x and y) or its move outside;
+  - an outside legend's room taken from the plot area (the plot area's width, to 1e-6 px)
+    and its place beside the plot (past a right or phase axis);
+  - where the legend is drawn: an outside legend's frame top left on the app's, an inside
+    one's frame against the edges the app's box is inset from (10 px);
+  - Colour by keys stacked after the legend (under it outside, past it in its corner).
+
+    tools/.venv/bin/python -m pytest tools/test_plot_legend_auto.py -q
+"""
+
+from __future__ import annotations
+
+import math
+
+import pytest
+
+from plot_extras_support import (CASES, app_bbox, cases_of, close_all, legend_of, render,
+                                 rle_decode, rt)
+
+LEGEND_CASES = cases_of("legend") + [n for n in cases_of("fft")
+                                     if CASES[n]["expected"]["legend"]["box"]]
+
+
+@pytest.fixture(autouse=True)
+def _reset():
+    yield
+    close_all()
+
+
+def layout_of(name):
+    fig, ax, case = render(name)
+    return fig, ax, case, ax._ancir_legend_layout, case["expected"]["legend"]
+
+
+@pytest.mark.parametrize("name", LEGEND_CASES)
+def test_the_box_is_the_apps(name):
+    _fig, _ax, _case, lay, exp = layout_of(name)
+    assert lay["box"] is not None, name
+    for k in ("width", "height", "lineH", "padding"):
+        assert lay["box"][k] == pytest.approx(exp["box"][k], abs=1e-9), (name, k)
+    assert lay["font_px"] == pytest.approx(exp["fontPx"])
+
+
+@pytest.mark.parametrize("name", [n for n in LEGEND_CASES
+                                  if CASES[n]["expected"]["legend"]["occupancy"]])
+def test_the_occupancy_grid_is_the_apps(name):
+    _fig, _ax, _case, lay, exp = layout_of(name)
+    occ, want = lay["occupancy"], exp["occupancy"]
+    assert (occ["cols"], occ["rows"], occ["cell"]) == (want["cols"], want["rows"], want["cell"])
+    expected = rle_decode(want["rle"], want["cols"] * want["rows"])
+    diff = [i for i in range(len(expected)) if expected[i] != occ["grid"][i]]
+    assert not diff, (name, len(diff), [(i % occ["cols"], i // occ["cols"]) for i in diff[:10]])
+
+
+@pytest.mark.parametrize("name", LEGEND_CASES)
+def test_auto_picks_the_apps_place(name):
+    _fig, _ax, _case, lay, exp = layout_of(name)
+    if exp["auto"] is None:
+        assert lay["auto"] is None
+        return
+    a, b = lay["auto"], exp["auto"]
+    assert (a["name"], a["outside"]) == (b["name"], b["outside"]), name
+    assert a["x"] == pytest.approx(b["x"], abs=1e-9)
+    assert a["y"] == pytest.approx(b["y"], abs=1e-9)
+
+
+@pytest.mark.parametrize("name", LEGEND_CASES)
+def test_an_outside_legend_takes_the_apps_room(name):
+    _fig, ax, case, lay, exp = layout_of(name)
+    assert lay["reserveW"] == pytest.approx(exp["reserveW"], abs=1e-9), name
+    if exp["outsidePosition"] is None:
+        assert lay["outside"] is None
+    else:
+        assert lay["outside"]["x"] == pytest.approx(exp["outsidePosition"]["x"], abs=1e-9)
+        assert lay["outside"]["y"] == pytest.approx(exp["outsidePosition"]["y"], abs=1e-9)
+    w, h = rt._axes_px(ax)
+    assert w == pytest.approx(case["expected"]["plotSize"][0], abs=1e-6), name
+    assert h == pytest.approx(case["expected"]["plotSize"][1], abs=1e-6), name
+
+
+@pytest.mark.parametrize("name", LEGEND_CASES)
+def test_the_legend_is_drawn_where_the_app_draws_it(name):
+    fig, ax, case, lay, exp = layout_of(name)
+    leg = legend_of(fig)
+    assert leg is not None, name
+    pad = case["expected"]["padding"]
+    plot_w, plot_h = case["expected"]["plotSize"]
+    left, top, right, bottom = app_bbox(fig, leg.get_frame())
+    d = exp["drawn"]
+    where = (exp["auto"] or {}).get("name") if exp["auto"] else lay["position"]
+    if lay["outside"] is not None:
+        assert (left, top) == pytest.approx((d["x"], d["y"]), abs=0.6), name
+        return
+    m = 10
+    if where in ("topright", "right", "bottomright"):
+        assert right == pytest.approx(pad["left"] + plot_w - m, abs=0.6), name
+    if where in ("topleft", "left", "bottomleft"):
+        assert left == pytest.approx(pad["left"] + m, abs=0.6), name
+    if where in ("topright", "topleft", "top"):
+        assert top == pytest.approx(pad["top"] + m, abs=0.6), name
+    if where in ("bottomright", "bottomleft", "bottom"):
+        assert bottom == pytest.approx(pad["top"] + plot_h - m, abs=0.6), name
+    if where in ("top", "bottom"):
+        assert (left + right) / 2 == pytest.approx(pad["left"] + plot_w / 2, abs=0.6), name
+    if where in ("left", "right"):
+        assert (top + bottom) / 2 == pytest.approx(pad["top"] + plot_h / 2, abs=0.6), name
+
+
+@pytest.mark.parametrize("name", LEGEND_CASES)
+def test_the_legend_lists_the_apps_entries(name):
+    fig, _ax, _case, _lay, exp = layout_of(name)
+    texts = [t.get_text() for t in legend_of(fig).get_texts()]
+    assert texts == exp["labels"], name
+
+
+@pytest.mark.parametrize("name", [n for n in LEGEND_CASES
+                                  if (CASES[n]["expected"].get("keys") or {}).get("colour")])
+def test_the_keys_stack_after_the_legend(name):
+    _fig, ax, case, lay, _exp = layout_of(name)
+    keys = case["expected"]["keys"]
+    k = ax._ancir_key_layout
+    for part in ("colour", "size"):
+        want = keys[part]
+        if want is None:
+            assert k[part] is None
+            continue
+        assert k[part]["x"] == pytest.approx(want["x"], abs=1e-6), (name, part)
+        assert k[part]["y"] == pytest.approx(want["y"], abs=1e-6), (name, part)
+        if "length" in want:
+            assert k[part]["length"] == pytest.approx(want["length"], abs=1e-6), (name, part)
+    plot_w, plot_h = rt._axes_px(ax)
+    placed = rt.legend_placed_box(case["plotJSON"]["plot"]["legend"], lay, plot_w, plot_h)
+    want = keys["legendPlaced"]
+    assert placed["outside"] == want["outside"]
+    assert (placed["x"], placed["y"]) == pytest.approx((want["x"], want["y"]), abs=1e-6)
+
+
+def test_measured_label_widths_place_the_same_legends():
+    """In the export the label widths are matplotlib's own (the browser measures its own font):
+    the decision can differ from the estimate only where a box is a whisker from fitting."""
+    for name in LEGEND_CASES:
+        _fig, ax, _case = render(name, estimate=False)
+        lay = ax._ancir_legend_layout
+        assert lay["box"]["width"] > 0
+        assert math.isfinite(lay["box"]["width"])
+        close_all()
