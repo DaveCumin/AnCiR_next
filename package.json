@@ -1,7 +1,7 @@
 {
 	"name": "ancir-next",
 	"private": true,
-	"version": "82.58",
+	"version": "82.59",
 	"license": "Apache-2.0",
 	"type": "module",
 	"packageManager": "pnpm@9.15.4",
@@ -36,7 +36,7 @@
 		"manifest:gen": "node scripts/genManifest.mjs",
 		"parity:emit": "GEN_PARITY=1 vitest run src/lib/_parity/emitParity.svelte.test.js",
 		"parity:py": "tools/.venv/bin/python -m pytest tools/test_parity.py -q",
-		"parity:r": "Rscript tools/test_parity.R",
+		"parity:r": "Rscript tools/test_parity.R && Rscript tools/test_zone_warnings.R",
 		"parity": "npm run parity:emit && npm run parity:py && npm run parity:r",
 		"redcap:test": "node --test redcap-worker/redcap.test.js",
 		"redcap:dev": "wrangler dev --config redcap-worker/wrangler.toml --local",

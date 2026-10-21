@@ -20,6 +20,9 @@ import { evaluateCosinor } from '$lib/tableProcesses/Cosinor.svelte';
 import { getOutputKeys as rhythmicityOutputKeys } from '$lib/tableProcesses/RhythmicityAnalysis.svelte';
 import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysis.svelte';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
+import { applyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
+import { applyAutoBinSize } from '$lib/tableProcesses/binSizeAuto.svelte.js';
 import { joinOutKeys } from '$lib/utils/joinPairing.js';
 import { timeZoneSource, readsWallClockText } from '$lib/core/columnTimeZone.js';
 // A time column's text format and zone, read and refused exactly as a draft's are (pure).
@@ -543,6 +546,40 @@ function columnZoneInfo(col) {
 	};
 }
 
+/**
+ * Fill every param a caller left out of a table process's args, as the app does when the
+ * palette or its in-app AI edit adds a node (utils/aiEdit.js: `{ ...buildTableProcessDefaults
+ * (entry, params), ...params, ...inputs }`): the registry defaults (unwrapped, objects deep
+ * copied), plus the definition's `newNodeArgs` (the free-period fits' `periodRangeAuto`, the
+ * binned periodograms' `pgBinSizeAuto`). The node's component then resolves those from its x
+ * when it mounts (periodRangeAuto.svelte.js, binSizeAuto.svelte.js); headless nothing mounts,
+ * so the same functions run here once the inputs are resolved: a time x gets 1 to 30 h, a
+ * number x the Nyquist period to the record span, and the bin size the median sampling interval.
+ *
+ * A supplied value always wins. An explicit `null` counts as omitted, as in the Worker's draft
+ * normalizer (src/emit/normalizer.js), so `binStart: null` gets the default rather than a node
+ * that cannot run. `out` is left alone (runTableProcess seeds it). Mutates and returns `args`.
+ *
+ * @param {object} entry a tableProcessMap registry entry
+ * @param {object} args the caller's args, inputs already resolved to column ids
+ * @returns {object} args
+ */
+export function fillOmittedArgs(entry, args) {
+	const explicit = { ...args };
+	const defaults = buildTableProcessDefaults(entry, explicit);
+	for (const [k, v] of Object.entries(defaults)) {
+		if (k === 'out') continue;
+		// A copy: buildTableProcessDefaults hands out the registry's own objects (yIN: []).
+		if (args[k] == null) args[k] = v !== null && typeof v === 'object' ? structuredClone(v) : v;
+	}
+	const xCol = Number.isInteger(args.xIN) && args.xIN >= 0 ? getColumnById(args.xIN) : null;
+	if (xCol) {
+		applyAutoPeriodRange(args, xCol);
+		applyAutoBinSize(args, xCol);
+	}
+	return args;
+}
+
 export class AncirSession {
 	constructor(id = 'default') {
 		this.id = id;
@@ -742,6 +779,10 @@ export class AncirSession {
 		} catch (e) {
 			return { name, valid: false, error: e.message, outputs: [] };
 		}
+
+		// Every omitted param from the node's defaults, as a node added in the app starts
+		// (Bin Data with no binStart used to be refused as invalid).
+		fillOmittedArgs(entry, a);
 
 		let synthesizedKeys = null; // the authoritative standalone out-key set, when we seed it
 		if (!a.out || typeof a.out !== 'object') a.out = {};

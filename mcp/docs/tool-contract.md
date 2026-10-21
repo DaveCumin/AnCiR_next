@@ -34,6 +34,10 @@ rely on a copy.** In one line each:
 - **Reference columns by NAME** (`"time_0"`), not id — from a result's `outputs[].name` or
   `list_columns`; array inputs like `yIN` take an array.
 - **Never pass `out`** — auto-seeded (fixed + dynamic keys).
+- **Omitted params take the node's defaults**, as a node added in the app does (`null` counts as
+  omitted): e.g. Bin Data without `binStart` starts at 0 h. A free-period fit with no range
+  searches 1 to 30 h on a time x (the Nyquist period to the record span on a number x), and a
+  binned periodogram's `pgBinSize` is the median sampling interval.
 - **Generate data** with `SimulatedData`/`SequenceColumn`/`Random`; don't type big arrays.
 - **Cosinor/FitFunction:** `useFixedPeriod:true` + `fixedPeriod` (hours) for known rhythms.
 

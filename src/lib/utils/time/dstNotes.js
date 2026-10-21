@@ -28,7 +28,8 @@ function changeText(change, named) {
 
 function changesText(changes, named) {
 	const parts = changes.slice(0, 2).map((c) => changeText(c, named));
-	const more = changes.length > 2 ? ` (and ${changes.length - 2} more changes)` : '';
+	const extra = changes.length - 2;
+	const more = extra > 0 ? ` (and ${extra} more change${extra === 1 ? '' : 's'})` : '';
 	return parts.join(' and ') + more;
 }
 

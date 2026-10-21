@@ -2,6 +2,11 @@
 import { KahanSum } from './numerics.js';
 import quantile_t from '@stdlib/stats-base-dists-t-quantile';
 import { pUpperFromF } from './fdist.js';
+// The period range a free fit may use: in a pure module so the MCP Worker's draft normalizer
+// can give a new node the same range (periodRangeDefaults.js).
+import { resolvePeriodRange } from './periodRangeDefaults.js';
+
+export { resolvePeriodRange };
 
 // ─── Free-period search range ────────────────────────────────────────────────
 //
@@ -39,41 +44,6 @@ const SCAN_MAX_POINTS = 10000;
 const SCAN_PEAKS = 3;
 // A fitted period within this relative distance of a bound counts as "on" it.
 const BOUND_RTOL = 1e-6;
-
-/**
- * Resolve the period range the free fit may use.
- *
- * `minPeriod` / `maxPeriod` are in the units of `t` (hours for time columns).
- * A missing value falls back to what the sampling supports: the Nyquist period
- * (2 × median spacing) at the short end, the record span at the long end. The
- * short end is never allowed below the Nyquist period, where a cosine aliases.
- *
- * @returns {{minPeriod:number, maxPeriod:number, nyquist:number, span:number} | null}
- *   null when the resolved range is empty (min ≥ max) or `t` has < 2 distinct values.
- */
-export function resolvePeriodRange(t, minPeriod, maxPeriod) {
-	const ts = [];
-	for (const v of t ?? []) if (Number.isFinite(v)) ts.push(v);
-	if (ts.length < 2) return null;
-	ts.sort((a, b) => a - b);
-	const span = ts[ts.length - 1] - ts[0];
-	const diffs = [];
-	for (let i = 1; i < ts.length; i++) {
-		const d = ts[i] - ts[i - 1];
-		if (d > 0) diffs.push(d);
-	}
-	if (!(span > 0) || diffs.length === 0) return null;
-	diffs.sort((a, b) => a - b);
-	const mid = diffs.length >> 1;
-	const medianDt = diffs.length % 2 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
-	const nyquist = 2 * medianDt;
-	const userMin = Number(minPeriod);
-	const userMax = Number(maxPeriod);
-	const lo = Number.isFinite(userMin) && userMin > 0 ? Math.max(userMin, nyquist) : nyquist;
-	const hi = Number.isFinite(userMax) && userMax > 0 ? userMax : span;
-	if (!(hi > lo)) return null;
-	return { minPeriod: lo, maxPeriod: hi, nyquist, span };
-}
 
 /**
  * Fits a model comprised of N cosine curves to data.

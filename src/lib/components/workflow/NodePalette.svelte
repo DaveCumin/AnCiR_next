@@ -10,6 +10,7 @@
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
+	import { newGroupPosition } from '$lib/core/canvasPlacement.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { filterPaletteItems } from './paletteSearch.js';
 	import { tick } from 'svelte';
@@ -306,8 +307,11 @@
 		}
 
 		if (item.kind === 'group') {
-			queueSpawnPosition?.();
-			mutationService.record(() => createGroup());
+			// In free space at the top left of the view, as an imported table lands. (Queuing a
+			// spawn position here left it unused, since a group keeps its own x/y, and the next
+			// palette node took that stale spot.)
+			const at = newGroupPosition();
+			mutationService.record(() => createGroup(at));
 			closeMenu();
 			return;
 		}

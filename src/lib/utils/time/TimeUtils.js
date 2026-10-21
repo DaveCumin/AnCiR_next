@@ -2,7 +2,6 @@
 import dayjs from './dayjsSetup.js';
 import { guessFormat } from './guessTimeFormat';
 import { zonedDayjs } from './displayTime.js';
-import { min, max } from '$lib/utils/MathsStats';
 import { createSequenceArray } from '$lib/utils/MathsStats';
 import {
 	DAYJS_FORMAT_TOKENS,
@@ -10,8 +9,6 @@ import {
 	formatReadsOffset,
 	utcDesignatorAsOffset
 } from './offsetFormat.js';
-
-const decimalPlaces = 4;
 
 // Translate a legacy Luxon-style format string (saved by older sessions) into
 // the moment/dayjs vocabulary that dayjs expects. New code should write
@@ -268,17 +265,6 @@ function normalizeMeridiemText(value) {
 		const isUpper = ap === ap.toUpperCase();
 		const meridiem = ap.toLowerCase() === 'a' ? (isUpper ? 'AM' : 'am') : isUpper ? 'PM' : 'pm';
 		return `${pre}${meridiem}${post}`;
-	});
-}
-
-export function formatDate(dateIN) {
-	const dt = dayjs(dateIN);
-	if (!dt.isValid()) return '';
-	// Mirrors Luxon's DATETIME_MED ("Oct 14, 1983, 1:30 PM") via Intl, so the
-	// output stays locale-aware without dragging in a localizedFormat plugin.
-	return dt.toDate().toLocaleString(undefined, {
-		dateStyle: 'medium',
-		timeStyle: 'short'
 	});
 }
 
@@ -569,61 +555,6 @@ export function timeCellText(raw, parsedMs, zoneOf = null) {
 	return typeof raw === 'number' ? formatTimeFromUNIX(ms, zoneOf) : String(raw);
 }
 
-// `dateFormat` is a moment-style token string (e.g. 'YYYY-MM-DD HH:mm:ss')
-// — the same vocabulary saved sessions store, since `convertFormat` (which
-// previously translated to Luxon tokens) has been removed.
-export function calculateTimeDifference(start, end, dateFormat) {
-	if (start === null || end === null || start === undefined || end === undefined) {
-		return null;
-	}
-	const fmt = normalizeTimeFormat(dateFormat);
-	const startDt = parseTimeStrict(start, fmt, { utc: false });
-	const endDt = parseTimeStrict(end, fmt, { utc: false });
-	// dayjs.diff returns a number; pass `true` for fractional hours.
-	return endDt.diff(startDt, 'hour', true).toFixed(decimalPlaces);
-}
-
-//get the minimum period and if all the steps are the same
-export function getPeriod(timeData, timefmt) {
-	let diffs = new Array(timeData.length - 1);
-	for (let i = 1; i < timeData.length; i++) {
-		diffs[i - 1] = calculateTimeDifference(timeData[i - 1], timeData[i], timefmt);
-	}
-
-	return {
-		minDiff: min(diffs),
-		constant: min(diffs) === max(diffs)
-	};
-}
-
-// Takes in an inputted value (ISO format) and the first time and format of
-//data. Calculates the offset for actograms (and other plots).
-export function getstartTimeOffset(inputTime, firstTime, timeFormat) {
-	const start = dayjs(inputTime);
-	const end = parseTimeStrict(firstTime, normalizeTimeFormat(timeFormat), { utc: false });
-	return end.diff(start, 'hour', true).toFixed(decimalPlaces);
-}
-
-export function makeTimeProcessedData(rawData) {
-	let guessedFormat = guessDateofArray(rawData);
-	const dataout = rawData.map((date) => {
-		calculateTimeDifference(rawData[0], date, guessedFormat);
-	});
-	return dataout;
-}
-
-export function getGuessedFormat(dataIN) {
-	//get the format
-	let guessedFormat = guessDateofArray(dataIN);
-
-	return guessedFormat;
-}
-
-export function forceFormat(dataIN, formatIN) {
-	const dataout = dataIN.map((date) => calculateTimeDifference(dataIN[0], date, formatIN));
-	return dataout;
-}
-
 // `zoneOf` is the column the time belongs to (or its time frame), so the time shows in that
 // column's zone; omitted, it shows as a zone-less UTC column would (see displayTime.js).
 export function formatTimeFromUNIX(timeUNIX, zoneOf = null) {
@@ -705,7 +636,4 @@ export function describeTimeFormatProblem(values, fmt, maxSample = 200) {
 	if (bad.length === 0) return null;
 	const scope = sample.length === maxSample ? 'sampled values' : 'values';
 	return `${bad.length} of ${sample.length} ${scope} (e.g. "${bad[0]}") do not match this format and will be blank.`;
-}
-export function addTime(start, hoursIN) {
-	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());
 }

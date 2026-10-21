@@ -2,7 +2,7 @@
 // bin edges against the local clock. Pacific/Auckland went back an hour at 03:00 NZDT on
 // 7 Apr 2024 (6 Apr 14:00 UTC); Lord Howe back 30 minutes the same day (6 Apr 15:00 UTC).
 import { describe, it, expect } from 'vitest';
-import { binDstNote } from './dstNotes.js';
+import { binDstNote, clockPhaseDstWarning } from './dstNotes.js';
 import { zoneTransitions } from './zones.js';
 
 const NZ = 'Pacific/Auckland';
@@ -53,5 +53,22 @@ describe('binDstNote', () => {
 		expect(
 			binDstNote(clock(NZ), changes(NZ), { firstEdge: NZ_MIDNIGHT, stepHrs: 0, binHrs: 24 })
 		).toBeNull();
+	});
+});
+
+describe('more changes than are named', () => {
+	// Pacific/Auckland changes in Apr and Sep each year; the first two are named.
+	const span = (to) => zoneTransitions(NZ, Date.UTC(2024, 0, 1), to);
+	const warn = (to) => clockPhaseDstWarning(clock(NZ), span(to), { perWindow: true });
+	it('one more: singular', () => {
+		expect(span(Date.UTC(2025, 5, 1))).toHaveLength(3);
+		expect(warn(Date.UTC(2025, 5, 1))).toMatch(/ \(and 1 more change\) in /);
+	});
+	it('several more: plural', () => {
+		expect(span(Date.UTC(2025, 11, 1))).toHaveLength(4);
+		expect(warn(Date.UTC(2025, 11, 1))).toMatch(/ \(and 2 more changes\) in /);
+	});
+	it('two or fewer: none', () => {
+		expect(warn(Date.UTC(2024, 11, 1))).not.toMatch(/more change/);
 	});
 });

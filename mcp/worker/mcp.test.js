@@ -638,3 +638,92 @@ test("describe_session reports each time column's zone and how its times read", 
 	assert.match(text, /air_t \(time, 24 values, as written \(no zone, read as UTC\)\)/);
 	assert.match(text, /epoch_t \(time, 2 values, UTC\+12:00 \(fixed\): instants\)/);
 });
+
+// ---- computed time columns and daylight saving (plan per-column time zone, 5e Open) ---------
+
+test('check_draft sees zones through outputs that become time columns when computed', async () => {
+	// Bin Data's binnedx is a number column in the draft; the app types it time on compute.
+	const draft = {
+		columns: ZONE_DRAFT.columns,
+		analyses: [
+			{ name: 'BinnedData', args: { xIN: 'hive_t', yIN: ['hive'], binSize: 1 } },
+			{ name: 'BinnedData', args: { xIN: 'air_t', yIN: ['air'], binSize: 1 } }
+		],
+		plots: [
+			{
+				type: 'actogram',
+				name: 'Binned',
+				series: [
+					{ time: 'binnedx', values: 'binnedy_hive' },
+					{ time: 'binnedx_1', values: 'binnedy_air' }
+				]
+			}
+		]
+	};
+	const { body } = await call('check_draft', draft);
+	assert.deepEqual(body.result.structuredContent.warnings, [
+		'Plot "Binned": The series\' times are in different zones; the rows follow Pacific/Auckland, the first series\' zone.'
+	]);
+});
+
+test('describe_session types a computed time output and gives its inherited zone', async () => {
+	const env = ENV();
+	const built = await call('build_session', ZONE_DRAFT, env);
+	const { sessionId } = built.body.result.structuredContent;
+	const { body } = await call('describe_session', { session: sessionId }, env);
+	const cols = Object.fromEntries(body.result.structuredContent.columns.map((c) => [c.name, c]));
+	assert.deepEqual(cols.jointime, {
+		name: 'jointime',
+		type: 'time',
+		hasData: false,
+		timeZone: NZ,
+		times: 'wall clock',
+		from: 'hive_t'
+	});
+	assert.match(
+		body.result.content[0].text,
+		/jointime \(time, computed on open, empty here, Pacific\/Auckland: written times read in that zone, from hive_t\)/
+	);
+});
+
+test('check_draft warns of skipped and out-of-order repeated hours, not of an in-order repeat', async () => {
+	const at = (day, hm) => hm.map((t) => `2024-${day} ${t}`);
+	const { body } = await call('check_draft', {
+		columns: [
+			{
+				name: 'spring',
+				type: 'time',
+				values: at('09-29', ['01:30', '02:30', '03:30']),
+				time_zone: NZ
+			},
+			{
+				name: 'sorted',
+				type: 'time',
+				values: at('04-07', ['01:30', '02:15', '02:45', '03:30']),
+				time_zone: NZ
+			},
+			{
+				name: 'logger',
+				type: 'time',
+				values: at('04-07', ['01:30', '02:00', '02:30', '02:00', '02:30', '03:00']),
+				time_zone: NZ
+			},
+			// One time in the repeated hour: the singular wording.
+			{
+				name: 'once',
+				type: 'time',
+				values: at('04-07', ['01:30', '02:30', '03:30']),
+				time_zone: NZ
+			},
+			{ name: 'fixed', type: 'time', values: at('09-29', ['02:30']), time_zone: '+12:00' }
+		]
+	});
+	const sc = body.result.structuredContent;
+	assert.deepEqual(sc.errors, []);
+	assert.deepEqual(sc.warnings, [
+		'Column "spring": 1 time falls in the hour skipped when daylight saving began in Pacific/Auckland, so it does not exist there; it is moved forward by the change (02:30 reads 03:30 after a 1 h change). This logger may not follow daylight saving: try a fixed offset.',
+		'Column "sorted": 2 times fall in the hour repeated when daylight saving ended in Pacific/Auckland, and do not step back through it in order, so each is read as the earlier (daylight-saving) time. This logger may not follow daylight saving: try a fixed offset.',
+		'Column "once": 1 time falls in the hour repeated when daylight saving ended in Pacific/Auckland, and does not step back through it in order, so it is read as the earlier (daylight-saving) time. This logger may not follow daylight saving: try a fixed offset.'
+	]);
+	assert.match(body.result.content[0].text, /WARNINGS:[\s\S]*skipped when daylight saving began/);
+});

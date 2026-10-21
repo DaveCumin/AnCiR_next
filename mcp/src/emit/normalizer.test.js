@@ -1557,13 +1557,16 @@ test('plots[].overlays: the allowed forms come from the generated schema, not a 
 	assert.match(errors[0], /must be one of horizontal \(got "vertical"\)/);
 });
 
-// A new free-period fit on a TIME x starts at 1 to 30 h (v82.30), as one added from the
-// palette does; a range the model names is kept; a number x keeps the schema default.
-test('free-period fits: 1..30 h on a time x unless a range is named', () => {
+// A new free-period fit starts where one added from the palette does (the app's
+// autoPeriodRange): 1 to 30 h on a TIME x (v82.30), the Nyquist period to the record span on a
+// NUMBER x; a range the model names is kept. Pinned against the app's own function on an app
+// Column by mcp/test/engine.defaults.test.js.
+test('free-period fits: 1..30 h on a time x, Nyquist..span on a number x, unless a range is named', () => {
 	const times = Array.from({ length: 49 }, (_, i) => i * 3600000);
 	const columns = [
 		{ name: 'time', type: 'time', values: times },
-		{ name: 'n', values: times.map((_, i) => i) },
+		// Days: sampled hourly (1/24), so Nyquist 2/24 (0.0834 rounded up) to a span of 2.
+		{ name: 'n', values: times.map((_, i) => i / 24) },
 		{ name: 'values', values: times.map((_, i) => Math.cos(i / 4)) }
 	];
 	const fits = ['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction'];
@@ -1585,7 +1588,7 @@ test('free-period fits: 1..30 h on a time x unless a range is named', () => {
 	const cos = tps.filter((t) => t.name === 'Cosinor');
 	assert.deepEqual([cos[1].args.minPeriod, cos[1].args.maxPeriod], [2, 40]);
 	assert.deepEqual([cos[2].args.minPeriod, cos[2].args.maxPeriod], [1, 40]);
-	assert.deepEqual([cos[3].args.minPeriod, cos[3].args.maxPeriod], [1, 48]);
+	assert.deepEqual([cos[3].args.minPeriod, cos[3].args.maxPeriod], [0.0834, 2]);
 });
 
 test('JoinData: the time inputs are optional; a draft without them stacks (no jointime)', () => {

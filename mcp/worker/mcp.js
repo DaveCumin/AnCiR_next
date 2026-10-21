@@ -19,7 +19,13 @@ import { checkFitness } from '../src/emit/fitness.js';
 import { fingerprint } from './fingerprint.js';
 import { encodingNote } from './draftPrompt.js';
 import { describePlotEncodings, encodingsText } from '../src/emit/encodings.js';
-import { mixedZoneWarnings, describeColumnZone, columnZoneText } from '../src/emit/timeColumns.js';
+import {
+	mixedZoneWarnings,
+	daylightSavingWarnings,
+	describeColumnZone,
+	columnZoneText,
+	sessionTimeTyper
+} from '../src/emit/timeColumns.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 // Matches the SUPPORTED_PROTOCOL_VERSIONS list in @modelcontextprotocol/sdk 1.29. We echo the
@@ -265,9 +271,15 @@ async function callTool(name, args, env, request, ctx) {
 		// than no dry run, because it teaches the agent to trust a fiction.
 		const built = normalizeSession(args ?? {}, {});
 		const { session, errors } = built;
-		// Times in different zones meeting in one Join Data or one plot: said here in the app's
-		// own words (the node's warning, the plot's note), so the agent can set a zone first.
-		const warnings = [...built.warnings, ...mixedZoneWarnings(session)];
+		// Times in different zones meeting in one Join Data or one plot, and a zoned column's times
+		// in a skipped hour or out of order in a repeated one: said here in the app's own words
+		// (the node's warning, the plot's note, the column's warning), so the agent can fix the
+		// draft first.
+		const warnings = [
+			...built.warnings,
+			...daylightSavingWarnings(session),
+			...mixedZoneWarnings(session)
+		];
 		const empty = !session.tableProcesses.length && !session.data.length;
 		const notes = [
 			structureText(session),
@@ -336,14 +348,18 @@ async function callTool(name, args, env, request, ctx) {
 			};
 		}
 		const session = JSON.parse(stored);
+		// An analysis output that becomes a time column when the browser computes it (cosinorx,
+		// binnedx, jointime, ...) is a number column in the stored session; say what it will be.
+		const isTime = sessionTimeTyper(session);
+		const typeOf = (c) => (isTime(c.id) ? 'time' : c.type);
 		const columns = (session.data ?? []).map((c) => {
 			// Which columns hold DATA is the thing an agent can't otherwise know, and it decides
 			// what's safe to reason about: an analysis's outputs are empty until a browser opens
 			// the link and computes them.
 			const filled = (session.rawData?.[c.id] ?? []).length;
 			// A time column's zone, and whether its times are as written or instants.
-			const zone = c.type === 'time' ? `, ${columnZoneText(describeColumnZone(session, c))}` : '';
-			return `  ${c.name} (${c.type}${filled ? `, ${filled} values` : ', computed on open, empty here'}${zone})`;
+			const zone = isTime(c.id) ? `, ${columnZoneText(describeColumnZone(session, c))}` : '';
+			return `  ${c.name} (${typeOf(c)}${filled ? `, ${filled} values` : ', computed on open, empty here'}${zone})`;
 		});
 		const detail = (session.tableProcesses ?? [])
 			.map((t) => `  #${t.id} ${t.name} args=${JSON.stringify(t.args ?? {})}`)
@@ -370,9 +386,9 @@ async function callTool(name, args, env, request, ctx) {
 				generatedBy: session.generatedBy ?? null,
 				columns: (session.data ?? []).map((c) => ({
 					name: c.name,
-					type: c.type,
+					type: typeOf(c),
 					hasData: (session.rawData?.[c.id] ?? []).length > 0,
-					...(c.type === 'time' ? describeColumnZone(session, c) : {})
+					...(isTime(c.id) ? describeColumnZone(session, c) : {})
 				})),
 				analyses: (session.tableProcesses ?? []).map((t) => ({
 					id: t.id,

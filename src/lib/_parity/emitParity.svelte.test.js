@@ -80,8 +80,10 @@ import dayjs from '$lib/utils/time/dayjsSetup.js';
 import {
 	formatDateTime,
 	formatTimeAxisTick,
+	shownZoneLabel,
 	zoneAlignedTicks
 } from '$lib/utils/time/displayTime.js';
+import { actogramMixedZonesNote, axisMixedZonesNote } from '$lib/utils/time/zoneNotes.js';
 import { scaleUtc } from 'd3-scale';
 import { columnToPhaseHours } from '$lib/utils/circularPlot.js';
 import { encodingValues } from '$lib/components/plotbits/encodings.js';
@@ -1371,6 +1373,23 @@ async function runClockZone(fx) {
 			);
 		}
 		const { rows } = act.getDownloadData();
+		// A real Scatterplot of the same series: its time axis shows the first series' zone,
+		// and the panel says so when another series' zone differs (decision 7). The notes are
+		// the panels' own expressions (Actogram.svelte, Scatterplot.svelte).
+		const scatter = Plot.fromJSON({
+			id: 1,
+			name: `${fx.id}-scatter`,
+			type: 'scatterplot',
+			width: 600,
+			height: 400,
+			plot: { data: series.map((s) => ({ x: s.x, y: s.y })) }
+		});
+		core.plots.push(scatter);
+		const sc = scatter.plot;
+		const actogramZoneNote = act.clockZonesDiffer ? actogramMixedZonesNote(act.clock.named) : '';
+		const axisZoneNote = sc.xTimeZonesDiffer
+			? axisMixedZonesNote(shownZoneLabel(sc.xTimeFrame))
+			: '';
 
 		const join = joinZoneNotes(clockRecord(columnClock(a)), clockRecord(columnClock(b)), 0);
 		const joinShifted = joinZoneNotes(columnClock(a), columnClock(b), 13);
@@ -1457,7 +1476,10 @@ async function runClockZone(fx) {
 					dayTitle: colourBarTitle('dayOfYear', { zone: clock.named }),
 					labels: labelled,
 					axisTicks,
-					axisLabels: axisTicks.map((t) => formatTimeAxisTick(t, a))
+					axisLabels: axisTicks.map((t) => formatTimeAxisTick(t, a)),
+					actogramZoneNote,
+					axisZonesDiffer: sc.xTimeZonesDiffer,
+					axisZoneNote
 				}
 			}
 		});

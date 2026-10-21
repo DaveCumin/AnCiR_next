@@ -360,6 +360,8 @@ def run_clock_zone(fx, js):
         _, start, ndays = rt._actogram_series(plot, cols)
         labels = [rt.actogram_row_label_text(d, "date", start, 24, "DD MMM HH:mm", zone)
                   for d in range(min(ndays, 20))]
+        scatter = rt.scatter_zone_note({"type": "scatterplot", "name": f"{fx['id']}-scatter",
+                                        "plot": {"data": series}}, cols)
         join = rt.join_zone_notes(rt.column_clock(a), rt.column_clock(b), 0)
         joined = rt.join_zone_notes(rt.column_clock(a), rt.column_clock(b), 13)
         circ_zone = "utc" if clock["legacy"] else clock["zone"]
@@ -402,6 +404,9 @@ def run_clock_zone(fx, js):
                            for v in data[:6]],
                 "axisTicks": ticks,
                 "axisLabels": [rt.time_tick_label(t, shown) for t in ticks],
+                "actogramZoneNote": info["zoneNote"] or "",
+                "axisZonesDiffer": scatter["differ"],
+                "axisZoneNote": scatter["note"] or "",
             },
         }
     finally:

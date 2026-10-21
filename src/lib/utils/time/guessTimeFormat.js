@@ -1092,6 +1092,28 @@ const strftimeAssigners = [
 	strftimeYearFormatTokenAssigner
 ];
 
+// ISO 8601 parsers whose hour is always two digits ("T12", never "T9").
+const ISO_PARSERS = new Set([
+	iSO8601ExtendedDateTimeFormatParser.name,
+	iSO8601BasicDateTimeFormatParser.name
+]);
+
+/**
+ * Write an ISO 8601 result the conventional way: the date/time separator T as the literal
+ * `[T]` and the hour as `HH` ("YYYY-MM-DD[T]HH:mm:ss[Z]"), where the assigners alone gave
+ * "YYYY-MM-DDTH:mm:ss[Z]" for hours 10 to 23 and "…THH…" for 00 to 09. Parsing is the same:
+ * T is not a dayjs token, so bare or bracketed it matches the letter T, and both H and HH
+ * read the two-digit hour these parsers require (plan 5f). Other parsers keep `H`, which
+ * also reads an unpadded hour ("9:30").
+ */
+function applyIsoConventions(result) {
+	if (!ISO_PARSERS.has(result.parser)) return;
+	for (const t of result.tokens) {
+		if (t.type === 'delimiter' && t.value === 'T') t.format = '[T]';
+		else if (t.type === 'twentyFourHour') t.format = 'HH';
+	}
+}
+
 class Guesser {
 	constructor() {}
 	static parse(date) {
@@ -1140,7 +1162,10 @@ export function guessFormat(date, format) {
 		// console.error("Couldn't parse date");
 		//throw Error("Couldn't parse date");
 	}
-	refinedParsedResults.forEach((r) => Guesser.assign(r.tokens, format));
+	refinedParsedResults.forEach((r) => {
+		Guesser.assign(r.tokens, format);
+		if (!format || format === 'default') applyIsoConventions(r);
+	});
 	let matchedFormats = [];
 	refinedParsedResults.forEach((r) => matchedFormats.push(Guesser.getFormatString(r.tokens)));
 	return matchedFormats.length === 1 ? matchedFormats[0] : matchedFormats;

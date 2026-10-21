@@ -35,7 +35,12 @@
 import { core } from './core.svelte.js';
 import { columnDisplayName } from './columnLabels.js';
 import { wallClockCountsOf } from './columnTimeZone.js';
-import { normalizeZone, zoneLabel } from '$lib/utils/time/zones.js';
+import { normalizeZone } from '$lib/utils/time/zones.js';
+// The daylight-saving wording lives in a pure module so the MCP Worker's check_draft says the
+// same (utils/time/dstCountWarnings.js).
+import { dstCountWarnings } from '$lib/utils/time/dstCountWarnings.js';
+
+export { dstCountWarnings };
 
 const NB = ' ';
 const BIN_DATA = `Bin${NB}Data`;
@@ -246,40 +251,6 @@ export function longFormatLabel(col, times = col?.getData?.()) {
 		if (!best || r.k < best.k) best = { col: c, k: r.k };
 	}
 	return best;
-}
-
-const FIXED_OFFSET_ADVICE = 'This logger may not follow daylight saving: try a fixed offset.';
-const timesText = (n) => (n === 1 ? '1 time' : `${n.toLocaleString()} times`);
-
-/**
- * The daylight-saving warnings for a zoned zone-less column's read (`counts` from
- * resolveWallClocks, with its zone), in the order skipped, repeated out of order. Empty when
- * none.
- * @param {{ zone: string, unordered: number, skipped: number }|null} counts
- * @returns {string[]}
- */
-export function dstCountWarnings(counts) {
-	if (!counts) return [];
-	const zone = zoneLabel(counts.zone, { bare: true });
-	const out = [];
-	if (counts.skipped > 0) {
-		out.push(
-			`${timesText(counts.skipped)} fall in the hour skipped when daylight saving began in ${zone}, ` +
-				`so ${counts.skipped === 1 ? 'it does' : 'they do'} not exist there; ${counts.skipped === 1 ? 'it is' : 'they are'} moved ` +
-				`forward by the change (02:30 reads 03:30 after a 1 h change). ${FIXED_OFFSET_ADVICE}`
-		);
-	}
-	// Read in order (a logger that follows daylight saving) is what should happen: said beside
-	// the zone picker (columnTimeZone.js zoneShiftNote), not warned. Only the runs that could
-	// not be read in order are.
-	if (counts.unordered > 0) {
-		out.push(
-			`${timesText(counts.unordered)} fall in the hour repeated when daylight saving ended in ${zone}, ` +
-				`and do not step back through it in order, so each is read as the earlier ` +
-				`(daylight-saving) time. ${FIXED_OFFSET_ADVICE}`
-		);
-	}
-	return out;
 }
 
 /** A zone saved on a source column that this browser does not know, or null. */

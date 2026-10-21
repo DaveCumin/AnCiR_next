@@ -27253,6 +27253,38 @@
 			"note": "A logger on NZ standard time all year, mislabelled Pacific/Auckland: it passes the repeated hour once (unordered, read as daylight time)."
 		},
 		{
+			"id": "tz-nz-autumn-standard-logger-hourly",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "+12:00"
+				}
+			},
+			"note": "The same mislabelled standard-time logger, hourly: ONE time (02:00) in the repeated hour, unordered, so the column's warning is the singular wording ('1 time falls ... and does not step back ... so it is read')."
+		},
+		{
+			"id": "tz-nz-spring-standard-logger-hourly",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-09-27T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "+12:00"
+				}
+			},
+			"note": "A standard-time logger mislabelled Pacific/Auckland across the 29 Sep 2024 spring change, hourly: ONE time (02:00) in the skipped hour, so the column's warning is the singular wording ('1 time falls ... so it does not exist there; it is moved')."
+		},
+		{
 			"id": "tz-nz-spring-in-order",
 			"kind": "clockZone",
 			"pyFunc": "clock_zone",
@@ -27656,6 +27688,82 @@
 				}
 			},
 			"note": "Text ending in Z (the UTC designator, written as a literal [Z] as the import guesser writes it) with a zone: the instants are the UTC times written; the zone only names the clock they are read on (since plan 5f; before, the zone moved them 13 h as if they were a wall clock)."
+		},
+		{
+			"id": "tz-mixed-zones-show-times-in",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Two series in different zones (A Pacific/Auckland, B Europe/London) with \"Show times in\" America/New_York: the actogram's rows follow A's zone and say so; the scatterplot's x axis names the zone it shows (New York), the first series' zone as shown (decision 7).",
+			"columnB": {
+				"timeZone": "Europe/London",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Europe/London"
+				}
+			},
+			"showTimesIn": "America/New_York"
+		},
+		{
+			"id": "tz-mixed-zones-fixed-vs-as-written",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "+05:30",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "+05:30"
+				}
+			},
+			"note": "A in a fixed offset, B zone-less (as written, UTC): the zones differ, and both notes name the fixed offset as zoneLabel does (UTC+05:30 (fixed)).",
+			"columnB": {
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "utc"
+				}
+			}
+		},
+		{
+			"id": "tz-mixed-zones-same-zone",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Two series in the same zone (one written with offsets): no mixed-zone note on either plot.",
+			"columnB": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Pacific/Auckland",
+					"format": "YYYY-MM-DD[T]HH:mm:ssZ"
+				}
+			}
 		}
 	]
 }

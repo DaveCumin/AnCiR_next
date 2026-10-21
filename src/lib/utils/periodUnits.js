@@ -16,10 +16,11 @@
 // fallback for a node that carries no range at all (fillDefaults on load, `??` at compute time),
 // which is what sessions saved without a range (the shipped Rectangular wave and Double
 // logistic demos) were computed with; changing it would change their saved results.
-import { resolvePeriodRange } from './cosinor.js';
-import { NEW_NODE_TIME_PERIOD_RANGE } from './periodRangeDefaults.js';
+// The auto range itself is in the pure periodRangeDefaults.js, so the MCP Worker's draft
+// normalizer gives a new node exactly this range.
+import { NEW_NODE_TIME_PERIOD_RANGE, autoPeriodRange } from './periodRangeDefaults.js';
 
-export { NEW_NODE_TIME_PERIOD_RANGE };
+export { NEW_NODE_TIME_PERIOD_RANGE, autoPeriodRange };
 
 export const PERIOD_UNIT_HOURS = 'h';
 export const PERIOD_UNIT_X = 'x units';
@@ -31,37 +32,6 @@ export const PERIOD_UNIT_X = 'x units';
  */
 export function periodUnitForColumn(col) {
 	return col && col.type !== 'time' ? PERIOD_UNIT_X : PERIOD_UNIT_HOURS;
-}
-
-/** `v` rounded UP to 3 significant figures, so a rounded bound never cuts into the range. */
-function ceil3(v) {
-	if (!(v > 0) || !Number.isFinite(v)) return v;
-	const step = 10 ** (Math.floor(Math.log10(v)) - 2);
-	return Number((Math.ceil(v / step - 1e-9) * step).toPrecision(3));
-}
-
-/**
- * The period range a node that follows its x starts from, or null when x cannot give one.
- * Time x: NEW_NODE_TIME_PERIOD_RANGE (1 to 30 h). Number x: the Nyquist period to the record span,
- * each rounded up to 3 significant figures.
- * @param {{type?: string, getData?: () => any[]} | null} col
- * @returns {{minPeriod: number, maxPeriod: number} | null}
- */
-export function autoPeriodRange(col) {
-	if (!col) return null;
-	if (col.type === 'time') return { ...NEW_NODE_TIME_PERIOD_RANGE };
-	const data = col.getData?.() ?? [];
-	const nums = [];
-	for (const v of data) {
-		if (v == null || v === '') continue;
-		const n = Number(v);
-		if (Number.isFinite(n)) nums.push(n);
-	}
-	const r = resolvePeriodRange(nums, null, null);
-	if (!r) return null;
-	const minPeriod = ceil3(r.nyquist);
-	const maxPeriod = ceil3(r.span);
-	return maxPeriod > minPeriod ? { minPeriod, maxPeriod } : null;
 }
 
 /**

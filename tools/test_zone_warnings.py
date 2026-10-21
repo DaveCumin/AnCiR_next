@@ -110,3 +110,79 @@ def test_the_actogram_prints_its_dst_note(capsys):
     assert _err_lines(capsys) == [
         'WARNING: Actogram "Hive": Daylight saving ended on 7 Apr 2024 in Pacific/Auckland. '
         "Rows are 24 h of elapsed time, so rows after it start at 23:00 local time."]
+
+
+def _scatter(name, pairs):
+    return {"name": name, "type": "scatterplot", "width": 500, "height": 300,
+            "plot": {"data": [{"x": {"refId": x}, "y": {"refId": y}} for x, y in pairs]}}
+
+
+def test_a_scatterplot_mixing_zones_prints_the_axis_note_once(capsys):
+    # Hive (Pacific/Auckland) and zone-less weather (as written, UTC) on one time axis: the
+    # axis shows the first series' zone and the panel says so (Scatterplot.svelte, decision
+    # 7). The figure is drawn up to four times while its padding settles; one note.
+    cols, _raw, _ = run_session(copy.deepcopy(SESSION))
+    capsys.readouterr()
+    out = rt.render_plot_figure(_scatter("Hive and weather", [(1, 2), (3, 4)]), cols)
+    plt.close(out[0])
+    assert _err_lines(capsys) == [
+        'WARNING: Scatterplot "Hive and weather": The series\' times are in different zones; '
+        "the x axis shows Pacific/Auckland, the first series' zone."]
+
+
+def test_a_scatterplot_names_the_zone_it_shows(capsys):
+    # "Show times in" relabels the axis, so the note names that zone (shownZoneLabel).
+    cols, _raw, _ = run_session(copy.deepcopy(SESSION))
+    capsys.readouterr()
+    prev = rt.SHOW_TIMES_IN
+    rt.set_show_times_in("+05:30")
+    try:
+        note = rt.scatter_zone_note(_scatter("s", [(3, 4), (1, 2)]), cols)["note"]
+    finally:
+        rt.set_show_times_in(prev)
+    assert note == ("The series' times are in different zones; the x axis shows "
+                    "UTC+05:30 (fixed), the first series' zone.")
+
+
+def test_a_scatterplot_in_one_zone_prints_nothing(capsys):
+    # The Cosinor's fitted times (10) inherit the hive's zone: one zone, no note.
+    cols, _raw, _ = run_session(copy.deepcopy(SESSION))
+    capsys.readouterr()
+    out = rt.render_plot_figure(_scatter("Hive and fit", [(1, 2), (10, 16)]), cols)
+    plt.close(out[0])
+    assert _err_lines(capsys) == []
+
+
+def test_an_actogram_mixing_zones_prints_the_rows_note(capsys):
+    # The rows follow the first series' zone (Actogram.svelte clockZonesDiffer, decision 7);
+    # the panel shows the mixed-zone note above the DST note.
+    cols, _raw, _ = run_session(copy.deepcopy(SESSION))
+    capsys.readouterr()
+    plot = {"name": "Hive", "type": "actogram",
+            "plot": {"periodHrs": 24, "data": [{"x": {"refId": 1}, "y": {"refId": 2}},
+                                               {"x": {"refId": 3}, "y": {"refId": 4}}]}}
+    fig, ax = plt.subplots()
+    try:
+        rt.plot_actogram(plot, cols, ax)
+    finally:
+        plt.close(fig)
+    err = _err_lines(capsys)
+    assert err[0] == ('WARNING: Actogram "Hive": The series\' times are in different zones; '
+                      "the rows follow Pacific/Auckland, the first series' zone.")
+    assert len(err) == 2 and err[1].startswith('WARNING: Actogram "Hive": Daylight saving ended')
+
+
+def test_a_number_x_with_a_time_origin_counts_as_a_time_series(capsys):
+    # Hours counted from a time origin share the date axis (xTimeSeries takes series whose
+    # column carries originTime_ms); a zone-less one is in UTC, so with the hive (Pacific/
+    # Auckland) first the zones differ.
+    cols, raw, _ = run_session(copy.deepcopy(SESSION))
+    raw[99] = [0.0, 1.0, 2.0]
+    hours = rt.Column(id=99, name="hours", type="number", data=99, raw_data=raw,
+                      origin_time_ms=1712318400000)
+    cols = {**cols, 99: hours}
+    hours.columns_index = cols
+    got = rt.scatter_zone_note(_scatter("s", [(1, 2), (99, 4)]), cols)
+    assert got["differ"] is True
+    assert got["note"] == ("The series' times are in different zones; the x axis shows "
+                           "Pacific/Auckland, the first series' zone.")

@@ -67,6 +67,32 @@ describe('the UTC designator in a format', () => {
 		// A legacy Luxon format with a quoted Z ('Z') is normalised to [Z] first.
 		expect(formatHasOffset("yyyy-LL-dd'T'HH:mm:ss.S'Z'")).toBe(true);
 	});
+
+	it('a bracketed [T] and a two-digit HH give the same answers as T and H', () => {
+		// The guesser wrote "YYYY-MM-DDTH:mm:ss[Z]" before plan 5f and writes
+		// "YYYY-MM-DD[T]HH:mm:ss[Z]" now; sessions keep either, so both must agree.
+		const pairs = [
+			['YYYY-MM-DDTH:mm:ss[Z]', 'YYYY-MM-DD[T]HH:mm:ss[Z]', true],
+			['YYYY-MM-DDTH:mm:ss.SSS[Z]', 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true],
+			['YYYY-MM-DDTH:mm[Z]', 'YYYY-MM-DD[T]HH:mm[Z]', true],
+			['YYYY-MM-DDTH[Z]', 'YYYY-MM-DD[T]HH[Z]', true],
+			['YYYYMMDDTHmmss[Z]', 'YYYYMMDD[T]HHmmss[Z]', true],
+			['YYYY-MM-DDTH:mm:ssZ', 'YYYY-MM-DD[T]HH:mm:ssZ', true],
+			['YYYY-MM-DDTH:mm:ssZZ', 'YYYY-MM-DD[T]HH:mm:ssZZ', true],
+			['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DD[T]HH:mm:ss', false],
+			['YYYY-MM-DDTH:mm', 'YYYY-MM-DD[T]HH:mm', false],
+			['YYYY-MM-DD H:mm:ss[Z]', 'YYYY-MM-DD HH:mm:ss[Z]', true],
+			// A [T] between the time and the Z breaks adjacency, as any literal does.
+			['YYYY-MM-DD HH:mm:ss[T][Z]', 'YYYY-MM-DD HH:mm:ss[T][Z]', false]
+		];
+		for (const [before, after, reads] of pairs) {
+			expect(formatReadsOffset(before), before).toBe(reads);
+			expect(formatReadsOffset(after), after).toBe(reads);
+			expect(formatHasOffset(after), after).toBe(reads);
+		}
+		expect(utcDesignatorAsOffset('YYYY-MM-DD[T]HH:mm:ss[Z]')).toBe('YYYY-MM-DD[T]HH:mm:ssZ');
+		expect(utcDesignatorAsOffset('YYYY-MM-DDTH:mm:ss[Z]')).toBe('YYYY-MM-DDTH:mm:ssZ');
+	});
 });
 
 describe('a column of Z text', () => {

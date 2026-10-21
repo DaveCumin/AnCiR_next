@@ -2715,6 +2715,36 @@ def shown_zone(col):
     return column_clock(col)['zone']
 
 
+def shown_zone_label(col):
+    """displayTime.js shownZoneLabel: the zone a column's times are shown in, as a label (a
+    legacy session's zone, else "Show times in" when it names a zone, else the column's own
+    time frame zone)."""
+    legacy = legacy_zone()
+    if legacy:
+        return zone_label(legacy)
+    show = SHOW_TIMES_IN
+    if show != 'column':
+        z = normalize_zone(show)
+        if z:
+            return zone_label(z)
+    frame = resolve_time_frame(col) if col is not None else {'zone': UTC_ZONE}
+    return zone_label(frame['zone'])
+
+
+def actogram_mixed_zones_note(zone):
+    """zoneNotes.js actogramMixedZonesNote: the actogram's note when its series' times are in
+    different zones (decision 7: the rows follow the first series' zone)."""
+    return (f"The series' times are in different zones; the rows follow {zone_label(zone)}, "
+            "the first series' zone.")
+
+
+def axis_mixed_zones_note(shown):
+    """zoneNotes.js axisMixedZonesNote: a time axis's note when its series' times are in
+    different zones (decision 7). `shown` is the first series' zone as the axis names it."""
+    return (f"The series' times are in different zones; the x axis shows {shown}, the first "
+            "series' zone.")
+
+
 def node_warning(node, text):
     """Print what the app shows on a node or a column (a warning, or a note such as a
     daylight-saving note or Join Data's zone summary) as a console warning, as the Sequence
@@ -2741,7 +2771,8 @@ def _dst_change_text(change, named):
 
 def _dst_changes_text(changes, named):
     parts = [_dst_change_text(c, named) for c in changes[:2]]
-    more = f' (and {len(changes) - 2} more changes)' if len(changes) > 2 else ''
+    extra = len(changes) - 2
+    more = f" (and {extra} more change{'' if extra == 1 else 's'})" if extra > 0 else ''
     return ' and '.join(parts) + more
 
 
@@ -2807,18 +2838,18 @@ def bin_dst_note(clock, changes, first_edge, step_hrs, bin_hrs):
             f'so bins after it start at {local} local time.')
 
 
-# core/columnWarnings.js dstCountWarnings: what a zoned column's repeated and skipped hours
+# utils/time/dstCountWarnings.js: what a zoned column's repeated and skipped hours
 # say (a clean in-order repeat says nothing: that is what a DST-following logger writes).
 _FIXED_OFFSET_ADVICE = 'This logger may not follow daylight saving: try a fixed offset.'
 
 
-def _times_text(n):
-    """columnWarnings.js timesText: '1 time', '1,234 times' (toLocaleString, en-US)."""
-    return '1 time' if n == 1 else f'{n:,} times'
+def _times_fall(n):
+    """dstCountWarnings: '1 time falls', '1,234 times fall' (toLocaleString, en-US)."""
+    return '1 time falls' if n == 1 else f'{n:,} times fall'
 
 
 def dst_count_warnings(counts):
-    """columnWarnings.js dstCountWarnings: the warnings for a column's wall_clock_counts."""
+    """dstCountWarnings.js: the warnings for a column's wall_clock_counts."""
     if not counts:
         return []
     zone = zone_label(counts.get('zone'), bare=True)
@@ -2828,15 +2859,17 @@ def dst_count_warnings(counts):
     if skipped > 0:
         one = skipped == 1
         out.append(
-            f"{_times_text(skipped)} fall in the hour skipped when daylight saving began in "
+            f"{_times_fall(skipped)} in the hour skipped when daylight saving began in "
             f"{zone}, so {'it does' if one else 'they do'} not exist there; "
             f"{'it is' if one else 'they are'} moved forward by the change (02:30 reads 03:30 "
             f'after a 1 h change). {_FIXED_OFFSET_ADVICE}')
     if unordered > 0:
+        one = unordered == 1
         out.append(
-            f'{_times_text(unordered)} fall in the hour repeated when daylight saving ended in '
-            f'{zone}, and do not step back through it in order, so each is read as the earlier '
-            f'(daylight-saving) time. {_FIXED_OFFSET_ADVICE}')
+            f'{_times_fall(unordered)} in the hour repeated when daylight saving ended in '
+            f"{zone}, and {'does' if one else 'do'} not step back through it in order, so "
+            f"{'it' if one else 'each'} is read as the earlier (daylight-saving) time. "
+            f'{_FIXED_OFFSET_ADVICE}')
     return out
 
 
@@ -13804,7 +13837,28 @@ def _merge_extent(ext, other):
             other[1] if hi is None else max(hi, other[1]))
 
 
-def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
+def scatter_zone_note(plot, columns_index):
+    """Scatterplot.svelte's x-axis zone note (Scatterplotclass xTimeSeries, xTimeFrame,
+    xTimeZonesDiffer; decision 7): {'differ', 'note'}. The time series are the ones with a
+    time x or one that borrows a time origin; the axis shows the first one's zone, and when
+    another one's time frame zone differs the panel names the zone shown (shown_zone_label:
+    a legacy session's zone or "Show times in" when set). `note` is None when they agree."""
+    p = plot.get('plot', {}) or {}
+    xs = []
+    for s in p.get('data', []) or []:
+        x_col = _resolve_plot_col(s.get('x'), columns_index)
+        if x_col is not None and (x_col.type == 'time'
+                                  or _scatter_x_origin_ms(x_col) is not None):
+            xs.append(x_col)
+    if not xs:
+        return {'differ': False, 'note': None}
+    first = resolve_time_frame(xs[0])['zone']
+    differ = any(resolve_time_frame(x)['zone'] != first for x in xs)
+    note = axis_mixed_zones_note(shown_zone_label(xs[0])) if differ else None
+    return {'differ': differ, 'note': note}
+
+
+def plot_scatterplot(plot, columns_index, ax_left, ax_right=None, notes=True):
     """Series may target the left or right Y axis (`yAxis: 'right'`).
     Each series may show points and/or a line. A number x series on a plot that also has
     time x data counts hours from its column's time origin (the app's xOriginFor), so it
@@ -13814,8 +13868,13 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     display zone, gridlines per axis and the figure's type sizes. The legend goes where the
     app puts it (legend_layout: a corner, the 'auto' search over the drawn marks and an inside
     colour bar, or outside on the right sharing the margin with the keys beside the plot), and
-    the keys stack after it (encoding_key_layout)."""
+    the keys stack after it (encoding_key_layout). With `notes`, the panel's x-axis zone
+    note (scatter_zone_note) is printed as a console warning; render_plot_figure draws the
+    plot up to four times while it sizes the padding and prints it on the first pass only."""
     p = plot.get('plot', {})
+    if notes:
+        node_warning(f'Scatterplot "{plot.get("name", "")}"',
+                     scatter_zone_note(plot, columns_index)['note'])
     look = plot_look(plot)
     base_w, base_h = _axes_px(ax_left)
     xctx = _scatter_x_context(p, columns_index)
@@ -15465,7 +15524,8 @@ def actogram_dst_info(plot, columns_index):
     if r is not None:
         note = actogram_dst_note(clock, clock_dst_changes(clock, r[0], r[1]), start,
                                  _js_number(p.get('periodHrs', 24)))
-    return {'clock': clock, 'clockZonesDiffer': differ, 'startTime': start, 'dstNote': note}
+    return {'clock': clock, 'clockZonesDiffer': differ, 'startTime': start, 'dstNote': note,
+            'zoneNote': actogram_mixed_zones_note(clock['named']) if differ else None}
 
 
 def _actogram_series(plot, columns_index, zone=None):
@@ -15910,8 +15970,10 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     entries, start_ms, rows_needed = _actogram_series(plot, columns_index, zone)
     # Actogram.svelte dstNote: the app says, under Time, that rows after a daylight-saving
     # change start an hour off local midnight.
-    node_warning(f'Actogram "{plot.get("name", "")}"',
-                 actogram_dst_info(plot, columns_index)['dstNote'])
+    # Actogram.svelte, under Time: the mixed-zone note (decision 7), then the DST note.
+    notes = actogram_dst_info(plot, columns_index)
+    node_warning(f'Actogram "{plot.get("name", "")}"', notes['zoneNote'])
+    node_warning(f'Actogram "{plot.get("name", "")}"', notes['dstNote'])
     series_data = p.get('data', []) or []
     heat = p.get('renderMode') == 'heatmap'
     base_w, h_px = _axes_px(ax)
@@ -16722,12 +16784,12 @@ AUTO_PADDED_PLOTS = {'scatterplot', 'periodogram', 'fft', 'correlogram', 'boxplo
 _AUTO_PAD_EXTRA = {'left': 6, 'right': 6, 'top': 6, 'bottom': 12}
 
 
-def _draw_plot_kind(kind, plot, columns_index, ax):
+def _draw_plot_kind(kind, plot, columns_index, ax, notes=True):
     if kind == 'scatter':
         has_right = any((s.get('yAxis') == 'right')
                         for s in plot.get('plot', {}).get('data', []))
         ax_right = ax.twinx() if has_right else None
-        plot_scatterplot(plot, columns_index, ax, ax_right)
+        plot_scatterplot(plot, columns_index, ax, ax_right, notes=notes)
     elif kind == 'fft':
         plot_fft(plot, columns_index, ax)
     elif kind == 'periodogram':
@@ -16782,7 +16844,7 @@ def render_plot_figure(plot, columns_index, *, auto_pad=True):
     for i in range(passes):
         fig, ax, _g = new_plot_figure(plot, padding=padding, band=band)
         try:
-            _draw_plot_kind(kind, _copy.deepcopy(plot), columns_index, ax)
+            _draw_plot_kind(kind, _copy.deepcopy(plot), columns_index, ax, notes=(i == 0))
         except Exception:
             plt.close(fig)
             raise

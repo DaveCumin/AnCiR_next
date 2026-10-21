@@ -31,15 +31,19 @@ import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.
 // The app's overlay spec (channel table + spec normaliser), shared for the same reason: a
 // draft's plot overlays are refused exactly where add_plot and the GUI refuse them. Pure.
 import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/overlaySpec.js';
-import { NEW_NODE_TIME_PERIOD_RANGE } from '../../../src/lib/utils/periodRangeDefaults.js';
+// The app's own rule for a new free-period fit's range (pure; periodRangeAuto.svelte.js applies
+// it in the app, the MCP engine's fillOmittedArgs headless).
+import { autoPeriodRange } from '../../../src/lib/utils/periodRangeDefaults.js';
 // A time column's text format and zone, read and refused as the app does (timeColumns.js).
 import { timeTextFormat, columnZoneOf } from './timeColumns.js';
 
-// The free-period fits. A new one on a TIME x with no period range named starts at
-// NEW_NODE_TIME_PERIOD_RANGE (1 to 30 h), as a node added from the palette or by the in-app AI
-// edit does; a range the model names is kept as given (either bound named: both as given,
-// the other from the defaults). Written as numbers, so the engine and the ports compute with
-// exactly what the session stores.
+// The free-period fits. A new one with no period range named starts where a node added from the
+// palette or by the in-app AI edit does (autoPeriodRange, the app's own function): 1 to 30 h on
+// a TIME x, and the Nyquist period to the record span on a NUMBER x with baked values. A range
+// the model names is kept as given (either bound named: both as given, the other from the
+// defaults). Written as numbers, so the engine and the ports compute with exactly what the
+// session stores. A number x with no baked values (an analysis output, computed on load) gets
+// the defaults (1 to 48), as a saved node with no range does.
 const FREE_PERIOD_FITS = new Set(['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction']);
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
@@ -322,7 +326,13 @@ export function normalizeSession(
 
 		if (FREE_PERIOD_FITS.has(name) && args.minPeriod == null && args.maxPeriod == null) {
 			const xCol = data.find((c) => c.id === args.xIN);
-			if (xCol?.type === 'time') Object.assign(args, NEW_NODE_TIME_PERIOD_RANGE);
+			const range = xCol
+				? autoPeriodRange({
+						type: xCol.type,
+						getData: () => rawData[xCol.data] ?? rawData[xCol.id] ?? []
+					})
+				: null;
+			if (range) Object.assign(args, range);
 		}
 
 		// fill omitted params from defaults (without clobbering supplied values).

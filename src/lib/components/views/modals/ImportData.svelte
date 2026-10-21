@@ -4,6 +4,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { sniffFile, looksLikeSession } from '$lib/utils/fileTypeSniff.js';
 	import { loadSessionFile as loadSessionFileViaRegistry } from '$lib/core/dataSourceActions.js';
+	import { newGroupPosition } from '$lib/core/canvasPlacement.js';
 	import { isTrustedSessionUrl } from '$lib/utils/nlSession.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -1846,7 +1847,8 @@
 		const keys = Object.keys(dataObj);
 		if (keys.length === 0) return;
 
-		const groupId = createGroup({ name: tableName });
+		// In free space, so it does not cover an earlier import (canvasPlacement.js).
+		const groupId = createGroup({ name: tableName, ...newGroupPosition({ rows: keys.length }) });
 
 		for (const key of keys) {
 			const col = new Column({});
@@ -3485,7 +3487,11 @@
 		let newGroupId = null;
 		if (newEntries.length > 0) {
 			const baseName = fname ? fname.replace(/\.[^.]+$/, '') : 'imported';
-			newGroupId = createGroup({ name: baseName });
+			// In free space, so it does not cover an earlier import (canvasPlacement.js).
+			newGroupId = createGroup({
+				name: baseName,
+				...newGroupPosition({ rows: newEntries.length })
+			});
 
 			for (let i = 0; i < newEntries.length; i++) {
 				const f = newEntries[i];

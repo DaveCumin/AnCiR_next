@@ -1702,7 +1702,8 @@ note_output_zone_inputs <- function(args, env) {
 .dst_changes_text <- function(changes, named) {
   parts <- vapply(changes[seq_len(min(2, length(changes)))], .dst_change_text, character(1),
                   named = named)
-  more <- if (length(changes) > 2) sprintf(" (and %d more changes)", length(changes) - 2) else ""
+  extra <- length(changes) - 2
+  more <- if (extra > 0) sprintf(" (and %d more change%s)", extra, if (extra == 1) "" else "s") else ""
   paste0(paste(parts, collapse = " and "), more)
 }
 
@@ -1715,10 +1716,10 @@ node_warning <- function(node, text) {
   invisible(NULL)
 }
 
-# core/columnWarnings.js dstCountWarnings: what a zoned column's repeated and skipped hours
+# utils/time/dstCountWarnings.js: what a zoned column's repeated and skipped hours
 # say (a clean in-order repeat says nothing: that is what a DST-following logger writes).
 .FIXED_OFFSET_ADVICE <- "This logger may not follow daylight saving: try a fixed offset."
-.times_text <- function(n) if (n == 1) "1 time" else paste0(.thousands(n), " times")
+.times_fall <- function(n) if (n == 1) "1 time falls" else paste0(.thousands(n), " times fall")
 dst_count_warnings <- function(counts) {
   if (is.null(counts)) return(character(0))
   zone <- zone_label(counts$zone, bare = TRUE)
@@ -1727,19 +1728,26 @@ dst_count_warnings <- function(counts) {
   unordered <- if (is.null(counts$unordered)) 0 else counts$unordered
   if (skipped > 0) {
     one <- skipped == 1
-    out <- c(out, paste0(.times_text(skipped), " fall in the hour skipped when daylight saving ",
+    out <- c(out, paste0(.times_fall(skipped), " in the hour skipped when daylight saving ",
       "began in ", zone, ", so ", if (one) "it does" else "they do", " not exist there; ",
       if (one) "it is" else "they are", " moved forward by the change (02:30 reads 03:30 ",
       "after a 1 h change). ", .FIXED_OFFSET_ADVICE))
   }
   if (unordered > 0) {
-    out <- c(out, paste0(.times_text(unordered), " fall in the hour repeated when daylight ",
-      "saving ended in ", zone, ", and do not step back through it in order, so each is read ",
-      "as the earlier (daylight-saving) time. ", .FIXED_OFFSET_ADVICE))
+    one <- unordered == 1
+    out <- c(out, paste0(.times_fall(unordered), " in the hour repeated when daylight ",
+      "saving ended in ", zone, ", and ", if (one) "does" else "do", " not step back through ",
+      "it in order, so ", if (one) "it" else "each", " is read as the earlier ",
+      "(daylight-saving) time. ", .FIXED_OFFSET_ADVICE))
   }
   out
 }
-# A column is read many times in a run; its DST warnings are printed once per R session.
+# A column is read many times in a run; its DST warnings are printed once per column per
+# load, as the app warns once per column each time a session is loaded and the Python port
+# once per Column object. Each new_column() carries its own `dst_warned` environment (shared
+# by reference by every copy of that column list), so building the columns again (loading the
+# session again in the same R process) warns again. A column list built by hand without one
+# falls back to this process-wide registry.
 .dst_warned <- new.env(parent = emptyenv())
 
 # dstNotes.js clockPhaseDstWarning, or NULL.
@@ -7509,9 +7517,12 @@ new_column <- function(id, name, type = "number", data = NULL, time_format = NUL
                        group_label = NULL, processes = list(), time_zone = NULL) {
   # time_zone: Column.timeZone (per-column time zone): NULL / "utc" (as written), a fixed
   # offset ("+05:30") or an IANA name. Only a source column's own zone counts (column_clock).
+  # dst_warned: which of this column's daylight-saving warnings this load has printed
+  # (col_data); a fresh one per new_column(), so each load of a session warns once.
   list(id = id, name = name, type = type, data = data, time_format = time_format,
        bin_width = bin_width, compression = compression, ref_id = ref_id,
-       group_label = group_label, processes = processes, time_zone = time_zone)
+       group_label = group_label, processes = processes, time_zone = time_zone,
+       dst_warned = new.env(parent = emptyenv()))
 }
 
 col_is_ref <- function(col) !is.null(col$ref_id)
@@ -7688,12 +7699,13 @@ col_data <- function(col, cols, raw_data) {
         parsed <- r$instants
         attr(parsed, "wall_clock_counts") <- list(zone = zone, repeated = r$repeated,
           secondPass = r$secondPass, unordered = r$unordered, skipped = r$skipped)
-        # The app shows these on the column (columnWarnings.js), printed once.
+        # The app shows these on the column (columnWarnings.js), printed once per load.
+        warned <- if (is.environment(col$dst_warned)) col$dst_warned else .dst_warned
         for (w in dst_count_warnings(attr(parsed, "wall_clock_counts"))) {
           node <- sprintf('Column "%s"', if (is.null(col$name)) "" else col$name)
           key <- paste(col$id, node, w, sep = "\r")
-          if (is.null(.dst_warned[[key]])) {
-            assign(key, TRUE, envir = .dst_warned)
+          if (is.null(warned[[key]])) {
+            assign(key, TRUE, envir = warned)
             node_warning(node, w)
           }
         }

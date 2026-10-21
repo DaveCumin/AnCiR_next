@@ -102,6 +102,7 @@
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
+	import { registerCanvasBoxes } from '$lib/core/canvasPlacement.js';
 	import { computeNodeLayers } from './nodeLayers.js';
 	import { isEditableTarget, yieldEscapeToField } from '$lib/utils/editableTarget.js';
 	import {
@@ -1358,6 +1359,30 @@
 		}
 		return boxes;
 	}
+
+	// Every node's drawn box, groups included, for placing a new group (an import, a palette
+	// group) in free space: canvasPlacement.js newGroupPosition reads it while this is mounted.
+	function drawnNodeBoxes() {
+		const boxes = [];
+		for (const node of allNodes) {
+			const pos = stablePositions[node.id];
+			if (!pos) continue;
+			const el = document.querySelector(
+				`.workflow-node-wrapper[data-node-id="${CSS.escape(node.id)}"]`
+			);
+			boxes.push({
+				id: node.id,
+				x: pos.x,
+				y: pos.y,
+				w: el?.offsetWidth || getNodeWidth(node),
+				h:
+					el?.offsetHeight ||
+					(node.type === 'group' ? (node.groupObj?.height ?? 0) : getNodeRenderHeight(node))
+			});
+		}
+		return boxes;
+	}
+	$effect(() => registerCanvasBoxes(drawnNodeBoxes));
 
 	/**
 	 * Move nodes that the topo default placed into an already laid-out canvas (a table

@@ -45,9 +45,15 @@ thing just teaches the agent to trust a fiction.
 `time_zone` (IANA, `+12:00`, or `utc`, the default), validated and stored as the app does
 (`src/emit/timeColumns.js`, on the app's pure `utils/time/zoneNames.js`). `check_draft` warns,
 in the app's own words (`utils/time/zoneNotes.js`), when one Join Data or one actogram or
-scatterplot mixes zones. A plot series on an analysis output that only becomes a time column
-when computed (Join Data's `jointime`, Cosinor's `cosinorx`) is typed as a number in the draft,
-so the plot check sees input columns and generator outputs only.
+scatterplot mixes zones, including through analysis outputs that only become time columns when
+computed (Bin Data's `binnedx`, Cosinor's `cosinorx`, Join Data's `jointime`, Sort's copy of a
+time column...): `sessionTimeTyper` applies each node's typing rule, pinned against every node in
+the registry by `test/emit.timezone.app.test.js`, and `describe_session` reports such a column
+as `time` with its inherited zone. It also warns, in the column's own words
+(the app's own pure `utils/time/zoneResolver.js` `resolveWallClocks` and
+`utils/time/dstCountWarnings.js`, imported, not copied), when
+a zoned column's times fall in a skipped hour or go through a repeated hour out of order; a
+repeated hour written twice in order is not a warning.
 
 `describe_session` **parses** its argument for a session id; it never _fetches_ it. "Describe the
 session at this URL" reads as an invitation to go and get it, which would hand any caller an
