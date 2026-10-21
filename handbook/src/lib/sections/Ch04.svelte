@@ -277,10 +277,13 @@
 				<strong>Its own column</strong> keeps a B column apart.
 			</li>
 			<li>
-				If one logger ran on another time zone, set <strong>Shift B's clock by (h)</strong>. Both
-				time inputs must be real times, or both numbers counting from the same origin; with numbers
-				the setting reads <strong>Shift B's x by (x units)</strong>. The joined time takes A's time
-				zone, which the summary names; when A and B are in different zones the node warns.
+				If the two loggers ran in different time zones, give each time column its zone (at import or
+				in the column's Properties): the times then line up by themselves, across a daylight-saving
+				change too. <strong>Shift B's clock by (h)</strong> is for a logger whose clock was simply
+				off. Both time inputs must be real times, or both numbers counting from the same origin;
+				with numbers the setting reads <strong>Shift B's x by (x units)</strong>. The joined time
+				takes A's time zone, which the summary names; a shift set between columns in different zones
+				is warned about, since the zones already account for the difference.
 			</li>
 			<li>
 				When A and B rarely share a time, the node offers <strong>+ Add Bin Data</strong>: one click

@@ -3,7 +3,12 @@
  * Warnings about a column's own data, shown wherever the column is shown (its row in a
  * group card, a data node, the Data panel).
  *
- * Today one: a time column whose times repeat. Multi-file import keeps every row (David,
+ * A time column whose times repeat; and, for a zone-less column given a zone (per-column
+ * time zone, phase 3), times that fall in the hour a daylight-saving change skipped, or in the
+ * hour it repeated without stepping back through it in order (counted when the column is
+ * read, utils/time/zones.js resolveWallClocks), and a zone this browser does not know.
+ *
+ * Repeated times: Multi-file import keeps every row (David,
  * 2026-10-17: "import data simply imports the data (without merging)"), so files that
  * overlap leave times that appear more than once; one file can have them too, and so does
  * long-format data (one row per subject per time).
@@ -29,6 +34,8 @@
  */
 import { core } from './core.svelte.js';
 import { columnDisplayName } from './columnLabels.js';
+import { wallClockCountsOf } from './columnTimeZone.js';
+import { normalizeZone, zoneLabel } from '$lib/utils/time/zones.js';
 
 const NB = ' ';
 const BIN_DATA = `Bin${NB}Data`;
@@ -241,6 +248,48 @@ export function longFormatLabel(col, times = col?.getData?.()) {
 	return best;
 }
 
+const FIXED_OFFSET_ADVICE = 'This logger may not follow daylight saving: try a fixed offset.';
+const timesText = (n) => (n === 1 ? '1 time' : `${n.toLocaleString()} times`);
+
+/**
+ * The daylight-saving warnings for a zoned zone-less column's read (`counts` from
+ * resolveWallClocks, with its zone), in the order skipped, repeated out of order. Empty when
+ * none.
+ * @param {{ zone: string, unordered: number, skipped: number }|null} counts
+ * @returns {string[]}
+ */
+export function dstCountWarnings(counts) {
+	if (!counts) return [];
+	const zone = zoneLabel(counts.zone, { bare: true });
+	const out = [];
+	if (counts.skipped > 0) {
+		out.push(
+			`${timesText(counts.skipped)} fall in the hour skipped when daylight saving began in ${zone}, ` +
+				`so ${counts.skipped === 1 ? 'it does' : 'they do'} not exist there; ${counts.skipped === 1 ? 'it is' : 'they are'} moved ` +
+				`forward by the change (02:30 reads 03:30 after a 1 h change). ${FIXED_OFFSET_ADVICE}`
+		);
+	}
+	// Read in order (a logger that follows daylight saving) is what should happen: said beside
+	// the zone picker (columnTimeZone.js zoneShiftNote), not warned. Only the runs that could
+	// not be read in order are.
+	if (counts.unordered > 0) {
+		out.push(
+			`${timesText(counts.unordered)} fall in the hour repeated when daylight saving ended in ${zone}, ` +
+				`and do not step back through it in order, so each is read as the earlier ` +
+				`(daylight-saving) time. ${FIXED_OFFSET_ADVICE}`
+		);
+	}
+	return out;
+}
+
+/** A zone saved on a source column that this browser does not know, or null. */
+function unknownZoneWarning(col) {
+	if (col.refId != null) return null;
+	const z = col.timeZone;
+	if (typeof z !== 'string' || z === '' || normalizeZone(z)) return null;
+	return `The time zone "${z}" is not known to this browser, so these times are read as written (UTC).`;
+}
+
 /**
  * The warnings for a column (strings, empty when none). Never throws: a column that
  * cannot be read has nothing to warn about here (its own error shows elsewhere).
@@ -248,17 +297,22 @@ export function longFormatLabel(col, times = col?.getData?.()) {
 export function columnWarnings(col) {
 	if (!col || col.type !== 'time') return [];
 	try {
+		const out = [];
+		const unknown = unknownZoneWarning(col);
+		if (unknown) out.push(unknown);
 		const times = col.getData();
+		out.push(...dstCountWarnings(wallClockCountsOf(times)));
 		const n = repeatedTimesOf(times);
-		if (!(n > 0)) return [];
+		if (!(n > 0)) return out;
 		let label = null;
 		try {
 			label = longFormatLabel(col, times);
 		} catch {
 			label = null;
 		}
-		if (label) return [longFormatWarning(displayName(label.col), label.k)];
-		return [repeatedTimesWarning(n)];
+		if (label) out.push(longFormatWarning(displayName(label.col), label.k));
+		else out.push(repeatedTimesWarning(n));
+		return out;
 	} catch {
 		return [];
 	}

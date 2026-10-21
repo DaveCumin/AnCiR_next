@@ -423,8 +423,9 @@
 				>
 				<p class="privacy-note">
 					Times are then shown in their own column's zone (text with no zone exactly as written).
-					The actogram day start and clock-time phases can move. No stored time changes, and Undo
-					reverses it.
+					With the box ticked, those columns are read as {zoneLabel(legacyZone)} time: they still show
+					as written, they line up with columns in other zones, and elapsed time across a daylight-saving
+					change is exact. The actogram day start and clock-time phases can move. Undo reverses it.
 				</p>
 			</div>
 		{/if}

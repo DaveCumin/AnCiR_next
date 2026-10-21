@@ -9,6 +9,7 @@ import {
 	watsonWilliams,
 	weightedRayleigh
 } from '$lib/utils/circular.js';
+import { instantToWallClock } from '$lib/utils/time/zones.js';
 
 const TAU = Math.PI * 2;
 
@@ -154,18 +155,27 @@ const TAU_P = Math.PI * 2;
 
 /**
  * Convert a column to phase hours for polar plotting. A `time`-type column's
- * getData() returns epoch-ms → absolute hours (÷3.6e6); a numeric column's
- * values are raw hours. Gaps/blank/non-numeric → NaN.
+ * getData() returns epoch-ms → absolute hours of the column's CLOCK: each time is read
+ * on the wall clock of `zone` (its own offset, so a daylight-saving change moves the
+ * clock with it) and divided by 3.6e6, so folding by 24 gives the hour of day there. A
+ * numeric column's values are raw hours. Gaps/blank/non-numeric → NaN.
+ *
+ * `zone` is the time column's clock zone (core/columnTimeZone.js columnClock(col).zone;
+ * the plot passes 'utc' in a legacy session, whose circular plots never read a zone).
+ * 'utc' reads the stored ms as they are, which is a zone-less column's written clock.
  * @param {any[]} data
  * @param {string} columnType
+ * @param {string} [zone='utc']
  * @returns {number[]}
  */
-export function columnToPhaseHours(data, columnType) {
+export function columnToPhaseHours(data, columnType, zone = 'utc') {
+	const shift = columnType === 'time' && zone && zone !== 'utc';
 	return (data ?? []).map((v) => {
 		if (v == null || (typeof v === 'string' && v.trim() === '')) return NaN;
 		const n = Number(v);
 		if (!Number.isFinite(n)) return NaN;
-		return columnType === 'time' ? n / 3_600_000 : n;
+		if (columnType !== 'time') return n;
+		return (shift ? instantToWallClock(n, zone) : n) / 3_600_000;
 	});
 }
 
@@ -190,10 +200,11 @@ export function timeToAngleRad(hours, period) {
  * with an arbitrary offset tests nothing. R and the weighted acrophase stay:
  * they describe the series. For a rhythm test on (time, value) data use the
  * fixed-period cosinor (Cornelissen 2014, zero-amplitude F test).
+ * `zone` is the time column's clock zone, as for columnToPhaseHours.
  * @returns {{n,nEff,R,meanAngle,z,pValue,W,meanValue:number}}
  */
-export function weightedSeriesStats(timeData, timeType, valueData, period) {
-	const angles = columnToPhaseHours(timeData, timeType).map((h) => timeToAngleRad(h, period));
+export function weightedSeriesStats(timeData, timeType, valueData, period, zone = 'utc') {
+	const angles = columnToPhaseHours(timeData, timeType, zone).map((h) => timeToAngleRad(h, period));
 	const weights = cleanNumericColumn(valueData);
 	const r = weightedRayleigh(angles, weights);
 	const dp = displayPeriodFor('hours', period);

@@ -13,10 +13,10 @@
 // There is no 'local' value on purpose: the machine's zone would make a session read
 // differently on another computer. "Use my computer's zone" stores the IANA name.
 //
-// Plan: ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, sections 3.1 to 3.3.
-// Phase 1 uses this module for display and import detection only; no stored instant is
-// computed through it. `wallClockToInstant` is the simple two-pass lookup; phase 3
-// replaces it with the resolver that applies the repeated/missing hour rules (3.10).
+// Plan: ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, sections 3.1 to 3.3 and
+// 3.10. Since phase 3 a zone-less text column with a zone other than 'utc' stores the
+// instants its wall clock names in that zone (`resolveWallClocks`, below); 'utc' keeps the
+// wall clock read as UTC exactly as before.
 
 import dayjs from './dayjsSetup.js';
 
@@ -217,6 +217,7 @@ function partsFormatter(zone) {
 // Offsets change only on a quarter hour of UTC, so a 15-minute bucket is exact. Capped so a
 // long session cannot grow it without bound.
 const OFFSET_BUCKET_MS = 15 * 60 * 1000;
+const DAY_MS = 86400000;
 const offsetCache = new Map();
 const OFFSET_CACHE_MAX = 50_000;
 
@@ -256,24 +257,191 @@ export function zoneOffsetMinutes(zone, ms) {
 	return ianaOffsetMinutes(z, ms);
 }
 
+// ─── Wall clock to instant (phase 3; plan section 3.10, decision 10) ──────────
+//
+// A zone-less text time is parsed as if it were UTC (TimeUtils.js parseTimeStrict, so every
+// format rule stays), giving its WALL CLOCK as ms. These functions turn that wall clock into
+// the instant it names in a zone. Written to be ported line for line to Python and R
+// (plan phase 4); the contract:
+//
+// For one wall clock w (ms) in zone z:
+//   before = offset of z at the instant w - 1 day      (minutes east of UTC)
+//   after  = offset of z at the instant w + 1 day
+//   if before == after:  instant = w - before            (no change near w)
+//   else  tb = w - before, ta = w - after, and
+//         okB = offset at tb == before, okA = offset at ta == after
+//     both ok   REPEATED (the clock went back; w happened twice): earlier = min(tb, ta) (the
+//               offset before the change), later = max(tb, ta)
+//     one ok    that one
+//     neither   SKIPPED (the clock went forward; w never happened): tb, the offset BEFORE the
+//               change, which reads on the clock as w plus the gap (02:30 becomes 03:30)
+// Assumes no zone changes its offset twice within two days (none does).
+//
+// For a column (values in row order), REPEATED values are grouped into runs: consecutive
+// values (blank cells skipped) with the same two offsets, each within the length of the
+// repeated window of the one before. In a run, the positions where the wall clock steps back
+// or repeats (w <= the previous w) are counted:
+//   exactly one   the times are in order through the repeated hour: values before it are the
+//                 first pass (earlier instant), it and those after the second (later instant).
+//                 Like pandas' tz_localize(ambiguous='infer').
+//   none or more  not a clean two-pass record (one pass only, sorted by the text, shuffled):
+//                 every value of the run takes the earlier instant.
+// Counts returned: `repeated` (values in a repeated hour), `secondPass` (of those, read as the
+// later instant), `unordered` (of those, in runs that were not a clean two-pass record, so all
+// read as the earlier instant), `skipped` (values in a skipped hour, shifted forward).
+//
+// Offsets are looked up per 15-minute UTC bucket and cached per zone (ianaOffsetMinutes), and
+// a column memoises the classification per 15-minute WALL bucket: offsets and changes fall on
+// quarter hours, so every wall clock in a bucket is classified alike (checked: a zone whose
+// offset is not a whole quarter hour, such as a historical local mean time, is not memoised).
+
+const UNIQUE = 0;
+const REPEATED = 1;
+const SKIPPED = 2;
+const QUARTER_MS = 15 * 60000;
+
+/** The normalised zone, or a RangeError: a zone the resolver cannot read is refused. */
+function resolverZone(zone) {
+	const z = normalizeZone(zone);
+	if (!z) throw new RangeError(`Unknown time zone: ${zone}`);
+	return z;
+}
+
 /**
- * The instant a wall clock names in `zone`. The wall clock is given as ms read as if it
- * were UTC (which is how a zone-less text column is stored today).
- *
- * Two-pass lookup: the offset at the wall clock taken as an instant, then the offset at the
- * corrected instant. In a repeated hour this lands on one of the two instants and in a
- * missing hour on a nearby one; phase 3 replaces it with the plan's explicit rules
- * (section 3.10) before any stored instant is computed this way. Phase 1 only DISPLAYS
- * through it (a zone-less column shown in another zone).
+ * How an IANA zone reads one wall clock: `{ kind, early, late }`, the offsets (minutes) of
+ * the earlier and later instant (equal unless REPEATED; for SKIPPED the offset before the
+ * change). See the contract above.
+ */
+function classifyWall(z, w) {
+	const before = ianaOffsetMinutes(z, w - DAY_MS);
+	const after = ianaOffsetMinutes(z, w + DAY_MS);
+	if (before === after) return { kind: UNIQUE, early: before, late: before };
+	const okBefore = ianaOffsetMinutes(z, w - before * 60000) === before;
+	const okAfter = ianaOffsetMinutes(z, w - after * 60000) === after;
+	if (okBefore && okAfter) {
+		// The larger offset gives the earlier instant.
+		const hi = Math.max(before, after);
+		const lo = Math.min(before, after);
+		return { kind: REPEATED, early: hi, late: lo };
+	}
+	if (okBefore) return { kind: UNIQUE, early: before, late: before };
+	if (okAfter) return { kind: UNIQUE, early: after, late: after };
+	return { kind: SKIPPED, early: before, late: before };
+}
+
+/** classifyWall, memoised per 15-minute wall bucket for one column (see the header). */
+function wallClassifier(z) {
+	const memo = new Map();
+	return (w) => {
+		const bucket = Math.floor(w / QUARTER_MS);
+		let c = memo.get(bucket);
+		if (c === undefined) {
+			c = classifyWall(z, bucket * QUARTER_MS);
+			if (c.early % 15 !== 0 || c.late % 15 !== 0) return classifyWall(z, w);
+			memo.set(bucket, c);
+		}
+		return c;
+	};
+}
+
+const isWallValue = (w) => typeof w === 'number' && Number.isFinite(w);
+
+/**
+ * The instant a wall clock names in `zone` (the contract above, for one value): a repeated
+ * hour gives the earlier instant, a skipped one is shifted forward by the gap. `wallMs` is the
+ * wall clock read as UTC; a missing value (null, NaN) is returned as it is. Throws a
+ * RangeError for a zone it does not know.
+ * @param {number} wallMs
+ * @param {string} zone 'utc', a fixed offset or an IANA name
  */
 export function wallClockToInstant(wallMs, zone) {
-	if (!Number.isFinite(wallMs)) return wallMs;
-	const z = normalizeZone(zone) ?? UTC_ZONE;
+	const z = resolverZone(zone);
+	if (!isWallValue(wallMs)) return wallMs;
 	if (z === UTC_ZONE) return wallMs;
-	const first = zoneOffsetMinutes(z, wallMs);
-	const guess = wallMs - first * 60000;
-	const second = zoneOffsetMinutes(z, guess);
-	return wallMs - second * 60000;
+	const fixed = fixedOffsetMinutes(z);
+	if (fixed != null) return wallMs - fixed * 60000;
+	return wallMs - classifyWall(z, wallMs).early * 60000;
+}
+
+/**
+ * A column of wall clocks (ms read as UTC, in row order; null, NaN and other non-numbers kept
+ * as they are) to the instants they name in `zone`, with the repeated hour inferred from the
+ * order and the skipped hour shifted forward (the contract above). 'utc' returns the values
+ * unchanged. Throws a RangeError for a zone it does not know.
+ * @param {ArrayLike<unknown>} walls
+ * @param {string} zone
+ * @returns {{ instants: unknown[], repeated: number, secondPass: number, unordered: number,
+ *   skipped: number }}
+ */
+export function resolveWallClocks(walls, zone) {
+	const z = resolverZone(zone);
+	const n = walls?.length ?? 0;
+	const instants = new Array(n);
+	const counts = { repeated: 0, secondPass: 0, unordered: 0, skipped: 0 };
+	if (z === UTC_ZONE) {
+		for (let i = 0; i < n; i++) instants[i] = walls[i];
+		return { instants, ...counts };
+	}
+	const fixed = fixedOffsetMinutes(z);
+	if (fixed != null) {
+		const shift = fixed * 60000;
+		for (let i = 0; i < n; i++) {
+			const w = walls[i];
+			instants[i] = isWallValue(w) ? w - shift : w;
+		}
+		return { instants, ...counts };
+	}
+
+	const classify = wallClassifier(z);
+	// The current run of repeated values: their row indices and the two offsets.
+	let run = null;
+	const endRun = () => {
+		if (!run) return;
+		const idx = run.idx;
+		counts.repeated += idx.length;
+		let backStep = -1;
+		let backSteps = 0;
+		for (let p = 1; p < idx.length; p++) {
+			if (walls[idx[p]] <= walls[idx[p - 1]]) {
+				backSteps++;
+				backStep = p;
+			}
+		}
+		if (backSteps === 1) {
+			const shift = run.late * 60000;
+			for (let p = backStep; p < idx.length; p++) instants[idx[p]] = walls[idx[p]] - shift;
+			counts.secondPass += idx.length - backStep;
+		} else {
+			counts.unordered += idx.length;
+		}
+		run = null;
+	};
+
+	for (let i = 0; i < n; i++) {
+		const w = walls[i];
+		if (!isWallValue(w)) {
+			instants[i] = w;
+			continue;
+		}
+		const c = classify(w);
+		instants[i] = w - c.early * 60000;
+		if (c.kind === REPEATED) {
+			const windowMs = (c.early - c.late) * 60000;
+			const last = run ? walls[run.idx[run.idx.length - 1]] : null;
+			const sameRun =
+				run && run.early === c.early && run.late === c.late && Math.abs(w - last) < windowMs;
+			if (!sameRun) {
+				endRun();
+				run = { early: c.early, late: c.late, idx: [] };
+			}
+			run.idx.push(i);
+		} else {
+			endRun();
+			if (c.kind === SKIPPED) counts.skipped++;
+		}
+	}
+	endRun();
+	return { instants, ...counts };
 }
 
 /** The wall clock (as ms read as UTC) that `zone` shows at the instant `ms`. */
@@ -300,18 +468,16 @@ export function dayjsInZone(ms, zone) {
 
 /**
  * Parse a wall-clock text in `zone` to an instant (ms), or NaN. `fmt` is optional; without
- * one, dayjs's ISO reading is used (what <input type="datetime-local"> emits).
+ * one, dayjs's ISO reading is used (what <input type="datetime-local"> emits). The text is
+ * read as UTC and resolved with `wallClockToInstant`, so a typed time in a repeated hour is
+ * the earlier instant and one in a skipped hour moves forward, as a column's times do.
  */
 export function parseInZone(text, fmt, zone) {
 	if (text == null || text === '') return NaN;
 	const z = normalizeZone(zone) ?? UTC_ZONE;
 	const asUtc = fmt ? dayjs.utc(text, fmt, true) : dayjs.utc(text);
 	if (!asUtc.isValid()) return NaN;
-	if (z === UTC_ZONE) return asUtc.valueOf();
-	const fixed = fixedOffsetMinutes(z);
-	if (fixed != null) return asUtc.valueOf() - fixed * 60000;
-	const dt = fmt ? dayjs.tz(text, fmt, z) : dayjs.tz(text, z);
-	return dt.isValid() ? dt.valueOf() : NaN;
+	return wallClockToInstant(asUtc.valueOf(), z);
 }
 
 // ─── Import detection (plan 3.3) ───────────────────────────────────────────
@@ -376,8 +542,6 @@ export function suggestZoneFromOffsets(samples, { preferZone, zones } = {}) {
 }
 
 // ─── Daylight-saving changes (phase 2: clock-time consumers) ───────────────
-
-const DAY_MS = 86400000;
 
 /**
  * The offset changes of `zone` between the instants `fromMs` and `toMs` (inclusive), in time

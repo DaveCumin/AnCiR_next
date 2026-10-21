@@ -34,8 +34,8 @@ function timeEndMs(col) {
  *
  * The result keeps the clock (`zone`, `perWindowZone`) so a rolling node can shift each
  * window by its own offset; a legacy session gets no per-window shift (it computes exactly
- * what it did before per-column zones), nor does a wall-clock column (its ms already ARE the
- * local clock).
+ * what it did before per-column zones), nor does a wall-clock column (zone-less 'utc' text:
+ * its ms already ARE the local clock, and UTC has no daylight saving).
  *
  * @param {object} argsIN  the node args (`phaseReference` absent = since first sample)
  * @param {object|null} xCol  the x column phases are measured on

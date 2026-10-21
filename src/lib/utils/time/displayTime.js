@@ -10,8 +10,11 @@
 //   2. "Show times in" (`appState.showTimesIn`): 'column' (the default) shows each time in
 //      its own column's zone; a zone there is a DISPLAY override that relabels every time.
 //   3. the column's time frame (core/columnTimeZone.js): its zone, and whether its stored ms
-//      are the wall clock read as UTC (`wall`, a zone-less text column: shown "As written")
-//      or true instants (text with offsets, epoch ms).
+//      are the wall clock read as UTC (`wall`: zone-less text in 'utc', shown "As written") or
+//      true instants (text with offsets, epoch ms, and since phase 3 zone-less text given a
+//      zone, which shown in its own zone also reads as written). A frame `{ zone, wall: true }`
+//      with a zone other than 'utc' no longer comes from a column; the import preview uses it
+//      for times it has parsed as UTC but will store resolved in that zone.
 //
 // Helpers take an optional `zoneOf`: the Column the time belongs to (its `timeFrame` is
 // read), a frame `{ zone, wall }`, or a zone name (a true instant in that zone). Omitted,

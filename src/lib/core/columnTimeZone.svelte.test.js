@@ -1,7 +1,8 @@
 // @ts-nocheck
 // A column's time zone (STAT-18, phase 1): saved and loaded, inherited by every column
-// derived from it, changed in one undo step, and a legacy session converted in one undo step
-// that changes how times are SHOWN and never a stored time.
+// derived from it, changed in one undo step, and a legacy session converted in one undo step.
+// Since phase 3 a zone on zone-less text decides the instants it names (the wall clock stays
+// as written); see wallClock.svelte.test.js for the parse itself.
 //
 // The three ways a column derives from another reach their source through different code
 // (a reference, a free process output, an analysis node output), so each is tested, with
@@ -70,12 +71,12 @@ describe('save and load', () => {
 
 		await importJson(saved);
 		expect(getColumnById(t.id).timeZone).toBe(NZ);
-		expect(getColumnById(t.id).timeFrame).toEqual({ zone: NZ, wall: true });
+		expect(getColumnById(t.id).timeFrame).toEqual({ zone: NZ, wall: false });
 		expect(getColumnById(u.id).timeZone).toBeNull();
 		expect(getColumnById(u.id).timeFrame).toEqual({ zone: 'utc', wall: true });
-		// The parsed times do not depend on the zone in phase 1.
+		// Phase 3: the same text names instants 13 h earlier in Auckland (NZDT) than in UTC.
 		expect(Array.from(getColumnById(t.id).getData())).toEqual(
-			Array.from(getColumnById(u.id).getData())
+			Array.from(getColumnById(u.id).getData()).map((ms) => ms - 13 * 3600000)
 		);
 	});
 
@@ -101,7 +102,7 @@ describe('inheritance', () => {
 		const t = source('time', TIMES, { timeZone: NZ });
 		const ref = new Column({ refId: t.id });
 		pushObj(ref);
-		expect(ref.timeFrame).toEqual({ zone: NZ, wall: true });
+		expect(ref.timeFrame).toEqual({ zone: NZ, wall: false });
 		expect(ownsTimeZone(ref)).toBe(false);
 		expect(timeZoneSource(ref)).toBe(t);
 		t.timeZone = '+05:30';
@@ -169,8 +170,9 @@ describe('inheritance', () => {
 	});
 
 	it('phase 2 hook: a wall-clock column is read in utc, an instant column in its zone', () => {
-		const w = source('w', TIMES, { timeZone: NZ });
-		expect(clockZoneOf(w)).toBe('utc');
+		expect(clockZoneOf(source('w', TIMES))).toBe('utc');
+		// Since phase 3 zone-less text given a zone is an instant column.
+		expect(clockZoneOf(source('z', TIMES, { timeZone: NZ }))).toBe(NZ);
 		const i = source('i', ['2024-03-10T08:00:00+13:00'], {
 			timeFormat: 'YYYY-MM-DDTHH:mm:ssZ',
 			timeZone: NZ
@@ -180,16 +182,26 @@ describe('inheritance', () => {
 });
 
 describe('changing a zone', () => {
-	it('is one undo step and does not touch the stored times', () => {
+	it('is one undo step: the text is read again in the zone, and undo reads it as before', () => {
 		const t = source('time', TIMES);
 		const before = Array.from(t.getData());
 		const n0 = history.undoCount;
 		applyOp({ kind: 'setColumnTimeZone', id: t.id, zone: NZ });
 		expect(t.timeZone).toBe(NZ);
 		expect(history.undoCount).toBe(n0 + 1);
-		expect(Array.from(t.getData())).toEqual(before);
+		// 6 Apr 23:00 to 7 Apr 01:00 are NZDT (-13 h); 02:00 is in the repeated hour, read
+		// once, so the earlier (NZDT) instant.
+		expect(Array.from(t.getData())).toEqual(before.map((ms) => ms - 13 * 3600000));
+		// Shown in its own zone, every time still reads as written.
+		expect(t.getData().map((ms) => formatTimeFromUNIX(ms, t))).toEqual([
+			'06 Apr 2024 23:00:00',
+			'07 Apr 2024 00:00:00',
+			'07 Apr 2024 01:00:00',
+			'07 Apr 2024 02:00:00'
+		]);
 		history.undo();
 		expect(getColumnById(t.id).timeZone).toBeNull();
+		expect(Array.from(getColumnById(t.id).getData())).toEqual(before);
 		history.redo();
 		expect(getColumnById(t.id).timeZone).toBe(NZ);
 		// Setting the same zone again is not a step.
@@ -225,7 +237,7 @@ describe('a legacy session (saved with Timezone = Pacific/Auckland)', () => {
 		}
 	});
 
-	it('converts in one undo step that changes display only', async () => {
+	it('converts in one undo step; the zone-less column is then read in the old zone', async () => {
 		await importJson(legacySession());
 		const [offsets, local] = core.data;
 		const dataBefore = core.data.map((c) => Array.from(c.getData()));
@@ -243,8 +255,10 @@ describe('a legacy session (saved with Timezone = Pacific/Auckland)', () => {
 		expect(history.undoCount).toBe(n0 + 1);
 		expect(getLegacyZone()).toBeNull();
 		expect(getClockZone()).toBe('utc');
-		// No stored time moved.
-		expect(core.data.map((c) => Array.from(c.getData()))).toEqual(dataBefore);
+		// The offset column's instants do not move; the zone-less one's are now read in
+		// Auckland (phase 3): 13 h earlier, as NZDT.
+		expect(Array.from(offsets.getData())).toEqual(dataBefore[0]);
+		expect(Array.from(local.getData())).toEqual(dataBefore[1].map((ms) => ms - 13 * 3600000));
 		// The offset column reads exactly as before (its zone is now the old one); the zone-less
 		// one now reads as written instead of relabelled (the STAT-18 fix).
 		expect(formatTimeFromUNIX(offsets.getData()[0], offsets)).toBe(shownBefore);
@@ -254,6 +268,7 @@ describe('a legacy session (saved with Timezone = Pacific/Auckland)', () => {
 		expect(getLegacyZone()).toBe(NZ);
 		expect(getColumnById(offsets.id).timeZone).toBeNull();
 		expect(getColumnById(local.id).timeZone).toBeNull();
+		expect(core.data.map((c) => Array.from(c.getData()))).toEqual(dataBefore);
 	});
 
 	it('a new-format session saves the setting and is not legacy on reload', async () => {

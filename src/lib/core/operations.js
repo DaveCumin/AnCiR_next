@@ -1036,8 +1036,10 @@ function op_setAppearanceMaps(op) {
  * the session (plots/applyTemplateToAll.js). Colours only: the stored colours a swap repaints
  * (Box's fill) are plot state and travel in the same step as plot edits.
  */
-// A column's time zone (STAT-18). Phase 1 changes no stored instant: the zone decides how the
-// column's times are shown, so this is an ordinary one-field edit with its own inverse.
+// A column's time zone (STAT-18). An ordinary one-field edit with its own inverse: for
+// zone-less text the zone is part of the column's data hash, so its text is read again in the
+// new zone (phase 3: the wall clock stays, the instants move) and everything downstream
+// recomputes; undo reads it in the old zone again. Nothing stored is rewritten.
 function op_setColumnTimeZone(op) {
 	const col = core.data.find((c) => c.id === op.id);
 	if (!col) return null;

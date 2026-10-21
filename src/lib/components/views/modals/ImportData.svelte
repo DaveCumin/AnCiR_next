@@ -50,7 +50,18 @@
 	} from '$lib/utils/time/displayTime.js';
 	import { formatHasOffset } from '$lib/utils/time/TimeUtils';
 	import { suggestImportZone } from '$lib/utils/time/importZone.js';
-	import { UTC_ZONE, normalizeZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import {
+		UTC_ZONE,
+		normalizeZone,
+		zoneLabel,
+		localZone,
+		isFixedOffset,
+		formatFixedOffset,
+		dayjsInZone,
+		resolveWallClocks
+	} from '$lib/utils/time/zones.js';
+	import { dstPatternHint } from '$lib/utils/time/dstHint.js';
+	import { ownsTimeZone } from '$lib/core/columnTimeZone.js';
 	import TimeZoneSelect from '$lib/components/inputs/TimeZoneSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -798,7 +809,8 @@
 	// Without a pick, a column whose text carries offsets is proposed the zone they show
 	// (zoneSuggestions, said beside the picker), and any other column is 'utc', shown "As
 	// written". Never guessed silently. One choice per column serves every file of a
-	// multi-file import. Phase 1 stores the zone on the column and changes no parsed time.
+	// multi-file import. The zone is stored on the column; for zone-less text it decides the
+	// instants the text names (phase 3), so the import's sort and binning read it too.
 	let columnTimeZones = $state({});
 
 	/** The format a time column will be read with: the typed one, else the detected one. */
@@ -839,6 +851,22 @@
 	function storedZoneFor(col) {
 		const z = importZones ? (importZones[col] ?? UTC_ZONE) : importZoneFor(col);
 		return z === UTC_ZONE ? null : z;
+	}
+
+	/**
+	 * A time column's values as instants for the import's own sort and binning: `ms` is the
+	 * text parsed as UTC (the wall clock, for zone-less text), in file order. Zone-less text
+	 * with a zone is resolved there, as the column will be once imported (Column.getData), so
+	 * rows are sorted by the moments they name and a logger's repeated hour keeps its order.
+	 * @param {string} col
+	 * @param {unknown} fmt the column's format
+	 * @param {number[]} ms NaN for an unreadable value
+	 */
+	function importInstants(col, fmt, ms) {
+		const zone = storedZoneFor(col);
+		if (!zone || formatHasOffset(fmt)) return ms;
+		const walls = ms.map((v) => (Number.isFinite(v) ? v : null));
+		return resolveWallClocks(walls, zone).instants.map((v) => (v == null ? NaN : v));
 	}
 
 	/** The imported name of a combined date + time pair, given its date column. */
@@ -1315,6 +1343,93 @@
 		}
 		return shownZoneLabel(frame, bare);
 	}
+
+	// ─── Daylight-saving hint and zone prompt (phase 3; plan 3.3 points 3 and 6) ────────
+	// Hints only: each says what it saw and offers one button; nothing is set by itself.
+
+	/** The summary time column's wall clocks (its zone-less text read as UTC), or null. */
+	function summaryWalls() {
+		const spec = overlapTimeSpec;
+		if (!spec || spec.kind === 'epoch-s' || spec.kind === 'epoch-ms') return null;
+		const fmt = spec.kind === 'time' ? (spec.format ?? effectiveTimeFormat(spec.col)) : '';
+		if (spec.kind === 'time' && formatHasOffset(fmt)) return null;
+		if (overlapRows) return overlapRows.times ?? null;
+		const key = JSON.stringify(specColumns(spec));
+		if (!singleTimeValues || singleTimeValues.key !== key) return null;
+		return instantsOf(spec, specValues(spec, singleTimeValues.values));
+	}
+
+	function changeDate(change, zone) {
+		return dayjsInZone(change.at, zone).format('D MMM YYYY');
+	}
+	function changeLength(change) {
+		const m = Math.abs(change.after - change.before);
+		return m === 60 ? 'an hour' : `${m} minutes`;
+	}
+
+	// "These times look like they follow daylight saving in X": a zone-less column left as
+	// written whose clock skips or repeats exactly at a change of this computer's zone. Or,
+	// for a column set to a zone with daylight saving, "runs straight through the change":
+	// a fixed offset (the zone's standard time) is offered instead.
+	const dstHint = $derived.by(() => {
+		const spec = overlapTimeSpec;
+		const walls = spec ? summaryWalls() : null;
+		if (!walls) return null;
+		const column = spec.column;
+		const zone = importZoneFor(column);
+		if (zone === UTC_ZONE) {
+			const mine = localZone();
+			if (mine === UTC_ZONE || isFixedOffset(mine)) return null;
+			const h = dstPatternHint(walls, mine);
+			if (h?.kind !== 'follows') return null;
+			const what =
+				h.change.after > h.change.before
+					? `the clock skips ${changeLength(h.change)}`
+					: `the clock steps back ${changeLength(h.change)}`;
+			return {
+				column,
+				zone: mine,
+				text: `These times look like they follow daylight saving in ${mine}: ${what} at the change on ${changeDate(h.change, mine)}. Set the zone?`,
+				button: `Use ${mine}`
+			};
+		}
+		if (isFixedOffset(zone)) return null;
+		const h = dstPatternHint(walls, zone);
+		if (h?.kind !== 'fixed') return null;
+		const standard = formatFixedOffset(Math.min(h.change.before, h.change.after));
+		return {
+			column,
+			zone: standard,
+			text: `These times run straight through the daylight-saving change in ${zone} on ${changeDate(h.change, zone)}, so the logger may not follow daylight saving. Try a fixed offset?`,
+			button: `Use UTC${standard}`
+		};
+	});
+
+	// "Other time columns are in X": the session already has time columns in a real zone and
+	// this one is left as written. Gone once the user picks a zone for it (UTC included).
+	const zonePrompt = $derived.by(() => {
+		const spec = overlapTimeSpec;
+		if (!spec || isUrlMode) return null;
+		const column = spec.column;
+		if (columnTimeZones[column] != null || importZoneFor(column) !== UTC_ZONE) return null;
+		if (spec.kind === 'time' && formatHasOffset(spec.format ?? effectiveTimeFormat(spec.col))) {
+			return null;
+		}
+		const zones = [];
+		for (const c of core.data ?? []) {
+			if (!ownsTimeZone(c)) continue;
+			const z = normalizeZone(c.timeZone);
+			if (z && z !== UTC_ZONE && !zones.includes(z)) zones.push(z);
+		}
+		if (zones.length === 0) return null;
+		const label = zoneLabel(zones[0], { bare: true });
+		return {
+			column,
+			zone: zones[0],
+			text: `Other time columns in this session are in ${label}. Are the times in "${column}" in that zone too?`,
+			button: `Use ${label}`
+		};
+	});
 
 	/**
 	 * Multi-file: read every file in full (their common columns) for the overlap
@@ -1902,6 +2017,8 @@
 			zoneSuggestions: $state.snapshot(zoneSuggestions),
 			summaryZone: previewTimeRange ? displayZoneName() : null,
 			summaryFirst: previewTimeRange ? summaryTime(previewTimeRange.first) : null,
+			dstHint: dstHint && { ...dstHint },
+			zonePrompt: zonePrompt && { ...zonePrompt },
 			columnTypes: Object.fromEntries(
 				Object.entries(previewColumnTypes).map(([col, info]) => [
 					col,
@@ -3258,11 +3375,12 @@
 
 		// Parse timestamps to epoch-ms, then sort via the shared primitive (missing
 		// values sort last). Every column is reordered to keep rows aligned.
-		const msKeys = data[timeCol].map((v) => {
+		let msKeys = data[timeCol].map((v) => {
 			if (epoch) return typeof v === 'number' ? v : NaN;
 			const parsed = parseUTCStrict(v, timeFmt);
 			return parsed ? parsed.valueOf() : NaN;
 		});
+		if (!epoch) msKeys = importInstants(timeCol, timeFmt, msKeys);
 		const order = sortPermutation(msKeys, { direction: 'asc' });
 		const sorted = {};
 		for (const col of allCols) sorted[col] = applyPermutation(data[col], order);
@@ -3286,11 +3404,15 @@
 		// For time columns, parse to epoch-ms; otherwise let the shared primitive
 		// classify each value (numeric vs string) and treat null/NaN as missing-last.
 		const keys = isTime
-			? values.map((v) => {
-					if (v == null) return null;
-					const parsed = parseUTCStrict(v, fmt);
-					return parsed ? parsed.valueOf() : NaN;
-				})
+			? importInstants(
+					sortColName,
+					fmt,
+					values.map((v) => {
+						if (v == null) return NaN;
+						const parsed = parseUTCStrict(v, fmt);
+						return parsed ? parsed.valueOf() : NaN;
+					})
+				)
 			: values;
 
 		const order = sortPermutation(keys, { direction: 'asc' });
@@ -3638,6 +3760,11 @@
 		// Convert time to hours (numeric) for binData compatibility
 		let timeHours;
 		let firstDt;
+		// The zone the binned time column will carry (phase 3). With one, the bins are laid on
+		// the instants the times name and labelled with the wall clock in that zone, which the
+		// column reads back as those instants; without one, as before (labels in UTC).
+		const binZone = storedZoneFor(timeKey);
+		let firstInstant = null;
 
 		if (awdMeta && timeKey === 'DateTime') {
 			// AWD: compute hours directly from metadata — no string parsing needed.
@@ -3648,6 +3775,7 @@
 			// UTC offset.
 			const stepHours = awdMeta.stepMs / 3_600_000;
 			firstDt = dayjs.utc(awdMeta.startMs);
+			if (binZone) firstInstant = resolveWallClocks([awdMeta.startMs], binZone).instants[0];
 			timeHours = new Array(rowCount);
 			for (let i = 0; i < rowCount; i++) {
 				timeHours[i] = i * stepHours;
@@ -3668,10 +3796,19 @@
 				return data;
 			}
 
-			timeHours = timeStrings.map((t) => {
-				const dt = parseDt(t);
-				return dt ? dt.diff(firstDt, 'hour', true) : NaN;
-			});
+			if (binZone) {
+				const ms = timeStrings.map((t) => parseDt(t)?.valueOf() ?? NaN);
+				const instants = importInstants(timeKey, timeFormat, ms);
+				firstInstant = instants[0];
+				timeHours = instants.map((v) =>
+					Number.isFinite(v) ? (v - firstInstant) / 3_600_000 : NaN
+				);
+			} else {
+				timeHours = timeStrings.map((t) => {
+					const dt = parseDt(t);
+					return dt ? dt.diff(firstDt, 'hour', true) : NaN;
+				});
+			}
 		}
 
 		// Guard: check we have valid time data
@@ -3724,7 +3861,12 @@
 
 		// Build result: for time column, reconstruct datetime strings from bin positions
 		const result = {};
-		result[timeKey] = binPositions.map((h) => binTimeLabel(firstDt, h));
+		result[timeKey] =
+			binZone && Number.isFinite(firstInstant)
+				? binPositions.map((h) =>
+						dayjsInZone(firstInstant + h * 3_600_000, binZone).format('DD MMM YYYY HH:mm:ss')
+					)
+				: binPositions.map((h) => binTimeLabel(firstDt, h));
 
 		// For each other column: the shared-grid numeric result, or map category by index
 		for (const k of keys) {
@@ -4251,6 +4393,17 @@
 									{/if}
 								</p>
 							{/if}
+							{#each [zonePrompt, dstHint].filter(Boolean) as hint (hint.text)}
+								<p class="zone-hint" role="status" data-testid="import-zone-hint">
+									<span>{hint.text}</span>
+									<button
+										type="button"
+										class="link-button"
+										data-testid="import-zone-hint-accept"
+										onclick={() => setImportZone(hint.column, hint.zone)}>{hint.button}</button
+									>
+								</p>
+							{/each}
 
 							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
 								<table class="preview-table">
@@ -5208,6 +5361,22 @@
 		gap: 0 0.5em;
 		margin: var(--space-3) 0 0;
 		font-size: var(--font-sm);
+	}
+	/* A zone hint under the summary: information with one button, never applied by itself. */
+	.zone-hint {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0 0.5em;
+		margin: var(--space-2) 0 0;
+		padding: var(--space-2) var(--space-3);
+		font-size: var(--font-sm);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+	}
+	.zone-hint .link-button {
+		padding: 0;
 	}
 	.combine-collapsed {
 		margin: 0.25em 0;

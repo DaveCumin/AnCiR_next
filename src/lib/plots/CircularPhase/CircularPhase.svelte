@@ -35,6 +35,7 @@
 		convertPhaseValues
 	} from '$lib/utils/circularPlot.js';
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
+	import { columnClock } from '$lib/core/columnTimeZone.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 	import {
 		EncodedSeries,
@@ -163,8 +164,16 @@
 		// [0, period) that they convert to radians themselves (see polar.js).
 		// The TAU-radian conversion is only needed inside the Rayleigh-stats
 		// machinery (weightedSeriesStats), which does its own conversion.
+		// The clock the times are read on: the time column's own zone (per-column time zone;
+		// David, 2026-10-22). A legacy session keeps UTC: its circular plots never read the
+		// session's one zone, so their numbers stay.
+		clockZone = $derived.by(() => {
+			if (!this.timeWired) return 'utc';
+			const c = columnClock(this.x);
+			return c.legacy ? 'utc' : c.zone;
+		});
 		angles = $derived.by(() =>
-			this.timeWired ? columnToPhaseHours(this.x.getData(), this.x.type) : []
+			this.timeWired ? columnToPhaseHours(this.x.getData(), this.x.type, this.clockZone) : []
 		);
 
 		stats = $derived.by(() =>
@@ -173,7 +182,8 @@
 						this.x.getData(),
 						this.x.type,
 						this.y.getData(),
-						this.parentPlot.period
+						this.parentPlot.period,
+						this.clockZone
 					)
 				: this.untimedStats()
 		);

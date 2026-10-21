@@ -5,7 +5,10 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import {
+		min as arrayMin,
+		max as arrayMax
+	} from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	const displayName = 'Bin Data';
 	const defaults = new Map([
@@ -292,7 +295,13 @@
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
-	import { columnClock, formatClockInput, parseClockInput } from '$lib/core/columnTimeZone.js';
+	import {
+		columnClock,
+		clockDstChanges,
+		formatClockInput,
+		parseClockInput
+	} from '$lib/core/columnTimeZone.js';
+	import { binDstNote } from '$lib/utils/time/dstNotes.js';
 	import { zoneLabel } from '$lib/utils/time/zones.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
@@ -340,6 +349,20 @@
 			: ''
 	);
 	let binStartZone = $derived(xIsTime ? zoneLabel(columnClock(xIN_col).named) : '');
+	// Daylight saving inside the record moves the bin edges against the local clock (plan 3.5):
+	// said, not changed (bins stay elapsed time).
+	let dstNote = $derived.by(() => {
+		if (!xIsTime || xStartTime_ms == null || (p.args.binMode ?? 'uniform') !== 'uniform') {
+			return null;
+		}
+		const clock = columnClock(xIN_col);
+		const max = arrayMax(xIN_col?.getData() ?? []);
+		return binDstNote(clock, clockDstChanges(clock, xStartTime_ms, max), {
+			firstEdge: xStartTime_ms + Number(p.args.binStart) * 3600000,
+			stepHrs: Number(effectiveStep(p.args)),
+			binHrs: Number(p.args.binSize)
+		});
+	});
 
 	function handleBinStartDatetime(e) {
 		const ms = parseClockInput(e.target.value, xIN_col);
@@ -624,6 +647,9 @@
 		</div>
 	{/if}
 
+	{#if dstNote}
+		<p class="dst-note" data-testid="bin-dst-note">{dstNote}</p>
+	{/if}
 	{#if binnedData?.droppedCount > 0}
 		<div class="data-warning">
 			<p>
@@ -725,6 +751,11 @@
 		font-size: 0.85em;
 		color: var(--color-text-muted);
 		margin: 0.2rem 0 0;
+	}
+	.dst-note {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		margin: var(--space-2) 0 0;
 	}
 	.data-warning {
 		margin-top: 0.4rem;

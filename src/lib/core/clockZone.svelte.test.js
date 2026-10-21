@@ -3,11 +3,12 @@
 // (plan ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, sections 3.4 to 3.8 and
 // decisions 2 and 5 to 8), on the real core, plots and nodes.
 //
-// Phase 2 changes no stored instant, so two kinds of column are tested throughout:
+// Two kinds of column are tested throughout:
 //   - a true-instant column (epoch ms, or text with offsets) with a zone: its clock is that
 //     zone, DST included;
-//   - a zone-less text column ("as written") given a zone: its stored ms ARE its wall clock,
-//     so every clock reading stays as written and only the labels name the zone.
+//   - a zone-less text column given a zone: since phase 3 its wall clock is resolved in that
+//     zone, so it is a true-instant column too and reads exactly as written in its zone
+//     (phases 1 and 2 kept its ms as the wall clock read as UTC).
 // Legacy sessions are pinned separately (plots/Actogram/clockZone.legacy.svelte.test.js and
 // tableProcesses/clockZone.legacy.test.js).
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
@@ -95,11 +96,18 @@ beforeEach(() => {
 });
 
 describe('columnClock', () => {
-	it('an instant column reads in its zone; a wall-clock column as written, naming its zone', () => {
+	it('an instant column reads in its zone; so does zone-less text given one (phase 3)', () => {
 		const inst = timeCol(MS, { timeZone: NZ });
 		expect(columnClock(inst)).toEqual({ zone: NZ, named: NZ, wall: false, legacy: false });
-		const wall = timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm', timeZone: NZ });
-		expect(columnClock(wall)).toEqual({ zone: 'utc', named: NZ, wall: true, legacy: false });
+		const zoned = timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm', timeZone: NZ });
+		expect(columnClock(zoned)).toEqual({ zone: NZ, named: NZ, wall: false, legacy: false });
+		const asWritten = timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm' });
+		expect(columnClock(asWritten)).toEqual({
+			zone: 'utc',
+			named: 'utc',
+			wall: true,
+			legacy: false
+		});
 		expect(columnClock(null)).toEqual({ zone: 'utc', named: 'utc', wall: true, legacy: false });
 	});
 
@@ -141,12 +149,21 @@ describe('actogram day start, row labels and x labels', () => {
 		).toBe('03 Apr 00:00');
 	});
 
-	it('a zone-less column given a zone keeps its as-written midnight', () => {
+	it('a zone-less column given a zone starts at its written midnight, in its zone', () => {
 		const p = actogram([
 			timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm', timeZone: NZ })
 		]);
-		expect(p.startTime).toBe(Date.UTC(2024, 3, 3));
-		expect(p.clockZone).toBe('utc');
+		// Written 3 Apr 07:00 in Auckland (NZDT): the day starts 3 Apr 00:00 NZDT.
+		expect(p.startTime).toBe(Date.UTC(2024, 3, 2, 11));
+		expect(p.clockZone).toBe(NZ);
+		expect(
+			rowLabelText(0, {
+				mode: 'date',
+				startTime: p.startTime,
+				dateFormat: 'DD MMM HH:mm',
+				zone: p.clockZone
+			})
+		).toBe('03 Apr 00:00');
 	});
 
 	it('row labels follow the zone; after the DST change rows start at 23:00 NZST', () => {
@@ -197,12 +214,12 @@ describe('actogram notes', () => {
 		expect(actogram([timeCol(MS, { timeZone: '+13:00' })]).dstNote).toBeNull();
 	});
 
-	it('a zone-less column in a DST zone: rows keep the local clock, the repeated hour is said', () => {
+	it('a zone-less column in a DST zone reads like an instant column (phase 3)', () => {
 		const p = actogram([
 			timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm', timeZone: NZ })
 		]);
 		expect(p.dstNote).toBe(
-			'Daylight saving ended on 7 Apr 2024 in Pacific/Auckland. The times are as written, so rows keep to the local clock, but the day of the change holds a repeated hour.'
+			'Daylight saving ended on 7 Apr 2024 in Pacific/Auckland. Rows are 24 h of elapsed time, so rows after it start at 23:00 local time.'
 		);
 	});
 
@@ -325,18 +342,26 @@ describe('Join Data', () => {
 	it('warns that a non-zero shift between two instant columns double corrects', () => {
 		const res = join(timeCol(MS.slice(0, 4), { timeZone: NZ }), timeCol(MS.slice(0, 4)), 13);
 		expect(res.zoneWarning).toBe(
-			"A's times are in Pacific/Auckland and B's in UTC; both carry their offsets, so they already line up. B's zone accounts for the difference: check the 13 h shift."
+			"A's times are in Pacific/Auckland and B's in UTC; each is read in its own zone, so they already line up and the zones account for the difference: check the 13 h shift."
 		);
 	});
 
-	it('warns when a zone-less side is joined as written against another zone', () => {
+	it('a zone-less side given a zone is an instant column: no warning (phase 3)', () => {
 		const a = timeCol(MS.slice(0, 4).map(wallText), {
 			timeFormat: 'YYYY-MM-DD HH:mm',
 			timeZone: NZ
 		});
 		const res = join(a, timeCol(MS.slice(0, 4)));
-		expect(res.zoneWarning).toContain('joined as written');
+		expect(res.zoneWarning).toBeNull();
 		expect(res.summary).toContain("A's zone (Pacific/Auckland)");
+	});
+
+	it('names a zone-less side left as UTC, in case its clock was in the other zone', () => {
+		const a = timeCol(MS.slice(0, 4), { timeZone: NZ });
+		const b = timeCol(MS.slice(0, 4).map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm' });
+		expect(join(a, b).zoneWarning).toBe(
+			"B's times have no zone, so they are read as UTC. If they were recorded in Pacific/Auckland time, set B's zone (in its column's Properties) and the two line up."
+		);
 	});
 
 	it('says nothing for two UTC columns (the default)', () => {
@@ -365,12 +390,16 @@ describe('cache keys and undo', () => {
 		expect(clockCacheKey(t)).toBe(NZ);
 	});
 
-	it('a zone-less column keys by its named zone, so its warnings recompute too', () => {
+	it('a zone-less column keys by its zone, and its data change with it (phase 3)', () => {
 		const t = timeCol(MS.map(wallText), { timeFormat: 'YYYY-MM-DD HH:mm' });
 		expect(clockCacheKey(t)).toBe('utc');
+		const hash = t.getDataHash;
+		const before = t.getData()[0];
 		t.timeZone = NZ;
 		flushSync();
-		expect(clockCacheKey(t)).toBe(`${NZ}/wall`);
+		expect(clockCacheKey(t)).toBe(NZ);
+		expect(t.getDataHash).not.toBe(hash);
+		expect(t.getData()[0]).toBe(before - 13 * H);
 	});
 
 	it('a legacy session keeps its old key (the legacy zone)', () => {

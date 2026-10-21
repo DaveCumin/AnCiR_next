@@ -1325,9 +1325,7 @@
 			     daylight-saving change or a series in another zone does to them. -->
 			{#if theData.clock.named !== 'utc'}
 				<p class="time-zone-note" data-testid="actogram-clock-zone">
-					Days start at midnight {zoneLabel(theData.clock.named)}{theData.clock.wall
-						? ' (times as written)'
-						: ''}.
+					Days start at midnight {zoneLabel(theData.clock.named)}.
 				</p>
 			{/if}
 			{#if theData.clockZonesDiffer}

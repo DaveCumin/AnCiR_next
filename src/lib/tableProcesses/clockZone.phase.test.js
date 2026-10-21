@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Clock-time phases in the x column's own zone (per-column time zone, phase 2; plan
+// Clock-time phases in the x column's own zone (per-column time zone, phases 2 and 3; plan
 // ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, section 3.7 and decision 6).
 // Real maths, mocked columns: each mock carries the `timeFrame` a real Column derives.
 //
@@ -131,12 +131,13 @@ describe('Cosinor clock phase in the column zone', () => {
 		expect(res.warnings.some((w) => /Daylight saving/.test(w))).toBe(false);
 	});
 
-	it('a zone-less column given a zone reads as written, and says elapsed time is off', async () => {
-		setTime(MS, { zone: NZ, wall: true });
+	it('a zone-less UTC column ("as written") reads its written clock with no warning', async () => {
+		// Since phase 3 only a 'utc' column is a wall-clock column; zone-less text given a zone
+		// is resolved to instants (the NZ instant case above).
+		setTime(MS, { zone: 'utc', wall: true });
 		const [res] = await cosinor(cosinorArgs);
-		// Its stored ms are its wall clock, so the peak reads 02:00 as written.
 		expect(rawData.get(63)[0]).toBeCloseTo(2, 1);
-		expect(res.warnings.some((w) => /The times are as written/.test(w))).toBe(true);
+		expect(res.warnings.some((w) => /Daylight saving|as written/.test(w))).toBe(false);
 	});
 
 	it('"Show times in" does not move a clock phase (decision 2)', async () => {

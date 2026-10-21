@@ -18,7 +18,8 @@
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { remapSeriesRefs, seriesHasData } from '$lib/core/seriesChannelRefs.js';
-	import { resolveTimeFrame } from '$lib/core/columnTimeZone.js';
+	import { resolveTimeFrame, parseZoneOf, noteWallClockCounts } from '$lib/core/columnTimeZone.js';
+	import { resolveWallClocks, wallClockToInstant } from '$lib/utils/time/zones.js';
 
 	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
 	// Returning a fresh integer gives us cheap !== equality for cache invalidation
@@ -369,7 +370,8 @@
 		// The zone this column's wall clock belongs to: 'utc' ("As written" for text with no
 		// offset), a fixed offset '+13:00', or an IANA name (utils/time/zones.js). Set on a
 		// SOURCE time column only; null means 'utc'. Derived columns inherit theirs through
-		// `timeFrame`. Phase 1 changes no stored instant, so this is not part of getDataHash.
+		// `timeFrame`. For zone-less text (and AWD) a zone other than 'utc' decides the instants
+		// the text names (phase 3; resolved in #computePipeline), so it is part of getDataHash.
 		timeZone = $state(null);
 		// { zone, wall }: the zone the column's times are in and whether the stored ms are its
 		// wall clock read as UTC. Inherited through references, process and analysis outputs
@@ -509,6 +511,7 @@
 			this.compression;
 			this.type;
 			this.timeFormat;
+			this.timeZone;
 			this.binWidth;
 			this.tableProcessGUId;
 			this.rawDataVersion;
@@ -592,9 +595,13 @@
 					if (raw == null) {
 						out = [];
 					} else {
+						// The header's start is a wall clock with no zone: with a zone it is
+						// resolved there (phase 3), and the samples follow it in elapsed time.
+						const zone = this.type === 'time' ? parseZoneOf(this) : null;
+						const start = zone ? wallClockToInstant(raw.start, zone) : raw.start;
 						out = new Array(raw.length);
 						for (let i = 0; i < raw.length; i++) {
-							out[i] = raw.start + i * raw.step;
+							out[i] = start + i * raw.step;
 						}
 					}
 				} else {
@@ -614,6 +621,23 @@
 					);
 					// Warn (once, debounced) when many non-blank values did not parse.
 					auditTimeColumnParse(this, rawTimes, out);
+					// Zone-less text with a zone (phase 3): the parse above is the wall clock read
+					// as UTC; resolve it to the instants it names in the zone, with the repeated
+					// and skipped hours of a daylight-saving change (utils/time/zones.js). Only
+					// text cells: an epoch-ms cell already is an instant.
+					const zone = parseZoneOf(this);
+					if (zone) {
+						const walls = out.map((v, i) => (typeof rawTimes[i] === 'string' ? v : null));
+						const r = resolveWallClocks(walls, zone);
+						out = out.map((v, i) => (typeof rawTimes[i] === 'string' ? r.instants[i] : v));
+						noteWallClockCounts(out, {
+							zone,
+							repeated: r.repeated,
+							secondPass: r.secondPass,
+							unordered: r.unordered,
+							skipped: r.skipped
+						});
+					}
 				} catch {
 					console.warn('Error parsing time data for column ', this.id, this.name);
 				}
@@ -756,7 +780,12 @@
 	import { columnDisplayName, commitColumnRename } from '$lib/core/columnLabels.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	import TimeZoneSelect from '$lib/components/inputs/TimeZoneSelect.svelte';
-	import { ownsTimeZone, timeZoneSource } from '$lib/core/columnTimeZone.js';
+	import {
+		ownsTimeZone,
+		timeZoneSource,
+		readsWallClockText,
+		zoneShiftNote
+	} from '$lib/core/columnTimeZone.js';
 	import { applyOp } from '$lib/core/operations.js';
 	import { zoneLabel } from '$lib/utils/time/zones.js';
 	import {
@@ -808,6 +837,10 @@
 	// comes from) on a derived one. One setColumnTimeZone op per change, so it is one undo step.
 	let zoneEditable = $derived(ownsTimeZone(col));
 	let zoneFrame = $derived(col?.type === 'time' ? col.timeFrame : null);
+	// Zone-less text (or AWD): its zone says where the wall clock was, so a zone other than
+	// 'utc' moves its instants (phase 3) and the row says by how much.
+	let zoneAsWritten = $derived(zoneEditable && readsWallClockText(col));
+	let zoneMoveNote = $derived(zoneAsWritten ? zoneShiftNote(col) : null);
 	let zoneFrom = $derived.by(() => {
 		if (!zoneFrame || zoneEditable) return null;
 		const src = timeZoneSource(col);
@@ -947,12 +980,12 @@
 					{#if zoneEditable}
 						<TimeZoneSelect
 							value={col.timeZone ?? 'utc'}
-							utcLabel={zoneFrame.wall ? AS_WRITTEN_LABEL : 'UTC'}
+							utcLabel={zoneAsWritten ? AS_WRITTEN_LABEL : 'UTC'}
 							ariaLabel={`Time zone of ${shownName}`}
 							testid="column-time-zone"
-							title={zoneFrame.wall
-								? 'Where these times were recorded. They stay as written; the zone is used to show them in another zone.'
-								: 'The zone these times are shown in.'}
+							title={zoneAsWritten
+								? 'Where these times were recorded. They stay as written; the zone decides the moments they name, so elapsed time across daylight saving and lining up with other columns are right.'
+								: 'The zone these times are shown in. Their offsets already fix each moment.'}
 							onChange={setZone}
 						/>
 					{:else}
@@ -965,6 +998,9 @@
 						>
 					{/if}
 				</div>
+				{#if zoneMoveNote}
+					<p class="time-zone-note" data-testid="column-time-zone-move">{zoneMoveNote}</p>
+				{/if}
 				{#if zoneShownNote}
 					<p class="time-zone-note" data-testid="column-time-zone-note">{zoneShownNote}</p>
 				{/if}

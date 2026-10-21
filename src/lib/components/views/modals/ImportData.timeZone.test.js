@@ -2,7 +2,8 @@
 //
 // A time column with no offsets in its text imports "As written" ('utc', stored as no zone);
 // offsets in the text propose the zone they show, and say so; a picked zone is stored on the
-// column. Phase 1 changes no parsed time: the ms are identical whichever zone is chosen.
+// column. Since phase 3 a zone on zone-less text decides the instants it names (shown, it
+// still reads as written).
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	openImportModalWithFiles,
@@ -69,7 +70,7 @@ describe('a zone-less time column', () => {
 		expect(col.toJSON().timeZone).toBeUndefined();
 	});
 
-	it('a picked zone is stored on the column, and the parsed times do not move', async () => {
+	it('a picked zone is stored on the column; its times stay as written and name Auckland instants', async () => {
 		await openImportModalWithFiles([makeFile('nz-local.csv', LOCAL_NZ)]);
 		await _importTestActions().confirmImport();
 		const asWritten = Array.from(importedColumn('time').getData());
@@ -83,8 +84,10 @@ describe('a zone-less time column', () => {
 		await _importTestActions().confirmImport();
 		const col = importedColumn('time');
 		expect(col.timeZone).toBe('Pacific/Auckland');
-		expect(col.timeFrame).toEqual({ zone: 'Pacific/Auckland', wall: true });
-		expect(Array.from(col.getData())).toEqual(asWritten);
+		expect(col.timeFrame).toEqual({ zone: 'Pacific/Auckland', wall: false });
+		// Phase 3: read in Auckland, NZDT (+13:00) up to and including 02:00 (in the repeated
+		// hour, read once: the earlier instant).
+		expect(Array.from(col.getData())).toEqual(asWritten.map((ms) => ms - 13 * 3600000));
 		expect(col.toJSON().timeZone).toBe('Pacific/Auckland');
 	});
 

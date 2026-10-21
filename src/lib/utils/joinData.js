@@ -21,10 +21,12 @@
  *    whole millisecond, so the stored times stay integers), x units for numbers.
  *  - Size: more than MAX_JOIN_ROWS output rows is refused, with the shared limit wording.
  *
- * Zone-less text times parse as UTC (utils/time/TimeUtils.js parseTimeStrict), so a wall clock
- * has no daylight-saving jump inside the join: the node only compares the stored ms. The
- * joined time column takes A's zone (per-column time zone, decision 8), which the summary
- * says; `joinZoneNotes` says when A and B are in different zones.
+ * The node only compares the stored ms, which are true instants for every time column: text
+ * with offsets and epoch ms always, zone-less text read in its column's zone (per-column time
+ * zone, phase 3: Column.getData resolves it, daylight saving included), and zone-less text
+ * with no zone read as UTC. So an Auckland logger and a UTC weather file line up with no shift,
+ * across a daylight-saving change too. The joined time column takes A's zone (decision 8),
+ * which the summary says; `joinZoneNotes` says when A and B are in different zones.
  *
  * STACK MODE (neither time wired): stackData, A's rows then B's, each in input order.
  *
@@ -286,15 +288,16 @@ export function suggestedBinSize(intervalA, intervalB) {
 
 /**
  * What the summary and the warnings say about the two time columns' zones (per-column time
- * zone, phase 2; plan section 3.8 and decision 8). The joined time column takes A's zone.
+ * zone; plan section 3.8 and decision 8). The joined time column takes A's zone.
  *
  * - `summary`: "Joined times are in A's zone (Pacific/Auckland)." Empty for a legacy session
  *   (one zone for every column), for two UTC columns, and (the caller) for number times.
- * - `warning`, when A and B are in different zones:
- *     both carry their offsets (true instants): they already line up, so a non-zero shift is
- *     probably a double correction;
- *     otherwise at least one side is a wall clock kept as written, so the two are compared as
- *     written and do not line up by themselves.
+ * - `warning`, when A and B are in different zones. Every time column holds true instants
+ *   (phase 3), so the two already line up:
+ *     a non-zero shift is probably a double correction (a session that compensated by hand
+ *     before the zones were set);
+ *     with no shift, a side whose times are written with no zone and left as UTC ("as
+ *     written") is named, in case its clock was really in another zone.
  *
  * @param {{ named: string, wall: boolean, legacy: boolean }|null} a  A's clock (columnClock)
  * @param {{ named: string, wall: boolean, legacy: boolean }|null} b  B's clock
@@ -309,17 +312,17 @@ export function joinZoneNotes(a, b, shiftB = 0) {
 	if (a.named === b.named) return { summary, warning: null };
 	const zones = `A's times are in ${zoneLabel(a.named)} and B's in ${zoneLabel(b.named)}`;
 	const shift = Number(shiftB) || 0;
-	if (!a.wall && !b.wall) {
+	if (shift !== 0) {
 		return {
 			summary,
-			warning:
-				shift !== 0
-					? `${zones}; both carry their offsets, so they already line up. B's zone accounts for the difference: check the ${shift} h shift.`
-					: null
+			warning: `${zones}; each is read in its own zone, so they already line up and the zones account for the difference: check the ${shift} h shift.`
 		};
 	}
+	const asWritten = b.wall ? 'B' : a.wall ? 'A' : null;
+	if (!asWritten) return { summary, warning: null };
+	const other = asWritten === 'B' ? a.named : b.named;
 	return {
 		summary,
-		warning: `${zones}, but times without an offset are joined as written, so the two clocks do not line up by themselves. Use Shift B's clock (h) for the difference.`
+		warning: `${asWritten}'s times have no zone, so they are read as UTC. If they were recorded in ${zoneLabel(other)} time, set ${asWritten}'s zone (in its column's Properties) and the two line up.`
 	};
 }
