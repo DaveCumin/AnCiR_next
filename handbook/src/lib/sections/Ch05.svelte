@@ -170,29 +170,32 @@
 				12:12 LD cycle, add two bands at 50% each.
 			</li>
 			<li>
-				<strong>Onset/offset markers:</strong> click <strong>+ Add markers and line</strong> under
-				<strong>Markers and lines on</strong> a series (Overlays tab) to draw a marker at activity
-				onset or offset each day. The detector is a template match with three controls (<strong
-					>N</strong
-				>, hours before; <strong>M</strong>, hours after; and a <strong>%</strong> percentile
-				threshold), not a mean + SD cutoff. Template matching is the approach ClockLab (Actimetrics)
-				uses; Fernandez et al., for example, used ClockLab to find each onset as 5 h of relative
-				immobility followed by 5 h of vigorous movement, and offsets with the reverse<sup
-					class="cite"><a href="#ref-33">[33]</a></sup
+				<strong>Onset/offset markers:</strong> on the <strong>Data</strong> tab, under each series,
+				click <strong>+ Add markers and line</strong> (in <strong>Markers and lines</strong>) to
+				draw a marker at activity onset or offset each day. The detector is a template match with
+				three controls (<strong>N</strong>, hours before; <strong>M</strong>, hours after; and a
+				<strong>%</strong>
+				percentile threshold), not a mean + SD cutoff. Template matching is the approach ClockLab (Actimetrics)
+				uses; Fernandez et al., for example, used ClockLab to find each onset as 5 h of relative immobility
+				followed by 5 h of vigorous movement, and offsets with the reverse<sup class="cite"
+					><a href="#ref-33">[33]</a></sup
 				>. AnCiR's version is its own: the windows are yours to set (3 h each by default), and a bin
 				counts as active when it is above the percentile of the non-zero activity in its row and the
 				next, so its markers need not match ClockLab's.
 			</li>
 			<li>
 				<strong>Marker rules:</strong> with several animals on one actogram, click
-				<strong>+ Add rule</strong> under <strong>Marker rules</strong> in the Overlays tab instead
-				of one block per series. A rule applies the same markers and line to every series (every
-				panel when faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
+				<strong>+ Add rule</strong> under <strong>Marker rules</strong> in the
+				<strong>Overlays</strong> tab instead of one block per series. A rule applies the same
+				markers and line to every series (every panel when faceted) and lists each series' fitted τ,
+				φ, R², RMSE and marker count. Its
 				<strong>Min day</strong> and <strong>Max day</strong> set which days are fitted on every
 				series, and each series can still untick its own days. φ is reported in hours after the row
-				start, at the range's first day unless you set a φ day. Changing a setting under one series
-				(or dragging its line, or correcting one of its onsets) <strong>detaches</strong> that
-				series with its own copy;
+				start, at the range's first day unless you set a φ day. Each series shows the rule under its
+				own <strong>Markers and lines</strong> on the Data tab, where <strong>Edit rule</strong>
+				goes back to the rule on the Overlays tab. Changing a setting under one series (or dragging its
+				line, or correcting one of its onsets) <strong>detaches</strong> that series with its own
+				copy;
 				<strong>Reattach to rule</strong> undoes that, and <strong>Make rule</strong> on a series' own
 				block turns it into a rule for all series.
 			</li>

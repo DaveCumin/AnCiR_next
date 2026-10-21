@@ -81,6 +81,8 @@ describe('template-matching method note', () => {
 	});
 
 	it("shows under a series' own onset marker, and not under a hand-placed one", () => {
+		// A series' own markers sit in its block on the Data tab.
+		appState.currentControlTab = 'data';
 		const plot = restActogram();
 		const datum = plot.plot.data[0];
 		datum.phaseMarkers.push(

@@ -237,20 +237,31 @@ describe('legend', () => {
 	});
 });
 
-describe('the Data tab', () => {
-	it('shows the rule section with its note, the summary table, and an instance under each series', async () => {
+describe('the Overlays and Data tabs', () => {
+	it('Overlays shows the rule section with its note and summary; Data an instance under each series', async () => {
 		const session = loadSession(REST);
 		const plot = Plot.fromJSON(session.plots.find((p) => p.type === 'actogram'));
 		core.plots.push(plot);
 		addRuleRecorded(plot.plot, { ...ONSET, name: 'Onsets' });
 		appState.currentControlTab = 'overlays';
-		const r = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
-		const text = r.container.textContent;
+		const r0 = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
+		const text = r0.container.textContent;
 		expect(text).toContain('Marker rules');
 		expect(text).toContain('Applies to all 2 series');
-		expect(r.container.querySelectorAll('.rule-summary li')).toHaveLength(2);
-		expect(r.container.querySelectorAll('[data-rule-instance="r1"]')).toHaveLength(2);
+		expect(r0.container.querySelectorAll('.rule-summary li')).toHaveLength(2);
+		// The instances are not on Overlays: they sit with their series.
+		expect(r0.container.querySelectorAll('[data-rule-instance="r1"]')).toHaveLength(0);
+		cleanup();
+
+		appState.currentControlTab = 'data';
+		const r = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
+		const blocks = r.container.querySelectorAll('.dataBlock');
+		expect(blocks).toHaveLength(2);
+		for (const b of blocks) {
+			expect(b.querySelectorAll('[data-rule-instance="r1"]')).toHaveLength(1);
+		}
 		expect(r.container.textContent).toContain('Changing a setting here detaches');
+		expect(r.container.textContent).not.toContain('Applies to all 2 series');
 
 		// Unticking a day on the first series' instance writes that series' ruleData only.
 		const inst0 = r.container.querySelectorAll('[data-rule-instance="r1"]')[0];
@@ -269,8 +280,11 @@ describe('the Data tab', () => {
 		expect(history.undoStack).toHaveLength(2);
 		cleanup();
 		const r2 = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
-		expect(r2.container.textContent).toContain('1 of 2 series; 1 detached');
 		expect(r2.container.textContent).toContain('Detached from Onsets');
 		expect(r2.container.textContent).toContain('Reattach to rule');
+		cleanup();
+		appState.currentControlTab = 'overlays';
+		const r3 = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
+		expect(r3.container.textContent).toContain('1 of 2 series; 1 detached');
 	});
 });

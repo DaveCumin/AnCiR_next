@@ -547,7 +547,9 @@
 </script>
 
 <script>
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
+	import { appState } from '$lib/core/core.svelte.js';
+	import { rememberControlTab } from '$lib/components/views/controlTabs.js';
 	import { isFacetPanel, panelSeriesTarget } from '$lib/core/facetPanels.svelte.js';
 	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
 	import { commitObjectEdit } from '$lib/plots/plotEdits.js';
@@ -855,9 +857,19 @@
 		store.selectedPeriods = next;
 	}
 
-	/** Scroll the rule's block (Overlays tab, Marker rules) into view and flash it. */
-	function showRule(m) {
-		const el = document.getElementById(ruleBlockDomId(m.parentData.parentPlot, m.ruleId));
+	/**
+	 * Open the Overlays tab (the rule instances sit on the Data tab, under their series; the
+	 * rules on Overlays, under Marker rules), then scroll the rule's block into view and flash it.
+	 */
+	async function showRule(m) {
+		const id = ruleBlockDomId(m.parentData.parentPlot, m.ruleId);
+		if (appState.currentControlTab !== 'overlays') {
+			// As a click on the Overlays tab would: shown, and remembered for actograms.
+			appState.currentControlTab = 'overlays';
+			rememberControlTab('actogram', 'overlays');
+			await tick();
+		}
+		const el = document.getElementById(id);
 		if (!el) return;
 		el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		el.classList.remove('rule-flash');
@@ -1294,7 +1306,8 @@
 				<button
 					class="period-select-btn"
 					onclick={() => showRule(marker)}
-					{@attach tooltip('Show this rule under Marker rules')}>Edit rule</button
+					{@attach tooltip('Show this rule under Marker rules, on the Overlays tab')}
+					>Edit rule</button
 				>
 				<button
 					class="period-select-btn"

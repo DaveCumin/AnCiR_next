@@ -33,6 +33,7 @@ const PINS = [
 test.use({ viewport: { width: 1500, height: 1000 } });
 
 async function load(page, url) {
+	await page.routeWebSocket(/.*/, () => {}); // no live reload mid-test
 	await page.goto(`/?loadFromURL=${encodeURIComponent(url)}`);
 	await page.waitForFunction(
 		() =>
@@ -48,7 +49,8 @@ async function load(page, url) {
 const headerOf = (page, id) =>
 	page.locator(`section.draggable:has(svg[id="plot${id}"]) .plot-header`).first();
 
-// Marker rules and each series' markers live on the Overlays tab (UI-12; Data until v82.23).
+// Marker rules live on the Overlays tab (UI-12, v82.25); each series' markers and lines,
+// including its instance of every rule, sit in that series' block on the Data tab.
 async function openOverlays(page, plotId) {
 	// Click the header's right end: a demo's note card can overlap its left end.
 	const header = headerOf(page, plotId);
@@ -59,6 +61,12 @@ async function openOverlays(page, plotId) {
 		window.__appState.currentControlTab = 'overlays';
 	});
 	await page.waitForTimeout(700);
+}
+
+/** Switch the open panel to a tab as a user does, by clicking it. */
+async function showTab(page, label) {
+	await page.getByRole('tab', { name: label, exact: true }).click();
+	await page.waitForTimeout(600);
 }
 
 async function shot(page, what, prefix = '33-rules') {
@@ -194,10 +202,25 @@ test.describe('actogram marker rules', () => {
 		await expect(page.locator('.rule-block .rule-note').first()).toHaveText(
 			'Applies to all 2 series'
 		);
-		await expect(page.locator('[data-rule-instance="r1"]')).toHaveCount(2);
+		// The rule's instances are not on Overlays: each sits in its series' block on Data.
+		await expect(page.locator('[data-rule-instance="r1"]')).toHaveCount(0);
+		await showTab(page, 'Data');
+		await expect(page.locator('.dataBlock [data-rule-instance="r1"]')).toHaveCount(2);
+		for (const block of await page.locator('.dataBlock').all()) {
+			await expect(block.locator('[data-rule-instance="r1"]')).toHaveCount(1);
+		}
 		expect(await undoDepth(page)).toBe(depth0 + 1);
 		await shot(page, 'added');
 		const added = s;
+
+		// "Edit rule" on an instance opens Overlays at the rule (navigation, not an edit).
+		await page.getByRole('button', { name: 'Edit rule' }).nth(1).click();
+		await expect(page.getByRole('tab', { name: 'Overlays', exact: true })).toHaveAttribute(
+			'aria-selected',
+			'true'
+		);
+		await expect(page.locator('.rule-block').first()).toBeInViewport();
+		expect(await undoDepth(page)).toBe(depth0 + 1);
 
 		// 2. A shared day range: every series' fit follows (fewer markers, phi at day 2).
 		await setRuleField(page, 'Min day', 2);
@@ -215,6 +238,7 @@ test.describe('actogram marker rules', () => {
 		// 3. Untick one in-range day on series 1 only: only series 1 changes. Like every gesture
 		// in the plot panel it is one undo step (plots/plotEditScope.js, since v82.17), and it is
 		// series data, not a settings change, so nothing detaches.
+		await showTab(page, 'Data');
 		const inst0 = page.locator('[data-rule-instance="r1"]').nth(0);
 		// The LAST in-range day: a row's search spans that row and the next, so an earlier
 		// row's detection can be the same onset as the next row's (merged, not counted twice).
@@ -244,6 +268,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.series[1].own[0].fromRule).toBe('r1');
 		expect(s.series[0].instances).toHaveLength(1);
 		expect(await undoDepth(page)).toBe(depth0 + 5);
+		await showTab(page, 'Overlays');
 		await expect(page.locator('.rule-block .rule-note').first()).toHaveText(
 			'1 of 2 series; 1 detached'
 		);
@@ -260,7 +285,8 @@ test.describe('actogram marker rules', () => {
 		expect(await undoDepth(page)).toBe(depth0 + 6);
 		await shot(page, 'detached');
 
-		// 5. Reattach: series 2 is back on the rule (one step).
+		// 5. Reattach: series 2 is back on the rule (one step). Its block is on Data.
+		await showTab(page, 'Data');
 		await page.getByRole('button', { name: 'Reattach to rule' }).click();
 		await page.waitForTimeout(600);
 		s = await state(page, 0);
@@ -334,7 +360,9 @@ test.describe('actogram marker rules', () => {
 			let s = await state(page, demo.id);
 			expect(s.series).toHaveLength(2);
 			s.series.forEach((ser) => expect(ser.instances.map((i) => i.ruleId)).toEqual(['r1']));
-			await expect(page.locator('[data-rule-instance="r1"]')).toHaveCount(2);
+			await showTab(page, 'Data');
+			await expect(page.locator('.dataBlock [data-rule-instance="r1"]')).toHaveCount(2);
+			await showTab(page, 'Overlays');
 			const before = s;
 			await setRuleField(page, 'Min day', 3);
 			s = await state(page, demo.id);

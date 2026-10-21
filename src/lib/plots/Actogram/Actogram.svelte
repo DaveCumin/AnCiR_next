@@ -58,9 +58,9 @@
 	} from '$lib/plots/Actogram/rowLabels.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
-	// Overlays: everything drawn over the rows (light bands, annotations, marker rules and each
-	// series' markers), in one tab named as on the other plots (UI-12). The series themselves
-	// (columns, colour, visibility) stay on Data.
+	// Overlays: what is drawn over the rows for the whole plot (light bands, annotations, marker
+	// rules), in one tab named as on the other plots (UI-12). Data holds the series, each block
+	// with its own markers and lines (the rules' instances and the series' own blocks).
 	export const Actogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	function getNdataByPeriods(dataIN, from, to, period) {
@@ -1428,6 +1428,43 @@
 						</div>
 					</div>
 
+					<!-- MARKERS AND LINES of this series, inside its block (as before v82.25): rule
+					     instances first (settings from the rule, per-day ticks editable), then the
+					     series' own blocks. The rules themselves are on the Overlays tab. -->
+					<div class="markers-section">
+						<div class="control-data-title markers-head">
+							<p>Markers and lines</p>
+						</div>
+						<BlockAdd
+							actions={[
+								{
+									label: 'Add markers and line',
+									ariaLabel: 'Add markers and a line',
+									tooltip:
+										'Add a block of onset, offset or hand-placed markers with their fitted line',
+									onadd: () => datum.addMarker()
+								}
+							]}
+							count={datum.ruleInstances.length + datum.phaseMarkers.length}
+							empty="No markers on this series yet"
+						/>
+						{#each datum.ruleInstances as inst (inst.ruleId)}
+							<div class="markerBlock">
+								<PhaseMarker {which} marker={inst} />
+							</div>
+						{/each}
+						{#each datum.phaseMarkers as marker (marker.id)}
+							<div
+								class="markerBlock"
+								animate:flip={{ duration: 500 }}
+								in:slide={{ duration: 500, axis: 'y' }}
+								out:slide={{ duration: 500, axis: 'y' }}
+							>
+								<PhaseMarker {which} {marker} />
+							</div>
+						{/each}
+					</div>
+
 					<div class="div-line"></div>
 				</div>
 			{/each}
@@ -1474,8 +1511,8 @@
 
 		<div class="div-line"></div>
 
-		<!-- MARKER RULES: one definition, projected onto every series (markerRules.svelte.js),
-		     above the per-series markers it applies to. -->
+		<!-- MARKER RULES: one definition, projected onto every series (markerRules.svelte.js).
+		     Each series shows its instance of a rule under its own block on the Data tab. -->
 		<div class="control-component marker-rules">
 			<div class="control-component-title">
 				<p>Marker rules</p>
@@ -1490,7 +1527,11 @@
 					}
 				]}
 				count={theData.markerRules.length}
-				empty={`A rule puts the same markers and line on all ${theData.data.length} ${theData.parentBox?.facet ? 'panels' : 'series'}; "Make rule" on a block below makes one too`}
+				empty={`A rule puts the same markers and line on ${
+					theData.data.length === 1
+						? `the ${theData.parentBox?.facet ? 'panel' : 'series'}`
+						: `all ${theData.data.length} ${theData.parentBox?.facet ? 'panels' : 'series'}`
+				}; "Make rule" on a series' markers (Data tab) makes one too`}
 			/>
 			{#each theData.markerRules as rule (rule.id)}
 				<MarkerRuleBlock
@@ -1500,44 +1541,6 @@
 				/>
 			{/each}
 		</div>
-
-		<!-- MARKERS AND LINES, per series: rule instances first (settings from the rule, per-day
-		     ticks editable), then the series' own blocks. -->
-		{#each theData.data as datum (datum.x.id + '-' + datum.y.id)}
-			<div class="div-line"></div>
-			<div class="control-component markers-section">
-				<div class="control-component-title">
-					<p>Markers and lines on {datum.displayLabel}</p>
-				</div>
-				<BlockAdd
-					actions={[
-						{
-							label: 'Add markers and line',
-							ariaLabel: 'Add markers and a line',
-							tooltip: 'Add a block of onset, offset or hand-placed markers with their fitted line',
-							onadd: () => datum.addMarker()
-						}
-					]}
-					count={datum.ruleInstances.length + datum.phaseMarkers.length}
-					empty="No markers on this series yet"
-				/>
-				{#each datum.ruleInstances as inst (inst.ruleId)}
-					<div class="markerBlock">
-						<PhaseMarker {which} marker={inst} />
-					</div>
-				{/each}
-				{#each datum.phaseMarkers as marker (marker.id)}
-					<div
-						class="markerBlock"
-						animate:flip={{ duration: 500 }}
-						in:slide={{ duration: 500, axis: 'y' }}
-						out:slide={{ duration: 500, axis: 'y' }}
-					>
-						<PhaseMarker {which} {marker} />
-					</div>
-				{/each}
-			</div>
-		{/each}
 	{/if}
 {/snippet}
 
@@ -1815,6 +1818,13 @@
 	.markers-section,
 	.annotation-container {
 		width: 100%;
+	}
+
+	/* A series' markers and lines: a sub-section of its block, set off from the x and y
+	   columns above it. */
+	.markers-head {
+		margin-top: var(--space-5);
+		margin-bottom: var(--space-2);
 	}
 
 	/* The start time's date and time boxes, with the reset beside them once one is chosen. */
