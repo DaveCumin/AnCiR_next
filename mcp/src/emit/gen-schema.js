@@ -22,6 +22,7 @@ import { ensureDom } from '../engine/bootstrapDom.js';
 import { OUTPUT_NOTES } from './dynamicOut.js';
 import { USAGE_NOTES } from './generators.js';
 import { PARAM_NOTES } from './paramNotes.js';
+import { encodingFacts, encodingCapsOf } from './encodings.js';
 
 await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
@@ -240,15 +241,7 @@ for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		// Colour by / Size by (a series' `colourBy` / `sizeBy` in a draft): what the class
 		// declares in `encodingCapabilities` (plotbits/encodingHost.js). `lines`: the series'
 		// line can be coloured too (`colourLine`). Only on encoding hosts.
-		...(encodingCaps
-			? {
-					encodings: {
-						colour: encodingCaps.colour === true,
-						size: encodingCaps.size === true,
-						lines: encodingCaps.lines === true
-					}
-				}
-			: {}),
+		...(encodingCaps ? { encodings: encodingCapsOf(encodingCaps) } : {}),
 		// The metric output ports the plot emits in the app (one value per series), in the node
 		// manifest's shape. Read-only knowledge for the model: the engine cannot wire a plot
 		// metric column (the app mints them at mount; plan 2026-09-30 marker rules, Phase C), so
@@ -259,47 +252,10 @@ for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 	};
 }
 
-// Colour by / Size by facts the draft normalizer validates against (src/emit/encodings.js),
-// read from the app's own encoding machinery (plotbits/encodings.js, colormaps.js) so a mode or
-// map added to the app reaches the draft language without editing a list:
-//   modes / sizeModes   every mode Colour by / Size by can store, in the panel's order ('auto'
-//                       is always accepted as well)
-//   cyclicModes         modes whose domain is fixed and wraps (cyclic maps; never size)
-//   categoryModes       modes whose values are labels (palette colours, no range; never size)
-//   modesFor / sizeModesFor  the modes a column of each kind offers (encodingModesFor /
-//                       sizeModesFor), with the app's warning where it reads a column a way the
-//                       user should know about
-//   colormaps           every map and its kind ('sequential' | 'diverging' | 'cyclic')
-//   radius              the size defaults and floor, px
-const KINDS = {
-	time: { type: 'time' },
-	number: { type: 'number' },
-	numberWithOrigin: { type: 'number', originTime_ms: 0 },
-	category: { type: 'category' },
-	text: { type: 'text' }
-};
-const modeList = (list) =>
-	list.map((m) => ({ mode: m.mode, ...(m.warning ? { warning: m.warning } : {}) }));
-const perKind = (fn) =>
-	Object.fromEntries(Object.entries(KINDS).map(([k, col]) => [k, modeList(fn(col))]));
-const isCategoryMode = encodingsLib.isCategoryMode ?? (() => false);
-const encodings = {
-	modes: [...encodingsLib.ENCODING_MODES],
-	sizeModes: [
-		...(encodingsLib.SIZE_ENCODING_MODES ??
-			encodingsLib.ENCODING_MODES.filter((m) => !encodingsLib.isCyclicMode(m)))
-	],
-	cyclicModes: encodingsLib.ENCODING_MODES.filter((m) => encodingsLib.isCyclicMode(m)),
-	categoryModes: encodingsLib.ENCODING_MODES.filter((m) => isCategoryMode(m)),
-	modesFor: perKind(encodingsLib.encodingModesFor),
-	sizeModesFor: perKind(encodingsLib.sizeModesFor),
-	colormaps: Object.fromEntries(Object.entries(COLORMAP_META).map(([k, m]) => [k, m.kind])),
-	radius: {
-		min: encodingsLib.DEFAULT_MIN_RADIUS,
-		max: encodingsLib.DEFAULT_MAX_RADIUS,
-		floor: encodingsLib.MIN_RADIUS_FLOOR
-	}
-};
+// Colour by / Size by facts the draft normalizer validates against, read from the app's own
+// encoding machinery (plotbits/encodings.js, colormaps.js) by the same builder the app's AI edit
+// and the engine use live (plotbits/encodingSpec.js encodingFacts, where each fact is described).
+const encodings = encodingFacts(encodingsLib, COLORMAP_META);
 
 const out = {
 	_comment:

@@ -33,6 +33,20 @@ import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.
 import { getByPath } from '$lib/utils/objectPath.js';
 import { applyInnerEdits, facetOverrideOps } from '$lib/plots/pairedEdits.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+import * as encodingsLib from '$lib/components/plotbits/encodings.js';
+import { COLORMAP_META } from '$lib/components/plotbits/colormaps.js';
+import { nextEncodingId } from '$lib/components/plotbits/encodingHost.js';
+import {
+	ENCODING_SPEC_CHANNELS,
+	encodingFacts,
+	encodingCapsOf,
+	encodingColumnKind,
+	encodingEntries,
+	encodingFieldsOf,
+	draftEncoding,
+	draftSeriesEncodings,
+	applySeriesEncodings
+} from '$lib/components/plotbits/encodingSpec.js';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
@@ -165,15 +179,50 @@ export function registryFacts(consts = appConsts) {
 	}
 	const plots = {};
 	for (const [type, entry] of consts.plotMap ?? new Map()) {
+		const encodingCaps = encodingCapsOf(entry.data?.encodingCapabilities);
 		plots[type] = {
 			inputs: entry.defaultInputs ?? [],
 			// Shading (light/dark bands) is a scatterplot feature today: a repeating band
 			// OVERLAY, added through the class's `addNightBand` wrapper. Asked of the class
 			// rather than hardcoded, so a plot that gains the wrapper is covered for free.
-			supportsBands: typeof entry.data?.prototype?.addNightBand === 'function'
+			supportsBands: typeof entry.data?.prototype?.addNightBand === 'function',
+			// Colour by / Size by: what the class declares (plotbits/encodingHost.js).
+			...(encodingCaps ? { encodings: encodingCaps } : {})
 		};
 	}
-	return { tps, plots };
+	// The Colour by / Size by facts, live from the app's encodings.js and colormaps.js: the same
+	// builder the Worker's generated catalogue is made with (plotbits/encodingSpec.js).
+	return { tps, plots, encodings: encodingFacts(encodingsLib, COLORMAP_META) };
+}
+
+/**
+ * What the planner needs to know about the open session that the model is NOT sent: each
+ * column's kind for Colour by / Size by (encodingSpec.js encodingColumnKind; null while it holds
+ * no data) and each plot's series labels. Kept apart from summariseSession because that summary
+ * goes to the Worker, whose schema is strict (mcp/app/validation.js): a new key there would
+ * break every edit until the Worker is redeployed.
+ */
+export function sessionFacts(c = core) {
+	const columns = {};
+	for (const col of c.data ?? []) {
+		let kind = null;
+		try {
+			const data = typeof col.getData === 'function' ? col.getData() : null;
+			kind = encodingColumnKind(
+				{ type: col.type, originTime_ms: col.originTime_ms },
+				(data?.length ?? 0) > 0
+			);
+		} catch {
+			kind = null; // a column that cannot read itself is "not known yet"
+		}
+		columns[col.id] = kind;
+	}
+	const plots = {};
+	for (const p of c.plots ?? []) {
+		const rows = p?.plot?.data;
+		plots[p.id] = Array.isArray(rows) ? rows.map((row) => ({ label: row?.label ?? null })) : [];
+	}
+	return { columns, plots };
 }
 
 /**
@@ -376,11 +425,15 @@ function resolveRef(ref, { index, pending }) {
  * preview and the tests possible.
  *
  * @param {{analyses?: any[], plots?: any[], changes?: any[], bands?: any[]}} spec
- * @param {{summary: object, facts: object}} ctx
- * @returns {{analyses, plots, changes, bands, errors: string[], preview: string[]}}
+ * @param {{summary: object, facts: object, local?: object}} ctx  `local` is sessionFacts():
+ *   column kinds and series labels for Colour by / Size by (without it a column's kind is read
+ *   from its summary type, and a series index is checked at apply time)
+ * @returns {{analyses, plots, changes, bands, errors: string[], warnings: string[], preview: string[]}}
+ *   `warnings`: what was adjusted rather than dropped (a range hour of day ignores, say)
  */
-export function planEdit(spec, { summary, facts }) {
+export function planEdit(spec, { summary, facts, local = null }) {
 	const errors = [];
+	const warnings = [];
 	const preview = [];
 	const analyses = [];
 	const plots = [];
@@ -394,6 +447,34 @@ export function planEdit(spec, { summary, facts }) {
 	const nameOf = new Map((summary.columns ?? []).map((c) => [c.id, c.name]));
 	// Analyses queued by THIS edit, so a later plot can refer to their outputs.
 	const pending = [];
+
+	// Colour by / Size by: the same rules, words and saved shape as a session draft
+	// (plotbits/encodingSpec.js). A column is a ref ({colId} or a symbolic {analysis, outKey}),
+	// resolved to an id at apply time like a series' x and y.
+	const colById = new Map((summary.columns ?? []).map((c) => [c.id, c]));
+	const kindOfColumn = (col) =>
+		local?.columns ? (local.columns[col.id] ?? null) : encodingColumnKind(col);
+	const encodingCtx = (plotType, where) => ({
+		plotType,
+		plotSchemas: facts.plots,
+		encodings: facts.encodings,
+		resolveRef: (ref) => resolveRef(ref, { index, pending }),
+		data: summary.columns ?? [],
+		columnOf: (r) => (r.colId != null ? colById.get(r.colId) : { id: null, name: r.outKey }),
+		// A column this edit is about to make holds no data yet: its kind is not known.
+		kindOf: (col, r) => (r.colId != null ? kindOfColumn(col) : null),
+		where,
+		errors,
+		warnings
+	});
+	const encodingWords = (fields, nameOfRef) =>
+		ENCODING_SPEC_CHANNELS.map((channel) => {
+			const f = encodingFieldsOf(channel);
+			const ref = fields?.[f.column]?.refId;
+			if (!fields?.[f.encoding] || ref == null) return null;
+			return `${channel} by ${nameOfRef(ref)} (${fields[f.encoding].mode})`;
+		}).filter(Boolean);
+	const nameOfRef = (r) => (r.colId != null ? nameOf.get(r.colId) : r.outKey);
 
 	// ---- analyses ----
 	for (const a of spec?.analyses ?? []) {
@@ -505,6 +586,7 @@ export function planEdit(spec, { summary, facts }) {
 			continue;
 		}
 
+		const name = typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : type;
 		const series = [];
 		let failed = false;
 		for (const s of rawSeries) {
@@ -520,13 +602,25 @@ export function planEdit(spec, { summary, facts }) {
 				refs[storageField(fields, i)] = r;
 			}
 			if (failed) break;
-			series.push({ refs, kind: s?.kind === 'line' ? 'line' : 'points', label: s?.label });
+			const k = series.length;
+			const encodings =
+				s && typeof s === 'object'
+					? draftSeriesEncodings(s, k, encodingCtx(type, `Plot "${name}" series ${k + 1}:`))
+					: {};
+			series.push({
+				refs,
+				kind: s?.kind === 'line' ? 'line' : 'points',
+				label: s?.label,
+				...(Object.keys(encodings).length ? { encodings } : {})
+			});
 		}
 		if (failed) continue;
 
-		const name = typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : type;
 		plots.push({ type, name, series });
-		preview.push(`Add plot: ${type} named "${name}" (${series.length} series)`);
+		const encoded = series.flatMap((s) => encodingWords(s.encodings, nameOfRef));
+		preview.push(
+			`Add plot: ${type} named "${name}" (${series.length} series${encoded.length ? `; ${encoded.join(', ')}` : ''})`
+		);
 	}
 
 	// ---- changes to an existing analysis or plot ----
@@ -537,6 +631,53 @@ export function planEdit(spec, { summary, facts }) {
 	// model asserted.
 	const byId = new Map((summary.analyses ?? []).map((a) => [a.id, a]));
 	const plotById = new Map((summary.plots ?? []).map((p) => [p.id, p]));
+
+	// Colour by / Size by on an EXISTING series: `{plot, series, colourBy, sizeBy}`. A spec
+	// switches the channel on (or replaces its settings and column); null or false switches it
+	// off. `series` is the index i of the plot.data[i] paths, or the series' label.
+	function planSeriesEncodings(ch, target) {
+		const entries = encodingEntries(ch);
+		if (!entries.length) return;
+		const plotWord = `Plot "${target.name || target.type}"`;
+		const known = local?.plots?.[target.id];
+		let i = null;
+		if (Number.isInteger(ch.series) && ch.series >= 0) i = ch.series;
+		else if (typeof ch.series === 'string' && known) {
+			const hit = known.findIndex((r) => r.label === ch.series);
+			if (hit >= 0) i = hit;
+		}
+		if (i == null || (known && i >= known.length)) {
+			const labels = known?.map((r, k) => `${k}${r.label ? ` "${r.label}"` : ''}`).join(', ');
+			errors.push(
+				`${plotWord}: Colour by / Size by needs "series", the index of one of its series${
+					labels ? ` (${labels})` : ''
+				}; got ${JSON.stringify(ch.series ?? null)}. Skipped.`
+			);
+			return;
+		}
+		const where = `${plotWord} series ${i + 1}:`;
+		const fields = {};
+		const off = [];
+		for (const [channel, value] of entries) {
+			if (value === null || value === false) {
+				off.push(channel);
+				continue;
+			}
+			// The id is the series' own if this channel is on already, else the panel's next one;
+			// only the live plot knows which, so applyEdit fills it in.
+			const one = draftEncoding({ ...encodingCtx(target.type, where), channel, value, id: null });
+			if (one) Object.assign(fields, one);
+		}
+		if (!off.length && !Object.keys(fields).length) return;
+		changes.push({ plotId: target.id, series: i, encodings: fields, off });
+		const bits = [
+			...encodingWords(fields, nameOfRef),
+			...off.map((channel) => `${channel} by off`)
+		];
+		preview.push(
+			`Restyle ${target.type}${target.name ? ` "${target.name}"` : ''} series ${i + 1}: ${bits.join(', ')}`
+		);
+	}
 
 	for (const ch of spec?.changes ?? []) {
 		if (ch?.plot != null) {
@@ -562,6 +703,7 @@ export function planEdit(spec, { summary, facts }) {
 					`Restyle ${target.type}${target.name ? ` "${target.name}"` : ''}: ${prop.label} = ${JSON.stringify(v)}`
 				);
 			}
+			planSeriesEncodings(ch, target);
 			continue;
 		}
 
@@ -627,7 +769,7 @@ export function planEdit(spec, { summary, facts }) {
 		);
 	}
 
-	return { analyses, plots, changes, bands, errors, preview };
+	return { analyses, plots, changes, bands, errors, warnings, preview };
 }
 
 /**
@@ -664,12 +806,38 @@ export function firstBandStart(inner, fromHour, tz) {
 	return start.valueOf();
 }
 
+/**
+ * Planned encoding fields with each column ref resolved to a real id. A channel whose column
+ * did not survive (an output the node turned out not to make) is dropped, and said so.
+ */
+function resolvedEncodings(fields, resolve, where, errors) {
+	const out = {};
+	for (const channel of ENCODING_SPEC_CHANNELS) {
+		const f = encodingFieldsOf(channel);
+		const enc = fields?.[f.encoding];
+		const ref = fields?.[f.column]?.refId;
+		if (!enc || ref == null) continue;
+		const id = resolve(ref);
+		if (id === -1) {
+			errors.push(`${where} its ${channel} column couldn't be wired; that encoding was dropped.`);
+			continue;
+		}
+		out[f.column] = { refId: id };
+		out[f.encoding] = { ...enc };
+	}
+	return out;
+}
+
 /** Plot JSON for `addPlot`, with every ref already a real column id. */
-function plotData(plan, resolve) {
-	const data = plan.series.map((s) => {
+function plotData(plan, resolve, errors) {
+	const data = plan.series.map((s, k) => {
 		const entry = { ...seriesStyle(s.kind) };
 		for (const [field, ref] of Object.entries(s.refs)) entry[field] = { refId: resolve(ref) };
 		if (s.label) entry.label = s.label;
+		if (s.encodings) {
+			const where = `Plot "${plan.name}" series ${k + 1}:`;
+			applySeriesEncodings(entry, resolvedEncodings(s.encodings, resolve, where, errors));
+		}
 		return entry;
 	});
 	return {
@@ -681,6 +849,36 @@ function plotData(plan, resolve) {
 		height: 300,
 		plot: { data }
 	};
+}
+
+/**
+ * Colour by / Size by on an existing series, written into the plot's inner SNAPSHOT (so it
+ * lands with the other edits of that plot in one setPlotInner, one undo step). The same JSON
+ * the panel's checkbox and a wire produce: `colourBy: {refId}` and the settings, or both null
+ * when switched off. A channel already on keeps its id (its canvas port and wire); a new one
+ * takes the panel's next id (encodingHost.js nextEncodingId), written channel by channel so
+ * size pairs with a colour switched on in the same breath.
+ */
+function applySeriesEncodingChange(inner, plot, c, resolve, errors) {
+	const row = inner.data?.[c.series];
+	const where = `Plot "${plot.name || plot.type}" series ${c.series + 1}:`;
+	if (!row || typeof row !== 'object') {
+		errors.push(`${where} no such series; its Colour by / Size by change was skipped.`);
+		return;
+	}
+	for (const channel of c.off ?? []) {
+		const f = encodingFieldsOf(channel);
+		row[f.column] = null;
+		row[f.encoding] = null;
+	}
+	const fields = resolvedEncodings(c.encodings, resolve, where, errors);
+	for (const channel of ENCODING_SPEC_CHANNELS) {
+		const f = encodingFieldsOf(channel);
+		const enc = fields[f.encoding];
+		if (!enc) continue;
+		enc.id = row[f.encoding]?.id ?? nextEncodingId(inner, channel, row);
+		applySeriesEncodings(row, { [f.column]: fields[f.column], [f.encoding]: enc });
+	}
 }
 
 /**
@@ -744,7 +942,7 @@ export function applyEdit(plan) {
 			skippedPlots++;
 			continue;
 		}
-		ops.push({ kind: 'addPlot', plotData: plotData(p, resolve) });
+		ops.push({ kind: 'addPlot', plotData: plotData(p, resolve, errors) });
 	}
 	// Both restyles and shading rewrite a plot's inner, so they share ONE snapshot per plot,
 	// taken once and emitted once at the end. Snapshotting per edit would read the same
@@ -778,6 +976,10 @@ export function applyEdit(plan) {
 		const plot = ownerPlotOf(resolvePlotRef(c.plotId));
 		if (!plot?.plot?.toJSON) {
 			errors.push(`Couldn't restyle plot ${c.plotId}; it's no longer there.`);
+			continue;
+		}
+		if (c.encodings) {
+			applySeriesEncodingChange(innerFor(plot), plot, c, resolve, errors);
 			continue;
 		}
 		if (!c.path.startsWith('plot.')) {
@@ -842,6 +1044,7 @@ export function applyEdit(plan) {
 	return {
 		ok: true,
 		errors,
+		warnings: [...(plan.warnings ?? [])],
 		added: {
 			analyses: tps.length,
 			plots: plan.plots.length - skippedPlots,

@@ -24,7 +24,7 @@
 // versions behind the app before.
 import { SCHEMA, PLOTS as plots_, ENCODINGS, columnIdFields, SESSION_VERSION } from './schema.js';
 // Colour by / Size by on a draft series (pure; validated against the generated ENCODINGS).
-import { draftSeriesEncodings } from './encodings.js';
+import { draftSeriesEncodings, applySeriesEncodings } from './encodings.js';
 // The app's FormulaColumn grammar, shared so the Worker refuses exactly what the GUI refuses.
 // Pure and dependency-free like this file, so it bundles into the Worker unchanged.
 import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.js';
@@ -508,7 +508,9 @@ export function normalizeSession(
 				// Colour by / Size by: the app's own series fields, or an error naming why not
 				// (only that encoding is dropped; see encodings.js).
 				if (spec && typeof spec === 'object' && !Array.isArray(spec)) {
-					Object.assign(
+					// Asking for the line to be coloured means wanting a line: a "points" series
+					// draws none, so applySeriesEncodings draws it (the points stay).
+					applySeriesEncodings(
 						series,
 						draftSeriesEncodings(spec, data.length, {
 							plotType: p.type,
@@ -522,9 +524,6 @@ export function normalizeSession(
 							warnings
 						})
 					);
-					// Asking for the line to be coloured means wanting a line: a "points" series
-					// draws none, so draw it (the points stay).
-					if (series.colourEncoding?.colourLine && series.line) series.line.draw = true;
 				}
 				data.push(series);
 			}

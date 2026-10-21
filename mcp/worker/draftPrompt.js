@@ -204,9 +204,10 @@ RULES:
 
 /**
  * Colour by / Size by on a draft series (normalizer: src/emit/encodings.js), registry-derived:
- * the plots that can, the modes and the colormaps come from the generated catalogue. Draft-only:
- * the /edit client (src/lib/utils/aiEdit.js) does not read these series keys, so the shared
- * catalogue does not teach them. Kept to a few lines (token budget, ADR 2026-07-28).
+ * the plots that can, the modes and the colormaps come from the generated catalogue. Both the
+ * draft and the /edit prompt carry it (the /edit client, src/lib/utils/aiEdit.js, reads these
+ * series keys with the same rules: plotbits/encodingSpec.js). Kept outside buildCatalogue and to
+ * a few lines (token budget, ADR 2026-07-28).
  */
 export function encodingNote(schema = generated) {
 	const enc = schema.encodings;

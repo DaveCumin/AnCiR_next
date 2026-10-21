@@ -49,6 +49,10 @@ await ensureRegistry();
 const { overlayHostTypes, overlayFormsSummary } = await import('./engine/overlays.js');
 const OVERLAY_HOSTS = overlayHostTypes().join(', ');
 const OVERLAY_FORMS = overlayFormsSummary();
+// Which plots can colour / size their marks by a column, the modes and the maps (live facts,
+// the same ones a draft and the app's AI edit are checked against).
+const { encodingHostsSummary } = await import('./engine/encodings.js');
+const ENC = encodingHostsSummary();
 
 // One process = one active session (AnCiR's core is a singleton). Created lazily and
 // shared across transports/requests.
@@ -174,6 +178,9 @@ function registerTools(server) {
 		overlayColumnRef,
 		z.array(z.union([z.number(), z.string(), overlayColumnRef]))
 	]);
+	// Colour by / Size by: a column name or id, or the settings object. Passed through as given;
+	// the shared rules (plotbits/encodingSpec.js) check keys and values and say what is wrong.
+	const encodingSchema = z.union([z.string(), z.number().int(), z.record(z.any())]).optional();
 	const overlaysSchema = z
 		.array(
 			z.object({
@@ -213,7 +220,7 @@ function registerTools(server) {
 
 	server.tool(
 		'add_plot',
-		`Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field).`,
+		`Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
 		{
 			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
 			inputs: z
@@ -222,9 +229,16 @@ function registerTools(server) {
 					z.array(z.union([z.number().int(), z.string()]))
 				])
 				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
-			overlays: overlaysSchema
+			overlays: overlaysSchema,
+			colourBy: encodingSchema.describe(
+				`Colour by (${ENC.colourHosts.join(', ')}): colour the series' marks by a column. A column name, or { column, mode, colormap, range: [min, max], colourLine }. mode: auto (default), ${ENC.modes.join(', ')}. colormap: ${ENC.sequentialMaps}; for ${ENC.cyclicModes.join(', ')}: ${ENC.cyclicMaps}. colourLine: colour the line too.`
+			),
+			sizeBy: encodingSchema.describe(
+				`Size by (${ENC.sizeHosts.join(', ')}): size the points by a column. A column name, or { column, mode, minRadius, maxRadius, range: [min, max] } (radii in px). mode: auto, ${ENC.sizeModes.join(', ')}.`
+			)
 		},
-		async ({ type, inputs, overlays }) => ok(requireSession().addPlot(type, inputs, overlays))
+		async ({ type, inputs, overlays, colourBy, sizeBy }) =>
+			ok(requireSession().addPlot(type, inputs, overlays, { colourBy, sizeBy }))
 	);
 
 	server.tool(

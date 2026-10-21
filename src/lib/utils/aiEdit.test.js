@@ -728,3 +728,280 @@ describe('applyEdit — shading lands as a repeating band OVERLAY on the live pl
 		expect(core.plots.find((p) => p.id === plot.id).plot.overlays).toHaveLength(before);
 	});
 });
+
+describe('Colour by / Size by through an AI edit (real plot classes, real undo)', () => {
+	// The same syntax, rules and words as a session draft (plotbits/encodingSpec.js), producing
+	// the fields the panel's checkbox and a wire produce, as ONE undo step. No stubs: a live
+	// Scatterplot, live columns, the real op engine and history.
+	let applyEdit, registryFacts, sessionFacts, core, appConsts, history, M, Column;
+	const T0 = Date.UTC(2024, 0, 15);
+	const N = 30;
+	const ids = {};
+
+	function mkCol(name, values, type = 'number') {
+		const c = new Column({ type, data: -1 });
+		c.customName = name;
+		core.rawData.set(c.id, values);
+		c.data = c.id;
+		core.data.push(c);
+		ids[name] = c.id;
+	}
+
+	beforeAll(async () => {
+		({ applyEdit, registryFacts, sessionFacts } = await import('./aiEdit.js'));
+		({ core, appConsts } = await import('$lib/core/core.svelte.js'));
+		({ history } = await import('$lib/core/opHistory.svelte.js'));
+		({ mutationService: M } = await import('$lib/core/mutationService.js'));
+		({ Column } = await import('$lib/core/Column.svelte'));
+		appConsts.plotMap = await loadPlots();
+		history.init();
+	});
+
+	/** A fresh session: four columns and one plain scatter of hive against air. */
+	function setup() {
+		core.plots.length = 0;
+		core.data.length = 0;
+		mkCol(
+			'time',
+			Array.from({ length: N }, (_, i) => T0 + i * 3600000),
+			'time'
+		);
+		mkCol(
+			'air',
+			Array.from({ length: N }, (_, i) => 10 + i)
+		);
+		mkCol(
+			'hive',
+			Array.from({ length: N }, (_, i) => 30 + (i % 5))
+		);
+		mkCol(
+			'humidity',
+			Array.from({ length: N }, (_, i) => 50 + i)
+		);
+		mkCol(
+			'colony',
+			Array.from({ length: N }, (_, i) => (i % 2 ? 'A' : 'B')),
+			'category'
+		);
+		const plot = M.addPlot({
+			type: 'scatterplot',
+			name: 'Raw',
+			plot: { data: [{ x: { refId: ids.air }, y: { refId: ids.hive }, label: 'Hive' }] }
+		});
+		history.clear();
+		return plot;
+	}
+
+	const plan = (spec) =>
+		planEdit(spec, { summary: summariseSession(), facts: registryFacts(), local: sessionFacts() });
+	const live = (id) => core.plots.find((p) => p.id === id);
+
+	it('turns Colour by hour of day and Size by a column on for an existing series, as one undo step', () => {
+		const plot = setup();
+		const p = plan({
+			changes: [
+				{
+					plot: plot.id,
+					series: 0,
+					colourBy: { column: 'time', mode: 'hourOfDay', colormap: 'twilight_shifted' },
+					sizeBy: { column: 'humidity', minRadius: 1.5, maxRadius: 6 }
+				}
+			]
+		});
+		expect(p.errors).toEqual([]);
+		expect(p.preview.join('\n')).toMatch(
+			/series 1: colour by time \(hourOfDay\), size by humidity/
+		);
+		const res = applyEdit(p);
+		expect(res.ok).toBe(true);
+		expect(res.added.changes).toBe(1);
+
+		const dp = live(plot.id).plot.data[0];
+		expect(dp.colourActive).toBe(true);
+		expect(dp.colourMode).toBe('hourOfDay');
+		expect(dp.sizeActive).toBe(true);
+		expect(dp.sizeMode).toBe('value');
+		// Exactly what the panel saves (EncodingChannel.toJSON): the draft's shape, ids 1 and 1.
+		const saved = JSON.parse(JSON.stringify(dp.encodingsJSON()));
+		expect(saved.colourBy.refId).toBe(ids.time);
+		expect(saved.colourEncoding).toEqual({
+			id: 1,
+			mode: 'hourOfDay',
+			colormap: 'twilight_shifted',
+			domainMin: null,
+			domainMax: null,
+			colourLine: false
+		});
+		expect(saved.sizeBy.refId).toBe(ids.humidity);
+		expect(saved.sizeEncoding).toEqual({
+			id: 1,
+			mode: 'auto',
+			minRadius: 1.5,
+			maxRadius: 6,
+			domainMin: null,
+			domainMax: null
+		});
+
+		// ONE undo takes both away.
+		expect(history.undoStack).toHaveLength(1);
+		history.undo();
+		const back = live(plot.id).plot.data[0];
+		expect(back.colourEncoding).toBeNull();
+		expect(back.sizeEncoding).toBeNull();
+		expect(back.colourActive).toBe(false);
+	});
+
+	it('adds a plot whose series is coloured by a category column', () => {
+		setup();
+		const p = plan({
+			plots: [
+				{
+					type: 'scatterplot',
+					name: 'By colony',
+					series: [{ x: 'air', y: 'hive', colourBy: { column: 'colony', colormap: 'viridis' } }]
+				}
+			]
+		});
+		expect(p.errors).toEqual([]);
+		// Categories take their own colours: the map is dropped, and the user is told.
+		expect(p.warnings.join('\n')).toMatch(
+			/Plot "By colony" series 1: Colour by: categories take their own colours .* "colormap" was dropped\./
+		);
+		const res = applyEdit(p);
+		expect(res.warnings).toEqual(p.warnings);
+		const added = core.plots.find((q) => q.name === 'By colony');
+		const dp = added.plot.data[0];
+		expect(dp.colourActive).toBe(true);
+		expect(dp.colourMode).toBe('category');
+		expect(dp.colourEncoding.colormap).toBe('auto');
+		// The new plot and its encoding are one step too.
+		expect(history.undoStack).toHaveLength(1);
+		history.undo();
+		expect(core.plots.find((q) => q.name === 'By colony')).toBeUndefined();
+	});
+
+	it('refuses hour of day for size and an unknown column in the draft words, keeping the rest', () => {
+		const plot = setup();
+		const p = plan({
+			changes: [
+				{
+					plot: plot.id,
+					series: 0,
+					colourBy: 'nope',
+					sizeBy: { column: 'time', mode: 'hourOfDay' }
+				}
+			],
+			plots: [
+				{
+					type: 'scatterplot',
+					name: 'Loop',
+					series: [
+						{
+							x: 'air',
+							y: 'hive',
+							colourBy: { column: 'time' },
+							sizeBy: { column: 'time', mode: 'hourOfDay' }
+						}
+					]
+				}
+			]
+		});
+		const all = p.errors.join('\n');
+		expect(all).toMatch(
+			/Plot "Raw" series 1: Colour by: no column named "nope"\. Available: time, air, hive, humidity, colony\. Colour by dropped; the series is kept\./
+		);
+		expect(all).toMatch(
+			/Plot "Raw" series 1: Size by: size cannot read "hourOfDay": a cyclic quantity has no larger end/
+		);
+		expect(all).toMatch(/Plot "Loop" series 1: Size by: size cannot read "hourOfDay"/);
+		// The existing series had nothing valid left: no change planned for it.
+		expect(p.changes).toEqual([]);
+		// The new plot is kept, coloured (auto on a time column is hour of day) but not sized.
+		applyEdit(p);
+		const dp = core.plots.find((q) => q.name === 'Loop').plot.data[0];
+		expect(dp.colourActive).toBe(true);
+		expect(dp.colourMode).toBe('hourOfDay');
+		expect(dp.sizeEncoding).toBeNull();
+		expect(live(plot.id).plot.data[0].colourEncoding).toBeNull();
+	});
+
+	it('a plot that cannot encode, and a series that does not exist, are refused', () => {
+		setup();
+		const hist = M.addPlot({
+			type: 'histogram',
+			name: 'H',
+			plot: { data: [{ column: { refId: ids.hive } }] }
+		});
+		const scatter = core.plots.find((q) => q.name === 'Raw');
+		const p = plan({
+			changes: [
+				{ plot: hist.id, series: 0, colourBy: 'time' },
+				{ plot: scatter.id, series: 3, colourBy: 'time' }
+			]
+		});
+		expect(p.errors.join('\n')).toMatch(
+			/Plot "H" series 1: Colour by: a histogram cannot colour its marks by a column .* Plots that can: .*scatterplot/
+		);
+		expect(p.errors.join('\n')).toMatch(
+			/Plot "Raw": Colour by \/ Size by needs "series", the index of one of its series \(0 "Hive"\); got 3\. Skipped\./
+		);
+		expect(p.changes).toEqual([]);
+	});
+
+	it('null switches Colour by off, and undo brings it back with its id and wire', () => {
+		const plot = setup();
+		applyEdit(plan({ changes: [{ plot: plot.id, series: 'Hive', colourBy: 'humidity' }] }));
+		expect(live(plot.id).plot.data[0].colourActive).toBe(true);
+		history.clear();
+
+		const p = plan({ changes: [{ plot: plot.id, series: 0, colourBy: null }] });
+		expect(p.errors).toEqual([]);
+		expect(p.preview.join('\n')).toMatch(/colour by off/);
+		applyEdit(p);
+		const off = live(plot.id).plot.data[0];
+		expect(off.colourEncoding).toBeNull();
+		expect(off.colourBy).toBeNull();
+
+		history.undo();
+		const on = live(plot.id).plot.data[0];
+		expect(on.colourActive).toBe(true);
+		expect(on.colourBy.refId).toBe(ids.humidity);
+		expect(on.colourEncoding.id).toBe(1);
+	});
+
+	it('replacing an encoding keeps its id (port and wire); colourLine draws the line', () => {
+		const plot = setup();
+		applyEdit(plan({ changes: [{ plot: plot.id, series: 0, colourBy: 'humidity' }] }));
+		applyEdit(
+			plan({
+				changes: [
+					{
+						plot: plot.id,
+						series: 0,
+						colourBy: { column: 'air', colourLine: true },
+						sizeBy: 'hive'
+					}
+				]
+			})
+		);
+		const dp = live(plot.id).plot.data[0];
+		expect(dp.colourBy.refId).toBe(ids.air);
+		expect(dp.colourEncoding.id).toBe(1);
+		expect(dp.colourEncoding.colourLine).toBe(true);
+		expect(dp.line.draw).toBe(true);
+		// Size pairs with the series' colour id, as the panel's nextEncodingId gives it.
+		expect(dp.sizeEncoding.id).toBe(1);
+	});
+
+	it('sessionFacts: a column kind for each column, null while it holds no data', () => {
+		setup();
+		mkCol('empty', []);
+		const f = sessionFacts();
+		expect(f.columns[ids.time]).toBe('time');
+		expect(f.columns[ids.air]).toBe('number');
+		expect(f.columns[ids.colony]).toBe('category');
+		expect(f.columns[ids.empty]).toBeNull();
+		const scatter = core.plots.find((q) => q.name === 'Raw');
+		expect(f.plots[scatter.id]).toEqual([{ label: 'Hive' }]);
+	});
+});

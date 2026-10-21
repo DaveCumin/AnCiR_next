@@ -11,7 +11,13 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { buildNlSession, editNlSession, NL_URL } from '$lib/utils/nlSession.js';
 	import { core, appState } from '$lib/core/core.svelte.js';
-	import { summariseSession, registryFacts, planEdit, applyEdit } from '$lib/utils/aiEdit.js';
+	import {
+		summariseSession,
+		sessionFacts,
+		registryFacts,
+		planEdit,
+		applyEdit
+	} from '$lib/utils/aiEdit.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 
 	let { showModal = $bindable(false) } = $props();
@@ -127,7 +133,11 @@
 				// half-applied batch back, so it's the only thing standing between a model's guess
 				// and the user's work. What changed is who reviews it: the user, afterwards, with
 				// undo in hand.
-				const p = planEdit(spec, { summary: summariseSession(), facts: registryFacts() });
+				const p = planEdit(spec, {
+					summary: summariseSession(),
+					facts: registryFacts(),
+					local: sessionFacts()
+				});
 				if (!p.analyses.length && !p.plots.length && !p.changes.length && !p.bands.length) {
 					error = p.errors.length
 						? `Nothing in that suggestion could be applied:\n${p.errors.join('\n')}`
@@ -195,6 +205,10 @@
 		// to notice the gap themselves.
 		if (res.errors.length) {
 			addNotification(`Some parts were left out:\n${res.errors.join('\n')}`, 'info', 12000);
+		}
+		// Adjusted rather than dropped (a range hour of day ignores, a radius below the floor).
+		if (res.warnings?.length) {
+			addNotification(`Please note:\n${res.warnings.join('\n')}`, 'info', 12000);
 		}
 		// New nodes land at the origin until the canvas places them; same request the shared-link
 		// path makes.

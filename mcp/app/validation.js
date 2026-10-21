@@ -170,6 +170,11 @@ const sessionSummarySchema = z
 										label: z.string().max(200).optional(),
 										input: z.string().max(30).optional(),
 										options: z.array(z.string().max(100)).max(50).optional(),
+										// A label per option (the Boxplot's significance method) and a descriptor
+										// minimum (a periodogram step): plotProps sends both, and a strict
+										// schema that did not know them refused every edit of such a session.
+										optionLabels: z.array(z.string().max(200)).max(50).optional(),
+										min: z.number().optional(),
 										// Whatever the property currently holds — a scalar or null.
 										value: z
 											.union([z.string().max(500), z.number(), z.boolean(), z.null()])

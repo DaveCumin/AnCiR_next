@@ -34,6 +34,12 @@ import {
 	overlayDomainAxes,
 	unsupportedOverlaysError
 } from './overlays.js';
+import {
+	plotEncodingFields,
+	applyPlotEncodingFields,
+	plotEncodingSummary,
+	encodingPlotSchemas
+} from './encodings.js';
 
 // Column-id fields per arg (numeric or array of numerics) used to enumerate the Y
 // inputs that drive dynamic output keys.
@@ -216,8 +222,10 @@ export function describeCapabilities() {
 	// Plots: created with add_plot (wired into the session, renders in the GUI) and
 	// optionally rasterised to PNG/SVG with render_plot (needs a browser runtime).
 	const plots = [];
+	const encodingSchemas = encodingPlotSchemas();
 	for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		const overlayCaps = entry.data?.overlayCapabilities;
+		const encodingCaps = encodingSchemas[id]?.encodings;
 		plots.push({
 			id,
 			displayName: entry.displayName,
@@ -245,7 +253,10 @@ export function describeCapabilities() {
 						overlayAxes: overlayDomainAxes(overlayCaps),
 						...(overlayCaps.xNote ? { overlayNote: overlayCaps.xNote } : {})
 					}
-				: {})
+				: {}),
+			// Colour by / Size by (add_plot `colourBy` / `sizeBy`): what the class declares in
+			// `encodingCapabilities`; `lines`: its line can be coloured too (`colourLine`).
+			...(encodingCaps ? { encodings: encodingCaps } : {})
 		});
 	}
 	plots.sort((a, b) => a.id.localeCompare(b.id));
@@ -325,7 +336,12 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 			? { id: x.id }
 			: detail === 'full'
 				? x
-				: { id: x.id, inputs: x.inputs, ...overlaySummary(x) };
+				: {
+						id: x.id,
+						inputs: x.inputs,
+						...overlaySummary(x),
+						...(x.encodings ? { encodings: x.encodings } : {})
+					};
 
 	let A = full.analyses,
 		T = full.transforms,
@@ -845,9 +861,15 @@ export class AncirSession {
 	 *   declares `overlayCapabilities` and only in the forms it allows; see
 	 *   engine/overlays.js for the spec shape. Numbers are typed values, strings /
 	 *   `{ column }` are wires.
-	 * @returns {{plotId:number, type:string, name:string, inputs:object, overlays?:object[]}}
+	 * @param {{colourBy?: any, sizeBy?: any}} [encodings]  Colour by / Size by for the plot's
+	 *   series, on a plot whose class declares `encodingCapabilities`: the draft syntax
+	 *   (`"colourBy": "time"` or `{ column, mode, colormap, range, colourLine }`, `"sizeBy":
+	 *   { column, mode, minRadius, maxRadius, range }`; plotbits/encodingSpec.js). A refusal
+	 *   throws before anything is added.
+	 * @returns {{plotId:number, type:string, name:string, inputs:object, overlays?:object[],
+	 *   encodings?:object[], warnings?:string[]}}
 	 */
-	addPlot(type, inputs = {}, overlays = undefined) {
+	addPlot(type, inputs = {}, overlays = undefined, encodings = undefined) {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
@@ -869,6 +891,8 @@ export class AncirSession {
 		const overlayCaps = entry.data?.overlayCapabilities;
 		if (overlays?.length && !overlayCaps) throw unsupportedOverlaysError(type);
 		const overlayJsons = normalizeOverlaySpecs(overlays, assertCol, overlayCaps, { plot: type });
+		// Colour by / Size by, checked against the same rules as a draft, before committing.
+		const enc = plotEncodingFields(type, encodings, resolveColRef);
 
 		const p = new Plot({ name: type, type });
 
@@ -900,6 +924,7 @@ export class AncirSession {
 				dataIn[field] = { refId: assertCol(ref) };
 			}
 			if (Object.keys(dataIn).length) p.plot.addData(dataIn);
+			applyPlotEncodingFields(p.plot.data?.[0], enc.fields);
 		}
 
 		const overlaySummary = applyOverlays(p.plot, overlayJsons, type);
@@ -920,12 +945,15 @@ export class AncirSession {
 			}
 		}
 
+		const encodingSummary = plotEncodingSummary(p);
 		return {
 			plotId: p.id,
 			type,
 			name: p.name,
 			inputs,
-			...(overlaySummary.length ? { overlays: overlaySummary } : {})
+			...(overlaySummary.length ? { overlays: overlaySummary } : {}),
+			...(encodingSummary.length ? { encodings: encodingSummary } : {}),
+			...(enc.warnings.length ? { warnings: enc.warnings } : {})
 		};
 	}
 

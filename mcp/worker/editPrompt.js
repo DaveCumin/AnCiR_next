@@ -10,7 +10,7 @@
 // The client compiles this into ops and validates every reference before anything is applied
 // (src/lib/utils/aiEdit.js). Nothing here is trusted.
 
-import { buildCatalogue } from './draftPrompt.js';
+import { buildCatalogue, encodingNote } from './draftPrompt.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 /** Which plot types can shade a time-of-day window — registry-derived, so it can't go stale. */
@@ -119,6 +119,8 @@ WHAT YOU MAY DO:
               local): 18 → 6 shades 6pm to 6am every day. It wraps midnight; a duration is
               worked out for you. Do not try to give a date, a timestamp, or a duration.
               Only some plot types support this — the PLOTS list below marks which.
+- "changes":  with "plot" and "series" (the i of plot.data[i]): "colourBy" / "sizeBy" (as in
+              COLOUR BY below) switch it on or replace it; null switches it off.
 
 WHAT YOU MAY NOT DO:
 - You cannot delete or replace anything. There is no vocabulary for it. If the user asks you to
@@ -164,5 +166,6 @@ RULES:
  * @param {object} [schema] registry-derived catalogue; defaults to the generated one
  */
 export function buildEditPrompt(summary, schema = generated) {
-	return `${FRAME}\n\n${buildCatalogue(schema)}\n\n${bandCapablePlots(schema)}\n\n${renderSummary(summary)}`;
+	const enc = encodingNote(schema);
+	return `${FRAME}\n\n${buildCatalogue(schema)}${enc ? `\n\n${enc}` : ''}\n\n${bandCapablePlots(schema)}\n\n${renderSummary(summary)}`;
 }
