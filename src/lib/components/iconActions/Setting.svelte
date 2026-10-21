@@ -670,6 +670,10 @@
 			if (onProgress) onProgress('Restoring settings…');
 			await yieldFrame();
 			loadAppState(jsonData.appState);
+		} else {
+			// No saved settings: the session-owned ones (the time zone settings) go back to
+			// their defaults rather than staying as the previous session left them.
+			loadAppState({});
 		}
 		// Signal both canvases to adopt the session's restored viewport, even if a
 		// component is already mounted (e.g. loading while on the workflow view).

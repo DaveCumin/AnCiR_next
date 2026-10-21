@@ -567,21 +567,26 @@
 					step="0.01"
 				/>
 			</ControlInput>
-			<div class="control-input">
-				{#if xIsTime}
-					<p>Bin start</p>
-					<input
-						type="datetime-local"
-						step="1"
-						value={binStartDatetimeStr}
-						onchange={handleBinStartDatetime}
-					/>
-				{:else}
+			{#if !xIsTime}
+				<div class="control-input">
 					<p>Bin start (h)</p>
 					<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
+		{#if xIsTime}
+			<!-- Its own row: a date and time with seconds does not fit half the panel, and the
+			     field cut it to "05/04/20". -->
+			<div class="control-input bin-start-time">
+				<p>Bin start</p>
+				<input
+					type="datetime-local"
+					step="1"
+					value={binStartDatetimeStr}
+					onchange={handleBinStartDatetime}
+				/>
+			</div>
+		{/if}
 
 		<p>Different step size</p>
 		<input
@@ -674,7 +679,7 @@
 									const half = p.args.binSize / 2;
 									const centerMs = xStartTime_ms + (x + half) * 3600000;
 									return {
-										raw: formatDateTime(centerMs),
+										raw: formatDateTime(centerMs, undefined, xIN_col),
 										computed: `±${half.toFixed(2)}`,
 										isTime: true
 									};
@@ -710,6 +715,10 @@
 </details>
 
 <style>
+	.bin-start-time input {
+		width: 100%;
+		box-sizing: border-box;
+	}
 	.cuts-summary {
 		font-size: 0.85em;
 		color: var(--color-text-muted);

@@ -133,6 +133,16 @@ import { inReaction } from './reactionContext.svelte.js';
  *   composite id string)
  * @property {string} name       the new name (editors resolve an empty field to the default)
  *
+ * @typedef {Object} OpSetColumnTimeZone
+ * @property {'setColumnTimeZone'} kind
+ * @property {number} id          a SOURCE time column's id
+ * @property {string|null} zone   'utc', '+13:00', an IANA name; null clears it (reads 'utc')
+ *
+ * @typedef {Object} OpSetTimeSettings
+ * @property {'setTimeSettings'} kind
+ * @property {string} [showTimesIn]      "Show times in": 'column' or a zone
+ * @property {string} [displayTimezone]  the legacy zone; 'utc' ends legacy behaviour
+ *
  * @typedef {Object} OpSetRawCell
  * @property {'setRawCell'} kind
  * @property {number} columnId  the column whose raw series holds the cell
@@ -185,7 +195,7 @@ import { inReaction } from './reactionContext.svelte.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpSetPlotInner | OpSetPlotInnerField | OpSetPlotFields | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpRenameNode | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetPlotInnerField | OpSetPlotFields | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpRenameNode | OpSetColumnTimeZone | OpSetTimeSettings | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch | OpGraphPatch} GraphOperation
  */
@@ -386,6 +396,10 @@ function applyForward(op) {
 			return op_renameColumn(op);
 		case 'renameNode':
 			return op_renameNode(op);
+		case 'setColumnTimeZone':
+			return op_setColumnTimeZone(op);
+		case 'setTimeSettings':
+			return op_setTimeSettings(op);
 		case 'setRawCell':
 			return op_setRawCell(op);
 		case 'setPlotMetricOut':
@@ -1022,6 +1036,38 @@ function op_setAppearanceMaps(op) {
  * the session (plots/applyTemplateToAll.js). Colours only: the stored colours a swap repaints
  * (Box's fill) are plot state and travel in the same step as plot edits.
  */
+// A column's time zone (STAT-18). Phase 1 changes no stored instant: the zone decides how the
+// column's times are shown, so this is an ordinary one-field edit with its own inverse.
+function op_setColumnTimeZone(op) {
+	const col = core.data.find((c) => c.id === op.id);
+	if (!col) return null;
+	const zone = typeof op.zone === 'string' && op.zone !== '' ? op.zone : null;
+	const before = col.timeZone ?? null;
+	if (before === zone) return null;
+	col.timeZone = zone;
+	return pair(
+		{ kind: 'setColumnTimeZone', id: op.id, zone },
+		{ kind: 'setColumnTimeZone', id: op.id, zone: before }
+	);
+}
+
+// The session's time settings: "Show times in" and the legacy zone. Both in one op so the
+// legacy conversion (end the legacy zone, show each column's own) is one undo step with
+// whatever column zones it sets (a batch).
+function op_setTimeSettings(op) {
+	const before = {};
+	const after = {};
+	for (const key of ['showTimesIn', 'displayTimezone']) {
+		if (typeof op[key] !== 'string' || op[key] === '') continue;
+		if (appState[key] === op[key]) continue;
+		before[key] = appState[key];
+		after[key] = op[key];
+	}
+	if (Object.keys(after).length === 0) return null;
+	Object.assign(appState, after);
+	return pair({ kind: 'setTimeSettings', ...after }, { kind: 'setTimeSettings', ...before });
+}
+
 function op_setAppColours(op) {
 	if (!Array.isArray(op.colours) || op.colours.length === 0) return null;
 	const before = [...(appState.appColours ?? [])];

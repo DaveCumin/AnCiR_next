@@ -1011,7 +1011,7 @@
 							xIsTime && dlData.originTime_ms != null
 								? {
 										isTime: true,
-										raw: formatTimeFromUNIX(dlData.originTime_ms + x * 3600000),
+										raw: formatTimeFromUNIX(dlData.originTime_ms + x * 3600000, xIN_col),
 										computed: fmt(x, 2)
 									}
 								: fmt(x, 2)

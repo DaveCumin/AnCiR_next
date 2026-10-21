@@ -1,17 +1,27 @@
 <script>
 	import { untrack } from 'svelte';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
-	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
+	import { getClockZone, zonedDayjs, parseShownTime } from '$lib/utils/time/displayTime.js';
 
 	// `label` names the two fields for assistive tech ("Start time (date)", "Start time (time)").
 	// The widget is two inputs, so one wrapping <label> cannot name it; each field gets its own.
-	let { value = $bindable(), zone = null, onChange = () => {}, label = '' } = $props();
+	// `frame`: the column (or its time frame) the value is a time of. Given, the fields read and
+	// write the time as that column's times are SHOWN (its zone, or "Show times in"), so an
+	// axis limit reads like the axis. Without it (and without `zone`) the fields use the
+	// clock-time zone, as before per-column zones (phase 2 gives those callers a column).
+	let {
+		value = $bindable(),
+		zone = null,
+		frame = null,
+		onChange = () => {},
+		label = ''
+	} = $props();
 
-	// Fall back to the app-wide display zone when no explicit zone is passed,
-	// so changing appState.displayTimezone propagates to every input.
-	let effectiveZone = $derived(zone ?? getDisplayZone());
+	let effectiveZone = $derived(zone ?? getClockZone());
+	let shown = $derived(zone == null && frame != null);
 
 	function inZone(input) {
+		if (shown) return zonedDayjs(input instanceof Date ? input.getTime() : input, frame);
 		// Anchor a Date or ms value to `effectiveZone`. UTC takes a fast path
 		// because dayjs.utc avoids the Intl.DateTimeFormat lookup.
 		if (effectiveZone === 'utc') return dayjs.utc(input);
@@ -22,6 +32,7 @@
 	let dt = $derived.by(() => {
 		if (value instanceof Date) return inZone(value);
 		if (typeof value === 'number') return inZone(value);
+		if (shown) return zonedDayjs(Date.now(), frame);
 		return effectiveZone === 'utc' ? dayjs.utc() : dayjs().tz(effectiveZone);
 	});
 
@@ -49,6 +60,14 @@
 		const wallClock = `${editingDate}T${editingTime}`;
 		// Wall-clock interpretation: same string, different absolute instant
 		// depending on the chosen zone.
+		if (shown) {
+			const ms = parseShownTime(wallClock, null, frame);
+			if (Number.isFinite(ms)) {
+				value = ms;
+				onChange(ms);
+			}
+			return;
+		}
 		const newDt =
 			effectiveZone === 'utc' ? dayjs.utc(wallClock) : dayjs.tz(wallClock, effectiveZone);
 		if (newDt.isValid()) {

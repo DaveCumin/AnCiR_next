@@ -1,7 +1,7 @@
 // @ts-nocheck
 import dayjs from './dayjsSetup.js';
 import { guessFormat } from './guessTimeFormat';
-import { getDisplayZone } from './displayTime.js';
+import { zonedDayjs } from './displayTime.js';
 import { min, max } from '$lib/utils/MathsStats';
 import { createSequenceArray } from '$lib/utils/MathsStats';
 
@@ -128,6 +128,38 @@ function hasOffsetToken(fmt) {
 		if (m[1] === undefined && (m[0] === 'Z' || m[0] === 'ZZ')) return true;
 	}
 	return false;
+}
+
+/**
+ * Whether a column's time format reads a zone offset from the text (a Z or ZZ token in the
+ * format, or in any of a list of formats). Such a column's parsed values are true instants;
+ * a format without one stores the wall clock read as UTC ("As written"). See
+ * core/columnTimeZone.js.
+ * @param {unknown} fmt
+ */
+export function formatHasOffset(fmt) {
+	if (Array.isArray(fmt)) return fmt.some((f) => formatHasOffset(f));
+	if (typeof fmt !== 'string' || !fmt.trim()) return false;
+	return hasOffsetToken(normalizeTimeFormat(fmt));
+}
+
+/**
+ * Minutes east of UTC that one value's text carries where its format has the offset token
+ * ("…+13:00" → 780, "…Z" → 0), or null when the format has no offset or the value does not
+ * match it. Import uses it to suggest the column's zone.
+ * @param {unknown} text
+ * @param {unknown} fmt
+ */
+export function valueOffsetMinutes(text, fmt) {
+	if (typeof text !== 'string') return null;
+	const fmts = (Array.isArray(fmt) ? fmt : [fmt]).filter((f) => typeof f === 'string' && f.trim());
+	for (const f of fmts) {
+		const norm = normalizeTimeFormat(f);
+		if (!hasOffsetToken(norm)) continue;
+		const off = offsetTextIn(normalizeMeridiemText(text.trim()), norm);
+		if (off !== null) return offsetMinutes(off);
+	}
+	return null;
 }
 
 /**
@@ -529,13 +561,14 @@ export function shouldWarnUnparsedTimes({ nonBlank, failed }) {
  * missing or did not parse. Never renders a missing value as 1 Jan 1970.
  * @param {unknown} raw the stored value (text, or epoch ms)
  * @param {unknown} parsedMs the value Column.getData produced for it
+ * @param {unknown} [zoneOf] the column (or its time frame) the cell belongs to
  * @returns {string}
  */
-export function timeCellText(raw, parsedMs) {
+export function timeCellText(raw, parsedMs, zoneOf = null) {
 	if (isBlankCell(raw)) return '-';
 	const ms = Number(parsedMs);
 	if (parsedMs == null || !Number.isFinite(ms)) return '-';
-	return typeof raw === 'number' ? formatTimeFromUNIX(ms) : String(raw);
+	return typeof raw === 'number' ? formatTimeFromUNIX(ms, zoneOf) : String(raw);
 }
 
 // `dateFormat` is a moment-style token string (e.g. 'YYYY-MM-DD HH:mm:ss')
@@ -593,10 +626,11 @@ export function forceFormat(dataIN, formatIN) {
 	return dataout;
 }
 
-export function formatTimeFromUNIX(timeUNIX) {
+// `zoneOf` is the column the time belongs to (or its time frame), so the time shows in that
+// column's zone; omitted, it shows as a zone-less UTC column would (see displayTime.js).
+export function formatTimeFromUNIX(timeUNIX, zoneOf = null) {
 	if (timeUNIX == null || !Number.isFinite(Number(timeUNIX))) return '';
-	const zone = getDisplayZone();
-	const dt = zone === 'utc' ? dayjs.utc(timeUNIX) : dayjs(timeUNIX).tz(zone);
+	const dt = zonedDayjs(Number(timeUNIX), zoneOf);
 	if (!dt.isValid()) return '';
 	// Hand off to formatTimeFromISO so any external consumers of the wire
 	// format ("DD MMM YYYY HH:mm:ss") see exactly the same string.

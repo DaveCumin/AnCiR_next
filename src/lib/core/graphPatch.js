@@ -210,7 +210,8 @@ const COLUMN_FIELDS = [
 	'producerArtifactKind',
 	'tableProcessGUId',
 	'compression',
-	'groupLabel'
+	'groupLabel',
+	'timeZone'
 ];
 const COLUMN_DEFAULTS = { tableProcessGUId: '' };
 // Fields a referencing column DERIVES from what it points at; they follow refId by themselves.

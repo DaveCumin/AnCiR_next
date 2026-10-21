@@ -178,7 +178,7 @@
 	let previewTime = $derived.by(() => {
 		const timeData = wideToLongResult?.time ?? [];
 		if (timeIN_col?.type !== 'time') return timeData;
-		return timeData.map((value) => formatTimeFromUNIX(value));
+		return timeData.map((value) => formatTimeFromUNIX(value, timeIN_col));
 	});
 	let previewTotalRows = $derived(wideToLongResult?.time?.length ?? 0);
 

@@ -31,6 +31,11 @@
 	} from '$lib/plots/styleConfig.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadRecents } from '$lib/start/recentSessions.svelte.js';
+	import TimeZoneSelect from '$lib/components/inputs/TimeZoneSelect.svelte';
+	import { applyOp } from '$lib/core/operations.js';
+	import { ownsTimeZone } from '$lib/core/columnTimeZone.js';
+	import { normalizeZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import { getLegacyZone, getShowTimesIn, COLUMN_ZONE } from '$lib/utils/time/displayTime.js';
 	let { showModal = $bindable(false) } = $props();
 
 	// --- Privacy -------------------------------------------------------------
@@ -184,47 +189,38 @@
 		!!core.activeStyleName && !savedStyles.includes(core.activeStyleName)
 	);
 
-	// Build the IANA zone list once on first render. `supportedValuesOf` is in
-	// every modern browser; if it's missing we fall back to UTC + browser-local
-	// so the picker still does something useful.
-	const allZones =
-		typeof Intl?.supportedValuesOf === 'function'
-			? Intl.supportedValuesOf('timeZone')
-			: [Intl.DateTimeFormat().resolvedOptions().timeZone];
+	// ─── Time (STAT-18) ──────────────────────────────────────────────────────
+	// "Show times in" is display only: each column's own zone (the default) or one zone every
+	// time is relabelled in. It never changes a result (plan decision 2). A session saved
+	// before per-column zones with another zone keeps that old meaning (display AND clock-time
+	// analysis) until converted here, in one undo step.
+	let legacyZone = $derived(getLegacyZone());
+	let showTimesIn = $derived(getShowTimesIn());
+	// Converting also sets the time columns that have no zone to the old zone: usually why it
+	// was picked. Offered, on by default, and part of the same undo step.
+	let alsoSetColumnZones = $state(true);
 
-	// Local mirror of the displayed string so the user can type freely without
-	// each keystroke clobbering appState. Commit to appState only when a valid
-	// zone is selected/typed.
-	let zoneInput = $state(appState.displayTimezone ?? 'utc');
-	let zoneError = $state('');
-
-	function isValidZone(z) {
-		if (!z) return false;
-		const norm = String(z).trim();
-		if (norm.toLowerCase() === 'utc') return true;
-		// Intl will throw on invalid zones; cheaper than scanning allZones.
-		try {
-			new Intl.DateTimeFormat('en-US', { timeZone: norm });
-			return true;
-		} catch {
-			return false;
-		}
+	function setShowTimesIn(value) {
+		const v = value === COLUMN_ZONE ? COLUMN_ZONE : normalizeZone(value);
+		if (!v) return;
+		applyOp({ kind: 'setTimeSettings', showTimesIn: v });
 	}
 
-	function applyZone(z) {
-		const norm = String(z ?? '').trim();
-		if (!isValidZone(norm)) {
-			zoneError = `Unknown timezone: "${norm}"`;
-			return;
-		}
-		zoneError = '';
-		appState.displayTimezone = norm.toLowerCase() === 'utc' ? 'utc' : norm;
-		zoneInput = appState.displayTimezone;
+	/** The source time columns with no zone of their own (they read 'utc'). */
+	function columnsWithoutZone() {
+		return (core.data ?? []).filter(
+			(c) => ownsTimeZone(c) && (normalizeZone(c.timeZone) ?? 'utc') === 'utc'
+		);
 	}
 
-	function detectLocalZone() {
-		const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
-		applyZone(local);
+	function convertLegacyTimeZone() {
+		const zone = legacyZone;
+		if (!zone) return;
+		const ops = [{ kind: 'setTimeSettings', displayTimezone: 'utc', showTimesIn: COLUMN_ZONE }];
+		if (alsoSetColumnZones) {
+			for (const c of columnsWithoutZone()) ops.push({ kind: 'setColumnTimeZone', id: c.id, zone });
+		}
+		applyOp({ kind: 'batch', ops });
 	}
 
 	/**
@@ -404,33 +400,55 @@
 
 	<div class="control-component">
 		<div class="control-component-title"><p>Time</p></div>
-		<ControlInput label="Timezone">
-			<div class="tz-row">
-				<input
-					type="text"
-					list="ancir-timezone-list"
-					bind:value={zoneInput}
-					onchange={() => applyZone(zoneInput)}
-					onblur={() => applyZone(zoneInput)}
-					onkeydown={(e) => {
-						if (e.key === 'Enter') applyZone(zoneInput);
-					}}
-					placeholder="utc"
-				/>
-				<button class="tz-detect" type="button" onclick={detectLocalZone}>
-					Detect from browser
-				</button>
-				<datalist id="ancir-timezone-list">
-					<option value="utc"></option>
-					{#each allZones as z (z)}
-						<option value={z}></option>
-					{/each}
-				</datalist>
+		{#if legacyZone}
+			<div class="tz-legacy" data-testid="tz-legacy-notice">
+				<p>
+					This session uses the old time zone setting: every time is shown in
+					<strong>{zoneLabel(legacyZone)}</strong>, and actogram day starts and clock-time phases
+					use it too.
+				</p>
+				<label class="privacy-row">
+					<input
+						type="checkbox"
+						data-testid="tz-convert-columns"
+						bind:checked={alsoSetColumnZones}
+					/>
+					<span>Also mark time columns without a zone as {zoneLabel(legacyZone)}</span>
+				</label>
+				<button
+					class="export-py-btn"
+					type="button"
+					data-testid="tz-convert"
+					onclick={convertLegacyTimeZone}>Switch to each column's own zone</button
+				>
+				<p class="privacy-note">
+					Times are then shown in their own column's zone (text with no zone exactly as written).
+					The actogram day start and clock-time phases can move. No stored time changes, and Undo
+					reverses it.
+				</p>
 			</div>
-			{#if zoneError}
-				<p class="zone-error">{zoneError}</p>
-			{/if}
+		{/if}
+		<ControlInput label="Show times in">
+			<TimeZoneSelect
+				columnOption
+				value={showTimesIn}
+				disabled={!!legacyZone}
+				ariaLabel="Show times in"
+				testid="settings-show-times-in"
+				onChange={setShowTimesIn}
+			/>
 		</ControlInput>
+		<p class="privacy-note" data-testid="settings-show-times-note">
+			{#if legacyZone}
+				Available once this session is switched to each column's own zone.
+			{:else if showTimesIn === COLUMN_ZONE}
+				Each time is shown in its own column's zone. Set a column's zone when importing or in its
+				Properties.
+			{:else}
+				Every time is shown in {zoneLabel(showTimesIn)}. Display only: results, such as actogram
+				days and clock-time phases, do not change.
+			{/if}
+		</p>
 	</div>
 
 	<div class="div-line"></div>
@@ -553,41 +571,25 @@
 		color: var(--color-lightness-25);
 	}
 
-	/* Timezone input + "Detect" button on one row; the input inherits the global
-	   .control-input input styling, the button matches it. */
-	.tz-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
+	.tz-legacy {
+		margin: 0 0 var(--space-4);
+		padding: var(--space-3);
+		font-size: var(--font-sm);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+	}
+	.tz-legacy p {
+		margin: 0 0 var(--space-2);
+	}
+	.tz-legacy .privacy-note {
+		color: inherit;
+		font-size: inherit;
+		margin: var(--space-2) 0 0;
+	}
+	.control-component :global(.tz-select) {
 		width: 100%;
 	}
-	.tz-row > input {
-		flex: 1;
-		width: auto;
-		min-width: 0;
-	}
-	.tz-detect {
-		flex: 0 0 auto;
-		height: var(--control-input-height);
-		padding: 0 var(--space-4);
-		font-size: var(--font-sm);
-		white-space: nowrap;
-		color: var(--color-lightness-35);
-		background: var(--color-lightness-97);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		cursor: pointer;
-		transition: border-color 0.2s;
-	}
-	.tz-detect:hover {
-		border-color: var(--color-lightness-35);
-	}
-	.zone-error {
-		margin: var(--space-2) 0 0;
-		font-size: var(--font-sm);
-		color: var(--color-error);
-	}
-
 	.exp-badge {
 		margin-left: var(--space-2);
 		padding: 1px 6px;

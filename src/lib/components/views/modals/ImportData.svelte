@@ -41,7 +41,17 @@
 	} from '$lib/utils/importColumnTypes.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 	import { describeOverlapNote, findTimeOverlaps, timeRange } from '$lib/utils/importOverlap.js';
-	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
+	import {
+		AS_WRITTEN_LABEL,
+		COLUMN_ZONE,
+		getLegacyZone,
+		getShowTimesIn,
+		shownZoneLabel
+	} from '$lib/utils/time/displayTime.js';
+	import { formatHasOffset } from '$lib/utils/time/TimeUtils';
+	import { suggestImportZone } from '$lib/utils/time/importZone.js';
+	import { UTC_ZONE, normalizeZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import TimeZoneSelect from '$lib/components/inputs/TimeZoneSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
@@ -783,6 +793,65 @@
 		void refreshSingleTimeValues();
 	}
 
+	// ─── Per-column time zone (STAT-18) ────────────────────────────────────────
+	// columnTimeZones: header (or combined "date time" name) -> the zone the user picked.
+	// Without a pick, a column whose text carries offsets is proposed the zone they show
+	// (zoneSuggestions, said beside the picker), and any other column is 'utc', shown "As
+	// written". Never guessed silently. One choice per column serves every file of a
+	// multi-file import. Phase 1 stores the zone on the column and changes no parsed time.
+	let columnTimeZones = $state({});
+
+	/** The format a time column will be read with: the typed one, else the detected one. */
+	function effectiveTimeFormat(col) {
+		return (
+			columnTypeOverrides[col]?.timeFormat?.trim() || previewColumnTypes[col]?.detected.timeFormat
+		);
+	}
+
+	// The offsets each text time column carries, and the zone they point to (null: none).
+	const zoneSuggestions = $derived.by(() => {
+		const out = {};
+		for (const col of headers) {
+			if ((columnTypeOverrides[col]?.choice ?? previewColumnTypes[col]?.detected.type) !== 'time')
+				continue;
+			const fmt = effectiveTimeFormat(col);
+			if (!formatHasOffset(fmt)) continue;
+			out[col] = suggestImportZone(detectionValues(col), fmt);
+		}
+		return out;
+	});
+
+	/** The zone a time column is imported with. */
+	function importZoneFor(col) {
+		return (
+			normalizeZone(columnTimeZones[col]) ?? normalizeZone(zoneSuggestions[col]?.zone) ?? UTC_ZONE
+		);
+	}
+
+	function setImportZone(col, zone) {
+		columnTimeZones = { ...columnTimeZones, [col]: zone };
+	}
+
+	// The zones read when Confirm Import was pressed (see confirmImport), or null.
+	let importZones = null;
+
+	/** The `timeZone` a new time column stores: null for 'utc', so the default saves as before. */
+	function storedZoneFor(col) {
+		const z = importZones ? (importZones[col] ?? UTC_ZONE) : importZoneFor(col);
+		return z === UTC_ZONE ? null : z;
+	}
+
+	/** The imported name of a combined date + time pair, given its date column. */
+	function combinedNameOf(dateCol) {
+		const p = dateTimePairs.find((d, j) => combinePairs.has(j) && d.dateCol === dateCol);
+		return p ? `${dateCol} ${p.timeCol}` : dateCol;
+	}
+
+	/** The time frame of a column as it will be imported, for the preview's summary times. */
+	function importFrameFor(col, fmt) {
+		return { zone: importZoneFor(col), wall: !formatHasOffset(fmt) };
+	}
+
 	// ─── Per-column group/replicate labels (BioDare2 trace labels) ─────────────
 	// columnLabels: header-col-name -> label string. labelRowIndex: the preview
 	// data-row index (relative to parsedData, 0 = first data row) the user picked
@@ -1222,13 +1291,29 @@
 		return r ? { column: spec.column, ...r } : null;
 	});
 
-	/** A summary time as the app shows times (the display time zone). */
+	/** The summary column's frame (zone chosen above; wall clock unless the text has offsets). */
+	function summaryFrame() {
+		const spec = overlapTimeSpec;
+		if (!spec) return null;
+		if (spec.kind === 'epoch-s' || spec.kind === 'epoch-ms') {
+			return { zone: importZoneFor(spec.column), wall: false };
+		}
+		const fmt = spec.kind === 'time' ? (spec.format ?? effectiveTimeFormat(spec.col)) : '';
+		return importFrameFor(spec.column, fmt);
+	}
+	/** A summary time as the app will show it (the column's zone, or "Show times in"). */
 	function summaryTime(ms) {
-		return formatTimeFromUNIX(ms);
+		return formatTimeFromUNIX(ms, summaryFrame());
 	}
 	function displayZoneName() {
-		const z = getDisplayZone();
-		return z === 'utc' ? 'UTC' : z;
+		const frame = summaryFrame();
+		const asWritten = frame && frame.wall && !getLegacyZone() && getShowTimesIn() === COLUMN_ZONE;
+		// Shown in parentheses, so a fixed offset reads "UTC+13:00", not "UTC+13:00 (fixed)".
+		const bare = { bare: true };
+		if (asWritten) {
+			return frame.zone === UTC_ZONE ? 'as written' : `as written, ${zoneLabel(frame.zone, bare)}`;
+		}
+		return shownZoneLabel(frame, bare);
 	}
 
 	/**
@@ -1324,6 +1409,7 @@
 		selectedColumns = new Set();
 		columnLabels = {};
 		columnTypeOverrides = {};
+		columnTimeZones = {};
 		labelRowIndex = null;
 		pickingLabelRow = false;
 		labelBulkText = '';
@@ -1804,6 +1890,18 @@
 			dataIntervalMin,
 			estimatedBinnedRows,
 			parsedData: parsedData ? $state.snapshot(parsedData) : null,
+			// The zone each time column will be imported with, and what its offsets proposed.
+			timeZones: Object.fromEntries(
+				headers
+					.filter(
+						(c) =>
+							(columnTypeOverrides[c]?.choice ?? previewColumnTypes[c]?.detected.type) === 'time'
+					)
+					.map((c) => [c, importZoneFor(c)])
+			),
+			zoneSuggestions: $state.snapshot(zoneSuggestions),
+			summaryZone: previewTimeRange ? displayZoneName() : null,
+			summaryFirst: previewTimeRange ? summaryTime(previewTimeRange.first) : null,
 			columnTypes: Object.fromEntries(
 				Object.entries(previewColumnTypes).map(([col, info]) => [
 					col,
@@ -1845,6 +1943,7 @@
 			setDecimalComma,
 			setDateOrder,
 			setColumnTypeChoice,
+			setImportZone,
 			setBinningEnabled,
 			setBinInterval,
 			setAddSourceColumn: (on) => {
@@ -2322,6 +2421,14 @@
 		importBinning = { enabled: binningEnabled, intervalMin: binIntervalMin };
 		// Likewise the source-file column, named against the preview's headers.
 		importSourceColumn = addSourceColumn && targetFiles.length > 1 ? sourceColumnName() : null;
+		// And each column's zone: a proposal from the text's offsets is read off the preview
+		// rows too. Columns not named here (the full file found a time column the preview did
+		// not) import as 'utc'.
+		importZones = Object.fromEntries(
+			[...headers, ...[...combinePairs].map((j) => combinedNameOf(dateTimePairs[j]?.dateCol))]
+				.filter((c) => c != null)
+				.map((c) => [c, importZoneFor(c)])
+		);
 		awaitingLoad = true;
 		loadProgress = {
 			stage: 'Loading data',
@@ -2348,6 +2455,7 @@
 			awaitingLoad = false;
 			importBinning = null;
 			importSourceColumn = null;
+			importZones = null;
 			loadProgress = { stage: '', detail: '' };
 		}
 	}
@@ -3242,7 +3350,10 @@
 
 			// Update type/format
 			existingCol.type = resolved.type;
-			if (resolved.type === 'time') existingCol.timeFormat = resolved.timeFormat;
+			if (resolved.type === 'time') {
+				existingCol.timeFormat = resolved.timeFormat;
+				existingCol.timeZone = storedZoneFor(colName);
+			}
 
 			// Trigger reactivity by bumping rawDataVersion (tableProcessGUId must stay '' for raw columns)
 			existingCol.rawDataVersion++;
@@ -3272,6 +3383,8 @@
 					df.type = 'time';
 					df.compression = 'awd';
 					df.name = 'DateTime';
+					// The AWD header has no zone: 'utc' ("As written") unless one is picked.
+					df.timeZone = storedZoneFor(f);
 					core.rawData.set(df.id, {
 						start: awdMeta.startMs,
 						step: awdMeta.stepMs,
@@ -3286,7 +3399,10 @@
 					});
 					noteNonNumericCells(f, resolved);
 					df.type = resolved.type;
-					if (resolved.type === 'time') df.timeFormat = resolved.timeFormat;
+					if (resolved.type === 'time') {
+						df.timeFormat = resolved.timeFormat;
+						df.timeZone = storedZoneFor(f);
+					}
 
 					df.name = f;
 					core.rawData.set(df.id, resolved.values);
@@ -4221,7 +4337,10 @@
 														<!-- skip: merged into date col -->
 													{:else if combinedDateCols.has(col)}
 														<th class="label-cell label-cell-muted" title="Combined date and time"
-															>time{@render dayMonthControl(col)}</th
+															>time{@render dayMonthControl(col)}{@render zoneControl(
+																combinedNameOf(col),
+																''
+															)}</th
 														>
 													{:else}
 														{@const info = previewColumnTypes[col]}
@@ -4282,6 +4401,9 @@
 															{/if}
 															{#if choice === 'time' && !ov?.timeFormat}
 																{@render dayMonthControl(col)}
+															{/if}
+															{#if choice === 'time'}
+																{@render zoneControl(col, effectiveTimeFormat(col))}
 															{/if}
 															{#if !ov && info?.detected.empty}
 																<span class="type-hint" data-testid={`import-empty-${col}`}
@@ -4469,6 +4591,33 @@
 
 	<!-- Day/month order for a date column whose values read either way round
 	     (STAT-17): a choice when nothing in the file settles it, else the reason. -->
+	{#snippet zoneControl(key, fmt)}
+		{@const suggestion = zoneSuggestions[key]}
+		{@const zone = importZoneFor(key)}
+		{@const hasOffset = formatHasOffset(fmt)}
+		{@const shown = zone === UTC_ZONE ? (hasOffset ? 'UTC' : AS_WRITTEN_LABEL) : zoneLabel(zone)}
+		<span class="type-zone" style:--zone-chars={shown.length + (suggestion ? 11 : 0)}>
+			<TimeZoneSelect
+				value={zone}
+				suggested={suggestion?.zone ?? null}
+				utcLabel={hasOffset ? 'UTC' : AS_WRITTEN_LABEL}
+				ariaLabel={`Time zone of ${key}`}
+				testid={`import-zone-${key}`}
+				title={hasOffset
+					? 'The zone these times are shown in. Their offsets already fix each instant.'
+					: 'Where these times were recorded. They are kept exactly as written.'}
+				onChange={(z) => setImportZone(key, z)}
+			/>
+		</span>
+		{#if suggestion}
+			<span class="type-hint" data-testid={`import-zone-detected-${key}`}
+				>Offsets in the text: {suggestion.offsets.join(', ')}.{suggestion.note
+					? ` ${suggestion.note}`
+					: ''}</span
+			>
+		{/if}
+	{/snippet}
+
 	{#snippet dayMonthControl(col)}
 		{@const dm = previewColumnTypes[col]?.dayMonth}
 		{#if dm?.ambiguous}
@@ -4846,6 +4995,27 @@
 	.type-warn-title {
 		display: block;
 		font-weight: 600;
+	}
+	/* The zone picker sits under the time format, at the same dense size. Its width comes from
+	   the CHOSEN label (--zone-chars), not the longest of ~400 zone names, so it never widens
+	   the column more than the label it shows. */
+	.type-zone {
+		display: block;
+		margin-top: var(--space-1);
+	}
+	.type-zone :global(.tz-select) {
+		display: block;
+		width: 100%;
+		min-width: calc(
+			var(--zone-chars, 12) * 1ch + var(--field-padding-x) + var(--select-padding-right) + 2px
+		);
+		--field-font-size: var(--font-sm);
+		--field-font-weight: 400;
+		--field-bg: var(--surface-card);
+	}
+	.label-cell-muted .type-zone {
+		font-style: normal;
+		text-align: left;
 	}
 	.type-daymonth .type-select {
 		margin-top: var(--space-1);

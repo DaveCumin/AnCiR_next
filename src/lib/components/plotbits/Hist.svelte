@@ -43,6 +43,8 @@
 		// Tooltip props (same shape as Points/Line)
 		tooltip = false,
 		xtype = 'number',
+		// The x column (or its time frame) a time x belongs to, so the tooltip shows its zone.
+		xZone = null,
 		xLabel = 'x',
 		yLabel = 'y',
 		dataLabel = '',
@@ -117,6 +119,7 @@
 			xLabel: xLabel || 'x',
 			xValue: dataX,
 			xtype,
+			xZone,
 			xFormatter,
 			series
 		});

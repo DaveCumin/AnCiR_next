@@ -529,7 +529,7 @@
 				xIsTime
 					? xSlice.map((v) => ({
 							isTime: true,
-							raw: formatTimeFromUNIX(smoothedResult.originTime_ms + v * 3600000),
+							raw: formatTimeFromUNIX(smoothedResult.originTime_ms + v * 3600000, xIN_col),
 							computed: v.toFixed(2)
 						}))
 					: xSlice.map((x) => x.toFixed(2)),

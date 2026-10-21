@@ -294,7 +294,7 @@
 	const isTimeX = $derived(xIN_col?.type === 'time');
 	function fmt(v, isX) {
 		if (v == null || (typeof v === 'number' && !Number.isFinite(v))) return '—';
-		if (isX && isTimeX) return formatDateTime(v);
+		if (isX && isTimeX) return formatDateTime(v, undefined, xIN_col);
 		const n = Number(v);
 		return Number.isFinite(n) ? (Math.round(n * 1000) / 1000).toString() : String(v);
 	}

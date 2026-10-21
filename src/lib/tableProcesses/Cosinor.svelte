@@ -1652,7 +1652,7 @@
 							xIsTime && cosinorData.originTime_ms != null
 								? {
 										isTime: true,
-										raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000),
+										raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000, xIN_col),
 										computed: x.toFixed(2)
 									}
 								: x.toFixed(2)

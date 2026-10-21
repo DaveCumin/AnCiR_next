@@ -57,13 +57,14 @@ export function safeColour(value, fallback = 'currentColor') {
 
 /**
  * Format a value for display.
- * - type='time' renders via the app-wide displayTimezone (default UTC)
+ * - type='time' renders in the zone its column is shown in (`zoneOf`: the column or its
+ *   time frame; utils/time/displayTime.js)
  * - numbers are rendered with `dp` decimal places
  * - anything else is returned as-is
  */
-export function safeFormat(value, dp = 3, type = 'number') {
+export function safeFormat(value, dp = 3, type = 'number', zoneOf = null) {
 	if (type === 'time') {
-		return formatDateTime(value);
+		return formatDateTime(value, undefined, zoneOf);
 	}
 	try {
 		return value.toFixed(dp);
@@ -119,6 +120,7 @@ export function findBinValue(xStart, xEnd, yArr, targetX) {
  * @param {string} [opts.xLabel='x']
  * @param {*}      opts.xValue
  * @param {string} [opts.xtype='number']  - 'time' or 'number'
+ * @param {*}      [opts.xZone]  - the x column (or its time frame), for a time x
  * @param {(x:*)=>string} [opts.xFormatter] - overrides xtype/dp if provided
  * @param {Array<{label:string, colour:string, yValue:*, yLabel?:string}>} opts.series
  * @param {number} [opts.dp=3]
@@ -127,6 +129,7 @@ export function buildAggregatedContent({
 	xLabel = 'x',
 	xValue,
 	xtype = 'number',
+	xZone = null,
 	xFormatter = null,
 	series = [],
 	dp = 3,
@@ -138,7 +141,7 @@ export function buildAggregatedContent({
 	// formatted x/y strings: `safeFormat` returns a non-number as-is, so a text or
 	// category column's value reaches the markup verbatim, and `xFormatter` is a
 	// caller-supplied function whose output is no more trusted than its input.
-	const xStr = xFormatter ? xFormatter(xValue) : safeFormat(xValue, dp, xtype);
+	const xStr = xFormatter ? xFormatter(xValue) : safeFormat(xValue, dp, xtype, xZone);
 	let content = `<span style="opacity:0.7">${escapeHtml(xLabel)}:</span> ${escapeHtml(xStr)}`;
 	for (const s of series) {
 		if (s.yValue == null || (typeof s.yValue === 'number' && isNaN(s.yValue))) continue;

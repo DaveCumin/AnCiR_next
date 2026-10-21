@@ -623,7 +623,7 @@
 							timeIsTime
 								? longToWideResult.time.slice(previewStart - 1, previewStart + 5).map((t) => ({
 										isTime: true,
-										raw: formatTimeFromUNIX(t),
+										raw: formatTimeFromUNIX(t, getColumnById(p.args.timeIN)),
 										computed: ((t - longToWideResult.time[0]) / 3600000).toFixed(2)
 									}))
 								: longToWideResult.time.slice(previewStart - 1, previewStart + 5),

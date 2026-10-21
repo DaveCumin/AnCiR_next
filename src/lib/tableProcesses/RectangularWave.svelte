@@ -1009,7 +1009,7 @@
 							xIsTime && rwave.originTime_ms != null
 								? {
 										isTime: true,
-										raw: formatTimeFromUNIX(rwave.originTime_ms + x * 3600000),
+										raw: formatTimeFromUNIX(rwave.originTime_ms + x * 3600000, xIN_col),
 										computed: x.toFixed(2)
 									}
 								: x.toFixed(2)

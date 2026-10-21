@@ -214,7 +214,7 @@
 
 	function formatSplitLabel(val) {
 		if (val == null) return '?';
-		if (xIsTime) return formatTimeFromUNIX(val);
+		if (xIsTime) return formatTimeFromUNIX(val, xIN_col);
 		return val.toFixed(2);
 	}
 
@@ -583,7 +583,7 @@
 					xIsTime
 						? tData.slice(previewStart - 1, previewStart + 5).map((t) => ({
 								isTime: true,
-								raw: formatTimeFromUNIX(t),
+								raw: formatTimeFromUNIX(t, xIN_col),
 								computed: ((t - tData[0]) / 3600000).toFixed(2)
 							}))
 						: tData.slice(previewStart - 1, previewStart + 5),

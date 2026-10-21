@@ -12,7 +12,7 @@
 // What is stored follows utils/cellEntry.js: a blank entry is null (missing), a number column
 // only ever gets a finite number, a category keeps its text. An entry that cannot be stored is
 // refused with a reason, and nothing is written.
-import dayjs from '$lib/utils/time/dayjsSetup.js';
+import { parseShownTime } from '$lib/utils/time/displayTime.js';
 import { isBlankEntry, parseCellEntry, upsertEdit } from '$lib/utils/cellEntry.js';
 
 /** The format the Table plot shows UNIX-ms time cells in, and so the one it reads back. */
@@ -64,15 +64,16 @@ function editTimeCell(column, rowIndex, text, rawData, setRawCell) {
 	if (isBlankEntry(text)) {
 		value = null; // Column.getData keeps a blank time as a gap
 	} else if (holdsUnixMs(rawArr)) {
-		// UNIX ms (a node's time output): read the displayed format back to ms.
-		const dt = dayjs.utc(String(text).trim(), TIME_CELL_FORMAT, true);
-		if (!dt.isValid()) {
+		// UNIX ms (a node's time output): read the displayed format back to ms, in the zone the
+		// cell was shown in (the column's, or "Show times in"), so an unchanged cell round-trips.
+		const ms = parseShownTime(String(text).trim(), TIME_CELL_FORMAT, column);
+		if (!Number.isFinite(ms)) {
 			return {
 				ok: false,
 				reason: `"${String(text).trim()}" is not a time this column can read. Enter it as ${TIME_CELL_FORMAT} (for example 01 Jan 2024 13:30:00), or clear the cell to mark it as missing.`
 			};
 		}
-		value = dt.valueOf();
+		value = ms;
 	} else {
 		// Imported time text: store what was typed; the column parses it with its own format.
 		value = String(text);

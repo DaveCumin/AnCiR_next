@@ -61,7 +61,7 @@
 			if (column.originTime_ms != null) {
 				const centerMs = column.originTime_ms + (x + half) * 3600000;
 				return {
-					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
+					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs, undefined, column) : '-',
 					computed: rangeStr,
 					isTime: true,
 					unit: 'h'
@@ -73,7 +73,7 @@
 		if (isTime && Array.isArray(timeArr)) {
 			// The parsed value decides: a raw number is only epoch ms when the column
 			// parses it as such, and a missing value shows as '-', never 1 Jan 1970.
-			const raw = timeCellText(timeArr[i], data?.[i]);
+			const raw = timeCellText(timeArr[i], data?.[i], column);
 			if (raw === '-') return { raw, computed: '-', isTime: true };
 			const hours = column.hoursSinceStart?.[i];
 			if (!Number.isFinite(hours)) return { raw, computed: '-', isTime: true };

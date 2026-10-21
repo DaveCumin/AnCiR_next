@@ -4,6 +4,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleUtc, scaleLog } from 'd3-scale';
+	import { zoneAlignedTicks } from '$lib/utils/time/displayTime.js';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -437,7 +438,16 @@
 		xTickFormat = $state('');
 		XScale = $derived.by(() => {
 			if (this.anyXdataTime) {
-				return scaleUtc().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+				const scale = scaleUtc().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+				// Ticks on round times of the zone the axis is shown in (per-column time zone):
+				// d3 alone puts them on UTC hours, which read "13:00, 01:00" in +13:00. Where
+				// d3's UTC ticks already are round (as written, UTC, legacy), they are kept.
+				const utcTicks = scale.ticks.bind(scale);
+				const frame = this.xTimeFrame;
+				scale.ticks = (count) =>
+					zoneAlignedTicks(scale.domain(), count, frame, (d, c) => scaleUtc().domain(d).ticks(c)) ??
+					utcTicks(count);
+				return scale;
 			}
 			if (this.xLogScale && this.xlims[0] > 0 && this.xlims[1] > 0) {
 				return scaleLog().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
@@ -691,6 +701,21 @@
 			}
 			return this.data.some((d) => d.x.type === 'time' || this.resolveXOriginMs(d.x) != null);
 		});
+
+		// The time frame of the x axis (per-column time zone, STAT-18): the first series with a
+		// time x, else the first that borrows a time origin. Mixed zones use the first series'
+		// (plan decision 7); `xTimeZonesDiffer` lets the panel say so.
+		xTimeSeries = $derived.by(() =>
+			this.anyXdataTime
+				? this.data.filter((d) => d.x?.type === 'time' || this.resolveXOriginMs(d.x) != null)
+				: []
+		);
+		xTimeFrame = $derived(this.xTimeSeries[0]?.x?.timeFrame ?? null);
+		xTimeZonesDiffer = $derived(
+			this.xTimeSeries.some(
+				(d) => (d.x?.timeFrame?.zone ?? 'utc') !== (this.xTimeFrame?.zone ?? 'utc')
+			)
+		);
 
 		// The reference origin (ms) for pure-numeric series plotted alongside time series.
 		// Uses the first available originTime_ms or the first raw timestamp from a time column.
@@ -1032,6 +1057,7 @@
 		formatTimeAxisTick,
 		formatDateTime,
 		dominantTickPattern,
+		shownZoneLabel,
 		DEFAULT_DATE_FORMAT
 	} from '$lib/utils/time/displayTime.js';
 	import { onMount } from 'svelte';
@@ -1069,11 +1095,12 @@
 	 * with the user's dayjs pattern, which is what a figure spanning days usually wants and
 	 * what a figure spanning hours usually does not; hence override rather than default.
 	 *
-	 * Both paths format in the display zone, so switching timezone still moves every label.
+	 * Both paths format in the zone the x column is shown in (its own zone, or "Show times in").
 	 */
 	function xTick(d) {
 		const fmt = theData.plot.xTickFormat;
-		return fmt && fmt.trim() ? formatDateTime(d, fmt) : formatTimeAxisTick(d);
+		const zoneOf = theData.plot.xTimeFrame;
+		return fmt && fmt.trim() ? formatDateTime(d, fmt, zoneOf) : formatTimeAxisTick(d, zoneOf);
 	}
 
 	// --- Brush-to-zoom (view only; writes the same *IN limit overrides the axis
@@ -1375,6 +1402,7 @@
 						<p>Min</p>
 						<DateTimeHrs
 							label="X-axis minimum"
+							frame={theData.xTimeFrame}
 							value={(() => {
 								const v = theData.xlimsIN[0] ?? theData.xlims[0];
 								return v;
@@ -1389,6 +1417,7 @@
 						<p>Max</p>
 						<DateTimeHrs
 							label="X-axis maximum"
+							frame={theData.xTimeFrame}
 							value={(() => {
 								const v = theData.xlimsIN[1] ?? theData.xlims[1];
 								return v;
@@ -1440,8 +1469,10 @@
 					     The placeholder is the format the ticks are ACTUALLY using right now, so
 					     the box shows something to edit rather than the word "Automatic". -->
 					{@const autoPattern =
-						dominantTickPattern(theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? []) ??
-						DEFAULT_DATE_FORMAT}
+						dominantTickPattern(
+							theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? [],
+							theData.xTimeFrame
+						) ?? DEFAULT_DATE_FORMAT}
 					<ControlInput label="Date tick format">
 						<input
 							type="text"
@@ -1450,6 +1481,13 @@
 							title="Empty lets each tick pick its own resolution (currently {autoPattern}). Type a date format to use one for every tick."
 						/>
 					</ControlInput>
+					{#if theData.xTimeZonesDiffer}
+						<p class="x-zone-note" data-testid="x-zone-note">
+							The series' times are in different zones; the x axis shows {shownZoneLabel(
+								theData.xTimeFrame
+							)}, the first series' zone.
+						</p>
+					{/if}
 				{/if}
 			</div>
 		</Axis>
@@ -1601,6 +1639,7 @@
 					yoffset={theData.plot.padding.top}
 					tooltip={true}
 					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
+					xZone={theData.plot.xTimeFrame}
 					dataLabel={datum.displayLabel}
 					dataColour={datum.line.colour}
 					xLabel={theData.plot.xAxis.label || 'x'}
@@ -1616,6 +1655,7 @@
 					pointsData={datum.points}
 					x={xDATA}
 					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
+					xZone={theData.plot.xTimeFrame}
 					y={datum.yData}
 					xscale={theData.plot.XScale}
 					yscale={yScale}
@@ -1687,3 +1727,11 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<style>
+	.x-zone-note {
+		margin: var(--space-1) 0 0;
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+	}
+</style>

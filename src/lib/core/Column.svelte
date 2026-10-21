@@ -18,6 +18,7 @@
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { remapSeriesRefs, seriesHasData } from '$lib/core/seriesChannelRefs.js';
+	import { resolveTimeFrame } from '$lib/core/columnTimeZone.js';
 
 	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
 	// Returning a fresh integer gives us cheap !== equality for cache invalidation
@@ -365,6 +366,15 @@
 		});
 		//time format for converting time data
 		timeFormat = $state([]);
+		// The zone this column's wall clock belongs to: 'utc' ("As written" for text with no
+		// offset), a fixed offset '+13:00', or an IANA name (utils/time/zones.js). Set on a
+		// SOURCE time column only; null means 'utc'. Derived columns inherit theirs through
+		// `timeFrame`. Phase 1 changes no stored instant, so this is not part of getDataHash.
+		timeZone = $state(null);
+		// { zone, wall }: the zone the column's times are in and whether the stored ms are its
+		// wall clock read as UTC. Inherited through references, process and analysis outputs
+		// (core/columnTimeZone.js). Display helpers read it (utils/time/displayTime.js).
+		timeFrame = $derived.by(() => resolveTimeFrame(this));
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -637,6 +647,9 @@
 			jsonOut.type = this.type;
 			if (this.type == 'time') {
 				jsonOut.timeFormat = this.timeFormat;
+				// Only when set: a column without one reads 'utc', as every column saved before
+				// per-column zones does.
+				if (this.timeZone != null) jsonOut.timeZone = this.timeZone;
 			}
 			if (this.type == 'bin') {
 				jsonOut.binWidth = this.binWidth;
@@ -679,6 +692,7 @@
 				isTap,
 				data,
 				timeFormat,
+				timeZone,
 				binWidth,
 				originTime_ms,
 				tableProcessGUId,
@@ -710,6 +724,7 @@
 			if (name !== undefined) columnData.name = name;
 			if (type !== undefined) columnData.type = type;
 			if (groupLabel != null) columnData.groupLabel = groupLabel;
+			if (typeof timeZone === 'string' && timeZone !== '') columnData.timeZone = timeZone;
 			if (binWidth != null) columnData.binWidth = binWidth;
 			if (originTime_ms != null) columnData.originTime_ms = originTime_ms;
 			if (provenance != null) columnData.provenance = provenance;
@@ -740,6 +755,16 @@
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { columnDisplayName, commitColumnRename } from '$lib/core/columnLabels.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
+	import TimeZoneSelect from '$lib/components/inputs/TimeZoneSelect.svelte';
+	import { ownsTimeZone, timeZoneSource } from '$lib/core/columnTimeZone.js';
+	import { applyOp } from '$lib/core/operations.js';
+	import { zoneLabel } from '$lib/utils/time/zones.js';
+	import {
+		getLegacyZone,
+		getShowTimesIn,
+		COLUMN_ZONE,
+		AS_WRITTEN_LABEL
+	} from '$lib/utils/time/displayTime.js';
 
 	let {
 		col = $bindable(),
@@ -778,6 +803,32 @@
 
 	// Warnings about the column's own data (e.g. a time column whose times repeat).
 	let dataWarnings = $derived(columnWarnings(col));
+
+	// Time zone (STAT-18): editable on a source time column, shown read-only (with where it
+	// comes from) on a derived one. One setColumnTimeZone op per change, so it is one undo step.
+	let zoneEditable = $derived(ownsTimeZone(col));
+	let zoneFrame = $derived(col?.type === 'time' ? col.timeFrame : null);
+	let zoneFrom = $derived.by(() => {
+		if (!zoneFrame || zoneEditable) return null;
+		const src = timeZoneSource(col);
+		return src && src !== col ? columnDisplayName(src) : null;
+	});
+	// When a session-wide setting decides how the times are shown, say so beside the zone.
+	let zoneShownNote = $derived.by(() => {
+		if (!zoneFrame) return null;
+		const legacy = getLegacyZone();
+		if (legacy) {
+			return `Shown in ${zoneLabel(legacy)}: this session uses the old time zone setting (see Settings).`;
+		}
+		const show = getShowTimesIn();
+		if (show !== COLUMN_ZONE && show !== zoneFrame.zone) {
+			return `Shown in ${zoneLabel(show)} ("Show times in", Settings).`;
+		}
+		return null;
+	});
+	function setZone(zone) {
+		applyOp({ kind: 'setColumnTimeZone', id: col.id, zone });
+	}
 
 	// Rename: one renameColumn operation when the edit is committed (an undo step that counts as
 	// an unsaved change). Typing a node output's label back restores its auto name, so the label
@@ -890,6 +941,34 @@
 					<p class="time-format-warning" role="alert">{timeFormatProblem}</p>
 				{/if}
 			{/if}
+			{#if zoneFrame && !canChange}
+				<div class="control-input display time-zone-row" data-testid="column-time-zone-row">
+					<p>Time zone</p>
+					{#if zoneEditable}
+						<TimeZoneSelect
+							value={col.timeZone ?? 'utc'}
+							utcLabel={zoneFrame.wall ? AS_WRITTEN_LABEL : 'UTC'}
+							ariaLabel={`Time zone of ${shownName}`}
+							testid="column-time-zone"
+							title={zoneFrame.wall
+								? 'Where these times were recorded. They stay as written; the zone is used to show them in another zone.'
+								: 'The zone these times are shown in.'}
+							onChange={setZone}
+						/>
+					{:else}
+						<span class="time-zone-inherited" data-testid="column-time-zone-inherited"
+							>{zoneFrame.wall && zoneFrame.zone === 'utc'
+								? AS_WRITTEN_LABEL
+								: zoneLabel(zoneFrame.zone)}{#if zoneFrom}<span class="time-zone-from"
+									>from {zoneFrom}</span
+								>{/if}</span
+						>
+					{/if}
+				</div>
+				{#if zoneShownNote}
+					<p class="time-zone-note" data-testid="column-time-zone-note">{zoneShownNote}</p>
+				{/if}
+			{/if}
 			{#each dataWarnings as w (w)}
 				<p class="time-format-warning" role="status" data-testid="column-warning">{w}</p>
 			{/each}
@@ -995,6 +1074,41 @@
 	.time-format-row input {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+	/* Laid out like the Time format row above it: the label on top, the field full width. */
+	.time-zone-row {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-1);
+		font-size: var(--font-sm);
+		padding: 2px 4px 4px;
+	}
+	.time-zone-row p {
+		margin: 0;
+		color: var(--color-text-muted);
+	}
+	.time-zone-row :global(.tz-select) {
+		align-self: stretch;
+		width: 100%;
+		height: 1.55rem;
+		--field-font-size: var(--font-md);
+	}
+	.time-zone-inherited {
+		align-self: stretch;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: var(--font-md);
+	}
+	.time-zone-from {
+		margin-left: var(--space-2);
+		color: var(--color-text-muted);
+	}
+	.time-zone-note {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		margin: 0 4px var(--space-2);
 	}
 	.time-format-warning {
 		font-size: var(--font-xs);

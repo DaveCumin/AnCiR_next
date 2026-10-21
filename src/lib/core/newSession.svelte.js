@@ -11,7 +11,9 @@
 //     through it (the same reasoning as the close-tab guard).
 //   - Undo is cleared: the previous session's ops would hit unrelated nodes once ids are reused.
 //   - Selection, hidden plots and both viewports go back to a fresh page's values; user
-//     preferences in appState (panels, view, timezone, palette) are kept.
+//     preferences in appState (panels, view, "Show times in", palette) are kept. A legacy
+//     session's time zone (appState.displayTimezone) is not a preference: it says how THAT
+//     session's times were read, so a new session starts without it.
 //   - The caller's onReset runs last. +page uses it to re-arm the start screen, which a user may
 //     have dismissed earlier in this session.
 import { appState } from './core.svelte.js';
@@ -54,6 +56,7 @@ export async function startNewSession({ onReset } = {}) {
 			appState.canvasOffset = { x: 0, y: 0 };
 			appState.canvasScale = 1;
 			appState.workflowViewport = { x: 0, y: 0, z: 1 };
+			appState.displayTimezone = 'utc';
 			// Tell an already mounted canvas to adopt the viewport above (see importJson).
 			appState.viewportEpoch = (appState.viewportEpoch ?? 0) + 1;
 			// Let the effects the reset sets off run inside the load window.

@@ -621,7 +621,7 @@
 		if (xIsTime && result?.originTime_ms != null) {
 			return {
 				isTime: true,
-				raw: formatTimeFromUNIX(result.originTime_ms + binHrs * 3600000),
+				raw: formatTimeFromUNIX(result.originTime_ms + binHrs * 3600000, xIN_col),
 				computed: binHrs.toFixed(2)
 			};
 		}

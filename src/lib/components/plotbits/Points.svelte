@@ -108,6 +108,8 @@
 		xoffset,
 		tooltip = false,
 		xtype = 'number',
+		// The x column (or its time frame) a time x belongs to, so the tooltip shows its zone.
+		xZone = null,
 		which,
 		dataLabel = '',
 		dataColour = '',
@@ -263,6 +265,7 @@
 			xLabel: xLabel || 'x',
 			xValue: closest.x,
 			xtype,
+			xZone,
 			series,
 			extra
 		});

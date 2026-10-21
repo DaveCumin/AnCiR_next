@@ -25,6 +25,8 @@
 		PHASE_REFERENCE_CLOCK,
 		PHASE_REFERENCE_START
 	} from '$lib/utils/phaseReference.js';
+	import { getClockZone } from '$lib/utils/time/displayTime.js';
+	import { zoneLabel } from '$lib/utils/time/zones.js';
 
 	let {
 		value = $bindable(),
@@ -57,7 +59,7 @@
 	</ControlInput>
 	{#if (value ?? PHASE_REFERENCE_START) === PHASE_REFERENCE_CLOCK}
 		<p class="phase-ref-hint">
-			Phases are hours after local midnight in the display timezone, wrapped to one period.
+			Phases are hours after midnight {zoneLabel(getClockZone())}, wrapped to one period.
 		</p>
 	{:else}
 		<p class="phase-ref-hint">

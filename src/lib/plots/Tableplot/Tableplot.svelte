@@ -554,7 +554,7 @@
 			if (col.originTime_ms != null) {
 				const centerMs = col.originTime_ms + (x + half) * 3600000;
 				return {
-					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
+					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs, undefined, col) : '-',
 					computed: Number.isFinite(centerMs) ? rangeStr : '-',
 					isTime: true
 				};
@@ -568,7 +568,7 @@
 			// (UNIX ms) to still render dates rather than bare epoch numbers.
 			const timeArr = Array.isArray(rawArr) ? rawArr : col.getData();
 			if (Array.isArray(timeArr)) {
-				const raw = timeCellText(timeArr[i], col.getData()?.[i]);
+				const raw = timeCellText(timeArr[i], col.getData()?.[i], col);
 				const hours = col.hoursSinceStart?.[i];
 				const hoursStr = raw !== '-' && Number.isFinite(hours) ? hours.toFixed(dp) : '-';
 				return { raw, computed: hoursStr, isTime: true };

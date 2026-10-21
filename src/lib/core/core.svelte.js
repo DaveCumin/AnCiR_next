@@ -438,10 +438,18 @@ export const appState = $state({
 	// 'plots': legacy free-positioned PlotDisplay grid.
 	view: 'canvas',
 
-	// IANA timezone name used for all user-visible date/time formatting and
-	// for parsing values typed into <input type="datetime-local"> controls.
-	// Defaults to UTC; change to e.g. 'Pacific/Auckland' to localise.
+	// LEGACY time zone. Before per-column time zones (STAT-18) this one setting relabelled
+	// every time AND set the zone of clock-time analysis (actogram day starts, clock phase).
+	// It is now 'utc' for every session, except one saved before with another zone: such a
+	// session keeps that old meaning, exactly, until "Switch to each column's own zone" in
+	// Settings converts it (one undo step). Saved under its old name so a legacy session
+	// loads unchanged and the Python/R exports keep reading it. Read it through
+	// utils/time/displayTime.js (getLegacyZone, getClockZone), never directly.
 	displayTimezone: 'utc',
+	// "Show times in" (Settings): 'column' shows each time in its own column's zone (the
+	// default); a zone ('utc', '+13:00', an IANA name) relabels every time shown. Display
+	// only: it never changes a result (plan decision 2).
+	showTimesIn: 'column',
 
 	invisiblePlotIds: [],
 
@@ -558,6 +566,11 @@ export function loadAppState(newAppState) {
 			appState[key] = newAppState[key];
 		}
 	}
+	// The time settings belong to the session, so a session saved without them (before
+	// per-column zones) must not inherit the previous session's: it gets the defaults, which
+	// for such a session means its own `displayTimezone` decides (legacy when not UTC).
+	if (newAppState && !('showTimesIn' in newAppState)) appState.showTimesIn = 'column';
+	if (newAppState && !('displayTimezone' in newAppState)) appState.displayTimezone = 'utc';
 }
 
 export function pushObj(obj, autoPosition = true) {
