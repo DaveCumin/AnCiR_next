@@ -155,8 +155,9 @@
 				<strong>Period</strong> (default: 24 h). This sets how many hours fit in each horizontal row.
 			</li>
 			<li>
-				Set the <strong>Start time</strong> using the date-and-time picker: the date and clock time at
-				which the first row begins.
+				Set the <strong>Start time</strong> using the date-and-time picker: the date and clock time
+				at which the first row begins. By default rows start at midnight in the first series&rsquo;
+				time column&rsquo;s zone (see <a href="#time-zones">Time zones and daylight saving</a>).
 			</li>
 			<li>
 				Set <strong>Repeat</strong> to 2 for a <strong>double-plotted</strong> actogram (two consecutive

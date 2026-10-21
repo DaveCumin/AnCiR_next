@@ -474,3 +474,64 @@ describe('exported scripts write Wide To Long categories as the app shows them',
 		240_000
 	);
 });
+
+// Per-column time zones (plan ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, 5d):
+// the exported scripts must carry each column's `timeZone` into the runtime, which resolves a
+// zone-less column's wall clock there and reads every clock phase in it. The session is the
+// parity-only tools/parity/sessions/parity-zoned-time.json (Auckland text across the end of
+// NZDT, an AWD column in London across the start of BST); the expected numbers are what the
+// app computes for it (GEN_SESSION_PARITY=1 ... emitSessionParity, session_js_results.json).
+describe('exported scripts resolve per-column time zones (parity-zoned-time)', () => {
+	const session = JSON.parse(
+		readFileSync(join(ROOT, 'tools', 'parity', 'sessions', 'parity-zoned-time.json'), 'utf8')
+	);
+	// 1 Apr 2024 00:00 NZDT, not 00:00 UTC: the zone moved the instant.
+	const HIVE_FIRST_MS = 1711882800000;
+	// The clock acrophase with the first sample's offset (+13:00) for the whole record.
+	const COSINOR_ACROPHASE = 14.569584467842688;
+	// MovingAnalysis: each window's own offset, so every window reads about 14.0 h.
+	const MOVING_FIRST_ACROPHASE = 14.000800441248145;
+	// AWD in Europe/London: peak written at 13:00 local.
+	const AWD_ACROPHASE = 12.999999999999986;
+
+	const check = (out) => {
+		expect(scalarFromCsv(out, 'hive time')).toBe(HIVE_FIRST_MS);
+		expect(scalarFromCsv(out, 'acrophase_1')).toBeCloseTo(COSINOR_ACROPHASE, 6);
+		expect(scalarFromCsv(out, '2_H1_acrophase_3')).toBeCloseTo(MOVING_FIRST_ACROPHASE, 6);
+		expect(scalarFromCsv(out, 'acrophase_5')).toBeCloseTo(AWD_ACROPHASE, 6);
+	};
+
+	it.runIf(HAVE_PYTHON)(
+		'Python, single file and split + CSV',
+		() => {
+			for (const [opts, entry, outDir] of [
+				[{}, 'session.py', 'session_output'],
+				[{ split: true, dataAsCsv: true, version: '72.22-test' }, 'analysis.py', 'analysis_output']
+			]) {
+				const { dir, res } = runExport(
+					sessionToPythonFiles(session, PY_RUNTIME, opts),
+					PYTHON,
+					entry
+				);
+				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				check(readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8'));
+			}
+		},
+		240_000
+	);
+
+	it.runIf(HAVE_R)(
+		'R, single file and split + CSV',
+		() => {
+			for (const [opts, entry, outDir] of [
+				[{}, 'session.R', 'session_output'],
+				[{ split: true, dataAsCsv: true, version: '72.22-test' }, 'analysis.R', 'analysis_output']
+			]) {
+				const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME, opts), 'Rscript', entry);
+				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				check(readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8'));
+			}
+		},
+		240_000
+	);
+});

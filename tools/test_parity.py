@@ -309,6 +309,105 @@ def run_time_column(fx, js):
     return out
 
 
+def _zone_col(cid, spec, name, raw):
+    raw[cid] = spec["awd"] if spec.get("awd") is not None else list(spec["values"])
+    return rt.Column(id=cid, name=name, type=spec.get("type", "time"), data=cid, raw_data=raw,
+                     time_format=spec.get("timeFormat"), compression=spec.get("compression"),
+                     time_zone=spec.get("timeZone"))
+
+
+def run_clock_zone(fx, js):
+    """Per-column time zone (the `clockZone` kind): rebuild the zoned column (and B) as the
+    JS emitter did, with the session's legacy zone and "Show times in", and read back what
+    every clock-time consumer of the port reads from it. Mirrors runClockZone in
+    emitParity.svelte.test.js key for key."""
+    inp = js["inputs"]
+    prev = (rt.DISPLAY_TIMEZONE, rt.SHOW_TIMES_IN)
+    rt.set_display_timezone(inp.get("legacyZone") or "utc")
+    rt.set_show_times_in(inp.get("showTimesIn") or "column")
+    try:
+        raw = {}
+        a = _zone_col(1, inp["column"], "a", raw)
+        b = _zone_col(2, inp["columnB"], "b", raw)
+        raw[3] = list(inp["y"])
+        y = rt.Column(id=3, name="y", type="number", data=3, raw_data=raw)
+        ref = rt.Column(id=4, name="ref", type="time", ref_id=1, raw_data=raw)
+        binx = rt.Column(id=10, name="binnedx", type="number", data=10, raw_data=raw)
+        biny = rt.Column(id=11, name="binnedy", type="number", data=11, raw_data=raw)
+        raw[5] = [1] * len(b.get_data())
+        y_b = rt.Column(id=5, name="yB", type="number", data=5, raw_data=raw)
+        cols = {1: a, 2: b, 3: y, 4: ref, 5: y_b, 10: binx, 11: biny}
+        for c in cols.values():
+            c.columns_index = cols
+        bin_args = {**inp["bin"], "xIN": 1, "yIN": [3], "out": {"binnedx": 10, "binnedy_3": 11}}
+        rt.run_table_process("BinnedData", bin_args, cols, raw, {})
+
+        data = a.get_data()
+        counts = a.wall_clock_counts or {}
+        finite = [v for v in data if isinstance(v, (int, float)) and math.isfinite(v)]
+        lo, hi = (min(finite), max(finite)) if finite else (math.nan, math.nan)
+        clock = rt.column_clock(a)
+        changes = rt.clock_dst_changes(clock, lo, hi)
+        ref_p = rt.node_phase_reference({"phaseReference": "clock"}, a)
+        ref_w = rt.node_phase_reference({"phaseReference": "clock"}, a, per_window=True)
+
+        series = [{"x": {"refId": 1}, "y": {"refId": 3}}]
+        if inp.get("actogramWithB"):
+            series.append({"x": {"refId": 2}, "y": {"refId": 5}})
+        plot = {"type": "actogram", "name": fx["id"], "plot": {"periodHrs": 24, "data": series}}
+        info = rt.actogram_dst_info(plot, cols)
+        zone = info["clock"]["zone"]
+        _, start, ndays = rt._actogram_series(plot, cols)
+        labels = [rt.actogram_row_label_text(d, "date", start, 24, "DD MMM HH:mm", zone)
+                  for d in range(min(ndays, 20))]
+        join = rt.join_zone_notes(rt.column_clock(a), rt.column_clock(b), 0)
+        joined = rt.join_zone_notes(rt.column_clock(a), rt.column_clock(b), 13)
+        circ_zone = "utc" if clock["legacy"] else clock["zone"]
+        shown = rt.shown_zone(a)
+        ticks = rt.zone_aligned_ticks(lo, hi, 5, shown) if math.isfinite(lo) else []
+        return {
+            "data": data,
+            "hoursSinceStart": a.hours_since_start,
+            "counts": {k: counts.get(k, 0)
+                       for k in ("repeated", "secondPass", "unordered", "skipped")},
+            "clock": clock,
+            "changes": changes,
+            "phase": {"clock": ref_p["clock"], "offsetHours": ref_p["offsetHours"],
+                      "warning": ref_p.get("warning") or "", "zone": ref_p.get("zone") or "",
+                      "perWindowZone": ref_p.get("perWindowZone") or "",
+                      "originMs": ref_p.get("originMs")},
+            "phaseWindow": {"warning": ref_w.get("warning") or "",
+                            "perWindowZone": ref_w.get("perWindowZone") or "",
+                            "offsets": rt.window_clock_offsets(ref_w, inp["centresHrs"]) or []},
+            "binNotes": {"daily": rt.bin_dst_note(clock, changes, start, 24, 24) or "",
+                         "hourly": rt.bin_dst_note(clock, changes, start, 1, 1) or ""},
+            "circularHours": rt.column_to_phase_hours(data, "time", circ_zone),
+            "join": {"summary": join["summary"], "warning": join["warning"] or ""},
+            "joinShifted": {"summary": joined["summary"], "warning": joined["warning"] or ""},
+            "refClock": rt.column_clock(ref),
+            "binClock": rt.column_clock(binx),
+            "binX": binx.get_data(),
+            "actogram": {"clockZone": zone, "clockZonesDiffer": info["clockZonesDiffer"],
+                         "startTime": info["startTime"], "dstNote": info["dstNote"] or "",
+                         "rowLabels": labels},
+            "plots": {
+                "actogramRows": [list(r) for r in rt.actogram_download_data(plot, cols)[1]],
+                "hourOfDay": rt.encoding_values("hourOfDay", data, "time", None, clock["zone"])[0],
+                "dayOfYear": rt.encoding_values("dayOfYear", data, "time", None, clock["zone"])[0],
+                "hourTitle": rt.colour_bar_title("hourOfDay", zone=clock["named"]),
+                "dayTitle": rt.colour_bar_title("dayOfYear", zone=clock["named"]),
+                "labels": [rt.dayjs_format(v, "YYYY-MM-DD HH:mm Z", shown)
+                           if isinstance(v, (int, float)) and math.isfinite(v) else ""
+                           for v in data[:6]],
+                "axisTicks": ticks,
+                "axisLabels": [rt.time_tick_label(t, shown) for t in ticks],
+            },
+        }
+    finally:
+        rt.set_display_timezone(prev[0])
+        rt.set_show_times_in(prev[1])
+
+
 def run_actogram_markers(fx, js):
     """Rebuild the fixture's actogram from the plain arrays the JS emitter recorded and
     compute every rule on every series, with all intermediates."""
@@ -409,6 +508,11 @@ def _check_fixture(fx, js_results):
         for key in fx.get("compareArrays", []):
             ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
             assert ok, f"{fx['id']} array '{key}' differs: {why}"
+
+    elif fx["kind"] == "clockZone":
+        py = run_clock_zone(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
 
     elif fx["kind"] == "timeColumn":
         py = run_time_column(fx, js)

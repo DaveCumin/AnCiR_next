@@ -27,12 +27,12 @@ claude mcp add --transport http ancir https://ancir-nl.david-cumin.workers.dev/m
 
 That's the whole setup: no clone, no `npm install`, no VM. Four tools:
 
-|                     |                                                                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json`       |
-| `check_draft`       | **dry run**: the same normalizer, nothing stored, no link. Returns the errors it _would_ raise, the columns each analysis _would_ create, and fitness advice |
-| `build_session`     | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings,fitness}`                            |
-| `describe_session`  | read a session back: columns (and **which hold data**), analyses with args, plots, fitness                                                                   |
+|                     |                                                                                                                                                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json`                                                                  |
+| `check_draft`       | **dry run**: the same normalizer, nothing stored, no link. Returns the errors it _would_ raise, the columns each analysis _would_ create, fitness advice, and a warning when one Join Data or one plot mixes time zones |
+| `build_session`     | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings,fitness}`                                                                                       |
+| `describe_session`  | read a session back: columns (and **which hold data**; a time column's zone and whether its times are as written, wall clock in the zone, or instants), analyses with args, plots, fitness                              |
 
 `check_draft` and `describe_session` exist because the server was otherwise **write-only**: an
 agent could build but never look — not at what it had just made, not at a session a user linked
@@ -40,6 +40,14 @@ it to. `check_draft` in particular is the cheap way to learn what an analysis _n
 outputs (the thing agents most reliably get wrong) before wiring a plot to them, and it runs the
 _same_ normalizer rather than a cheaper approximation — a dry run that disagrees with the real
 thing just teaches the agent to trust a fiction.
+
+**Time zones.** A draft's time column takes epoch ms or ISO 8601 text and an optional
+`time_zone` (IANA, `+12:00`, or `utc`, the default), validated and stored as the app does
+(`src/emit/timeColumns.js`, on the app's pure `utils/time/zoneNames.js`). `check_draft` warns,
+in the app's own words (`utils/time/zoneNotes.js`), when one Join Data or one actogram or
+scatterplot mixes zones. A plot series on an analysis output that only becomes a time column
+when computed (Join Data's `jointime`, Cosinor's `cosinorx`) is typed as a number in the draft,
+so the plot check sees input columns and generator outputs only.
 
 `describe_session` **parses** its argument for a session id; it never _fetches_ it. "Describe the
 session at this URL" reads as an invitation to go and get it, which would hand any caller an

@@ -77,6 +77,81 @@ blank there, but `strptime` would read it. Both ports therefore gate each value 
 format's digit widths before parsing (`dayjs_width_pattern` / `.dayjs_width_pattern`), and a
 value that fails the gate is a gap, as in JS.
 
+### The `clockZone` fixture kind (per-column time zones, 2026-10-22)
+
+Pins phase 4 of the per-column time-zone plan
+(`ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md`, sections 3.9 to 3.11, 5c, 5d and
+7). Since phase 3 a zone-less text column with a zone other than `'utc'` stores the INSTANTS
+its wall clock names in that zone, with the app's own rules for the hours a daylight-saving
+change repeats or skips. Both ports resolve the column with a line-for-line port of
+`utils/time/zones.js` (`resolve_wall_clocks`, `wall_clock_to_instant`), NOT with pandas
+`tz_localize` or R `as.POSIXct(tz =)`: neither reads a repeated hour by the order of the values
+(runs keyed by the two offsets and the repeated window, exactly one step back = in order) or
+moves a skipped hour forward by the gap. Offsets come from `zoneinfo` (Python) and
+`as.POSIXlt(..)$gmtoff` (R), looked up per 15-minute UTC bucket as the app's Intl reading is.
+
+One fixture is one time column (`column`: a zone, a format, and text the emitter WRITES from
+`write`: instants `stepMin` apart, each formatted as the wall clock of `writeZone`, then
+optionally sorted, shuffled or blanked; or `values`, or `awd`) plus, for Join Data's notes and a
+two-series actogram, an optional B column (`columnB`), a legacy zone (`legacyZone`, a session
+saved before per-column zones) and "Show times in" (`showTimesIn`). The emitter builds real
+Columns and records what every clock-time consumer reads:
+
+| Output                                                                         | JS source                                                                                                                                                                                                                                             | Python                                                                                                                                   | R                                                          |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `data`, `hoursSinceStart`, `counts` (repeated, secondPass, unordered, skipped) | `Column.getData`, `wallClockCountsOf`                                                                                                                                                                                                                 | `Column.get_data`, `wall_clock_counts`                                                                                                   | `col_data` (counts in `attr(, "wall_clock_counts")`)       |
+| `clock`, `refClock`, `binClock`, `binX`                                        | `columnClock` of the column, a referencing column and a real Bin Data output                                                                                                                                                                          | `column_clock` (outputs inherit through `zone_inputs`, recorded by `run_table_process`)                                                  | `column_clock`                                             |
+| `changes`                                                                      | `clockDstChanges` (`zoneTransitions`)                                                                                                                                                                                                                 | `clock_dst_changes`                                                                                                                      | `clock_dst_changes`                                        |
+| `phase`, `phaseWindow`                                                         | `resolveNodePhaseReference` (first sample's offset, DST warning), `windowClockOffsets`                                                                                                                                                                | `node_phase_reference`, `window_clock_offsets`                                                                                           | same names                                                 |
+| `binNotes`                                                                     | `binDstNote` (daily and hourly bins)                                                                                                                                                                                                                  | `bin_dst_note`                                                                                                                           | `bin_dst_note`                                             |
+| `circularHours`                                                                | `columnToPhaseHours` in the Circular phase plot's clock zone (legacy: UTC)                                                                                                                                                                            | `column_to_phase_hours`                                                                                                                  | `column_to_phase_hours`                                    |
+| `join`, `joinShifted`                                                          | `joinZoneNotes` (shift 0 and 13 h)                                                                                                                                                                                                                    | `join_zone_notes`                                                                                                                        | `join_zone_notes`                                          |
+| `actogram`                                                                     | a real Actogram: `clockZone`, `clockZonesDiffer`, `startTime`, `dstNote`, row labels                                                                                                                                                                  | `actogram_dst_info`, `actogram_row_label_text`                                                                                           | `actogram_start_time`, `actogram_dst_note`, `.zone_format` |
+| `plots` (Python only)                                                          | the Actogram's download rows, `encodingValues` hour of day and day of year, `colourBarTitle` (`UTC+05:30` for a fixed offset), `formatDateTime` labels as shown, the Scatterplot time axis's `zoneAlignedTicks` and their `formatTimeAxisTick` labels | `actogram_download_data`, `encoding_values`, `colour_bar_title`, `dayjs_format` in `shown_zone`, `zone_aligned_ticks`, `time_tick_label` | (the R port draws no plots)                                |
+
+The 28 cases: no zone (today's values exactly); Pacific/Auckland across the end of NZDT in
+order (half-hourly and hourly), with blanks inside the repeated hour, sorted, shuffled, a
+standard-time logger (one pass, read as daylight time), across the start of NZDT (a following
+logger, and a standard-time logger whose values fall in the gap and move forward), and a year
+of hourly data with two autumn runs a year apart; Europe/London both ways; America/New_York
+both ways (negative offsets); Asia/Kolkata (+05:30), Asia/Kathmandu (+05:45), Pacific/Chatham
+(+13:45 / +12:45), Australia/Lord_Howe both ways (the 30-minute change: hourly bins get a
+note); fixed offsets +05:30 and -04:00; text that carries its own offsets with a zone (no
+re-parse); epoch ms with a zone; AWD with a zone (the header's start resolved); a legacy
+session (every clock reading in its one zone, the circular plot in UTC); an unknown zone (read
+as `'utc'`, never an error); Join Data A in Auckland against B in London, as a two-series
+actogram whose zones differ; and "Show times in" Europe/London (labels change, clock readings
+do not).
+
+Strings the JS records as `null` (no warning, no note) are recorded as `''`, so a port that
+says something where the app says nothing fails in R as well as Python (R's `deep_diff`
+compares a `null` numerically, which any string passes).
+
+**The emitter runs these fixtures as on a machine in UTC** (`process.env.TZ = 'UTC'` for the
+fixture, restored after; `PARITY_KEEP_TZ=1` turns it off), and writes the text from the
+zone's offset and dayjs's UTC mode only. dayjs computes zoned times through the MACHINE's
+local clock in two places, and both go wrong near a daylight-saving change, so the app's own
+results depend on where it runs (plan 5d lists the repro):
+
+- `dayjs.utc(ms).utcOffset(fixed)` (zones.js `dayjsInZone`, every fixed-offset zone) reads an
+  hour off when the shifted time falls in the machine's own daylight-saving change (on a
+  Pacific/Auckland machine, a +05:30 row label "07 Apr 01:00" where it should read 00:00, and
+  a +12:00 text written 01:00, 01:30, 01:00, 01:30, 03:00 across 29 Sep).
+- dayjs-tz `startOf('day')` on a day with a change in the TARGET zone keeps the later offset
+  when the machine is in another zone (on a UTC machine, the Auckland actogram day start of
+  7 Apr 2024 reads 01:00 NZDT instead of 00:00).
+
+The ports compute both correctly on any machine. No fixture starts its record on a
+daylight-saving day, so the UTC-machine JS results are correct and pinned; the dayjs paths are
+an open JS item, not a port difference.
+
+**Session parity** gained a parity-only session, `tools/parity/sessions/parity-zoned-time.json`
+(read by both session emitters alongside the demos): Auckland zone-less text across 7 Apr 2024
+with a clock-phase Cosinor (one offset, 14.57 h) and a clock-phase MovingAnalysis (per-window
+offsets, about 14.0 h in every window), Bin Data, Join Data against zone-less UTC weather
+text, and an AWD column in Europe/London across 31 Mar 2024 with a clock-phase Cosinor. It is
+hand-built (no demo carries a `timeZone`), so a demo regeneration does not touch it.
+
 ### The `actogramMarkers` fixture kind
 
 Pins the actogram MARKER RULES (plan `docs/plans/2026-09-30-actogram-marker-rules-and-outputs.md`,
@@ -693,7 +768,12 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-20 (second pass): 546 fixtures, Python
+`npm run parity` lists every fixture. As of 2026-10-22 (per-column time zones, phase 4): 580
+fixtures, Python 580/580, R 526 pass with 54 not claimed (the 28 `clockZone` fixtures are
+claimed by both), whole-session 92 match, 2 skipped (91 demo and classroom sessions plus the
+parity-only `parity-zoned-time`; outputs blanked before the port runs).
+
+As of 2026-10-20 (second pass): 546 fixtures, Python
 546/546, R 492 pass with 54 not claimed, whole-session 89 match, 1 mismatch, 2 skipped
 (outputs blanked before the port runs). The mismatch is a display name, not a number: since
 fcbd369f (v82.33) the app writes a column's DISPLAY name into name-bearing outputs
@@ -1063,7 +1143,8 @@ shape; the R logistic kernel is covered by the `tp-logistic*` fixtures), `util-c
 ## End-to-end session parity
 
 Whole-session JS↔Python check over every shipped session (one per node + the
-classroom lessons). This is what catches port drift across the _entire_ analysis
+classroom lessons), plus the parity-only sessions in `tools/parity/sessions/` (per-column
+time zones: `parity-zoned-time`, see the `clockZone` kind). This is what catches port drift across the _entire_ analysis
 graph, not just one module.
 
 ```bash

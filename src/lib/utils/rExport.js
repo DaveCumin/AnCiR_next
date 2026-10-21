@@ -88,6 +88,7 @@ main <- function() {
       type = if (is.null(meta$type)) "number" else meta$type,
       data = meta$data,
       time_format = meta$timeFormat,
+      time_zone = meta$timeZone,
       bin_width = if (is.null(meta$binWidth)) 1 else meta$binWidth,
       compression = meta$compression,
       ref_id = meta$refId,
@@ -285,6 +286,8 @@ function colMetaForColumn(col) {
 		data: col.data ?? null,
 		compression: col.compression ?? null,
 		timeFormat: col.timeFormat ?? null,
+		// Column.timeZone: a zone-less text column's zone (absent = 'utc', as written).
+		timeZone: col.timeZone ?? null,
 		binWidth: col.binWidth ?? 1.0,
 		refId: col.refId ?? null,
 		groupLabel: col.groupLabel ?? null,
@@ -437,7 +440,9 @@ function dataSectionLines(session, dataAsCsv) {
 	}
 	lines.push(`COLUMN_META <- ${toRLiteral(colMeta)}`);
 	lines.push(`TABLE_PROCESSES <- ${toRLiteral(tpsClean)}`);
-	// The display zone clock-time phase outputs are reported in (phaseReference 'clock').
+	// A legacy session's one zone (appState.displayTimezone, not 'utc' only for a session saved
+	// before per-column zones): every clock reading uses it, as in the app; otherwise each
+	// column's own zone (column_clock).
 	lines.push(`DISPLAY_TIMEZONE <- ${JSON.stringify(session.appState?.displayTimezone ?? 'utc')}`);
 	return { lines: wrapRLines(lines), csvText };
 }

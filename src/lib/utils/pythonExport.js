@@ -88,6 +88,7 @@ def main():
             data=meta.get("data"),
             raw_data=RAW_DATA,
             time_format=meta.get("timeFormat"),
+            time_zone=meta.get("timeZone"),
             bin_width=meta.get("binWidth"),
             origin_time_ms=meta.get("originTime_ms"),
             compression=meta.get("compression"),
@@ -155,7 +156,7 @@ def main():
     # correlogram, actogram, wavelet scalogram): the numbers the plot derives, not the raw input.
     if PLOTS:
         render_plots(PLOTS, columns_index, out_path)
-        export_plot_data(PLOTS, columns_index, out_path, zone=DISPLAY_TIMEZONE)
+        export_plot_data(PLOTS, columns_index, out_path)
 
     # Loud summary of any unsupported processes (only reachable when
     # STRICT_PROCESSES was set to False; strict mode aborts earlier).
@@ -213,6 +214,8 @@ function colMetaForColumn(col) {
 		data: col.data ?? null,
 		compression: col.compression ?? null,
 		timeFormat: col.timeFormat ?? null,
+		// Column.timeZone: a zone-less text column's zone (absent = 'utc', as written).
+		timeZone: col.timeZone ?? null,
 		// Only columns that carry bins have a binWidth (the app reads it for truthiness: the
 		// actogram's bar width), so a missing one stays missing rather than becoming 1.
 		binWidth: col.binWidth ?? null,
@@ -464,13 +467,15 @@ function dataSectionLines(session, dataAsCsv) {
 	lines.push(embed('TABLE_PROCESSES', tpsClean));
 	lines.push(embed('PLOTS', plots));
 	lines.push(embed('STORED_VALUES', storedValues));
-	// The app's display zone: actogram rows start at local midnight in it, so the exported
-	// actogram plot data folds in the same zone (export_plot_data reads DISPLAY_TIMEZONE, bound
-	// HERE so it holds in split mode too, where the helpers' own global is a separate name).
-	// Clock-time phase outputs (phaseReference 'clock') read it through the runtime.
+	// A legacy session's one zone (appState.displayTimezone, not 'utc' only for a session saved
+	// before per-column zones): every clock reading uses it, as in the app; otherwise each
+	// column's own zone (column_clock). Set through the runtime's setters so it holds in split
+	// mode too, where the helpers' own globals are separate names. "Show times in" is labels
+	// only.
 	const zone = JSON.stringify(session.appState?.displayTimezone || 'utc');
 	lines.push(`DISPLAY_TIMEZONE = ${zone}`);
 	lines.push(`set_display_timezone(${zone})`);
+	lines.push(`set_show_times_in(${JSON.stringify(session.appState?.showTimesIn || 'column')})`);
 	return { lines, csvText };
 }
 

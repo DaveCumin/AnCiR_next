@@ -48,6 +48,7 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import { columnClock, clockDstChanges } from '$lib/core/columnTimeZone.js';
 	import { dayjsInZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import { actogramMixedZonesNote } from '$lib/utils/time/zoneNotes.js';
 	import { actogramDstNote } from '$lib/utils/time/dstNotes.js';
 	import {
 		rowLabelText,
@@ -1330,9 +1331,7 @@
 			{/if}
 			{#if theData.clockZonesDiffer}
 				<p class="time-zone-note" data-testid="actogram-zone-note">
-					The series' times are in different zones; the rows follow {zoneLabel(
-						theData.clock.named
-					)}, the first series' zone.
+					{actogramMixedZonesNote(theData.clock.named)}
 				</p>
 			{/if}
 			{#if theData.dstNote}

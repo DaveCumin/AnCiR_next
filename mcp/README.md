@@ -42,8 +42,8 @@ browser anyway.
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_capabilities`  | Every analysis, **column transform**, and plot type, **derived live from the engine registry** — input fields, params (with defaults), output keys, status |
 | `create_session`     | Create/reset the active session                                                                                                                            |
-| `import_data`        | Add numeric columns (`{name, type?, values[]}`)                                                                                                            |
-| `list_columns`       | List columns (id, name, type, length)                                                                                                                      |
+| `import_data`        | Add columns (`{name, type?, values[], time_zone?}`); a time column takes epoch ms or ISO 8601 text and an optional zone (IANA, `+12:00`, `utc`)            |
+| `list_columns`       | List columns (id, name, type, length; a time column also `time_zone`, `times`, `zone_from`)                                                                |
 | `run_table_process`  | **Generic:** run _any_ AnCiR analysis by name (`{name, args}`) through the real `definition` registry; output columns are written into the session         |
 | `add_column_process` | Apply a **column transform** (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to a column and run its chain; embedded in the session       |
 | `add_plot`           | Create a plot wired to columns and add it to the session (opens rendered in the GUI)                                                                       |

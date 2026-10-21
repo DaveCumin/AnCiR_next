@@ -1258,6 +1258,507 @@ evaluate_cosinor_at_points <- function(parameters, x_points) {
   y
 }
 
+# --- Time zones (utils/time/zones.js), per-column time zone (STAT-18), matching the Python port
+#
+# A zone is "utc" (the default: zone-less text kept "as written"), a FIXED offset ("+05:30") or
+# an IANA name ("Pacific/Auckland", which follows that zone's daylight saving). A zone-less
+# text column with a zone other than "utc" stores the instants its wall clock names in that
+# zone (col_data, resolve_wall_clocks). Plan: ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-
+# plan.md, sections 3.10, 5c and 5d.
+#
+# Ported line for line, NOT through as.POSIXct(tz = zone): R resolves a repeated or skipped
+# hour by platform rules, while the app reads a repeated hour by the ORDER of the values and
+# moves a skipped hour forward. Offsets come from as.POSIXlt(..)$gmtoff, vectorised.
+
+.UTC_ZONE <- "utc"
+.FIXED_ZONE_RE <- "^([+-])([0-9]{2}):?([0-9]{2})$"
+.ZONE_BUCKET_MS <- 15 * 60 * 1000
+.ZONE_DAY_MS <- 86400000
+.ZONE_UNIQUE <- 0L; .ZONE_REPEATED <- 1L; .ZONE_SKIPPED <- 2L
+.zone_state <- new.env(parent = emptyenv())
+
+# JS Math.round, vectorised (halves toward +infinity).
+.zone_round <- function(x) floor(x + 0.5)
+
+is_fixed_offset <- function(z) {
+  is.character(z) && length(z) == 1 && !is.na(z) && grepl(.FIXED_ZONE_RE, trimws(z), perl = TRUE)
+}
+
+# zones.js fixedOffsetMinutes: minutes east of UTC for "+05:30" (330), else NULL.
+fixed_offset_minutes <- function(z) {
+  if (!is_fixed_offset(z)) return(NULL)
+  m <- regmatches(trimws(z), regexec(.FIXED_ZONE_RE, trimws(z), perl = TRUE))[[1]]
+  hours <- as.integer(m[3]); mins <- as.integer(m[4])
+  if (hours > 14 || mins > 59) return(NULL)
+  total <- hours * 60 + mins
+  if (identical(m[2], "-")) -total else total
+}
+
+format_fixed_offset <- function(minutes) {
+  a <- abs(.zone_round(minutes))
+  sprintf("%s%02d:%02d", if (minutes < 0) "-" else "+", a %/% 60, a %% 60)
+}
+
+.is_iana_zone <- function(name) {
+  if (is.null(.zone_state$olson)) .zone_state$olson <- OlsonNames()
+  name %in% .zone_state$olson
+}
+
+# zones.js normalizeZone: "utc" for UTC/Z/GMT/+00:00, "+05:30" for "+0530", an IANA name as
+# written when known, else NULL.
+normalize_zone <- function(z) {
+  if (!is.character(z) || length(z) != 1 || is.na(z)) return(NULL)
+  s <- trimws(z)
+  if (!nzchar(s)) return(NULL)
+  if (tolower(s) %in% c("utc", "z", "gmt", "etc/utc")) return(.UTC_ZONE)
+  if (is_fixed_offset(s)) {
+    mins <- fixed_offset_minutes(s)
+    if (is.null(mins)) return(NULL)
+    return(if (mins == 0) .UTC_ZONE else format_fixed_offset(mins))
+  }
+  if (.is_iana_zone(s)) s else NULL
+}
+
+# zones.js zoneLabel: "UTC", "UTC+13:00 (fixed)" ("UTC+13:00" when bare), or the IANA name.
+zone_label <- function(zone, bare = FALSE) {
+  z <- normalize_zone(zone)
+  if (is.null(z) || identical(z, .UTC_ZONE)) return("UTC")
+  if (is_fixed_offset(z)) return(if (bare) paste0("UTC", z) else paste0("UTC", z, " (fixed)"))
+  z
+}
+
+# zones.js ianaOffsetMinutes, vectorised: the offset at the START of each value's 15-minute
+# UTC bucket, rounded to whole minutes as the app's Intl reading is (NA for non-finite).
+.iana_offsets <- function(zone, ms) {
+  out <- rep(NA_real_, length(ms))
+  ok <- is.finite(ms)
+  if (!any(ok)) return(out)
+  at <- floor(ms[ok] / .ZONE_BUCKET_MS) * .ZONE_BUCKET_MS
+  u <- unique(at)
+  lt <- as.POSIXlt(u / 1000, origin = "1970-01-01", tz = zone)
+  g <- as.numeric(lt$gmtoff)
+  if (anyNA(g)) {
+    # A platform without tm_gmtoff: the offset is the wall clock read as UTC minus the instant.
+    wall <- as.numeric(as.POSIXct(format(lt, "%Y-%m-%d %H:%M:%S"), tz = "UTC"))
+    g <- wall - u / 1000
+  }
+  out[ok] <- .zone_round(g / 60)[match(at, u)]
+  out
+}
+
+# zones.js zoneOffsetMinutes (vectorised over ms): minutes east of UTC at each instant.
+zone_offset_minutes <- function(zone, ms) {
+  z <- normalize_zone(zone)
+  if (is.null(z) || identical(z, .UTC_ZONE)) return(rep(0, length(ms)))
+  fixed <- fixed_offset_minutes(z)
+  if (!is.null(fixed)) return(rep(fixed, length(ms)))
+  out <- .iana_offsets(z, ms)
+  out[!is.finite(ms)] <- 0
+  out
+}
+
+.resolver_zone <- function(zone) {
+  z <- normalize_zone(zone)
+  if (is.null(z)) stop(sprintf("Unknown time zone: %s", format(zone)))
+  z
+}
+
+# zones.js classifyWall, vectorised over finite wall clocks: list(kind, early, late).
+.classify_walls <- function(z, w) {
+  before <- .iana_offsets(z, w - .ZONE_DAY_MS)
+  after <- .iana_offsets(z, w + .ZONE_DAY_MS)
+  kind <- rep(.ZONE_UNIQUE, length(w)); early <- before; late <- before
+  d <- which(before != after)
+  if (length(d)) {
+    ok_b <- .iana_offsets(z, w[d] - before[d] * 60000) == before[d]
+    ok_a <- .iana_offsets(z, w[d] - after[d] * 60000) == after[d]
+    both <- ok_b & ok_a
+    # The larger offset gives the earlier instant.
+    kind[d[both]] <- .ZONE_REPEATED
+    early[d[both]] <- pmax(before[d[both]], after[d[both]])
+    late[d[both]] <- pmin(before[d[both]], after[d[both]])
+    only_a <- !ok_b & ok_a
+    early[d[only_a]] <- after[d[only_a]]; late[d[only_a]] <- after[d[only_a]]
+    neither <- !ok_b & !ok_a
+    kind[d[neither]] <- .ZONE_SKIPPED
+  }
+  list(kind = kind, early = early, late = late)
+}
+
+# zones.js wallClassifier: classifyWall per 15-minute WALL bucket (at the bucket's start),
+# except where the bucket's offsets are not whole quarter hours (then the value itself).
+.classify_walls_memo <- function(z, w) {
+  q <- 15 * 60000
+  b <- floor(w / q)
+  ub <- unique(b)
+  c <- .classify_walls(z, ub * q)
+  i <- match(b, ub)
+  res <- list(kind = c$kind[i], early = c$early[i], late = c$late[i])
+  odd <- which(res$early %% 15 != 0 | res$late %% 15 != 0)
+  if (length(odd)) {
+    e <- .classify_walls(z, w[odd])
+    res$kind[odd] <- e$kind; res$early[odd] <- e$early; res$late[odd] <- e$late
+  }
+  res
+}
+
+# zones.js wallClockToInstant (one value): the instant a wall clock (ms read as UTC) names in
+# `zone`; a repeated hour gives the earlier instant, a skipped one moves forward.
+wall_clock_to_instant <- function(wall_ms, zone) {
+  z <- .resolver_zone(zone)
+  if (!is.numeric(wall_ms) || length(wall_ms) != 1 || !is.finite(wall_ms)) return(wall_ms)
+  if (identical(z, .UTC_ZONE)) return(wall_ms)
+  fixed <- fixed_offset_minutes(z)
+  if (!is.null(fixed)) return(wall_ms - fixed * 60000)
+  wall_ms - .classify_walls(z, wall_ms)$early * 60000
+}
+
+# zones.js resolveWallClocks: a column of wall clocks (row order; NA kept) to the instants they
+# name in `zone`, with the repeated hour inferred from the order and the skipped hour moved
+# forward. Repeated values form RUNS: consecutive finite values with the same two offsets, each
+# within the repeated window's length of the one before; a run with exactly one step back
+# (w <= the previous w) is a clean two-pass record (values from that step on read the later
+# instant), otherwise every value reads the earlier one.
+resolve_wall_clocks <- function(walls, zone) {
+  z <- .resolver_zone(zone)
+  walls <- as.numeric(walls)
+  counts <- list(repeated = 0, secondPass = 0, unordered = 0, skipped = 0)
+  if (identical(z, .UTC_ZONE)) return(c(list(instants = walls), counts))
+  fixed <- fixed_offset_minutes(z)
+  if (!is.null(fixed)) return(c(list(instants = walls - fixed * 60000), counts))
+  inst <- walls
+  fi <- which(is.finite(walls))
+  if (!length(fi)) return(c(list(instants = inst), counts))
+  cl <- .classify_walls_memo(z, walls[fi])
+  inst[fi] <- walls[fi] - cl$early * 60000
+  counts$skipped <- sum(cl$kind == .ZONE_SKIPPED)
+  rp <- which(cl$kind == .ZONE_REPEATED)   # positions within fi
+  end_run <- function(run_pos) {
+    idx <- fi[run_pos]
+    counts$repeated <<- counts$repeated + length(idx)
+    steps <- if (length(idx) > 1) which(walls[idx[-1]] <= walls[idx[-length(idx)]]) + 1 else integer(0)
+    if (length(steps) == 1) {
+      late <- cl$late[run_pos[1]]
+      sec <- idx[steps:length(idx)]
+      inst[sec] <<- walls[sec] - late * 60000
+      counts$secondPass <<- counts$secondPass + length(sec)
+    } else {
+      counts$unordered <<- counts$unordered + length(idx)
+    }
+  }
+  run <- integer(0)
+  for (p in rp) {
+    same <- length(run) > 0 && run[length(run)] == p - 1 &&
+      cl$early[run[1]] == cl$early[p] && cl$late[run[1]] == cl$late[p] &&
+      abs(walls[fi[p]] - walls[fi[run[length(run)]]]) < (cl$early[p] - cl$late[p]) * 60000
+    if (!same) {
+      if (length(run)) end_run(run)
+      run <- integer(0)
+    }
+    run <- c(run, p)
+  }
+  if (length(run)) end_run(run)
+  c(list(instants = inst), counts)
+}
+
+# zones.js instantToWallClock (vectorised): the wall clock (ms read as UTC) `zone` shows.
+instant_to_wall_clock <- function(ms, zone) {
+  ms + zone_offset_minutes(zone, ms) * 60000
+}
+
+# zones.js zoneTransitions: the offset changes of `zone` between two instants, in order, each
+# list(at, before, after), `at` the first instant of the new offset. Sampled daily and narrowed
+# to the 15-minute bucket, exactly as the app does.
+zone_transitions <- function(zone, from_ms, to_ms) {
+  z <- normalize_zone(zone)
+  if (is.null(z) || identical(z, .UTC_ZONE) || is_fixed_offset(z)) return(list())
+  if (is.null(from_ms) || is.null(to_ms) || !is.finite(from_ms) || !is.finite(to_ms) ||
+      to_ms <= from_ms) return(list())
+  k <- 0:ceiling((to_ms - from_ms) / .ZONE_DAY_MS)
+  ts <- unique(pmin(from_ms + k * .ZONE_DAY_MS, to_ms))
+  offs <- zone_offset_minutes(z, ts)
+  out <- list()
+  for (i in which(offs[-1] != offs[-length(offs)])) {
+    lo <- ts[i]; hi <- ts[i + 1]; o0 <- offs[i]
+    while (hi - lo > .ZONE_BUCKET_MS) {
+      mid <- lo + floor((hi - lo) / 2)
+      if (zone_offset_minutes(z, mid) == o0) lo <- mid else hi <- mid
+    }
+    out[[length(out) + 1]] <- list(at = floor(hi / .ZONE_BUCKET_MS) * .ZONE_BUCKET_MS,
+                                   before = o0, after = offs[i + 1])
+  }
+  out
+}
+
+# The wall-clock fields of an instant in `zone` (utc, fixed or IANA), as POSIXlt.
+.zoned_lt <- function(ms, zone) {
+  z <- normalize_zone(zone)
+  if (is.null(z)) z <- .UTC_ZONE
+  fixed <- fixed_offset_minutes(z)
+  if (identical(z, .UTC_ZONE) || !is.null(fixed)) {
+    shift <- if (is.null(fixed)) 0 else fixed * 60000
+    return(as.POSIXlt((ms + shift) / 1000, origin = "1970-01-01", tz = "UTC"))
+  }
+  as.POSIXlt(ms / 1000, origin = "1970-01-01", tz = z)
+}
+
+# dayjs(ms) in `zone` .format() for the tokens the zone notes and row labels use.
+.zone_format <- function(ms, fmt, zone) {
+  lt <- .zoned_lt(ms, zone)
+  tokens <- list(YYYY = sprintf("%04d", lt$year + 1900L), MMM = month.abb[lt$mon + 1L],
+                 DD = sprintf("%02d", lt$mday), D = as.character(lt$mday),
+                 HH = sprintf("%02d", lt$hour), mm = sprintf("%02d", lt$min))
+  out <- ""; i <- 1; n <- nchar(fmt)
+  while (i <= n) {
+    hit <- FALSE
+    for (t in names(tokens)) {
+      if (identical(substr(fmt, i, i + nchar(t) - 1), t)) {
+        out <- paste0(out, tokens[[t]]); i <- i + nchar(t); hit <- TRUE; break
+      }
+    }
+    if (!hit) { out <- paste0(out, substr(fmt, i, i)); i <- i + 1 }
+  }
+  out
+}
+
+# dayjsInZone(ms, zone).startOf('day').valueOf(): local midnight of the day `ms` is in.
+zone_start_of_day <- function(ms, zone) {
+  z <- normalize_zone(zone)
+  if (is.null(z) || identical(z, .UTC_ZONE)) return(floor(ms / 86400000) * 86400000)
+  fixed <- fixed_offset_minutes(z)
+  if (!is.null(fixed)) {
+    return(floor((ms + fixed * 60000) / 86400000) * 86400000 - fixed * 60000)
+  }
+  lt <- as.POSIXlt(ms / 1000, origin = "1970-01-01", tz = z)
+  midnight <- as.POSIXct(format(lt, "%Y-%m-%d"), tz = z)
+  round(as.numeric(midnight) * 1000)
+}
+
+# --- A column's zone and clock (core/columnTimeZone.js), matching the Python port --------
+#
+# Only a SOURCE column owns its `time_zone`. A referencing column takes its target's; an
+# analysis output takes the zone of its node's FIRST time input in argument order (Join Data:
+# A's), which run_table_process records on the output columns (`zone_inputs`).
+
+# TimeUtils.js formatHasOffset: the format (or any of a list) reads an offset (Z / ZZ).
+format_has_offset <- function(fmt) {
+  if (is.list(fmt) || length(fmt) > 1) return(any(vapply(fmt, format_has_offset, logical(1))))
+  if (!is.character(fmt) || length(fmt) != 1 || is.na(fmt) || !nzchar(trimws(fmt))) return(FALSE)
+  toks <- c("YYYY", "YY", "MMMM", "MMM", "MM", "M", "DD", "D", "HH", "H", "hh", "h",
+            "mm", "m", "ss", "s", "SSS", "A", "a", "ZZ", "Z")
+  i <- 1; n <- nchar(fmt)
+  while (i <= n) {
+    if (identical(substr(fmt, i, i), "[")) {
+      end <- regexpr("]", substr(fmt, i, n), fixed = TRUE)
+      if (end != -1) { i <- i + end; next }
+    }
+    hit <- FALSE
+    for (t in toks) {
+      if (identical(substr(fmt, i, i + nchar(t) - 1), t)) {
+        if (t %in% c("Z", "ZZ")) return(TRUE)
+        i <- i + nchar(t); hit <- TRUE; break
+      }
+    }
+    if (!hit) i <- i + 1
+  }
+  FALSE
+}
+
+# columnTimeZone.js readsWallClockText: written with no zone (zone-less text, or AWD).
+reads_wall_clock_text <- function(col, raw_data) {
+  if (is.null(col) || !identical(col$type, "time")) return(TRUE)
+  if (identical(col$compression, "awd")) return(TRUE)
+  raw <- if (!is.null(col$data)) raw_data[[as.character(col$data)]] else NULL
+  if (!is.null(raw) && !(is.list(raw) && !is.null(raw$start))) {
+    for (v in as.list(raw)) {
+      if (is.null(v) || length(v) != 1 || is.na(v) || identical(v, "")) next
+      if (is.numeric(v)) return(FALSE)
+      break
+    }
+  }
+  !format_has_offset(col$time_format)
+}
+
+# columnTimeZone.js parseZoneOf: the zone a source column's zone-less wall clock is resolved
+# in, or NULL (no zone, "utc", unknown zone, offsets, epoch ms, not a source).
+parse_zone_of <- function(col, raw_data) {
+  if (is.null(col) || !identical(col$type, "time") || col_is_ref(col)) return(NULL)
+  z <- normalize_zone(col$time_zone)
+  if (is.null(z) || identical(z, .UTC_ZONE)) return(NULL)
+  if (reads_wall_clock_text(col, raw_data)) z else NULL
+}
+
+stores_wall_clock <- function(col, raw_data) {
+  reads_wall_clock_text(col, raw_data) && is.null(parse_zone_of(col, raw_data))
+}
+
+# columnTimeZone.js timeZoneSource: the column whose own time_zone decides this one's.
+time_zone_source <- function(col, cols) {
+  seen <- character(0); cur <- col; depth <- 0
+  while (!is.null(cur) && depth < 64) {
+    depth <- depth + 1
+    key <- as.character(cur$id)
+    if (key %in% seen) return(NULL)
+    seen <- c(seen, key)
+    if (col_is_ref(cur)) {
+      if (identical(as.numeric(cur$ref_id), -1)) return(NULL)
+      cur <- cols[[as.character(cur$ref_id)]]
+      next
+    }
+    if (!is.null(cur$zone_inputs)) {
+      nxt <- NULL
+      for (i in cur$zone_inputs) {
+        cc <- cols[[as.character(i)]]
+        if (!is.null(cc) && identical(cc$type, "time")) { nxt <- cc; break }
+      }
+      cur <- nxt
+      next
+    }
+    return(cur)
+  }
+  NULL
+}
+
+# displayTime.js getLegacyZone: a legacy session's one zone (DISPLAY_TIMEZONE when not "utc").
+legacy_zone <- function() {
+  z <- DISPLAY_TIMEZONE
+  if (!is.character(z) || length(z) != 1 || is.na(z) || !nzchar(z) || tolower(z) == .UTC_ZONE)
+    return(NULL)
+  z
+}
+
+# columnTimeZone.js columnClock: list(zone, named, wall, legacy).
+column_clock <- function(col, cols, raw_data) {
+  legacy <- legacy_zone()
+  if (!is.null(legacy)) return(list(zone = legacy, named = legacy, wall = FALSE, legacy = TRUE))
+  src <- if (is.null(col)) NULL else time_zone_source(col, cols)
+  if (is.null(src)) return(list(zone = .UTC_ZONE, named = .UTC_ZONE, wall = TRUE, legacy = FALSE))
+  named <- normalize_zone(src$time_zone)
+  if (is.null(named)) named <- .UTC_ZONE
+  wall <- stores_wall_clock(src, raw_data)
+  list(zone = if (wall) .UTC_ZONE else named, named = named, wall = wall, legacy = FALSE)
+}
+
+clock_dst_changes <- function(clock, min_ms, max_ms) {
+  if (is.null(clock) || is.null(min_ms) || is.null(max_ms) || !is.finite(min_ms) ||
+      !is.finite(max_ms)) return(list())
+  zone_transitions(clock$zone, min_ms, max_ms)
+}
+
+# Record on each output column of an analysis node the node's input column ids in argument
+# order (its `...IN` args), so the output inherits the zone of its first TIME input
+# (columnTimeZone.js owningTableProcess); the first node to claim a column keeps it.
+note_output_zone_inputs <- function(args, env) {
+  if (!is.list(args) || !is.list(args$out)) return(invisible(NULL))
+  inputs <- numeric(0)
+  for (k in names(args)) {
+    if (!endsWith(k, "IN")) next
+    for (v in as.list(args[[k]])) {
+      if (is.numeric(v) && length(v) == 1 && !is.na(v) && v >= 0 && v == floor(v) &&
+          !is.null(env$cols[[as.character(v)]])) inputs <- c(inputs, v)
+    }
+  }
+  for (v in args$out) {
+    if (is.list(v)) v <- v$val
+    if (is.character(v) && length(v) == 1 && grepl("^[0-9]+$", v)) v <- as.numeric(v)
+    if (!is.numeric(v) || length(v) != 1 || is.na(v) || v < 0) next
+    key <- as.character(v)
+    if (!is.null(env$cols[[key]]) && is.null(env$cols[[key]]$zone_inputs))
+      env$cols[[key]]$zone_inputs <- inputs
+  }
+  invisible(NULL)
+}
+
+# --- Daylight-saving notes (utils/time/dstNotes.js) and Join Data's zone notes -----------
+
+.js_num_str <- function(v) {
+  if (is.finite(v) && v == round(v) && abs(v) < 1e15) sprintf("%.0f", v) else as.character(v)
+}
+.num_text <- function(x, digits) .js_num_str(as.numeric(sprintf(paste0("%.", digits, "f"), x)))
+.offset_text <- function(m) if (m == 0) "UTC" else paste0("UTC", format_fixed_offset(m))
+.dst_change_text <- function(ch, named) {
+  paste0(if (ch$after < ch$before) "ended" else "began", " on ",
+         .zone_format(ch$at, "D MMM YYYY", named))
+}
+.dst_changes_text <- function(changes, named) {
+  parts <- vapply(changes[seq_len(min(2, length(changes)))], .dst_change_text, character(1),
+                  named = named)
+  more <- if (length(changes) > 2) sprintf(" (and %d more changes)", length(changes) - 2) else ""
+  paste0(paste(parts, collapse = " and "), more)
+}
+
+# dstNotes.js clockPhaseDstWarning, or NULL.
+clock_phase_dst_warning <- function(clock, changes, per_window = FALSE) {
+  if (is.null(clock) || !length(changes)) return(NULL)
+  zone <- zone_label(clock$named)
+  what <- .dst_changes_text(changes, clock$named)
+  if (per_window) {
+    return(paste0("Daylight saving ", what, " in ", zone,
+                  "; each window's clock time uses the offset in force at its centre."))
+  }
+  first <- changes[[1]]
+  diff <- first$before - first$after
+  paste0("Clock time uses the first sample's offset (", .offset_text(first$before), ", ", zone,
+         ") for the whole record. Daylight saving ", what, ", so phases after it read ",
+         .num_text(abs(diff) / 60, 2), " h ", if (diff > 0) "later" else "earlier",
+         " than the local clock.")
+}
+
+# dstNotes.js actogramDstNote, or NULL.
+actogram_dst_note <- function(clock, changes, start_time, period_hrs) {
+  if (is.null(clock) || !length(changes)) return(NULL)
+  period <- suppressWarnings(as.numeric(period_hrs))
+  if (length(period) != 1 || !is.finite(period) || period <= 0) period <- 24
+  first <- changes[[1]]
+  k <- max(0, ceiling((first$at - start_time) / (period * 3600000)))
+  local <- .zone_format(start_time + k * period * 3600000, "HH:mm", clock$zone)
+  paste0("Daylight saving ", .dst_changes_text(changes, clock$named), " in ",
+         zone_label(clock$named), ". Rows are ", .num_text(period, 4),
+         " h of elapsed time, so rows after it start at ", local, " local time.")
+}
+
+# dstNotes.js binDstNote, or NULL.
+bin_dst_note <- function(clock, changes, first_edge, step_hrs, bin_hrs) {
+  if (is.null(clock) || !length(changes)) return(NULL)
+  if (is.null(first_edge) || !is.finite(first_edge) || !isTRUE(step_hrs > 0)) return(NULL)
+  step_ms <- step_hrs * 3600000
+  moving <- NULL
+  for (ch in changes) {
+    rem <- (abs(ch$after - ch$before) * 60000) %% step_ms
+    if (rem > 1e-6 && step_ms - rem > 1e-6) { moving <- ch; break }
+  }
+  if (is.null(moving)) return(NULL)
+  k <- max(0, ceiling((moving$at - first_edge) / step_ms))
+  local <- .zone_format(first_edge + k * step_ms, "HH:mm", clock$zone)
+  size <- if (!is.null(bin_hrs) && is.finite(bin_hrs) && bin_hrs > 0) bin_hrs else step_hrs
+  paste0("Daylight saving ", .dst_changes_text(list(moving), clock$named), " in ",
+         zone_label(clock$named), ". Bins are ", .num_text(size, 4),
+         " h of elapsed time, so bins after it start at ", local, " local time.")
+}
+
+# joinData.js joinZoneNotes: list(summary, warning) for Join Data's two time clocks.
+join_zone_notes <- function(a, b, shift_b = 0) {
+  if (is.null(a) || is.null(b) || isTRUE(a$legacy)) return(list(summary = "", warning = NULL))
+  if (identical(a$named, "utc") && identical(b$named, "utc"))
+    return(list(summary = "", warning = NULL))
+  summary <- sprintf("Joined times are in A's zone (%s).", zone_label(a$named))
+  if (identical(a$named, b$named)) return(list(summary = summary, warning = NULL))
+  zones <- sprintf("A's times are in %s and B's in %s", zone_label(a$named), zone_label(b$named))
+  shift <- suppressWarnings(as.numeric(shift_b))
+  if (length(shift) != 1 || !is.finite(shift)) shift <- 0
+  if (shift != 0) {
+    return(list(summary = summary, warning = paste0(zones, "; each is read in its own zone, so ",
+      "they already line up and the zones account for the difference: check the ",
+      .js_num_str(shift), " h shift.")))
+  }
+  as_written <- if (isTRUE(b$wall)) "B" else if (isTRUE(a$wall)) "A" else NULL
+  if (is.null(as_written)) return(list(summary = summary, warning = NULL))
+  other <- if (as_written == "B") a$named else b$named
+  list(summary = summary, warning = paste0(as_written, "'s times have no zone, so they are ",
+    "read as UTC. If they were recorded in ", zone_label(other), " time, set ", as_written,
+    "'s zone (in its column's Properties) and the two line up."))
+}
+
 # --- Time origin and phase reference (utils/phaseReference.js), matching the Python port ---
 # The session's display time zone (appState.displayTimezone); the exported script sets it.
 DISPLAY_TIMEZONE <- "utc"
@@ -1310,8 +1811,7 @@ fit_time_frame <- function(t_col, out_col, cols, raw_data) {
 
 clock_hour_of_day <- function(ms, zone = "utc") {
   if (is.null(ms) || !is.finite(ms)) return(NaN)
-  tz <- if (is.null(zone) || zone %in% c("utc", "UTC")) "UTC" else zone
-  lt <- as.POSIXlt(ms / 1000, origin = "1970-01-01", tz = tz)
+  lt <- .zoned_lt(ms, if (is.null(zone)) "utc" else zone)
   msec <- floor(ms) %% 1000
   lt$hour + lt$min / 60 + floor(lt$sec) / 3600 + msec / 3600000
 }
@@ -1323,9 +1823,38 @@ resolve_phase_reference <- function(reference, origin_ms, zone = DISPLAY_TIMEZON
     return(list(clock = FALSE, offsetHours = 0, warning = .CLOCK_FALLBACK_WARNING))
   list(clock = TRUE, offsetHours = off, warning = NULL)
 }
-node_phase_reference <- function(args, x_col, cols, raw_data) {
+# phaseReferenceSupport.js resolveNodePhaseReference: clock time is hours after local midnight
+# in the x column's CLOCK zone (column_clock: its own zone, or a legacy session's one zone), one
+# offset at the first sample; a record crossing a daylight-saving change carries the app's
+# warning (`per_window`, MovingAnalysis: each window uses its own offset).
+node_phase_reference <- function(args, x_col, cols, raw_data, per_window = FALSE) {
   if (!identical(args$phaseReference, "clock")) return(resolve_phase_reference(NULL, NULL))
-  resolve_phase_reference("clock", time_origin_ms(x_col, cols, raw_data))
+  clock <- column_clock(x_col, cols, raw_data)
+  origin <- time_origin_ms(x_col, cols, raw_data)
+  ref <- resolve_phase_reference("clock", origin, clock$zone)
+  if (!isTRUE(ref$clock)) return(ref)
+  v <- suppressWarnings(as.numeric(unlist(col_data(x_col, cols, raw_data), use.names = FALSE)))
+  v <- v[is.finite(v)]
+  end <- if (length(v)) max(v) else NULL
+  changes <- clock_dst_changes(clock, origin, end)
+  shifts <- isTRUE(per_window) && !isTRUE(clock$legacy) && !isTRUE(clock$wall) &&
+    length(changes) > 0
+  ref$zone <- clock$zone
+  ref$originMs <- origin
+  ref$perWindowZone <- if (shifts) clock$zone else NULL
+  ref$warning <- clock_phase_dst_warning(clock, changes, per_window = shifts)
+  ref
+}
+
+# phaseReferenceSupport.js windowClockOffsets: each window's clock offset (h), the first
+# sample's plus how far the zone's offset at the window's centre has moved; NULL when every
+# window keeps the one offset.
+window_clock_offsets <- function(ref, centres_hrs) {
+  if (is.null(ref) || !isTRUE(ref$clock) || is.null(ref$perWindowZone)) return(NULL)
+  if (is.null(ref$originMs) || !is.finite(ref$originMs)) return(NULL)
+  at0 <- zone_offset_minutes(ref$perWindowZone, ref$originMs)
+  ref$offsetHours +
+    (zone_offset_minutes(ref$perWindowZone, ref$originMs + centres_hrs * 3600000) - at0) / 60
 }
 apply_phase_reference <- function(h, ref, p) {
   if (is.null(ref) || !isTRUE(ref$clock)) return(h)
@@ -3194,13 +3723,19 @@ watson_williams <- function(groups_of_angles) {
 # Hours for the weighted-mode time input. A 'time' column is epoch-ms -> ABSOLUTE hours with
 # NO baseline subtraction, which is deliberately NOT col_hours(): the phase is a time of day,
 # so shifting it by the recording start would rotate every point.
-column_to_phase_hours <- function(data, col_type) {
+#
+# `zone`: the clock the times are read on (circularPlot.js columnToPhaseHours: the Circular
+# phase plot passes the time column's clock zone, a legacy session "utc"; the Rayleigh node
+# passes none, as the app's does): each time is its wall clock there, with its own offset.
+column_to_phase_hours <- function(data, col_type, zone = "utc") {
+  shift <- identical(col_type, "time") && !is.null(zone) && !identical(zone, "utc")
   vapply(data, function(v) {
     if (is.null(v) || length(v) != 1) return(NA_real_)
     if (is.character(v) && !nzchar(trimws(v))) return(NA_real_)
     n <- suppressWarnings(as.numeric(v))
     if (length(n) != 1 || !is.finite(n)) return(NA_real_)
-    if (identical(col_type, "time")) n / 3600000 else n
+    if (!identical(col_type, "time")) return(n)
+    (if (shift) instant_to_wall_clock(n, zone) else n) / 3600000
   }, numeric(1), USE.NAMES = FALSE)
 }
 
@@ -5348,7 +5883,12 @@ compute_moving_windows <- function(t_all, ys, starts, window_size, stat_keys, ar
       if (identical(model, "exponential") && any(!(yy > 0))) next
       if (identical(model, "polynomial") && length(tt) <= deg) next
       if (identical(args$analysis, "fft") && !regrid_uniform(tt, yy)$ok) next
-      s <- .moving_window_stats(tt, yy, args, phase, ws + window_size / 2)
+      # Clock time across a daylight-saving change: this window's own offset (decision 6).
+      own <- if (!is.null(phase$windowOffsetHours) && w <= length(phase$windowOffsetHours))
+        phase$windowOffsetHours[w] else NA_real_
+      wphase <- phase
+      if (is.finite(own)) wphase$ref$offsetHours <- own
+      s <- .moving_window_stats(tt, yy, args, wphase, ws + window_size / 2)
       for (k in stat_keys) {
         v <- s[[k]]
         if (!is.null(v) && length(v) == 1 && is.finite(v)) per[[k]][w] <- v
@@ -5385,7 +5925,11 @@ tp_movinganalysis <- function(args, env) {
   keys <- moving_stat_keys(args)
   ids <- Filter(function(y) !is.null(env$cols[[as.character(y)]]), y_ins)
   if (!length(ids)) return(FALSE)
-  phase <- list(recordStart = x_min, ref = node_phase_reference(args, x_col, env$cols, env$raw_data))
+  # In clock time each window takes the offset in force at its centre when the record crosses
+  # a daylight-saving change (decision 6).
+  ref <- node_phase_reference(args, x_col, env$cols, env$raw_data, per_window = TRUE)
+  phase <- list(recordStart = x_min, ref = ref,
+                windowOffsetHours = if (is_time) window_clock_offsets(ref, starts + win / 2) else NULL)
   per_y <- compute_moving_windows(t_all, lapply(ids, function(y)
     col_data(env$cols[[as.character(y)]], env$cols, env$raw_data)), starts, win, keys, args, phase)
   names(per_y) <- as.character(ids)
@@ -6871,6 +7415,7 @@ run_table_process <- function(name, args, env) {
                         "  Export this session as Python instead, which is complete."),
                  name, paste(sort(names(TABLE_PROCESS_MAP)), collapse = ", ")))
   }
+  note_output_zone_inputs(args, env)
   fn(args, env)
 }
 
@@ -6887,10 +7432,12 @@ run_table_process <- function(name, args, env) {
 
 new_column <- function(id, name, type = "number", data = NULL, time_format = NULL,
                        bin_width = 1, compression = NULL, ref_id = NULL,
-                       group_label = NULL, processes = list()) {
+                       group_label = NULL, processes = list(), time_zone = NULL) {
+  # time_zone: Column.timeZone (per-column time zone): NULL / "utc" (as written), a fixed
+  # offset ("+05:30") or an IANA name. Only a source column's own zone counts (column_clock).
   list(id = id, name = name, type = type, data = data, time_format = time_format,
        bin_width = bin_width, compression = compression, ref_id = ref_id,
-       group_label = group_label, processes = processes)
+       group_label = group_label, processes = processes, time_zone = time_zone)
 }
 
 col_is_ref <- function(col) !is.null(col$ref_id)
@@ -6995,7 +7542,12 @@ col_is_ref <- function(col) !is.null(col$ref_id)
 .decompress <- function(col, raw) {
   # AWD records store a regular grid as {start, step, length} rather than every value.
   if (identical(col$compression, "awd") && is.list(raw) && !is.null(raw$start)) {
-    return(raw$start + seq_len(as.integer(raw$length)) * raw$step - raw$step)
+    # The header's start is a wall clock with no zone: with a zone it is resolved there
+    # (Column.getData, phase 3), and the samples follow it in elapsed time.
+    start <- raw$start
+    zone <- if (identical(col$type, "time")) parse_zone_of(col, list()) else NULL
+    if (!is.null(zone)) start <- wall_clock_to_instant(start, zone)
+    return(start + seq_len(as.integer(raw$length)) * raw$step - raw$step)
   }
   raw
 }
@@ -7052,6 +7604,16 @@ col_data <- function(col, cols, raw_data) {
                                                           "%Y-%m-%d")))
         }
         parsed[ok] <- as.numeric(p) * 1000
+      }
+      # Zone-less text with a zone (phase 3): the parse above is the wall clock read as UTC;
+      # resolve it to the instants it names in the zone, with the repeated and skipped hours
+      # of a daylight-saving change, exactly as the app does (resolve_wall_clocks).
+      zone <- parse_zone_of(col, raw_data)
+      if (!is.null(zone)) {
+        r <- resolve_wall_clocks(parsed, zone)
+        parsed <- r$instants
+        attr(parsed, "wall_clock_counts") <- list(zone = zone, repeated = r$repeated,
+          secondPass = r$secondPass, unordered = r$unordered, skipped = r$skipped)
       }
       d <- parsed
     }
@@ -7801,10 +8363,8 @@ actogram_start_time <- function(series_list, zone = "utc") {
     }
   }
   if (!is.finite(min_time)) min_time <- 0
-  if (is.null(zone) || tolower(zone) == "utc") return(floor(min_time / 86400000) * 86400000)
-  lt <- as.POSIXlt(min_time / 1000, origin = "1970-01-01", tz = zone)
-  midnight <- as.POSIXct(format(lt, "%Y-%m-%d"), tz = zone)
-  round(as.numeric(midnight) * 1000)
+  # dayjsInZone(min, zone).startOf('day'): fixed offsets as well as IANA zones.
+  zone_start_of_day(min_time, if (is.null(zone)) "utc" else zone)
 }
 
 # Column.hoursSinceStart: minus the smallest valid value (/ 3.6e6 for time), NA kept.

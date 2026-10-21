@@ -11,7 +11,7 @@
 // session-creation path.
 //
 // Draft shape:
-//   { id?, columns?: [{name, type?, values:number[]}],
+//   { id?, columns?: [{name, type?, values:number[], time_zone?}],
 //     analyses?: [{name, args:{ xIN?, yIN?, ...params }}],
 //     plots?:    [{type, inputs:{...}, overlays?:[...]}] }   // plots: minimal emit (see note)
 //   A plot series may also carry `colourBy` / `sizeBy` (Colour by / Size by; encodings.js).
@@ -32,6 +32,8 @@ import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.
 // draft's plot overlays are refused exactly where add_plot and the GUI refuse them. Pure.
 import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/overlaySpec.js';
 import { NEW_NODE_TIME_PERIOD_RANGE } from '../../../src/lib/utils/periodRangeDefaults.js';
+// A time column's text format and zone, read and refused as the app does (timeColumns.js).
+import { timeTextFormat, columnZoneOf } from './timeColumns.js';
 
 // The free-period fits. A new one on a TIME x with no period range named starts at
 // NEW_NODE_TIME_PERIOD_RANGE (1 to 30 h), as a node added from the palette or by the in-app AI
@@ -111,7 +113,7 @@ function storageField(fields, i) {
 }
 
 /** A blank AnCiR column descriptor owning its own rawData slot `id`. */
-function columnDescriptor(id, name, type, timeFormat) {
+function columnDescriptor(id, name, type, timeFormat, timeZone) {
 	return {
 		id,
 		name,
@@ -119,6 +121,9 @@ function columnDescriptor(id, name, type, timeFormat) {
 		// A time column needs its format, or it renders as a raw epoch number. Generators
 		// normally stamp this when they compute; we bake their data, so we must emit it.
 		...(timeFormat ? { timeFormat } : {}),
+		// Per-column time zone: saved only when it is not 'utc', as the app's import does, so a
+		// column with no zone saves exactly as before (timeColumns.js columnZoneOf).
+		...(timeZone ? { timeZone } : {}),
 		data: id,
 		// The GUI expects this field present (empty string) — omitting it HANGS the workflow
 		// load for free/source columns. NB: `tableProcessGUId` is a process-generated version
@@ -187,10 +192,10 @@ export function normalizeSession(
 		for (let i = 1; ; i++) if (!byName.has(`${name}_${i}`)) return `${name}_${i}`;
 	};
 
-	const addColumn = (name, type, values, timeFormat) => {
+	const addColumn = (name, type, values, timeFormat, timeZone) => {
 		const id = nextId++;
 		const unique = uniqueName(name);
-		data.push(columnDescriptor(id, unique, type, timeFormat));
+		data.push(columnDescriptor(id, unique, type, timeFormat, timeZone));
 		// Inputs carry their values; outputs stay empty ([]) so the GUI recomputes them.
 		rawData[id] = Array.isArray(values) ? values.slice() : [];
 		if (unique != null) byName.set(unique, id);
@@ -224,7 +229,25 @@ export function normalizeSession(
 			errors.push(issue);
 			continue;
 		}
-		addColumn(c.name, c.type ?? 'number', c.values);
+		// A time column: ISO text gets the format the app reads it with (without one the app shows
+		// text times as blanks), and an optional zone (`time_zone`), refused when the app would not
+		// know it. Text with no offset is then read in that zone; epoch ms and text with offsets
+		// keep their instants and the zone names their clock (plan 3.2).
+		let timeFormat = null;
+		const zone = columnZoneOf(c);
+		if (zone.error) {
+			errors.push(`${zone.error} Skipped.`);
+			continue;
+		}
+		if ((c.type ?? 'number') === 'time') {
+			const fmt = timeTextFormat(c.name, c.values);
+			if (fmt.error) {
+				errors.push(`${fmt.error} Skipped.`);
+				continue;
+			}
+			timeFormat = fmt.format;
+		}
+		addColumn(c.name, c.type ?? 'number', c.values, timeFormat, zone.zone);
 	}
 
 	// ---- 2. analyses (run_table_process) ----

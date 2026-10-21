@@ -186,6 +186,8 @@ RULES:
   (rhythm + noise) or SequenceColumn. Use "columns" only for small data the user gives you — which
   INCLUDES explicit outcome lists like the 0/1 counts above; write those out in full as an ARRAY,
   never squeezed into one number.
+- A "time" column's values are ISO 8601 text or epoch ms. Add "time_zone" ("Pacific/Auckland"; "+12:00"
+  for a logger that ignores daylight saving) only when the user says where the clock was.
 - \`analyses\` run in order: put a generator before the analysis that reads it.
 - For period fits (Cosinor/FitFunction) keep useFixedPeriod:true and set fixedPeriod to the
   rhythm period in hours (e.g. 24); free-period mode is unreliable on time-axis data.

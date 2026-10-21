@@ -123,6 +123,11 @@
 				<strong>Bin data to</strong> at import to down-sample as you load.
 			</li>
 			<li>
+				Each time column has a <strong>time zone</strong> picker beside its format: where the clock
+				was. Leave it <strong>As written</strong> if you are not sure; see
+				<a href="#time-zones">Time zones and daylight saving</a>.
+			</li>
+			<li>
 				Click <strong>Confirm import</strong>. Your data appears as a <strong>data node</strong>
 				on the canvas, with each column available as an output port to feed into plots and processes.
 			</li>

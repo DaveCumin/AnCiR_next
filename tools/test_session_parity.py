@@ -2,7 +2,8 @@
 """
 End-to-end SESSION parity — Python side.
 
-Loads every session under static/sessions/{demos,classroom}/ through
+Loads every session under static/sessions/{demos,classroom}/ (and the parity-only
+sessions in tools/parity/sessions/) through
 ancir_runtime.py (build columns → run table processes), then compares each
 column's final data, by column id, against the JS engine's output
 (tools/parity/session_js_results.json, written by the vitest emitter).
@@ -31,8 +32,10 @@ sys.path.insert(0, str(HERE))
 import ancir_runtime as rt  # noqa: E402
 
 JS_RESULTS = HERE / "parity" / "session_js_results.json"
+# tools/parity/sessions: parity-only sessions no demo covers (per-column time zones).
 SESSION_DIRS = [ROOT / "static" / "sessions" / "demos",
-                ROOT / "static" / "sessions" / "classroom"]
+                ROOT / "static" / "sessions" / "classroom",
+                HERE / "parity" / "sessions"]
 TOL = 1e-6
 
 
@@ -95,6 +98,7 @@ def build_columns(session):
         cols[cid] = rt.Column(
             id=cid, name=c.get("name"), type=c.get("type", "number"),
             data=c.get("data"), raw_data=raw, time_format=c.get("timeFormat"),
+            time_zone=c.get("timeZone"),
             bin_width=c.get("binWidth"), origin_time_ms=c.get("originTime_ms"),
             compression=c.get("compression"),
             ref_id=c.get("refId"), columns_index=None, processes=c.get("processes", []),

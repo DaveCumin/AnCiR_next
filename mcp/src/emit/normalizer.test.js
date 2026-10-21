@@ -1606,3 +1606,75 @@ test('JoinData: the time inputs are optional; a draft without them stacks (no jo
 	assert.equal(join.args.sourceColumn, null);
 	assert.deepEqual(Object.keys(join.args.out).sort(), ['joined_0', 'joined_1', 'source']);
 });
+
+// ---- time columns: text format and zone (per-column time zone, plan section 5e) ----------
+
+test('a time column of ISO text gets the format the app reads it with; epoch ms get none', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'iso', type: 'time', values: ['2024-04-01T12:00:00', null, '2024-04-01T13:00:00'] },
+			{ name: 'ms', type: 'time', values: ['2024-04-01T12:00:00.000Z'] },
+			{ name: 'off', type: 'time', values: ['2024-04-01 12:00+1300'] },
+			{ name: 'two', type: 'time', values: ['2024-04-01 12:00', '2024-04-01 12:00:30'] },
+			{ name: 'epoch', type: 'time', values: [0, '3600000'] }
+		]
+	});
+	assert.deepEqual(errors, []);
+	const fmt = Object.fromEntries(session.data.map((c) => [c.name, c.timeFormat]));
+	assert.deepEqual(fmt, {
+		iso: 'YYYY-MM-DD[T]HH:mm:ss',
+		ms: 'YYYY-MM-DD[T]HH:mm:ss.SSSZ',
+		off: 'YYYY-MM-DD HH:mmZZ',
+		two: ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD HH:mm:ss'],
+		epoch: undefined
+	});
+	assert.ok(!('timeFormat' in session.data[4]));
+});
+
+test('time_zone is stored as the app stores it: canonical, and absent for utc', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'nz', type: 'time', values: ['2024-04-01 12:00'], time_zone: 'Pacific/Auckland' },
+			{ name: 'fixed', type: 'time', values: ['2024-04-01 12:00'], time_zone: '+0530' },
+			{ name: 'utc', type: 'time', values: ['2024-04-01 12:00'], time_zone: 'UTC' },
+			{ name: 'alias', type: 'time', values: [0], timeZone: 'Europe/London' },
+			{ name: 'none', type: 'time', values: [0] }
+		]
+	});
+	assert.deepEqual(errors, []);
+	const zone = Object.fromEntries(session.data.map((c) => [c.name, c.timeZone]));
+	assert.deepEqual(zone, {
+		nz: 'Pacific/Auckland',
+		fixed: '+05:30',
+		utc: undefined,
+		alias: 'Europe/London',
+		none: undefined
+	});
+	assert.ok(!('timeZone' in session.data[2]));
+	assert.ok(!('timeZone' in session.data[4]));
+});
+
+test('a bad zone or unreadable times skip the column with a clear error', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'a', type: 'time', values: ['2024-04-01 12:00'], time_zone: 'NZST' },
+			{ name: 'b', values: [1, 2], time_zone: 'Pacific/Auckland' },
+			{ name: 'c', type: 'time', values: ['1 April 2024 12:00'] },
+			{ name: 'd', type: 'time', values: [0, '2024-04-01 12:00'] },
+			{ name: 'e', type: 'time', values: ['2024-04-01 12:00', '2024-04-01 12:00Z'] },
+			{ name: 'f', type: 'time', values: ['2024-04-01T12:00:00.5'] }
+		]
+	});
+	assert.deepEqual(session.data, []);
+	assert.equal(errors.length, 6);
+	assert.match(errors[0], /^Column "a": time_zone "NZST" is not a time zone\. Use an IANA name/);
+	assert.match(errors[1], /^Column "b": time_zone is only for a time column/);
+	assert.match(
+		errors[2],
+		/^Column "c" is type "time" but values\[0\] is "1 April 2024 12:00"\. Write times as ISO 8601/
+	);
+	assert.match(errors[3], /^Column "d" mixes epoch numbers and text times/);
+	assert.match(errors[4], /^Column "e" has some times with an offset/);
+	assert.match(errors[5], /^Column "f" is type "time" but values\[0\]/);
+	for (const e of errors) assert.match(e, /Skipped\.$/);
+});

@@ -20,6 +20,7 @@
 		{ label: 'Choosing a Method', id: 'choosing' },
 		{ label: 'Recipes (common tasks)', id: 'recipes' },
 		{ label: 'Colour by and Size by', id: 'colour-by' },
+		{ label: 'Time zones and daylight saving', id: 'time-zones' },
 		{ label: 'Statistical Foundations', id: 'stats' },
 		{ label: '1. Introduction', id: 'ch1', group: 'Chapters' },
 		{ label: '2. Data Collection', id: 'ch2' },

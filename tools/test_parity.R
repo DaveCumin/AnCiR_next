@@ -139,6 +139,95 @@ run_time_column_fixture <- function(fx, rec) {
   out
 }
 
+# Per-column time zone (the `clockZone` kind): rebuild the zoned column (and B) as the JS
+# emitter did, with the session's legacy zone, and read back what every clock-time consumer of
+# the R port reads from it. The record's `plots` part (actogram bars, colour values and titles,
+# labels as shown) is the Python leg's alone: the R port draws no plots.
+run_clock_zone_fixture <- function(fx, rec) {
+  inp <- rec$inputs
+  prev <- DISPLAY_TIMEZONE
+  DISPLAY_TIMEZONE <<- if (is.null(inp$legacyZone)) "utc" else inp$legacyZone
+  on.exit(DISPLAY_TIMEZONE <<- prev, add = TRUE)
+  env <- new.env()
+  env$raw_data <- list(); env$cols <- list()
+  mk <- function(cid, spec, name) {
+    env$raw_data[[as.character(cid)]] <- if (!is.null(spec$awd)) spec$awd
+                                         else unwrap_time_values(spec$values)
+    env$cols[[as.character(cid)]] <- new_column(id = cid, name = name,
+      type = if (!is.null(spec$type)) spec$type else "time", data = cid,
+      time_format = spec$timeFormat, compression = spec$compression, time_zone = spec$timeZone)
+  }
+  mk(1, inp$column, "a"); mk(2, inp$columnB, "b")
+  env$raw_data[["3"]] <- as_num_vec(inp$y)
+  env$cols[["3"]] <- new_column(id = 3, name = "y", data = 3)
+  env$cols[["4"]] <- new_column(id = 4, name = "ref", type = "time", ref_id = 1)
+  env$cols[["10"]] <- new_column(id = 10, name = "binnedx", data = 10)
+  env$cols[["11"]] <- new_column(id = 11, name = "binnedy", data = 11)
+  bin_args <- c(inp$bin, list(xIN = 1, yIN = list(3), out = list(binnedx = 10, binnedy_3 = 11)))
+  run_table_process("BinnedData", bin_args, env)
+  cols <- env$cols; raw <- env$raw_data
+  a <- cols[["1"]]; b <- cols[["2"]]
+  data <- col_data(a, cols, raw)
+  counts <- attr(data, "wall_clock_counts")
+  data <- as.numeric(unlist(data, use.names = FALSE))
+  fin <- data[is.finite(data)]
+  lo <- if (length(fin)) min(fin) else NaN; hi <- if (length(fin)) max(fin) else NaN
+  clock <- column_clock(a, cols, raw)
+  changes <- clock_dst_changes(clock, lo, hi)
+  ref_p <- node_phase_reference(list(phaseReference = "clock"), a, cols, raw)
+  ref_w <- node_phase_reference(list(phaseReference = "clock"), a, cols, raw, per_window = TRUE)
+  centres <- as_num_vec(inp$centresHrs)
+  yv <- as_num_vec(inp$y)
+  # The actogram: its clock is the first (time) series', A; B is a second series when asked.
+  series <- list(list(xType = "time", x = data, y = yv))
+  clocks <- list(clock)
+  if (isTRUE(inp$actogramWithB)) {
+    xb <- as.numeric(unlist(col_data(b, cols, raw), use.names = FALSE))
+    series[[2]] <- list(xType = "time", x = xb, y = rep(1, length(xb)))
+    clocks[[2]] <- column_clock(b, cols, raw)
+  }
+  start <- actogram_start_time(series, clock$zone)
+  frames <- lapply(series, function(sr) actogram_series_frame(sr$x, sr$y, "time", start, 24))
+  ndays <- actogram_ndays(frames)
+  xs <- unlist(lapply(series, function(sr) sr$x[!is.na(sr$x) & !is.na(sr$y)]))
+  note <- if (length(xs)) actogram_dst_note(clock, clock_dst_changes(clock, min(xs), max(xs)),
+                                            start, 24) else NULL
+  labels <- vapply(seq_len(min(ndays, 20)) - 1,
+                   function(d) .zone_format(start + d * 24 * 3600000, "DD MMM HH:mm", clock$zone),
+                   character(1))
+  differ <- !isTRUE(clock$legacy) &&
+    any(vapply(clocks, function(cc) !identical(cc$named, clock$named), logical(1)))
+  join <- join_zone_notes(column_clock(a, cols, raw), column_clock(b, cols, raw), 0)
+  joined <- join_zone_notes(column_clock(a, cols, raw), column_clock(b, cols, raw), 13)
+  or_empty <- function(v) if (is.null(v)) "" else v
+  cnt <- function(k) if (is.null(counts[[k]])) 0 else counts[[k]]
+  list(
+    data = data,
+    hoursSinceStart = col_hours(a, cols, raw),
+    counts = list(repeated = cnt("repeated"), secondPass = cnt("secondPass"),
+                  unordered = cnt("unordered"), skipped = cnt("skipped")),
+    clock = clock,
+    changes = changes,
+    phase = list(clock = ref_p$clock, offsetHours = ref_p$offsetHours,
+                 warning = or_empty(ref_p$warning), zone = or_empty(ref_p$zone),
+                 perWindowZone = or_empty(ref_p$perWindowZone), originMs = ref_p$originMs),
+    phaseWindow = list(warning = or_empty(ref_w$warning),
+                       perWindowZone = or_empty(ref_w$perWindowZone),
+                       offsets = as.list(window_clock_offsets(ref_w, centres))),
+    binNotes = list(daily = or_empty(bin_dst_note(clock, changes, start, 24, 24)),
+                    hourly = or_empty(bin_dst_note(clock, changes, start, 1, 1))),
+    circularHours = column_to_phase_hours(data, "time",
+                                          if (isTRUE(clock$legacy)) "utc" else clock$zone),
+    join = list(summary = join$summary, warning = or_empty(join$warning)),
+    joinShifted = list(summary = joined$summary, warning = or_empty(joined$warning)),
+    refClock = column_clock(cols[["4"]], cols, raw),
+    binClock = column_clock(cols[["10"]], cols, raw),
+    binX = as.numeric(unlist(col_data(cols[["10"]], cols, raw), use.names = FALSE)),
+    actogram = list(clockZone = clock$zone, clockZonesDiffer = differ, startTime = start,
+                    dstNote = or_empty(note), rowLabels = as.list(labels))
+  )
+}
+
 run_tp_fixture <- function(fx, rec) {
   env <- new.env()
   env$raw_data <- list()
@@ -340,12 +429,13 @@ for (fx in fixtures) {
   is_tp <- identical(fx$kind, "tableProcess")
   is_cp <- identical(fx$kind, "columnProcess")
   is_tc <- identical(fx$kind, "timeColumn")
+  is_cz <- identical(fx$kind, "clockZone")
   # An actogramMarkers fixture names a top-level runtime function (the whole actogram's
   # rule outputs) rather than an entry in one of the dispatch maps.
   is_am <- identical(fx$kind, "actogramMarkers")
   # A timeColumn fixture exercises col_data/col_hours directly rather than any entry in the
   # analysis maps, so it needs no lookup — the parser IS the thing under test.
-  fn <- if (is_tc) TRUE
+  fn <- if (is_tc || is_cz) TRUE
         else if (is_am) get0(rfunc, mode = "function")
         else if (is_tp || is_tpr) TABLE_PROCESS_MAP[[rfunc]]
         else if (is_cp) COLUMN_PROCESS_MAP[[rfunc]]
@@ -385,6 +475,22 @@ for (fx in fixtures) {
            else fx$pyArgs
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
+
+  if (is_cz) {
+    got <- tryCatch(run_clock_zone_fixture(fx, rec), error = function(e) e)
+    want <- rec$outputs
+    want$plots <- NULL
+    diff <- if (inherits(got, "error")) sprintf("R threw: %s", conditionMessage(got))
+            else deep_diff(got, want, tol)
+    if (is.null(diff)) {
+      n_pass <- n_pass + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = TRUE, msg = "")
+    } else {
+      n_fail <- n_fail + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE, msg = diff)
+    }
+    next
+  }
 
   if (is_am) {
     got <- tryCatch(fn(rec$inputs$inner, rec$inputs$series,

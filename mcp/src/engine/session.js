@@ -21,6 +21,9 @@ import { getOutputKeys as rhythmicityOutputKeys } from '$lib/tableProcesses/Rhyt
 import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysis.svelte';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { joinOutKeys } from '$lib/utils/joinPairing.js';
+import { timeZoneSource, readsWallClockText } from '$lib/core/columnTimeZone.js';
+// A time column's text format and zone, read and refused exactly as a draft's are (pure).
+import { timeTextFormat, columnZoneOf } from '../emit/timeColumns.js';
 import { joinNameOf } from '$lib/tableProcesses/JoinData.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
@@ -517,6 +520,29 @@ export function finalizeTableProcessOutputs(tp, name, { fit = null, stats = null
 	return result;
 }
 
+/**
+ * A time column's zone as list_columns reports it, read from the app's own rules
+ * (core/columnTimeZone.js): `time_zone` ('utc', '+12:00' or an IANA name), `times` (how the
+ * stored times relate to it: 'as written' = text with no zone kept in UTC, 'wall clock' = text
+ * with no zone read in its zone, 'instants' = epoch ms or text with offsets), and `zone_from`
+ * when an output inherits it. Empty for a column that is not a time column.
+ */
+function columnZoneInfo(col) {
+	if (col?.type !== 'time') return {};
+	const frame = col.timeFrame;
+	const src = timeZoneSource(col);
+	const times = frame.wall
+		? 'as written'
+		: src && readsWallClockText(src)
+			? 'wall clock'
+			: 'instants';
+	return {
+		time_zone: frame.zone,
+		times,
+		...(src && src !== col ? { zone_from: src.name } : {})
+	};
+}
+
 export class AncirSession {
 	constructor(id = 'default') {
 		this.id = id;
@@ -526,8 +552,13 @@ export class AncirSession {
 
 	/**
 	 * Import columns of data into the session.
-	 * @param {Array<{name:string,type?:string,values:number[]}>} cols
-	 * @returns {Array<{id:number,name:string,type:string}>}
+	 *
+	 * A time column takes epoch ms or ISO 8601 text (given the format the app reads it with), and
+	 * an optional `time_zone`: where its clock was (per-column time zone). It is stored as the
+	 * app's import stores it (none for 'utc'), so text with no offset is read in that zone and
+	 * epoch ms or text with offsets keep their instants with the zone naming their clock.
+	 * @param {Array<{name:string,type?:string,values:Array<number|string|null>,time_zone?:string}>} cols
+	 * @returns {Array<{id:number,name:string,type:string,time_zone?:string}>}
 	 */
 	importColumns(cols) {
 		// Validate EVERY column up-front so a bad value in a later column doesn't leave the earlier
@@ -541,19 +572,36 @@ export class AncirSession {
 			}
 			validateColumnValues(c.name ?? 'unnamed', c.type, c.values);
 		}
+		const time = new Map(); // column → { format, zone }
+		for (const c of cols) {
+			const zone = columnZoneOf(c);
+			if (zone.error) throw new Error(zone.error);
+			if ((c.type ?? 'number') !== 'time') continue;
+			const fmt = timeTextFormat(c.name ?? 'unnamed', c.values);
+			if (fmt.error) throw new Error(fmt.error);
+			time.set(c, { format: fmt.format, zone: zone.zone });
+		}
 		const added = [];
 		for (const c of cols) {
 			const id = this._nextId++;
 			core.rawData.set(id, c.values.slice());
+			const t = time.get(c);
 			const col = Column.fromJSON({
 				id,
 				name: c.name ?? `col_${id}`,
 				type: c.type ?? 'number',
 				data: id,
+				...(t?.format ? { timeFormat: t.format } : {}),
+				...(t?.zone ? { timeZone: t.zone } : {}),
 				processes: []
 			});
 			pushObj(col);
-			added.push({ id: col.id, name: col.name, type: col.type });
+			added.push({
+				id: col.id,
+				name: col.name,
+				type: col.type,
+				...(col.type === 'time' ? { time_zone: col.timeZone ?? 'utc' } : {})
+			});
 		}
 		return added;
 	}
@@ -566,7 +614,7 @@ export class AncirSession {
 			} catch {
 				length = 0;
 			}
-			return { id: c.id, name: c.name, type: c.type, length };
+			return { id: c.id, name: c.name, type: c.type, length, ...columnZoneInfo(c) };
 		});
 	}
 

@@ -27137,6 +27137,474 @@
 			"compareOutputs": ["term", "coef", "se", "z", "pvalue", "oddsRatio", "ciLow", "ciHigh"],
 			"note": "Perfect separation (x <= 4 is always 0, x >= 5 always 1): the app's Newton loop does not converge and the app writes what it reached (slope about 44, se about 1.5e4, p near 1) with a \"did not converge\" warning. statsmodels and glm gave different artefacts (R slope 278 against 197 here), so both ports now mirror the app's loop whenever it does not converge.",
 			"tolerance": 1e-7
+		},
+		{
+			"id": "tz-utc-default",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "utc"
+				}
+			},
+			"note": "No zone: the wall clock read as UTC, exactly as before per-column zones."
+		},
+		{
+			"id": "tz-nz-autumn-in-order",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Pacific/Auckland, NZDT ends 7 Apr 2024 03:00 -> 02:00: a logger that follows daylight saving writes 02:00 to 02:30 twice, in order; the second pass reads standard time."
+		},
+		{
+			"id": "tz-nz-autumn-hourly",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 72,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Hourly across the end of NZDT: 02:00 written twice in a row (a run of one value each pass, a step back of zero)."
+		},
+		{
+			"id": "tz-nz-autumn-blanks",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-06T10:00:00Z",
+					"stepMin": 15,
+					"count": 40,
+					"writeZone": "Pacific/Auckland",
+					"blanks": [3, 14, 15, 22]
+				}
+			},
+			"note": "Blank cells inside the repeated hour are skipped, not counted, and do not break the run."
+		},
+		{
+			"id": "tz-nz-autumn-sorted",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-06T10:00:00Z",
+					"stepMin": 15,
+					"count": 40,
+					"writeZone": "Pacific/Auckland",
+					"order": "sorted"
+				}
+			},
+			"note": "The text sorted: the two passes of the repeated hour interleave, so no clean two-pass run; every repeated value reads the earlier (daylight) instant and counts as unordered."
+		},
+		{
+			"id": "tz-nz-autumn-shuffled",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-06T10:00:00Z",
+					"stepMin": 15,
+					"count": 40,
+					"writeZone": "Pacific/Auckland",
+					"shuffleSeed": 7
+				}
+			},
+			"note": "The text shuffled: out of order, so repeated values read the earlier instant."
+		},
+		{
+			"id": "tz-nz-autumn-standard-logger",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "+12:00"
+				}
+			},
+			"note": "A logger on NZ standard time all year, mislabelled Pacific/Auckland: it passes the repeated hour once (unordered, read as daylight time)."
+		},
+		{
+			"id": "tz-nz-spring-in-order",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-09-27T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Pacific/Auckland, NZDT begins 29 Sep 2024 02:00 -> 03:00: a following logger never writes the skipped hour."
+		},
+		{
+			"id": "tz-nz-spring-skipped",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-09-27T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "+12:00"
+				}
+			},
+			"note": "A standard-time logger across the start of NZDT writes 02:00 and 02:30, which do not exist: they move forward by the gap (03:00, 03:30) and are counted as skipped."
+		},
+		{
+			"id": "tz-nz-two-autumns",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-03-30T12:00:00Z",
+					"stepMin": 60,
+					"count": 9200,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Hourly for a year and more: two repeated hours a year apart are two runs, each read in order, plus a spring change between them."
+		},
+		{
+			"id": "tz-london-autumn",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Europe/London",
+				"write": {
+					"start": "2024-10-25T12:00:00Z",
+					"stepMin": 30,
+					"count": 144,
+					"writeZone": "Europe/London"
+				}
+			},
+			"note": "Europe/London, BST ends 27 Oct 2024 02:00 -> 01:00 (01:00 to 01:59 twice), northern autumn."
+		},
+		{
+			"id": "tz-london-spring",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Europe/London",
+				"write": {
+					"start": "2024-03-29T12:00:00Z",
+					"stepMin": 30,
+					"count": 144,
+					"writeZone": "+00:00"
+				}
+			},
+			"note": "Europe/London, BST begins 31 Mar 2024 01:00 -> 02:00; a GMT-all-year logger writes 01:00 and 01:30, skipped and moved forward."
+		},
+		{
+			"id": "tz-new-york-spring",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "America/New_York",
+				"write": {
+					"start": "2024-03-09T12:00:00Z",
+					"stepMin": 20,
+					"count": 200,
+					"writeZone": "-05:00"
+				}
+			},
+			"note": "America/New_York, EDT begins 10 Mar 2024 02:00 -> 03:00 (negative offsets), standard-time logger: skipped values."
+		},
+		{
+			"id": "tz-new-york-autumn",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "America/New_York",
+				"write": {
+					"start": "2024-11-02T12:00:00Z",
+					"stepMin": 20,
+					"count": 200,
+					"writeZone": "America/New_York"
+				}
+			},
+			"note": "America/New_York, EDT ends 3 Nov 2024 02:00 -> 01:00, read in order."
+		},
+		{
+			"id": "tz-kolkata",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Asia/Kolkata",
+				"write": {
+					"start": "2024-04-05T00:00:00Z",
+					"stepMin": 45,
+					"count": 80,
+					"writeZone": "Asia/Kolkata"
+				}
+			},
+			"note": "Asia/Kolkata, +05:30, no daylight saving: a half-hour zone."
+		},
+		{
+			"id": "tz-kathmandu",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Asia/Kathmandu",
+				"write": {
+					"start": "2024-04-05T00:00:00Z",
+					"stepMin": 45,
+					"count": 80,
+					"writeZone": "Asia/Kathmandu"
+				}
+			},
+			"note": "Asia/Kathmandu, +05:45: a quarter-hour zone."
+		},
+		{
+			"id": "tz-chatham-autumn",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Chatham",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 15,
+					"count": 240,
+					"writeZone": "Pacific/Chatham"
+				}
+			},
+			"note": "Pacific/Chatham, +13:45 -> +12:45 on 7 Apr 2024 (03:45 -> 02:45): a quarter-hour zone with daylight saving."
+		},
+		{
+			"id": "tz-lord-howe-autumn",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Australia/Lord_Howe",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 10,
+					"count": 400,
+					"writeZone": "Australia/Lord_Howe"
+				}
+			},
+			"note": "Australia/Lord_Howe, +11:00 -> +10:30 on 7 Apr 2024 (02:00 -> 01:30): a 30-minute change; hourly bins get a note."
+		},
+		{
+			"id": "tz-lord-howe-spring",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Australia/Lord_Howe",
+				"write": {
+					"start": "2024-10-04T12:00:00Z",
+					"stepMin": 10,
+					"count": 400,
+					"writeZone": "+10:30"
+				}
+			},
+			"note": "Australia/Lord_Howe, +10:30 -> +11:00 on 6 Oct 2024: a standard-time logger writes into the 30-minute gap."
+		},
+		{
+			"id": "tz-fixed-plus-0530",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "+05:30",
+				"write": {
+					"start": "2024-04-05T00:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "+05:30"
+				}
+			},
+			"note": "A fixed offset (+05:30): wall clock minus 5.5 h, no daylight saving; the colour title reads UTC+05:30."
+		},
+		{
+			"id": "tz-fixed-minus-0400",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "-04:00",
+				"write": {
+					"start": "2024-11-02T00:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "-04:00"
+				}
+			},
+			"note": "A fixed negative offset (-04:00) across New York's change: the logger never changes."
+		},
+		{
+			"id": "tz-offset-column-nz",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"timeFormat": "YYYY-MM-DD[T]HH:mm:ssZ",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "Pacific/Auckland",
+					"format": "YYYY-MM-DD[T]HH:mm:ssZ"
+				}
+			},
+			"note": "Text that carries its own offsets (+13:00 then +12:00): the instants come from the offsets; the zone only says which clock it reads (no re-parse)."
+		},
+		{
+			"id": "tz-awd-nz",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"compression": "awd",
+				"awd": {
+					"start": "2024-04-06T20:00:00Z",
+					"step": 1800000,
+					"length": 96
+				}
+			},
+			"note": "AWD: the header's start is a wall clock with no zone, resolved in the column's zone; the samples follow in elapsed time."
+		},
+		{
+			"id": "tz-legacy-session",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 96,
+					"writeZone": "utc"
+				}
+			},
+			"note": "A legacy session (Settings Timezone Pacific/Auckland, saved before per-column zones): every clock reading uses that one zone; the circular plot keeps UTC hours.",
+			"legacyZone": "Pacific/Auckland"
+		},
+		{
+			"id": "tz-unknown-zone",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Mars/Olympus_Mons",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 48,
+					"writeZone": "utc"
+				}
+			},
+			"note": "A zone neither the app nor the ports know: read as 'utc' (as written), never an error."
+		},
+		{
+			"id": "tz-join-nz-vs-london-shift",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "Join Data notes: A in Pacific/Auckland, B in Europe/London.",
+			"columnB": {
+				"timeZone": "Europe/London",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 60,
+					"count": 48,
+					"writeZone": "Europe/London"
+				}
+			}
+		},
+		{
+			"id": "tz-show-times-in-london",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"write": {
+					"start": "2024-04-05T12:00:00Z",
+					"stepMin": 30,
+					"count": 48,
+					"writeZone": "Pacific/Auckland"
+				}
+			},
+			"note": "\"Show times in\" Europe/London: labels change, clock readings do not (decision 2).",
+			"showTimesIn": "Europe/London"
+		},
+		{
+			"id": "tz-epoch-nz",
+			"kind": "clockZone",
+			"pyFunc": "clock_zone",
+			"rFunc": "clock_zone",
+			"column": {
+				"timeZone": "Pacific/Auckland",
+				"values": [
+					1712318400000, 1712322000000, 1712325600000, 1712329200000, 1712332800000, 1712336400000,
+					1712340000000, 1712343600000, 1712347200000, 1712350800000, 1712354400000, 1712358000000,
+					1712361600000, 1712365200000, 1712368800000, 1712372400000, 1712376000000, 1712379600000,
+					1712383200000, 1712386800000, 1712390400000, 1712394000000, 1712397600000, 1712401200000,
+					1712404800000, 1712408400000, 1712412000000, 1712415600000, 1712419200000, 1712422800000,
+					1712426400000, 1712430000000, 1712433600000, 1712437200000, 1712440800000, 1712444400000,
+					1712448000000, 1712451600000, 1712455200000, 1712458800000, 1712462400000, 1712466000000,
+					1712469600000, 1712473200000, 1712476800000, 1712480400000, 1712484000000, 1712487600000,
+					1712491200000, 1712494800000, 1712498400000, 1712502000000, 1712505600000, 1712509200000,
+					1712512800000, 1712516400000, 1712520000000, 1712523600000, 1712527200000, 1712530800000
+				]
+			},
+			"note": "Epoch-ms times (already instants) with a zone: no re-parse; clock readings in Pacific/Auckland, across the end of NZDT."
 		}
 	]
 }

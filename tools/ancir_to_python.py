@@ -86,6 +86,7 @@ def main():
             data=meta.get("data"),
             raw_data=RAW_DATA,
             time_format=meta.get("timeFormat"),
+            time_zone=meta.get("timeZone"),
             bin_width=meta.get("binWidth"),
             origin_time_ms=meta.get("originTime_ms"),
             compression=meta.get("compression"),
@@ -153,7 +154,7 @@ def main():
     # correlogram, actogram) — the numbers the plot derives, not the raw input.
     if PLOTS:
         render_plots(PLOTS, columns_index, out_path)
-        export_plot_data(PLOTS, columns_index, out_path, zone=DISPLAY_TIMEZONE)
+        export_plot_data(PLOTS, columns_index, out_path)
 
     # Loud summary of any unsupported processes (only reachable when
     # STRICT_PROCESSES was set to False; strict mode aborts earlier).
@@ -191,6 +192,8 @@ def _col_meta_for_column(col):
         "data": col.get("data"),
         "compression": col.get("compression"),
         "timeFormat": col.get("timeFormat"),
+        # Column.timeZone: a zone-less text column's zone (absent = 'utc', as written).
+        "timeZone": col.get("timeZone"),
         # Only columns that carry bins have a binWidth; the actogram reads it for
         # truthiness (its bar width), so a missing one must stay missing.
         "binWidth": col.get("binWidth"),
@@ -271,12 +274,15 @@ def emit(session_path: Path, output_path: Path) -> None:
     parts.append("PLOTS = migrate_legacy_enright_bins({'version': json.loads("
                  f"{json.dumps(json.dumps(session_version))}), 'plots': PLOTS}})[0]['plots']")
     parts.append(f"STORED_VALUES = json.loads({json.dumps(json.dumps(stored_values))})")
-    # The app's display zone: actogram rows start at local midnight in it, so the
-    # exported actogram plot data must fold in the same zone to land on the same rows.
-    display_zone = (session.get("appState") or {}).get("displayTimezone") or "utc"
+    # A legacy session's one zone (appState.displayTimezone, not 'utc' only for a session
+    # saved before per-column zones): every clock reading uses it, as in the app. Otherwise
+    # clock readings use each column's own zone (column_clock).
+    app_state = session.get("appState") or {}
+    display_zone = app_state.get("displayTimezone") or "utc"
     parts.append(f"DISPLAY_TIMEZONE = {json.dumps(display_zone)}")
-    # Clock-time phase outputs (phaseReference 'clock') read the zone through the runtime.
     parts.append(f"set_display_timezone({json.dumps(display_zone)})")
+    # "Show times in" (labels only).
+    parts.append(f"set_show_times_in({json.dumps(app_state.get('showTimesIn') or 'column')})")
     parts.append(FOOTER_RUN)
 
     output_path.write_text("\n".join(parts))

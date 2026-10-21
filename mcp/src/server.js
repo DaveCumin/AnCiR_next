@@ -107,14 +107,22 @@ function registerTools(server) {
 
 	server.tool(
 		'import_data',
-		'Import one or more numeric columns into the active session.',
+		'Import one or more columns into the active session.',
 		{
 			columns: z
 				.array(
 					z.object({
 						name: z.string(),
 						type: z.enum(['number', 'time', 'bin', 'category']).optional(),
-						values: z.array(z.number())
+						values: z
+							.array(z.union([z.number(), z.string(), z.null()]))
+							.describe('time: ISO 8601 text or epoch ms; null = missing'),
+						time_zone: z
+							.string()
+							.optional()
+							.describe(
+								'time only: where the clock was. IANA ("Pacific/Auckland"), fixed offset ("+12:00") or "utc" (default)'
+							)
 					})
 				)
 				.describe('Columns to add')
@@ -124,7 +132,7 @@ function registerTools(server) {
 
 	server.tool(
 		'list_columns',
-		'List the columns in the active session (id, name, type, length).',
+		'List the columns in the active session (id, name, type, length; a time column also time_zone and times: as written | wall clock | instants).',
 		{},
 		async () => ok({ columns: requireSession().listColumns() })
 	);

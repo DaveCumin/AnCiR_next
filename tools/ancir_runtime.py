@@ -2216,6 +2216,610 @@ def evaluate_trend_at_points(parameters, model, x_points):
 
 
 # ----------------------------------------------------------------------
+# Time zones (utils/time/zones.js), per-column time zone (STAT-18)
+# ----------------------------------------------------------------------
+#
+# A zone is 'utc' (the default: zone-less text kept "as written"), a FIXED offset ('+05:30',
+# a logger that never changes its clock) or an IANA name ('Pacific/Auckland', which follows
+# that zone's daylight saving). A zone-less text column with a zone other than 'utc' stores
+# the instants its wall clock names in that zone (Column.get_data, resolve_wall_clocks).
+# Plan: ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, sections 3.10, 5c and 5d.
+#
+# Ported line for line, NOT through pandas tz_localize or zoneinfo's fold rules: the app reads
+# a repeated hour by the ORDER of the values and moves a skipped hour forward, which neither
+# library does (plan 5c, "Phase 4 must port exactly").
+
+UTC_ZONE = 'utc'
+_FIXED_ZONE_RE = re.compile(r'^([+-])(\d{2}):?(\d{2})$')
+_ZONE_BUCKET_MS = 15 * 60 * 1000      # offsets change only on a quarter hour of UTC
+_ZONE_DAY_MS = 86400000
+_ZONE_OFFSET_CACHE = {}
+_ZONE_OFFSET_CACHE_MAX = 50_000
+_IANA_VALID = {}
+_ZONE_UNIQUE, _ZONE_REPEATED, _ZONE_SKIPPED = 0, 1, 2
+
+
+def _js_round(x):
+    """JS Math.round (halves up, toward +infinity)."""
+    return math.floor(x + 0.5)
+
+
+def is_fixed_offset(z):
+    """zones.js isFixedOffset: written as +-HH:MM or +-HHMM (range not checked)."""
+    return isinstance(z, str) and _FIXED_ZONE_RE.match(z.strip()) is not None
+
+
+def fixed_offset_minutes(z):
+    """zones.js fixedOffsetMinutes: minutes east of UTC for '+05:30' (330), else None."""
+    m = _FIXED_ZONE_RE.match(z.strip()) if isinstance(z, str) else None
+    if not m:
+        return None
+    hours, mins = int(m.group(2)), int(m.group(3))
+    if hours > 14 or mins > 59:
+        return None
+    total = hours * 60 + mins
+    return -total if m.group(1) == '-' else total
+
+
+def format_fixed_offset(minutes):
+    """zones.js formatFixedOffset: '+05:30' for 330, '-04:00' for -240."""
+    sign = '-' if minutes < 0 else '+'
+    a = abs(_js_round(minutes))
+    return f'{sign}{a // 60:02d}:{a % 60:02d}'
+
+
+def _is_iana_zone(name):
+    if name in _IANA_VALID:
+        return _IANA_VALID[name]
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(name)
+        ok = True
+    except Exception:  # noqa: BLE001 (ZoneInfoNotFoundError, ValueError on odd keys)
+        ok = False
+    _IANA_VALID[name] = ok
+    return ok
+
+
+def normalize_zone(z):
+    """zones.js normalizeZone: 'utc' for UTC/Z/GMT/+00:00, '+05:30' for '+0530', an IANA name
+    as written when known, else None."""
+    if not isinstance(z, str):
+        return None
+    s = z.strip()
+    if not s:
+        return None
+    if s.lower() in ('utc', 'z', 'gmt', 'etc/utc'):
+        return UTC_ZONE
+    if is_fixed_offset(s):
+        mins = fixed_offset_minutes(s)
+        if mins is None:
+            return None
+        return UTC_ZONE if mins == 0 else format_fixed_offset(mins)
+    return s if _is_iana_zone(s) else None
+
+
+def zone_label(zone, bare=False):
+    """zones.js zoneLabel: 'UTC', 'UTC+13:00 (fixed)' ('UTC+13:00' when bare), or the name."""
+    z = normalize_zone(zone) or UTC_ZONE
+    if z == UTC_ZONE:
+        return 'UTC'
+    if is_fixed_offset(z):
+        return f'UTC{z}' if bare else f'UTC{z} (fixed)'
+    return z
+
+
+def zone_tzinfo(zone):
+    """A datetime tzinfo for a zone: UTC, a fixed offset, or a ZoneInfo (unknown -> UTC)."""
+    import datetime as _dt
+    z = normalize_zone(zone) or UTC_ZONE
+    if z == UTC_ZONE:
+        return _dt.timezone.utc
+    fixed = fixed_offset_minutes(z)
+    if fixed is not None:
+        return _dt.timezone(_dt.timedelta(minutes=fixed))
+    from zoneinfo import ZoneInfo
+    return ZoneInfo(z)
+
+
+def _iana_offset_minutes(zone, ms):
+    """zones.js ianaOffsetMinutes: the offset at the START of the 15-minute bucket `ms` is in,
+    rounded to whole minutes as the app's Intl reading is, and cached per zone and bucket."""
+    bucket = math.floor(ms / _ZONE_BUCKET_MS)
+    key = (zone, bucket)
+    hit = _ZONE_OFFSET_CACHE.get(key)
+    if hit is not None:
+        return hit
+    import datetime as _dt
+    from zoneinfo import ZoneInfo
+    at = bucket * _ZONE_BUCKET_MS
+    try:
+        off = _dt.datetime.fromtimestamp(at / 1000, tz=ZoneInfo(zone)).utcoffset()
+        minutes = _js_round(off.total_seconds() / 60)
+    except (OverflowError, OSError, ValueError):
+        minutes = 0
+    if len(_ZONE_OFFSET_CACHE) >= _ZONE_OFFSET_CACHE_MAX:
+        _ZONE_OFFSET_CACHE.clear()
+    _ZONE_OFFSET_CACHE[key] = minutes
+    return minutes
+
+
+def zone_offset_minutes(zone, ms):
+    """zones.js zoneOffsetMinutes: minutes east of UTC that `zone` is at the instant `ms`."""
+    z = normalize_zone(zone) or UTC_ZONE
+    if z == UTC_ZONE:
+        return 0
+    fixed = fixed_offset_minutes(z)
+    if fixed is not None:
+        return fixed
+    if ms is None or not math.isfinite(ms):
+        return 0
+    return _iana_offset_minutes(z, ms)
+
+
+def _resolver_zone(zone):
+    z = normalize_zone(zone)
+    if not z:
+        raise ValueError(f'Unknown time zone: {zone}')
+    return z
+
+
+def _classify_wall(z, w):
+    """zones.js classifyWall: (kind, early, late) offsets of the earlier and later instant a
+    wall clock `w` (ms read as UTC) names in the IANA zone `z`."""
+    before = _iana_offset_minutes(z, w - _ZONE_DAY_MS)
+    after = _iana_offset_minutes(z, w + _ZONE_DAY_MS)
+    if before == after:
+        return (_ZONE_UNIQUE, before, before)
+    ok_before = _iana_offset_minutes(z, w - before * 60000) == before
+    ok_after = _iana_offset_minutes(z, w - after * 60000) == after
+    if ok_before and ok_after:
+        # The larger offset gives the earlier instant.
+        return (_ZONE_REPEATED, max(before, after), min(before, after))
+    if ok_before:
+        return (_ZONE_UNIQUE, before, before)
+    if ok_after:
+        return (_ZONE_UNIQUE, after, after)
+    return (_ZONE_SKIPPED, before, before)
+
+
+def _wall_classifier(z):
+    """zones.js wallClassifier: _classify_wall memoised per 15-minute WALL bucket."""
+    memo = {}
+    quarter = 15 * 60000
+
+    def classify(w):
+        bucket = math.floor(w / quarter)
+        c = memo.get(bucket)
+        if c is None:
+            c = _classify_wall(z, bucket * quarter)
+            if c[1] % 15 != 0 or c[2] % 15 != 0:
+                return _classify_wall(z, w)
+            memo[bucket] = c
+        return c
+    return classify
+
+
+def _is_wall_value(w):
+    return isinstance(w, (int, float)) and not isinstance(w, bool) and math.isfinite(w)
+
+
+def wall_clock_to_instant(wall_ms, zone):
+    """zones.js wallClockToInstant: the instant a wall clock (ms read as UTC) names in `zone`;
+    a repeated hour gives the earlier instant, a skipped one moves forward. A missing value is
+    returned as it is; an unknown zone raises ValueError (the app's RangeError)."""
+    z = _resolver_zone(zone)
+    if not _is_wall_value(wall_ms):
+        return wall_ms
+    if z == UTC_ZONE:
+        return wall_ms
+    fixed = fixed_offset_minutes(z)
+    if fixed is not None:
+        return wall_ms - fixed * 60000
+    return wall_ms - _classify_wall(z, wall_ms)[1] * 60000
+
+
+def resolve_wall_clocks(walls, zone):
+    """zones.js resolveWallClocks: a column of wall clocks (row order) to the instants they
+    name in `zone`, with the repeated hour inferred from the order and the skipped hour moved
+    forward. Returns {'instants', 'repeated', 'secondPass', 'unordered', 'skipped'}.
+
+    Repeated values form RUNS: consecutive finite values (blanks skipped) with the same two
+    offsets, each within the repeated window's length of the one before. A run with exactly
+    one step back (w <= the previous w) is a clean two-pass record: values from that step on
+    read the later instant. Otherwise every value of the run reads the earlier one."""
+    z = _resolver_zone(zone)
+    walls = list(walls or [])
+    n = len(walls)
+    counts = {'repeated': 0, 'secondPass': 0, 'unordered': 0, 'skipped': 0}
+    if z == UTC_ZONE:
+        return {'instants': list(walls), **counts}
+    fixed = fixed_offset_minutes(z)
+    if fixed is not None:
+        shift = fixed * 60000
+        return {'instants': [w - shift if _is_wall_value(w) else w for w in walls], **counts}
+
+    classify = _wall_classifier(z)
+    instants = [None] * n
+    run = None  # {'early', 'late', 'idx'}
+
+    def end_run():
+        nonlocal run
+        if run is None:
+            return
+        idx = run['idx']
+        counts['repeated'] += len(idx)
+        back_step, back_steps = -1, 0
+        for p in range(1, len(idx)):
+            if walls[idx[p]] <= walls[idx[p - 1]]:
+                back_steps += 1
+                back_step = p
+        if back_steps == 1:
+            shift = run['late'] * 60000
+            for p in range(back_step, len(idx)):
+                instants[idx[p]] = walls[idx[p]] - shift
+            counts['secondPass'] += len(idx) - back_step
+        else:
+            counts['unordered'] += len(idx)
+        run = None
+
+    for i in range(n):
+        w = walls[i]
+        if not _is_wall_value(w):
+            instants[i] = w
+            continue
+        kind, early, late = classify(w)
+        instants[i] = w - early * 60000
+        if kind == _ZONE_REPEATED:
+            window_ms = (early - late) * 60000
+            last = walls[run['idx'][-1]] if run is not None else None
+            same_run = (run is not None and run['early'] == early and run['late'] == late
+                        and abs(w - last) < window_ms)
+            if not same_run:
+                end_run()
+                run = {'early': early, 'late': late, 'idx': []}
+            run['idx'].append(i)
+        else:
+            end_run()
+            if kind == _ZONE_SKIPPED:
+                counts['skipped'] += 1
+    end_run()
+    return {'instants': instants, **counts}
+
+
+def instant_to_wall_clock(ms, zone):
+    """zones.js instantToWallClock: the wall clock (ms read as UTC) `zone` shows at `ms`."""
+    if ms is None or not isinstance(ms, (int, float)) or not math.isfinite(ms):
+        return ms
+    return ms + zone_offset_minutes(zone, ms) * 60000
+
+
+def zone_transitions(zone, from_ms, to_ms):
+    """zones.js zoneTransitions: the offset changes of `zone` between two instants, in order:
+    [{'at', 'before', 'after'}], `at` the first instant of the new offset. Sampled daily and
+    narrowed to the 15-minute bucket, exactly as the app does."""
+    z = normalize_zone(zone)
+    if not z or z == UTC_ZONE or is_fixed_offset(z):
+        return []
+    if from_ms is None or to_ms is None or not math.isfinite(from_ms) \
+            or not math.isfinite(to_ms) or to_ms <= from_ms:
+        return []
+    out = []
+    t0 = from_ms
+    o0 = zone_offset_minutes(z, t0)
+    while t0 < to_ms:
+        t1 = min(t0 + _ZONE_DAY_MS, to_ms)
+        o1 = zone_offset_minutes(z, t1)
+        if o1 != o0:
+            lo, hi = t0, t1
+            while hi - lo > _ZONE_BUCKET_MS:
+                mid = lo + math.floor((hi - lo) / 2)
+                if zone_offset_minutes(z, mid) == o0:
+                    lo = mid
+                else:
+                    hi = mid
+            out.append({'at': math.floor(hi / _ZONE_BUCKET_MS) * _ZONE_BUCKET_MS,
+                        'before': o0, 'after': o1})
+        t0 = t1
+        o0 = o1
+    return out
+
+
+def zoned_datetime(ms, zone):
+    """dayjsInZone: the instant `ms` as an aware datetime in `zone` (utc, fixed or IANA)."""
+    import datetime as _dt
+    return (_dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
+            + _dt.timedelta(milliseconds=ms)).astimezone(zone_tzinfo(zone))
+
+
+def zone_start_of_day(ms, zone):
+    """dayjsInZone(ms, zone).startOf('day').valueOf(): local midnight of the day `ms` is in."""
+    import datetime as _dt
+    if ms is None or not math.isfinite(ms):
+        return _NAN
+    z = normalize_zone(zone) or UTC_ZONE
+    if z == UTC_ZONE:
+        return math.floor(ms / 86400000.0) * 86400000.0
+    tz = zone_tzinfo(z)
+    local = zoned_datetime(ms, z)
+    midnight = _dt.datetime(local.year, local.month, local.day, tzinfo=tz)
+    return float(round(midnight.timestamp() * 1000))
+
+
+# --- A column's zone and clock (core/columnTimeZone.js) ------------------------------------
+#
+# Only a SOURCE column owns its `timeZone`. A referencing column takes its target's; an
+# analysis output takes the zone of its node's FIRST time input in argument order (Join Data:
+# A's), which run_table_process records on the output columns (`zone_inputs`), first node
+# wins as the app's owningTableProcess does.
+
+def format_has_offset(fmt):
+    """TimeUtils.js formatHasOffset: the format (or any of a list) reads an offset (Z / ZZ)."""
+    if isinstance(fmt, (list, tuple)):
+        return any(format_has_offset(f) for f in fmt)
+    if not isinstance(fmt, str) or not fmt.strip():
+        return False
+    i = 0
+    while i < len(fmt):
+        if fmt[i] == '[':
+            end = fmt.find(']', i)
+            if end != -1:
+                i = end + 1
+                continue
+        for token, _ in _DAYJS_TO_STRPTIME:
+            if fmt.startswith(token, i):
+                if token in ('Z', 'ZZ'):
+                    return True
+                i += len(token)
+                break
+        else:
+            i += 1
+    return False
+
+
+def _first_present(values):
+    for v in values or []:
+        if v is not None and v != '':
+            return v
+    return None
+
+
+def reads_wall_clock_text(col):
+    """columnTimeZone.js readsWallClockText: a source column's times are written with no zone
+    (text whose format reads no offset, or AWD). Epoch ms and text with offsets are instants."""
+    if col is None or col.type != 'time':
+        return True
+    if col.compression == 'awd':
+        return True
+    raw = col.raw_data.get(col.data) if col.data is not None else None
+    first = _first_present(raw) if isinstance(raw, (list, tuple)) else None
+    if isinstance(first, (int, float)) and not isinstance(first, bool):
+        return False
+    return not format_has_offset(col.time_format)
+
+
+def parse_zone_of(col):
+    """columnTimeZone.js parseZoneOf: the zone a source column's zone-less wall clock is
+    resolved in, or None (no zone, 'utc', unknown zone, offsets, epoch ms, not a source)."""
+    if col is None or col.type != 'time' or col.ref_id is not None:
+        return None
+    z = normalize_zone(col.time_zone)
+    if not z or z == UTC_ZONE:
+        return None
+    return z if reads_wall_clock_text(col) else None
+
+
+def stores_wall_clock(col):
+    """columnTimeZone.js storesWallClock: the stored ms are the wall clock read as UTC."""
+    return reads_wall_clock_text(col) and parse_zone_of(col) is None
+
+
+def time_zone_source(col):
+    """columnTimeZone.js timeZoneSource: the column whose own timeZone decides this one's."""
+    seen = set()
+    cur = col
+    depth = 0
+    while cur is not None and depth < 64:
+        depth += 1
+        if cur.id in seen:
+            return None
+        seen.add(cur.id)
+        index = cur.columns_index or {}
+        if cur.ref_id is not None:
+            if cur.ref_id == -1:
+                return None
+            cur = index.get(cur.ref_id)
+            continue
+        if cur.zone_inputs is not None:
+            cur = next((index[i] for i in cur.zone_inputs
+                        if i in index and index[i].type == 'time'), None)
+            continue
+        return cur
+    return None
+
+
+def resolve_time_frame(col):
+    """columnTimeZone.js resolveTimeFrame: {'zone', 'wall'} ('utc', wall when nothing names
+    a zone)."""
+    src = time_zone_source(col)
+    if src is None:
+        return {'zone': UTC_ZONE, 'wall': True}
+    return {'zone': normalize_zone(src.time_zone) or UTC_ZONE, 'wall': stores_wall_clock(src)}
+
+
+def legacy_zone():
+    """displayTime.js getLegacyZone: a legacy session's one zone (DISPLAY_TIMEZONE when it is
+    not 'utc': only a session saved before per-column zones carries one), else None."""
+    z = DISPLAY_TIMEZONE
+    if not isinstance(z, str) or z == '' or z.lower() == UTC_ZONE:
+        return None
+    return z
+
+
+def column_clock(col):
+    """columnTimeZone.js columnClock: how clock-time ANALYSIS reads a column.
+    {'zone': the zone the stored ms are read in, 'named': the zone a label names, 'wall':
+    the ms are the wall clock read as UTC, 'legacy': a legacy session's one zone applies}."""
+    legacy = legacy_zone()
+    if legacy:
+        return {'zone': legacy, 'named': legacy, 'wall': False, 'legacy': True}
+    frame = resolve_time_frame(col) if col is not None else {'zone': UTC_ZONE, 'wall': True}
+    named = normalize_zone(frame.get('zone')) or UTC_ZONE
+    wall = frame.get('wall') is not False
+    return {'zone': UTC_ZONE if wall else named, 'named': named, 'wall': wall, 'legacy': False}
+
+
+def clock_dst_changes(clock, min_ms, max_ms):
+    """columnTimeZone.js clockDstChanges: the zone's changes inside a record."""
+    if not clock or min_ms is None or max_ms is None or not math.isfinite(min_ms) \
+            or not math.isfinite(max_ms):
+        return []
+    return zone_transitions(clock['zone'], min_ms, max_ms)
+
+
+# "Show times in" (appState.showTimesIn): 'column' (each column's own zone, the default) or a
+# zone every time is relabelled in. Labels only; never a clock reading (decision 2).
+SHOW_TIMES_IN = 'column'
+
+
+def set_show_times_in(value):
+    """Set the session's "Show times in" (exported scripts call this)."""
+    global SHOW_TIMES_IN
+    SHOW_TIMES_IN = value if isinstance(value, str) and value else 'column'
+
+
+def shown_zone(col):
+    """displayTime.js shownTime's zone for a column's time labels: a legacy session's zone,
+    else "Show times in" when it names a zone, else the column's own (a wall-clock column in
+    'utc', as written)."""
+    legacy = legacy_zone()
+    if legacy:
+        return legacy
+    show = SHOW_TIMES_IN
+    if show != 'column':
+        z = normalize_zone(show)
+        if z:
+            return z
+    return column_clock(col)['zone']
+
+
+# --- Daylight-saving notes (utils/time/dstNotes.js) --------------------------------------
+
+def _offset_text(minutes):
+    return 'UTC' if minutes == 0 else f'UTC{format_fixed_offset(minutes)}'
+
+
+def _num_text(x, digits):
+    """JS `${+x.toFixed(digits)}`."""
+    return _js_string(float(f'{x:.{digits}f}'))
+
+
+def _dst_change_text(change, named):
+    date = dayjs_format(change['at'], 'D MMM YYYY', named)
+    return f"{'ended' if change['after'] < change['before'] else 'began'} on {date}"
+
+
+def _dst_changes_text(changes, named):
+    parts = [_dst_change_text(c, named) for c in changes[:2]]
+    more = f' (and {len(changes) - 2} more changes)' if len(changes) > 2 else ''
+    return ' and '.join(parts) + more
+
+
+def clock_phase_dst_warning(clock, changes, per_window=False):
+    """dstNotes.js clockPhaseDstWarning, or None."""
+    if not clock or not changes:
+        return None
+    zone = zone_label(clock['named'])
+    what = _dst_changes_text(changes, clock['named'])
+    if per_window:
+        return (f'Daylight saving {what} in {zone}; each window\'s clock time uses the offset '
+                f'in force at its centre.')
+    first = changes[0]
+    diff = first['before'] - first['after']
+    return (f"Clock time uses the first sample's offset ({_offset_text(first['before'])}, "
+            f'{zone}) for the whole record. Daylight saving {what}, so phases after it read '
+            f"{_num_text(abs(diff) / 60, 2)} h {'later' if diff > 0 else 'earlier'} than the "
+            f'local clock.')
+
+
+def actogram_dst_note(clock, changes, start_time, period_hrs):
+    """dstNotes.js actogramDstNote, or None."""
+    if not clock or not changes:
+        return None
+    zone = zone_label(clock['named'])
+    what = _dst_changes_text(changes, clock['named'])
+    try:
+        period = float(period_hrs)
+    except (TypeError, ValueError):
+        period = _NAN
+    if not (math.isfinite(period) and period > 0):
+        period = 24.0
+    first = changes[0]
+    k = max(0, math.ceil((first['at'] - start_time) / (period * 3600000)))
+    row_start = start_time + k * period * 3600000
+    local = dayjs_format(row_start, 'HH:mm', clock['zone'])
+    return (f'Daylight saving {what} in {zone}. Rows are {_num_text(period, 4)} h of elapsed '
+            f'time, so rows after it start at {local} local time.')
+
+
+def bin_dst_note(clock, changes, first_edge, step_hrs, bin_hrs):
+    """dstNotes.js binDstNote, or None."""
+    if not clock or not changes:
+        return None
+    if first_edge is None or not math.isfinite(first_edge) or not (step_hrs and step_hrs > 0):
+        return None
+    step_ms = step_hrs * 3600000
+    moving = None
+    for c in changes:
+        shift_ms = abs(c['after'] - c['before']) * 60000
+        rem = math.fmod(shift_ms, step_ms)
+        if rem > 1e-6 and step_ms - rem > 1e-6:
+            moving = c
+            break
+    if moving is None:
+        return None
+    k = max(0, math.ceil((moving['at'] - first_edge) / step_ms))
+    local = dayjs_format(first_edge + k * step_ms, 'HH:mm', clock['zone'])
+    size = bin_hrs if (bin_hrs is not None and math.isfinite(bin_hrs) and bin_hrs > 0) \
+        else step_hrs
+    return (f"Daylight saving {_dst_changes_text([moving], clock['named'])} in "
+            f"{zone_label(clock['named'])}. Bins are {_num_text(size, 4)} h of elapsed time, "
+            f'so bins after it start at {local} local time.')
+
+
+def join_zone_notes(a, b, shift_b=0):
+    """joinData.js joinZoneNotes: {'summary', 'warning'} for Join Data's two time clocks."""
+    if not a or not b or a.get('legacy'):
+        return {'summary': '', 'warning': None}
+    if a['named'] == 'utc' and b['named'] == 'utc':
+        return {'summary': '', 'warning': None}
+    summary = f"Joined times are in A's zone ({zone_label(a['named'])})."
+    if a['named'] == b['named']:
+        return {'summary': summary, 'warning': None}
+    zones = (f"A's times are in {zone_label(a['named'])} and B's in "
+             f"{zone_label(b['named'])}")
+    try:
+        shift = float(shift_b) if shift_b not in (None, '') else 0.0
+    except (TypeError, ValueError):
+        shift = 0.0
+    if not math.isfinite(shift):
+        shift = 0.0
+    if shift != 0:
+        return {'summary': summary,
+                'warning': (f'{zones}; each is read in its own zone, so they already line up '
+                            f'and the zones account for the difference: check the '
+                            f'{_js_string(shift)} h shift.')}
+    as_written = 'B' if b['wall'] else ('A' if a['wall'] else None)
+    if as_written is None:
+        return {'summary': summary, 'warning': None}
+    other = a['named'] if as_written == 'B' else b['named']
+    return {'summary': summary,
+            'warning': (f"{as_written}'s times have no zone, so they are read as UTC. If they "
+                        f'were recorded in {zone_label(other)} time, set {as_written}\'s zone '
+                        f"(in its column's Properties) and the two line up.")}
+
+
+# ----------------------------------------------------------------------
 # Column model
 # ----------------------------------------------------------------------
 
@@ -2348,6 +2952,15 @@ class Column:
     # `resid_191_15`), when the exporter supplied one; plot legends use it. `name` stays the
     # stored identity (columns.csv headers, references). See _display_name.
     label: str | None = None
+    # Column.timeZone (per-column time zone): 'utc' / None (as written), a fixed offset
+    # ('+05:30') or an IANA name. Only a source column's own zone counts (column_clock).
+    time_zone: str | None = None
+    # The input column ids (argument order) of the analysis node that writes this column, set
+    # by run_table_process: the column's zone is its first TIME input's (time_zone_source).
+    zone_inputs: list | None = None
+    # How the last read resolved a zoned column's repeated and skipped hours
+    # (columnTimeZone.js noteWallClockCounts), or None.
+    wall_clock_counts: dict | None = None
 
     def is_referencial(self):
         return self.ref_id is not None
@@ -2388,6 +3001,11 @@ class Column:
     def _decompress(self, raw):
         if self.compression == 'awd' and isinstance(raw, dict):
             start = raw['start']; step = raw['step']; length = raw['length']
+            # The header's start is a wall clock with no zone: with a zone it is resolved
+            # there (Column.getData, phase 3), and the samples follow it in elapsed time.
+            zone = parse_zone_of(self) if self.type == 'time' else None
+            if zone:
+                start = wall_clock_to_instant(start, zone)
             return [start + i * step for i in range(int(length))]
         return list(raw)
 
@@ -2405,6 +3023,7 @@ class Column:
             # correlogram-data-missing-ends).
             first = next((v for v in data if v is not None and v != ''), None)
             if first is not None and not isinstance(first, (int, float)):
+                raw_cells = data
                 fmt = strptime_from_dayjs(self.time_format)
                 parsed = None
                 widths = dayjs_width_pattern(self.time_format)
@@ -2439,6 +3058,21 @@ class Column:
                     # a tz-aware datetime64[ms] cast are both unreliable).
                     epoch = pd.Timestamp('1970-01-01', tz='UTC')
                     data = ((parsed - epoch) // pd.Timedelta('1ms')).tolist()
+                    # Zone-less text with a zone (phase 3): the parse above is the wall clock
+                    # read as UTC; resolve it to the instants it names in the zone, with the
+                    # repeated and skipped hours of a daylight-saving change, exactly as the
+                    # app does (resolve_wall_clocks). Only text cells: a number is an instant.
+                    zone = parse_zone_of(self)
+                    if zone:
+                        texts = [isinstance(v, str) for v in raw_cells]
+                        walls = [v if t else None for v, t in zip(data, texts)]
+                        r = resolve_wall_clocks(walls, zone)
+                        data = [r['instants'][i] if t else v
+                                for i, (v, t) in enumerate(zip(data, texts))]
+                        self.wall_clock_counts = {
+                            'zone': zone, 'repeated': r['repeated'],
+                            'secondPass': r['secondPass'], 'unordered': r['unordered'],
+                            'skipped': r['skipped']}
         if self.type == 'bin':
             # getData reports bin CENTRES: start + binWidth / 2. A uniform bin column always
             # carries binWidth in the app; 1.0 stands in for one saved without it (the ports'
@@ -5049,7 +5683,12 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
     entries = [(y, cols[y].get_data()) for y in y_ins if y is not None and y != -1 and y in cols]
     if not entries:
         return False
-    phase = {'recordStart': x_min, 'ref': node_phase_reference(args, x_col)}
+    # One phase frame for every window; in clock time each window takes the offset in force
+    # at its centre when the record crosses a daylight-saving change (decision 6).
+    phase_ref = node_phase_reference(args, x_col, per_window=True)
+    phase = {'recordStart': x_min, 'ref': phase_ref,
+             'windowOffsetHours': (window_clock_offsets(phase_ref, [v + win / 2 for v in starts])
+                                   if is_time else None)}
     per_y = compute_moving_windows(t_all, [e[1] for e in entries], starts, win, keys, args,
                                    phase)
     results = {e[0]: per_y[i] for i, e in enumerate(entries)}
@@ -7446,12 +8085,16 @@ def _angles_col_to_radians(data, unit, period):
     return out
 
 
-def _column_to_phase_hours(data, col_type):
+def _column_to_phase_hours(data, col_type, zone='utc'):
     """Time-hours for the Rayleigh weighted-mode time input: a 'time'-type
     column is raw epoch-ms -> ABSOLUTE hours (n/3.6e6, no baseline
     subtraction); any other type is raw hours already. Gaps/blank/non-numeric
     -> NaN. Mirrors circularPlot.js columnToPhaseHours exactly (this is
-    deliberately NOT Column.hours_since_start, which subtracts a baseline)."""
+    deliberately NOT Column.hours_since_start, which subtracts a baseline).
+    `zone`: the clock the times are read on (the Circular phase plot passes the time
+    column's clock zone, a legacy session 'utc'; the Rayleigh node passes none, as the
+    app's does): each time is its wall clock there, with its own offset."""
+    shift = col_type == 'time' and bool(zone) and zone != 'utc'
     out = []
     for v in data or []:
         if v is None:
@@ -7468,8 +8111,16 @@ def _column_to_phase_hours(data, col_type):
         if not math.isfinite(n):
             out.append(_NAN)
             continue
-        out.append(n / 3_600_000.0 if col_type == 'time' else n)
+        if col_type != 'time':
+            out.append(n)
+            continue
+        out.append((instant_to_wall_clock(n, zone) if shift else n) / 3_600_000.0)
     return out
+
+
+def column_to_phase_hours(data, col_type, zone='utc'):
+    """circularPlot.js columnToPhaseHours (see _column_to_phase_hours)."""
+    return _column_to_phase_hours(data, col_type, zone)
 
 
 def _time_to_angle_rad(hours, period):
@@ -7639,11 +8290,7 @@ def clock_hour_of_day(ms, zone='utc'):
     if ms is None or not math.isfinite(ms):
         return _NAN
     import datetime as _dt
-    if not zone or zone in ('utc', 'UTC'):
-        d = _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc)
-    else:
-        from zoneinfo import ZoneInfo
-        d = _dt.datetime.fromtimestamp(ms / 1000, tz=ZoneInfo(zone))
+    d = _dt.datetime.fromtimestamp(ms / 1000, tz=zone_tzinfo(zone or 'utc'))
     msec = int(round(ms)) % 1000
     return d.hour + d.minute / 60 + d.second / 3600 + msec / 3600000
 
@@ -7659,11 +8306,48 @@ def resolve_phase_reference(reference, origin_ms, zone=None):
     return {'clock': True, 'offsetHours': off, 'warning': None}
 
 
-def node_phase_reference(args, x_col):
-    """phaseReferenceSupport.js resolveNodePhaseReference."""
+def _time_end_ms(col):
+    """phaseReferenceSupport.js timeEndMs: the latest valid timestamp of a time column."""
+    if col is None or col.type != 'time':
+        return None
+    vals = [_js_number(v) for v in (col.get_data() or []) if not _js_invalid(v)]
+    vals = [v for v in vals if math.isfinite(v)]
+    return max(vals) if vals else None
+
+
+def node_phase_reference(args, x_col, per_window=False):
+    """phaseReferenceSupport.js resolveNodePhaseReference: clock time is hours after local
+    midnight in the x column's CLOCK zone (column_clock: its own zone, or a legacy session's
+    one zone), with ONE offset taken at the first sample. When the record crosses a
+    daylight-saving change the result carries the app's warning; `per_window` (MovingAnalysis)
+    words it for windows that each use their own offset (window_clock_offsets)."""
     if (args or {}).get('phaseReference') != PHASE_REFERENCE_CLOCK:
         return resolve_phase_reference(None, None)
-    return resolve_phase_reference(PHASE_REFERENCE_CLOCK, time_origin_ms(x_col))
+    clock = column_clock(x_col)
+    origin = time_origin_ms(x_col)
+    ref = resolve_phase_reference(PHASE_REFERENCE_CLOCK, origin, clock['zone'])
+    if not ref['clock']:
+        return ref
+    changes = clock_dst_changes(clock, origin, _time_end_ms(x_col))
+    shifts = per_window and not clock['legacy'] and not clock['wall'] and len(changes) > 0
+    return {**ref, 'zone': clock['zone'], 'originMs': origin,
+            'perWindowZone': clock['zone'] if shifts else None,
+            'warning': clock_phase_dst_warning(clock, changes, per_window=shifts)}
+
+
+def window_clock_offsets(ref, centres_hrs):
+    """phaseReferenceSupport.js windowClockOffsets: each window's clock offset (h), the first
+    sample's plus how far the zone's offset at the window's centre has moved; None when every
+    window keeps the one offset."""
+    if not (ref and ref.get('clock')) or not ref.get('perWindowZone'):
+        return None
+    origin = ref.get('originMs')
+    if origin is None or not math.isfinite(origin):
+        return None
+    zone = ref['perWindowZone']
+    at0 = zone_offset_minutes(zone, origin)
+    return [ref['offsetHours'] + (zone_offset_minutes(zone, origin + c * 3600000) - at0) / 60
+            for c in centres_hrs]
 
 
 def apply_phase_reference(hrs, ref, period):
@@ -8942,7 +9626,48 @@ def run_table_process(name_or_funcname, args, columns_index, raw_data,
     if fn is None:
         _handle_unsupported('table', name_or_funcname, TABLE_PROCESS_MAP.keys())
         return False
+    note_output_zone_inputs(args, columns_index)
     return fn(args, columns_index, raw_data, stored_values)
+
+
+def _zone_col_id(v):
+    """columnTimeZone.js isColumnId / outIdOf: a column id (an integer >= 0, or digits)."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v if v >= 0 else None
+    if isinstance(v, float) and v.is_integer() and v >= 0:
+        return int(v)
+    if isinstance(v, str) and v.isdigit():
+        return int(v)
+    return None
+
+
+def note_output_zone_inputs(args, columns_index):
+    """Record on each output column of an analysis node the node's input column ids in
+    argument order (its `...IN` args), so the output inherits the zone of the first TIME input
+    (columnTimeZone.js owningTableProcess + tpInputColumns). The first node to claim a column
+    keeps it, as the app's scan in node order does."""
+    if not isinstance(args, dict):
+        return
+    out = args.get('out')
+    if not isinstance(out, dict):
+        return
+    inputs = []
+    for key, value in args.items():
+        if not (isinstance(key, str) and key.endswith('IN')):
+            continue
+        for v in (value if isinstance(value, list) else [value]):
+            cid = v if isinstance(v, int) and not isinstance(v, bool) and v >= 0 else None
+            if cid is not None and cid in columns_index:
+                inputs.append(cid)
+    for v in out.values():
+        if isinstance(v, dict):
+            v = v.get('val')
+        oid = _zone_col_id(v)
+        col = columns_index.get(oid) if oid is not None else None
+        if col is not None and col.zone_inputs is None:
+            col.zone_inputs = inputs
 
 
 # ----------------------------------------------------------------------
@@ -9239,11 +9964,7 @@ def day_of_year(ms, zone='utc'):
         return _NAN
     import datetime as _dt
     try:
-        if not zone or zone in ('utc', 'UTC'):
-            d = _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc)
-        else:
-            from zoneinfo import ZoneInfo
-            d = _dt.datetime.fromtimestamp(ms / 1000, tz=ZoneInfo(zone))
+        d = _dt.datetime.fromtimestamp(ms / 1000, tz=zone_tzinfo(zone or 'utc'))
     except (OverflowError, OSError, ValueError):
         return _NAN
     return d.timetuple().tm_yday
@@ -9411,7 +10132,8 @@ def colour_buckets(values, domain, k=COLOUR_BUCKETS):
 
 
 def _zone_label(zone):
-    return 'UTC' if not zone or zone == 'utc' else str(zone)
+    """encodingHost.js zoneLabel: 'UTC', 'UTC+05:30' (a fixed offset), or the IANA name."""
+    return zone_label(zone or 'utc', bare=True)
 
 
 def colour_bar_title(mode, column_name='', zone='utc', wrapped=False):
@@ -10782,7 +11504,14 @@ def _scatter_x_context(p, columns_index):
         lo = min(lo, math.floor(min(valid)))
         hi = max(hi, math.ceil(max(valid)))
     extent = (lo, hi) if math.isfinite(lo) and math.isfinite(hi) else None
-    return {'any_time': any_time, 'origin_for': origin_for, 'extent': extent}
+    # The zone the time axis is labelled in (Scatterplotclass xTimeFrame): the first series
+    # with a time x, or one that borrows a time origin, shown as the app shows it (shown_zone:
+    # a legacy session's zone, "Show times in", else that column's own zone).
+    first_time = next((x for x, _ in series
+                       if x.type == 'time' or _scatter_x_origin_ms(x) is not None), None) \
+        if any_time else None
+    return {'any_time': any_time, 'origin_for': origin_for, 'extent': extent,
+            'x_zone': shown_zone(first_time)}
 
 
 def scatter_colour_encodings(plot, columns_index, zone=None):
@@ -10792,7 +11521,8 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
 
     - Active only while switched on AND wired to a column that exists.
     - A number or bin column reads its clock from its time origin (resolveXOriginMs).
-    - Values in the display zone (`zone`, default the session's DISPLAY_TIMEZONE).
+    - Hour of day and day of year read the coloured column's CLOCK (column_clock: its own
+      zone, or a legacy session's one zone), and the bar title names it; `zone` overrides.
     - The range spans every coloured series of the plot reading the same column the same
       way; on a faceted plot (`facet`), every coloured series of that mode, so all panels
       share one scale (Scatterplotclass.colourDomainFor). A manual end overrides.
@@ -10805,7 +11535,7 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
       not exported from the app) the default palette by first appearance. More categories
       than palette colours, or the app's `refused`, colour nothing (None: the series is drawn
       plain and has no key), as the app refuses."""
-    zone = DISPLAY_TIMEZONE if zone is None else zone
+    zone_in = zone
     p = plot.get('plot', {}) or {}
     data = p.get('data', []) or []
     monochrome = ((plot.get('style') or {}).get('monochrome') is True)
@@ -10823,6 +11553,9 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
             continue
         origin = None if col.type == 'time' else _scatter_x_origin_ms(col)
         mode = effective_colour_mode(enc.get('mode'), col.type, origin)
+        clock = column_clock(col)
+        zone = clock['zone'] if zone_in is None else zone_in
+        named = clock['named'] if zone_in is None else zone_in
         values, warning = encoding_values(mode, col.get_data() or [], col.type, origin, zone)
         if mode == 'category':
             out.append({
@@ -10830,7 +11563,7 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
                 'colormap': None, 'palette': None, 'domain_in': [None, None],
                 'line': enc.get('colourLine') is True, 'monochrome': monochrome,
                 'resolved': _resolved_series_colours(plot, len(out)).get('colourCategories'),
-                'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone),
+                'title': colour_bar_title(mode, column_name=_display_name(col), zone=named),
             })
             continue
         cmap = effective_colormap(enc.get('colormap'), mode, monochrome)
@@ -10840,7 +11573,7 @@ def scatter_colour_encodings(plot, columns_index, zone=None):
             'domain_in': [_number_or_none(enc.get('domainMin')),
                           _number_or_none(enc.get('domainMax'))],
             'line': enc.get('colourLine') is True,
-            'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone,
+            'title': colour_bar_title(mode, column_name=_display_name(col), zone=named,
                                       wrapped=bool(warning) and mode == 'hourOfDay'),
         })
     for e in out:
@@ -10965,7 +11698,7 @@ def scatter_size_encodings(plot, columns_index, zone=None):
     column that exists; the range spans every sized series of the plot reading the same
     column the same way (facets: every sized series of that mode); a manual end overrides.
     A point with no size value keeps the series' point radius."""
-    zone = DISPLAY_TIMEZONE if zone is None else zone
+    zone_in = zone
     p = plot.get('plot', {}) or {}
     data = p.get('data', []) or []
     facet = plot.get('facet') is True
@@ -10982,6 +11715,9 @@ def scatter_size_encodings(plot, columns_index, zone=None):
             continue
         origin = None if col.type == 'time' else _scatter_x_origin_ms(col)
         mode = effective_size_mode(enc.get('mode'), col.type, origin)
+        clock = column_clock(col)
+        zone = clock['zone'] if zone_in is None else zone_in
+        named = clock['named'] if zone_in is None else zone_in
         values, warning = encoding_values(mode, col.get_data() or [], col.type, origin, zone)
         r_min, r_max = size_range(enc.get('minRadius'), enc.get('maxRadius'))
         points = _with_defaults(s.get('points'), _POINTS_DEFAULTS)
@@ -10991,7 +11727,7 @@ def scatter_size_encodings(plot, columns_index, zone=None):
                           _number_or_none(enc.get('domainMax'))],
             'r_min': r_min, 'r_max': r_max, 'default_r': points['radius'],
             'shape': points['shape'] if points['shape'] in POINT_SHAPES else 'circle',
-            'title': colour_bar_title(mode, column_name=_display_name(col), zone=zone),
+            'title': colour_bar_title(mode, column_name=_display_name(col), zone=named),
         })
     for e in out:
         if e is None:
@@ -12073,12 +12809,10 @@ _EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
 
 
 def _zoned(ms, zone):
-    """The instant `ms` as a datetime in the display zone ('utc' or an IANA name)."""
-    import datetime as _dt
+    """The instant `ms` as a datetime in `zone` ('utc', a fixed offset or an IANA name)."""
     if not zone or zone == 'utc':
         return _utc_dt(ms)
-    from zoneinfo import ZoneInfo
-    return _utc_dt(ms).astimezone(ZoneInfo(zone))
+    return _utc_dt(ms).astimezone(zone_tzinfo(zone))
 
 
 def dayjs_format(ms, fmt, zone='utc'):
@@ -12125,6 +12859,24 @@ def time_tick_pattern(ms, zone='utc'):
     if d.month != 1:
         return 'MMM'
     return 'YYYY'
+
+
+def zone_aligned_ticks(lo, hi, count, zone):
+    """displayTime.js zoneAlignedTicks: a time axis's ticks on round times of the zone it is
+    SHOWN in. d3's UTC ticks are kept for 'utc' and for a legacy session (exactly as before);
+    otherwise the domain is mapped to the wall clock it is shown as, d3 picks round ticks
+    there, and each is mapped back to an instant (wall_clock_to_instant), so a +13:00 axis
+    reads "5 Apr, 12:00, 6 Apr" rather than "13:00, 01:00, 13:00"."""
+    z = normalize_zone(zone) or UTC_ZONE
+    if legacy_zone() or z == UTC_ZONE:
+        return d3_utc_ticks(lo, hi, count)
+    a, b = min(lo, hi), max(lo, hi)
+    out = []
+    for t in d3_utc_ticks(instant_to_wall_clock(lo, z), instant_to_wall_clock(hi, z), count):
+        ms = wall_clock_to_instant(t, z)
+        if a <= ms <= b:
+            out.append(ms)
+    return out
 
 
 def time_tick_label(ms, zone='utc', fmt=''):
@@ -12236,8 +12988,8 @@ def app_axis_ticks(spec):
     use_manual = (kind in ('linear', 'log') and spec.get('tick_mode', 'numeric') == 'numeric'
                   and isinstance(manual, list) and len(manual) > 0)
     if kind == 'time':
-        vals = d3_utc_ticks(lo, hi, nticks)
         zone = spec.get('zone', DISPLAY_TIMEZONE)
+        vals = zone_aligned_ticks(lo, hi, nticks, zone)
         label = fmt or (lambda v: time_tick_label(v, zone, spec.get('time_format', '')))
         return [(v, label(v)) for v in vals]
     if use_manual:
@@ -13300,7 +14052,8 @@ def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, 
     x_axis = p.get('xAxis') or {}
     specs = {'bottom': {
         'kind': x_kind, 'domain': xd, 'axis': x_axis,
-        'zone': DISPLAY_TIMEZONE, 'time_format': p.get('xTickFormat') or '',
+        'zone': xctx.get('x_zone') or shown_zone(None),
+        'time_format': p.get('xTickFormat') or '',
         'tick_mode': 'time' if is_time else 'numeric'}}
     has_left = any((s.get('yAxis') or 'left') == 'left' for s, _, _ in series)
     has_right = any(s.get('yAxis') == 'right' for s, _, _ in series)
@@ -14582,9 +15335,61 @@ MAX_ACTOGRAM_ROWS = 20000
 ACTOGRAM_LIGHT_BAND_HEIGHT = 10
 
 
-def _actogram_series(plot, columns_index, zone):
+def actogram_clock(plot, columns_index):
+    """Actogram.svelte `clock` and `clockZonesDiffer`: the actogram's clock is the FIRST
+    time series' column clock (column_clock: its own zone, or a legacy session's one zone),
+    never "Show times in" (decision 2); differ is True when another time series' column is in
+    another zone (decision 7: the rows follow the first)."""
+    p = plot.get('plot', {}) or {}
+    clocks = []
+    for series in p.get('data', []) or []:
+        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        if x_col is not None and x_col.type == 'time':
+            clocks.append(column_clock(x_col))
+    clock = clocks[0] if clocks else column_clock(None)
+    differ = (not clock['legacy']) and any(c['named'] != clock['named'] for c in clocks)
+    return clock, differ
+
+
+def actogram_time_range(plot, columns_index):
+    """Actogram.svelte timeRange: (min, max) over the time series' rows with a valid x and y,
+    or None."""
+    p = plot.get('plot', {}) or {}
+    lo, hi = math.inf, -math.inf
+    for series in p.get('data', []) or []:
+        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        y_col = _resolve_plot_col(series.get('y'), columns_index)
+        if x_col is None or y_col is None or x_col.type != 'time':
+            continue
+        xd, yd = x_col.get_data() or [], y_col.get_data() or []
+        for i in range(min(len(xd), len(yd))):
+            xv, yv = _num_or_none(xd[i]), _num_or_none(yd[i])
+            if xv is None or yv is None or xv != xv or yv != yv:
+                continue
+            lo, hi = min(lo, xv), max(hi, xv)
+    return None if lo == math.inf else (lo, hi)
+
+
+def actogram_dst_info(plot, columns_index):
+    """The actogram's clock notes (Actogram.svelte): {'clock', 'clockZonesDiffer', 'startTime',
+    'dstNote'}, read in the first time series' clock zone."""
+    clock, differ = actogram_clock(plot, columns_index)
+    _, start, _ = _actogram_series(plot, columns_index, clock['zone'])
+    r = actogram_time_range(plot, columns_index)
+    p = plot.get('plot', {}) or {}
+    note = None
+    if r is not None:
+        note = actogram_dst_note(clock, clock_dst_changes(clock, r[0], r[1]), start,
+                                 _js_number(p.get('periodHrs', 24)))
+    return {'clock': clock, 'clockZonesDiffer': differ, 'startTime': start, 'dstNote': note}
+
+
+def _actogram_series(plot, columns_index, zone=None):
     """Every series of an actogram resolved and folded at the plot's ONE startTime:
-    ([{'d', 'series', 'x_col', 'y_col', 'frame', 'bins'} or None], startTime, Ndays)."""
+    ([{'d', 'series', 'x_col', 'y_col', 'frame', 'bins'} or None], startTime, Ndays). `zone`
+    (the day start's zone) defaults to the actogram's clock zone (actogram_clock)."""
+    if zone is None:
+        zone = actogram_clock(plot, columns_index)[0]['zone']
     p = plot.get('plot', {}) or {}
     period_hrs = float(p.get('periodHrs', 24) or 24)
     resolved = []
@@ -15006,13 +15811,15 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     blocks: the fitted line and its copies a tau apart, and a dot per selected marker), the
     annotations (the lower half of each row they cover), the light bar above the plot, the row
     labels and the legend (legend_layout, 'auto' avoiding the bars and the scale bar). `zone`
-    defaults to the session's display zone (DISPLAY_TIMEZONE)."""
+    defaults to the actogram's clock zone (actogram_clock: the first time series' column zone,
+    or a legacy session's one zone), which the day start, the row labels and the light bands
+    (a share of each row) all follow."""
     from matplotlib.patches import Rectangle
     from matplotlib.collections import PatchCollection
     from matplotlib.lines import Line2D
     p = plot.get('plot', {})
     look = plot_look(plot)
-    zone = DISPLAY_TIMEZONE if zone is None else zone
+    zone = actogram_clock(plot, columns_index)[0]['zone'] if zone is None else zone
     period_hrs = float(p.get('periodHrs', 24) or 24)
     double = max(1, int(p.get('doublePlot', 2) or 1))
     span = period_hrs * double
@@ -15809,7 +16616,7 @@ def _plot_padding(plot, columns_index=None):
         pad['top'] = (pad.get('top') or 0) + 2 * _actogram_light_band_height(bands)
     mode = _actogram_row_labels_mode(p)
     if mode in ('period', 'date') and columns_index is not None:
-        _, rows = actogram_download_data(plot, columns_index, DISPLAY_TIMEZONE)
+        _, rows = actogram_download_data(plot, columns_index)
         n_rows = max((r[1] for r in rows), default=0)
         look = plot_look(plot)
         h = float(plot.get('height') or 440)
@@ -16211,12 +17018,15 @@ def actogram_bins_by_period(frame, period_hrs, bin_width=None):
     return period_bins
 
 
-def actogram_download_data(plot, columns_index, zone='utc'):
+def actogram_download_data(plot, columns_index, zone=None):
     """Mirror Actogramclass.getDownloadData (Actogram.svelte): one tidy row per bar, rows
     (periods) numbered from 1. Every series is folded at the plot's ONE startTime: the
     user's chosen start (`startTimeIN`) when the plot carries one, else the earliest valid
-    sample over ALL series, snapped to its midnight in the display `zone` (the session's
-    appState.displayTimezone), exactly as the app draws it (actogram_plot_start_time)."""
+    sample over ALL series, snapped to its midnight in the actogram's clock zone (the first
+    time series' column zone, or a legacy session's one zone: actogram_clock; `zone`
+    overrides it), exactly as the app draws it (actogram_plot_start_time)."""
+    if zone is None:
+        zone = actogram_clock(plot, columns_index)[0]['zone']
     p = plot.get('plot', {})
     period_hrs = float(p.get('periodHrs', 24) or 24)
     headers = ['DataSeries', 'Period', 'BinStart (hrs)', 'BinEnd (hrs)', 'Value']
@@ -16277,13 +17087,13 @@ PLOT_DATA_BUILDERS = {
 }
 
 
-def export_plot_data(plots, columns_index, output_dir, zone='utc'):
+def export_plot_data(plots, columns_index, output_dir, zone=None):
     """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
     correlogram, actogram, wavelet scalogram). Each CSV mirrors the plot's in-app "Show/Save data"
     output. Returns the list of paths written; non-calculating plots
-    (scatter, boxplot, tableplot) are skipped. `zone` is the session's
-    display time zone (appState.displayTimezone); only the actogram reads it, to
-    place its rows at local midnight as the app does."""
+    (scatter, boxplot, tableplot) are skipped. Only the actogram reads a zone, to place its
+    rows at local midnight as the app does: its clock zone (actogram_clock) unless `zone`
+    overrides it."""
     import csv
     from pathlib import Path
 
@@ -16295,7 +17105,8 @@ def export_plot_data(plots, columns_index, output_dir, zone='utc'):
         if builder is None:
             continue
         try:
-            kwargs = {'zone': zone} if plot.get('type') == 'actogram' else {}
+            kwargs = {'zone': zone} if plot.get('type') == 'actogram' and zone is not None \
+                else {}
             headers, rows = builder(plot, columns_index, **kwargs)
         except Exception as e:  # noqa: BLE001 — one bad plot shouldn't abort the rest
             print(f"[ancir-plotdata] error building {plot.get('name')}: {e}")
@@ -17284,7 +18095,13 @@ def compute_moving_windows(t_all, ys, starts, window_size, stat_keys, args, phas
                 continue
             if args.get('analysis') == 'fft' and not regrid_uniform(tt, yy)['ok']:
                 continue
-            s_ = _moving_window_stats(tt, yy, args, phase, w_start + window_size / 2)
+            # Clock time across a daylight-saving change: this window's own offset
+            # (phase['windowOffsetHours'], decision 6), else the one offset.
+            offs = (phase or {}).get('windowOffsetHours')
+            own = offs[w] if offs is not None and w < len(offs) else None
+            w_phase = ({**phase, 'ref': {**phase['ref'], 'offsetHours': own}}
+                       if own is not None and math.isfinite(own) else phase)
+            s_ = _moving_window_stats(tt, yy, args, w_phase, w_start + window_size / 2)
             for k in stat_keys:
                 v = s_.get(k)
                 if _finite(v):
@@ -18003,16 +18820,8 @@ def actogram_start_time(series_list, zone='utc'):
                 min_time = xv
     if min_time == math.inf:
         min_time = 0
-    import datetime as _dt
-    if zone in (None, 'utc', 'UTC'):
-        return math.floor(min_time / 86400000.0) * 86400000.0
-    from zoneinfo import ZoneInfo
-    tz = ZoneInfo(zone)
-    local = _dt.datetime.fromtimestamp(min_time / 1000.0, tz)
-    midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
-    # Re-attach the zone at the new wall-clock time so its own UTC offset applies.
-    midnight = _dt.datetime(midnight.year, midnight.month, midnight.day, tzinfo=tz)
-    return float(round(midnight.timestamp() * 1000))
+    # dayjsInZone(min, zone).startOf('day'): fixed offsets as well as IANA zones.
+    return zone_start_of_day(min_time, zone)
 
 
 def actogram_plot_start_time(inner, series_list, zone='utc'):

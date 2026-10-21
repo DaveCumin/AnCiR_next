@@ -1064,6 +1064,7 @@
 		shownZoneLabel,
 		DEFAULT_DATE_FORMAT
 	} from '$lib/utils/time/displayTime.js';
+	import { axisMixedZonesNote } from '$lib/utils/time/zoneNotes.js';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -1487,9 +1488,7 @@
 					</ControlInput>
 					{#if theData.xTimeZonesDiffer}
 						<p class="x-zone-note" data-testid="x-zone-note">
-							The series' times are in different zones; the x axis shows {shownZoneLabel(
-								theData.xTimeFrame
-							)}, the first series' zone.
+							{axisMixedZonesNote(shownZoneLabel(theData.xTimeFrame))}
 						</p>
 					{/if}
 				{/if}

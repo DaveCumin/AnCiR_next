@@ -283,7 +283,8 @@
 				off. Both time inputs must be real times, or both numbers counting from the same origin;
 				with numbers the setting reads <strong>Shift B's x by (x units)</strong>. The joined time
 				takes A's time zone, which the summary names; a shift set between columns in different zones
-				is warned about, since the zones already account for the difference.
+				is warned about, since the zones already account for the difference (see
+				<a href="#time-zones">Time zones and daylight saving</a>).
 			</li>
 			<li>
 				When A and B rarely share a time, the node offers <strong>+ Add Bin Data</strong>: one click

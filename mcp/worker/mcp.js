@@ -19,6 +19,7 @@ import { checkFitness } from '../src/emit/fitness.js';
 import { fingerprint } from './fingerprint.js';
 import { encodingNote } from './draftPrompt.js';
 import { describePlotEncodings, encodingsText } from '../src/emit/encodings.js';
+import { mixedZoneWarnings, describeColumnZone, columnZoneText } from '../src/emit/timeColumns.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 // Matches the SUPPORTED_PROTOCOL_VERSIONS list in @modelcontextprotocol/sdk 1.29. We echo the
@@ -49,7 +50,16 @@ const DRAFT_SCHEMA = {
 				properties: {
 					name: { type: 'string' },
 					type: { type: 'string', enum: ['number', 'time', 'category'] },
-					values: { type: 'array', items: {} }
+					values: {
+						type: 'array',
+						items: {},
+						description: 'time: ISO 8601 text or epoch ms'
+					},
+					time_zone: {
+						type: 'string',
+						description:
+							'time only: where the clock was. IANA ("Pacific/Auckland"), fixed offset ("+12:00") or "utc" (default)'
+					}
 				},
 				required: ['name', 'values']
 			}
@@ -119,7 +129,7 @@ function toolList() {
 			name: 'describe_session',
 			title: 'Describe an existing AnCiR session',
 			description:
-				'Read back a session this server built: its columns, analyses (with args) and plots, plus scientific-fitness advice. Use it to look before you leap — to inspect a session you built earlier, or one a user gives you a link to, instead of replacing it blind. It reports STRUCTURE, not results: the numbers only exist once the link is opened in a browser.',
+				'Read back a session this server built: its columns (a time column with its zone), analyses (with args) and plots, plus scientific-fitness advice. Use it to look before you leap: to inspect a session you built earlier, or one a user gives you a link to, instead of replacing it blind. It reports STRUCTURE, not results: the numbers only exist once the link is opened in a browser.',
 			inputSchema: {
 				type: 'object',
 				properties: {
@@ -253,7 +263,11 @@ async function callTool(name, args, env, request, ctx) {
 		// The same normalizer build_session runs, minus the KV write. Deliberately the same call
 		// and not a cheaper approximation: a dry run that disagrees with the real thing is worse
 		// than no dry run, because it teaches the agent to trust a fiction.
-		const { session, warnings, errors } = normalizeSession(args ?? {}, {});
+		const built = normalizeSession(args ?? {}, {});
+		const { session, errors } = built;
+		// Times in different zones meeting in one Join Data or one plot: said here in the app's
+		// own words (the node's warning, the plot's note), so the agent can set a zone first.
+		const warnings = [...built.warnings, ...mixedZoneWarnings(session)];
 		const empty = !session.tableProcesses.length && !session.data.length;
 		const notes = [
 			structureText(session),
@@ -327,7 +341,9 @@ async function callTool(name, args, env, request, ctx) {
 			// what's safe to reason about: an analysis's outputs are empty until a browser opens
 			// the link and computes them.
 			const filled = (session.rawData?.[c.id] ?? []).length;
-			return `  ${c.name} (${c.type}${filled ? `, ${filled} values` : ', computed on open — empty here'})`;
+			// A time column's zone, and whether its times are as written or instants.
+			const zone = c.type === 'time' ? `, ${columnZoneText(describeColumnZone(session, c))}` : '';
+			return `  ${c.name} (${c.type}${filled ? `, ${filled} values` : ', computed on open, empty here'}${zone})`;
 		});
 		const detail = (session.tableProcesses ?? [])
 			.map((t) => `  #${t.id} ${t.name} args=${JSON.stringify(t.args ?? {})}`)
@@ -355,7 +371,8 @@ async function callTool(name, args, env, request, ctx) {
 				columns: (session.data ?? []).map((c) => ({
 					name: c.name,
 					type: c.type,
-					hasData: (session.rawData?.[c.id] ?? []).length > 0
+					hasData: (session.rawData?.[c.id] ?? []).length > 0,
+					...(c.type === 'time' ? describeColumnZone(session, c) : {})
 				})),
 				analyses: (session.tableProcesses ?? []).map((t) => ({
 					id: t.id,

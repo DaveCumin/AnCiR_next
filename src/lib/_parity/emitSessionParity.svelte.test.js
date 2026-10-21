@@ -1,7 +1,8 @@
 /**
  * End-to-end SESSION parity — JS side (NOT a normal test).
  *
- * For every session under static/sessions/{demos,classroom}/ this reconstructs
+ * For every session under static/sessions/{demos,classroom}/ (and the parity-only sessions in
+ * tools/parity/sessions/) this reconstructs
  * the session the way the app loads it, runs all table processes to completion
  * (synchronously, via the ThrowOnPost worker → workerPool sync fallback), then
  * records EVERY column's final data keyed by column id. tools/test_session_parity.py
@@ -23,9 +24,11 @@ import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 
 const ROOT = process.cwd();
+// tools/parity/sessions: parity-only sessions that no demo covers (per-column time zones).
 const SESSION_DIRS = [
 	join(ROOT, 'static', 'sessions', 'demos'),
-	join(ROOT, 'static', 'sessions', 'classroom')
+	join(ROOT, 'static', 'sessions', 'classroom'),
+	join(ROOT, 'tools', 'parity', 'sessions')
 ];
 const OUT = join(ROOT, 'tools', 'parity', 'session_js_results.json');
 

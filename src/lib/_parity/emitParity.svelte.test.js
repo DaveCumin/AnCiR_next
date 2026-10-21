@@ -57,7 +57,7 @@ import { pAdjust } from '$lib/utils/pAdjust.js';
 import { gridPointCount, gridTooLargeWarning } from '$lib/utils/interpolate.js';
 import { outputXSequence, defaultOutputXStep } from '$lib/utils/outputXSequence.js';
 import { sequenceLimitWarning } from '$lib/tableProcesses/SequenceColumn.svelte';
-import { joinTooLargeWarning } from '$lib/utils/joinData.js';
+import { joinTooLargeWarning, joinZoneNotes } from '$lib/utils/joinData.js';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
@@ -68,6 +68,24 @@ import { createSeededRNG } from '$lib/utils/permutationTest.js';
 import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 import { oneWayAnova, tukeyKramerPostHoc } from '$lib/tableProcesses/GroupComparison.svelte';
 import { mean as sampleMean, sampleStd } from '$lib/utils/sampleStats.js';
+import { columnClock, clockDstChanges, wallClockCountsOf } from '$lib/core/columnTimeZone.js';
+import {
+	resolveNodePhaseReference,
+	windowClockOffsets
+} from '$lib/tableProcesses/phaseReferenceSupport.js';
+import { binDstNote } from '$lib/utils/time/dstNotes.js';
+import { zoneOffsetMinutes, formatFixedOffset } from '$lib/utils/time/zones.js';
+import dayjs from '$lib/utils/time/dayjsSetup.js';
+import {
+	formatDateTime,
+	formatTimeAxisTick,
+	zoneAlignedTicks
+} from '$lib/utils/time/displayTime.js';
+import { scaleUtc } from 'd3-scale';
+import { columnToPhaseHours } from '$lib/utils/circularPlot.js';
+import { encodingValues } from '$lib/components/plotbits/encodings.js';
+import { colourBarTitle } from '$lib/components/plotbits/encodingHost.js';
+import { rowLabelText } from '$lib/plots/Actogram/rowLabels.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -1189,6 +1207,261 @@ function runActogramMarkers(fx) {
 	});
 }
 
+// --- per-column time zone (the `clockZone` kind) ----------------------------------------
+//
+// Plan ClaudeNotes/AnCiR/2026-10-20-per-column-timezone-plan.md, sections 5c, 5d and 7. One
+// fixture is one TIME COLUMN with a zone (and, for Join Data's notes, a second one, B). The
+// emitter builds it as the app does (a real Column, so Column.getData resolves the wall clock
+// through utils/time/zones.js resolveWallClocks) and records what every clock-time consumer
+// reads from it: the instants, the repeated/skipped counts, columnClock, the daylight-saving
+// changes inside the record, the clock phase (first sample's offset, warning, per-window
+// offsets), Bin Data's note, the circular hours, Join Data's summary and warning, the clock
+// of a referencing column and of a real Bin Data output (inheritance), and a real Actogram's
+// start, note and row labels. The `plots` part (actogram bars, hour-of-day and day-of-year
+// colour values and titles, time labels as shown) is checked by the Python leg only: the R
+// port draws no plots.
+//
+// The text is WRITTEN by the fixture (`write`): instants `stepMin` apart from `start`, each
+// formatted as the wall clock of `writeZone`. A logger that follows daylight saving writes in
+// the column's own zone (the repeated hour twice, in order); one on standard time all year
+// writes in a fixed offset (its values fall in the skipped hour, or pass the repeated hour
+// once). `order: 'sorted'` sorts the text (the two passes interleave), `shuffleSeed` shuffles
+// it, `blanks` empties some rows.
+function clockZoneValues(w) {
+	// Written from the zone's offset and dayjs's UTC mode only, so the text does not depend on
+	// the machine's own zone (dayjs's utcOffset() reads a fixed offset through the local
+	// clock and goes wrong in the machine's own daylight-saving gap; plan 5d).
+	const fmt = w.format ?? 'YYYY-MM-DD[T]HH:mm:ss';
+	const withOffset = fmt.endsWith('Z');
+	const wallFmt = withOffset ? fmt.slice(0, -1) : fmt;
+	const start = Date.parse(w.start);
+	const vals = [];
+	for (let i = 0; i < w.count; i++) {
+		const ms = start + i * w.stepMin * 60000;
+		const off = zoneOffsetMinutes(w.writeZone ?? 'utc', ms);
+		const text = dayjs.utc(ms + off * 60000).format(wallFmt);
+		vals.push(withOffset ? text + formatFixedOffset(off) : text);
+	}
+	if (w.order === 'sorted') vals.sort();
+	if (w.shuffleSeed != null) {
+		const rng = mulberry32(w.shuffleSeed);
+		for (let i = vals.length - 1; i > 0; i--) {
+			const j = Math.floor(rng() * (i + 1));
+			[vals[i], vals[j]] = [vals[j], vals[i]];
+		}
+	}
+	for (const b of w.blanks ?? []) vals[b] = '';
+	return vals;
+}
+
+/** The column spec a fixture describes, with its text written out (what the ports rebuild). */
+function clockZoneSpec(c) {
+	const spec = {
+		type: 'time',
+		timeFormat:
+			c.timeFormat !== undefined
+				? c.timeFormat
+				: c.write
+					? (c.write.format ?? 'YYYY-MM-DD[T]HH:mm:ss')
+					: null,
+		timeZone: c.timeZone ?? null,
+		compression: c.compression ?? null
+	};
+	if (c.awd) spec.awd = { ...c.awd, start: Date.parse(c.awd.start) };
+	else if (c.write) spec.values = clockZoneValues(c.write);
+	else spec.values = c.values;
+	return spec;
+}
+
+function mkZoneCol(spec, name) {
+	const c = new Column({ type: spec.type ?? 'time', data: -1 });
+	c.customName = name;
+	if (spec.timeFormat != null) c.timeFormat = spec.timeFormat;
+	if (spec.compression) c.compression = spec.compression;
+	if (spec.timeZone != null) c.timeZone = spec.timeZone;
+	core.rawData.set(c.id, spec.awd ?? spec.values);
+	c.data = c.id;
+	core.data.push(c);
+	return c;
+}
+
+const clockRecord = (c) => ({ zone: c.zone, named: c.named, wall: c.wall, legacy: c.legacy });
+
+async function runClockZone(fx) {
+	// The app's results must not depend on the machine's zone; dayjs's local-clock arithmetic
+	// does near the machine's own daylight-saving changes (plan 5d), so these fixtures are
+	// emitted as on a machine in UTC. Node re-reads TZ when it changes.
+	const prevTZ = process.env.TZ;
+	if (!process.env.PARITY_KEEP_TZ) process.env.TZ = 'UTC';
+	const prevLegacy = appState.displayTimezone;
+	const prevShow = appState.showTimesIn;
+	appState.displayTimezone = fx.legacyZone ?? 'utc';
+	appState.showTimesIn = fx.showTimesIn ?? 'column';
+	try {
+		const specA = clockZoneSpec(fx.column);
+		const specB = clockZoneSpec(fx.columnB ?? { values: ['2024-01-01T00:00:00'] });
+		const a = mkZoneCol(specA, 'a');
+		const b = mkZoneCol(specB, 'b');
+		const data = a.getData();
+		const n = data.length;
+		const yValues = Array.from({ length: n }, (_, i) => (i % 7) + 1);
+		const yId = mkCol('number', yValues, 'y');
+		const finite = data.filter((v) => typeof v === 'number' && Number.isFinite(v));
+		const lo = finite.length ? Math.min(...finite) : NaN;
+		const hi = finite.length ? Math.max(...finite) : NaN;
+
+		const clock = columnClock(a);
+		const changes = clockDstChanges(clock, lo, hi);
+		const counts = wallClockCountsOf(data) ?? {};
+
+		const ref = resolveNodePhaseReference({ phaseReference: 'clock' }, a);
+		const spanHrs = Number.isFinite(hi - lo) ? (hi - lo) / 3600000 : 0;
+		const centres = fx.centresHrs ?? [];
+		if (!fx.centresHrs) for (let h = 0; h <= spanHrs; h += 6) centres.push(h);
+		const refW = resolveNodePhaseReference({ phaseReference: 'clock' }, a, { perWindow: true });
+
+		// A referencing column and a real Bin Data output inherit the column's zone.
+		const refCol = new Column({ refId: a.id });
+		core.data.push(refCol);
+		const binArgs = { binSize: 1, binStart: 0, stepSize: 1, aggFunction: 'mean' };
+		const binTp = new TableProcess(
+			{ name: 'BinnedData', args: { ...binArgs, xIN: a.id, yIN: [yId], out: { binnedx: -1 } } },
+			null
+		);
+		pushObj(binTp);
+		await appConsts.tableProcessMap.get('BinnedData').func(binTp.args);
+		const binX = core.data.find((c) => c.id === binTp.args.out.binnedx);
+
+		// A real Actogram of the column (rows, start, note, labels follow its clock). With a B
+		// column, B is a second series: the rows follow A (the first), and the zones differ.
+		const series = [{ x: { refId: a.id }, y: { refId: yId }, colour: '#000000' }];
+		if (fx.columnB) {
+			const yB = mkCol(
+				'number',
+				b.getData().map(() => 1),
+				'yB'
+			);
+			series.push({ x: { refId: b.id }, y: { refId: yB }, colour: '#000000' });
+		}
+		const plot = Plot.fromJSON({
+			id: 0,
+			name: fx.id,
+			type: 'actogram',
+			width: 600,
+			height: 400,
+			plot: { periodHrs: 24, data: series }
+		});
+		core.plots.push(plot);
+		const act = plot.plot;
+		const startTime = act.startTime;
+		const rowLabels = [];
+		for (let day = 0; day < Math.min(act.Ndays ?? 0, 20); day++) {
+			rowLabels.push(
+				rowLabelText(day, {
+					mode: 'date',
+					startTime,
+					periodHrs: 24,
+					dateFormat: 'DD MMM HH:mm',
+					zone: act.clockZone
+				})
+			);
+		}
+		const { rows } = act.getDownloadData();
+
+		const join = joinZoneNotes(clockRecord(columnClock(a)), clockRecord(columnClock(b)), 0);
+		const joinShifted = joinZoneNotes(columnClock(a), columnClock(b), 13);
+		const circularZone = clock.legacy ? 'utc' : clock.zone;
+		// The time axis's ticks as the Scatterplot places them (round times of the zone it is
+		// shown in; d3's UTC ticks for 'utc' and a legacy session) and their labels.
+		const utcTicks = (d, c) => scaleUtc().domain(d).ticks(c);
+		const axisTicks = Number.isFinite(lo)
+			? (zoneAlignedTicks([lo, hi], 5, a, utcTicks) ?? utcTicks([lo, hi], 5)).map(Number)
+			: [];
+		const labelled = data
+			.slice(0, 6)
+			.map((v) =>
+				typeof v === 'number' && Number.isFinite(v)
+					? formatDateTime(v, 'YYYY-MM-DD HH:mm Z', a)
+					: ''
+			);
+
+		return jsonSafe({
+			inputs: {
+				column: specA,
+				columnB: specB,
+				legacyZone: fx.legacyZone ?? null,
+				actogramWithB: !!fx.columnB,
+				showTimesIn: fx.showTimesIn ?? 'column',
+				y: yValues,
+				centresHrs: centres,
+				bin: binArgs
+			},
+			outputs: {
+				data: safeArray(data),
+				hoursSinceStart: safeArray(a.hoursSinceStart),
+				counts: {
+					repeated: counts.repeated ?? 0,
+					secondPass: counts.secondPass ?? 0,
+					unordered: counts.unordered ?? 0,
+					skipped: counts.skipped ?? 0
+				},
+				clock: clockRecord(clock),
+				changes,
+				phase: {
+					clock: ref.clock,
+					offsetHours: ref.offsetHours,
+					warning: ref.warning ?? '',
+					zone: ref.zone ?? '',
+					perWindowZone: ref.perWindowZone ?? '',
+					originMs: ref.originMs ?? null
+				},
+				phaseWindow: {
+					warning: refW.warning ?? '',
+					perWindowZone: refW.perWindowZone ?? '',
+					offsets: windowClockOffsets(refW, centres) ?? []
+				},
+				binNotes: {
+					daily:
+						binDstNote(clock, changes, { firstEdge: startTime, stepHrs: 24, binHrs: 24 }) ?? '',
+					hourly: binDstNote(clock, changes, { firstEdge: startTime, stepHrs: 1, binHrs: 1 }) ?? ''
+				},
+				circularHours: safeArray(columnToPhaseHours(data, 'time', circularZone)),
+				join: { summary: join.summary, warning: join.warning ?? '' },
+				joinShifted: { summary: joinShifted.summary, warning: joinShifted.warning ?? '' },
+				refClock: clockRecord(columnClock(refCol)),
+				binClock: clockRecord(columnClock(binX)),
+				binX: safeArray(binX.getData()),
+				actogram: {
+					clockZone: act.clockZone,
+					clockZonesDiffer: act.clockZonesDiffer,
+					startTime,
+					dstNote: act.dstNote ?? '',
+					rowLabels
+				},
+				plots: {
+					actogramRows: rows,
+					hourOfDay: safeArray(
+						encodingValues('hourOfDay', data, { type: 'time', zone: clock.zone }).values
+					),
+					dayOfYear: safeArray(
+						encodingValues('dayOfYear', data, { type: 'time', zone: clock.zone }).values
+					),
+					hourTitle: colourBarTitle('hourOfDay', { zone: clock.named }),
+					dayTitle: colourBarTitle('dayOfYear', { zone: clock.named }),
+					labels: labelled,
+					axisTicks,
+					axisLabels: axisTicks.map((t) => formatTimeAxisTick(t, a))
+				}
+			}
+		});
+	} finally {
+		appState.displayTimezone = prevLegacy;
+		appState.showTimesIn = prevShow;
+		if (prevTZ === undefined) delete process.env.TZ;
+		else process.env.TZ = prevTZ;
+	}
+}
+
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 	it('runs every fixture through the JS engine', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -1207,6 +1480,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			else if (fx.kind === 'timeColumn') results[fx.id] = runTimeColumn(fx);
 			else if (fx.kind === 'actogramMarkers') results[fx.id] = runActogramMarkers(fx);
 			else if (fx.kind === 'sessionMigration') results[fx.id] = runSessionMigration(fx);
+			else if (fx.kind === 'clockZone') results[fx.id] = await runClockZone(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 		// The FormulaColumn injection fixture's payload sets window.__pwned if it ever runs

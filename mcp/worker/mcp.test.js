@@ -517,3 +517,124 @@ test('describe_session on an expired id explains WHY, so the agent stops retryin
 	assert.equal(body.result.isError, true);
 	assert.match(body.result.content[0].text, /transient|expire/i);
 });
+
+// ---- per-column time zone (plan 2026-10-20 per-column time zone, section 5e) -------------
+
+const NZ = 'Pacific/Auckland';
+const hourly = (n) =>
+	Array.from({ length: n }, (_, i) => `2024-04-01T${String(i % 24).padStart(2, '0')}:00:00`);
+const ZONE_DRAFT = {
+	columns: [
+		{ name: 'hive_t', type: 'time', values: hourly(24), time_zone: NZ },
+		{ name: 'hive', values: hourly(24).map((_, i) => 30 + (i % 5)) },
+		{ name: 'air_t', type: 'time', values: hourly(24) },
+		{ name: 'air', values: hourly(24).map((_, i) => 10 + i) }
+	],
+	analyses: [
+		{
+			name: 'JoinData',
+			args: { aTimeIN: 'hive_t', bTimeIN: 'air_t', aValuesIN: ['hive'], bValuesIN: ['air'] }
+		}
+	],
+	plots: [
+		{
+			type: 'actogram',
+			name: 'Both',
+			series: [
+				{ time: 'hive_t', values: 'hive' },
+				{ time: 'air_t', values: 'air' }
+			]
+		}
+	]
+};
+
+test('tools/list: a draft column takes time_zone (build_session and check_draft)', async () => {
+	const { body } = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+	for (const name of ['build_session', 'check_draft']) {
+		const tool = body.result.tools.find((t) => t.name === name);
+		const col = tool.inputSchema.properties.columns.items.properties;
+		assert.equal(col.time_zone.type, 'string', name);
+		assert.match(col.time_zone.description, /Pacific\/Auckland/);
+	}
+});
+
+test("check_draft warns when one Join Data or one plot mixes zones, in the app's words", async () => {
+	const { body } = await call('check_draft', ZONE_DRAFT);
+	const sc = body.result.structuredContent;
+	assert.deepEqual(sc.errors, []);
+	assert.deepEqual(sc.warnings, [
+		"Join Data: B's times have no zone, so they are read as UTC. If they were recorded in Pacific/Auckland time, set B's zone (in its column's Properties) and the two line up.",
+		'Plot "Both": The series\' times are in different zones; the rows follow Pacific/Auckland, the first series\' zone.'
+	]);
+	assert.match(body.result.content[0].text, /WARNINGS:[\s\S]*different zones/);
+});
+
+test('check_draft: a shift between two zoned columns is the double-correction warning', async () => {
+	const draft = structuredClone(ZONE_DRAFT);
+	draft.columns[2].time_zone = '+05:30';
+	draft.analyses[0].args.shiftB = 7;
+	draft.plots = [];
+	const { body } = await call('check_draft', draft);
+	assert.deepEqual(body.result.structuredContent.warnings, [
+		"Join Data: A's times are in Pacific/Auckland and B's in UTC+05:30 (fixed); each is read in its own zone, so they already line up and the zones account for the difference: check the 7 h shift."
+	]);
+});
+
+test('check_draft: one zone everywhere warns of nothing', async () => {
+	const draft = structuredClone(ZONE_DRAFT);
+	draft.columns[2].time_zone = NZ;
+	const { body } = await call('check_draft', draft);
+	assert.deepEqual(body.result.structuredContent.warnings, []);
+	assert.equal(body.result.structuredContent.ok, true);
+});
+
+test('check_draft refuses an unknown zone, naming what to write instead', async () => {
+	const draft = structuredClone(ZONE_DRAFT);
+	draft.columns[0].time_zone = 'Auckland';
+	const { body } = await call('check_draft', draft);
+	const sc = body.result.structuredContent;
+	assert.equal(sc.ok, false);
+	assert.equal(
+		sc.errors[0],
+		'Column "hive_t": time_zone "Auckland" is not a time zone. Use an IANA name such as "Pacific/Auckland" (follows daylight saving), a fixed offset such as "+12:00" (never changes), or "utc". Skipped.'
+	);
+	assert.ok(!sc.columns.includes('hive_t'));
+});
+
+test("describe_session reports each time column's zone and how its times read", async () => {
+	const env = ENV();
+	const draft = structuredClone(ZONE_DRAFT);
+	draft.columns.push({
+		name: 'epoch_t',
+		type: 'time',
+		values: [Date.UTC(2024, 3, 1), Date.UTC(2024, 3, 1, 1)],
+		time_zone: '+1200'
+	});
+	const built = await call('build_session', draft, env);
+	const { sessionId } = built.body.result.structuredContent;
+	const { body } = await call('describe_session', { session: sessionId }, env);
+	const cols = Object.fromEntries(body.result.structuredContent.columns.map((c) => [c.name, c]));
+	assert.deepEqual(cols.hive_t, {
+		name: 'hive_t',
+		type: 'time',
+		hasData: true,
+		timeZone: NZ,
+		times: 'wall clock'
+	});
+	assert.deepEqual(
+		{ timeZone: cols.air_t.timeZone, times: cols.air_t.times },
+		{ timeZone: 'utc', times: 'as written' }
+	);
+	assert.deepEqual(
+		{ timeZone: cols.epoch_t.timeZone, times: cols.epoch_t.times },
+		{ timeZone: '+12:00', times: 'instants' }
+	);
+	assert.equal(cols.hive.timeZone, undefined);
+	const text = body.result.content[0].text;
+	assert.match(
+		text,
+		/hive_t \(time, 24 values, Pacific\/Auckland: written times read in that zone\)/
+	);
+	assert.match(text, /air_t \(time, 24 values, as written \(no zone, read as UTC\)\)/);
+	assert.match(text, /epoch_t \(time, 2 values, UTC\+12:00 \(fixed\): instants\)/);
+});
