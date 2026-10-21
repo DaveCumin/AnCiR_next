@@ -14,7 +14,7 @@
 		['<strong>Value</strong>', 'The number in the cell.', 'Viridis', 'Yes'],
 		[
 			'<strong>Hour of day</strong>',
-			'The clock time of a time column, 0 to 24&nbsp;h, in the time zone set under <strong>Settings</strong> (<strong>Timezone</strong>). The scale is fixed at 0 to 24&nbsp;h and wraps at midnight.',
+			'The clock time of a time column, 0 to 24&nbsp;h, in that column&rsquo;s own time zone (set at import or in the column&rsquo;s Properties; a column with no zone reads its times as written). <strong>Show times in</strong> under <strong>Settings</strong> only relabels times, so it never moves a colour. The scale is fixed at 0 to 24&nbsp;h and wraps at midnight.',
 			'Twilight (cyclic)',
 			'No: a cycle has no larger end (23:59 would be drawn largest beside a smallest 00:00)'
 		],

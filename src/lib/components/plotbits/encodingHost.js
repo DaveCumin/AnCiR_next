@@ -20,6 +20,7 @@
 //
 // Pure: no Svelte, no core. The host passes in what it knows.
 
+import { zoneLabel as zoneName } from '$lib/utils/time/zones.js';
 import {
 	isCyclicMode,
 	encodingModesFor,
@@ -192,9 +193,9 @@ export function effectiveColormap(stored, mode, monochrome = false) {
 	return monochrome ? monochromeColormap(map) : map;
 }
 
-/** How a zone reads on a colour bar: 'UTC', or the IANA name. */
+/** How a zone reads on a colour bar: 'UTC', 'UTC+05:30' (a fixed offset), or the IANA name. */
 export function zoneLabel(zone) {
-	return !zone || zone === 'utc' ? 'UTC' : String(zone);
+	return zoneName(zone || 'utc', { bare: true });
 }
 
 /**

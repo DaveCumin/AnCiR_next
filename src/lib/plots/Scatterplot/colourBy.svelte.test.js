@@ -214,6 +214,35 @@ describe('hour of day', () => {
 		expect(s.colourKey.title).toBe('Hour of day (Asia/Kolkata)');
 	});
 
+	// Per-column time zone, phase 2: the hour of day is the COLOUR column's own clock, and the
+	// bar names that zone. "Show times in" relabels times only; it never moves a colour.
+	it("reads the colour column's own zone (epoch ms in +05:30) and names it", () => {
+		const times = [t0 + 18 * H, t0 + 18.5 * H]; // 23:30 and 00:00 at +05:30
+		const { d, s } = mkPlot([0, 1], [1, 1], times, { ctype: 'time' });
+		core.data.find((c) => c.id === d.colourBy.refId).timeZone = '+05:30';
+		flushSync();
+		expect(d.colourEncoded.values[0]).toBeCloseTo(23.5, 9);
+		expect(d.colourEncoded.values[1]).toBeCloseTo(0, 9);
+		expect(s.colourKey.title).toBe('Hour of day (UTC+05:30)');
+		appState.showTimesIn = 'Pacific/Auckland';
+		flushSync();
+		expect(d.colourEncoded.values[0]).toBeCloseTo(23.5, 9);
+		expect(s.colourKey.title).toBe('Hour of day (UTC+05:30)');
+		appState.showTimesIn = 'column';
+	});
+
+	it('a zone-less text column in Pacific/Auckland reads its hours as written', () => {
+		const { d, s } = mkPlot([0, 1], [1, 1], ['2026-01-10 07:15', '2026-01-10 19:45'], {
+			ctype: 'time'
+		});
+		const col = core.data.find((c) => c.id === d.colourBy.refId);
+		col.timeFormat = 'YYYY-MM-DD HH:mm';
+		col.timeZone = 'Pacific/Auckland';
+		flushSync();
+		expect([...d.colourEncoded.values]).toEqual([7.25, 19.75]);
+		expect(s.colourKey.title).toBe('Hour of day (Pacific/Auckland)');
+	});
+
 	it('the tooltip names the colour value', () => {
 		const { wrapper } = mkPlot([0], [1], [t0 + 14.5 * H], { ctype: 'time' });
 		const c = draw(wrapper);

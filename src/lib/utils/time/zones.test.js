@@ -16,6 +16,7 @@ import {
 	parseInZone,
 	zoneLabel,
 	suggestZoneFromOffsets,
+	zoneTransitions,
 	COMMON_FIXED_OFFSETS
 } from './zones.js';
 
@@ -164,5 +165,41 @@ describe('suggestZoneFromOffsets', () => {
 		const out = suggestZoneFromOffsets(samples, { zones: [NZ, 'Asia/Kolkata'] });
 		expect(out.zone).toBe('+05:30');
 		expect(out.note).toMatch(/no time zone matches/);
+	});
+});
+
+describe('zoneTransitions (phase 2)', () => {
+	it('finds both Pacific/Auckland changes of 2024 at their instants', () => {
+		const t = zoneTransitions('Pacific/Auckland', Date.UTC(2024, 0, 1), Date.UTC(2024, 11, 31));
+		expect(t).toEqual([
+			{ at: Date.UTC(2024, 3, 6, 14), before: 780, after: 720 },
+			{ at: Date.UTC(2024, 8, 28, 14), before: 720, after: 780 }
+		]);
+	});
+
+	it('Europe/London, Lord Howe (30-minute DST) and Chatham (+12:45/+13:45)', () => {
+		expect(zoneTransitions('Europe/London', Date.UTC(2024, 2, 1), Date.UTC(2024, 3, 1))).toEqual([
+			{ at: Date.UTC(2024, 2, 31, 1), before: 0, after: 60 }
+		]);
+		const lh = zoneTransitions('Australia/Lord_Howe', Date.UTC(2024, 2, 1), Date.UTC(2024, 4, 1));
+		expect(lh).toEqual([{ at: Date.UTC(2024, 3, 6, 15), before: 660, after: 630 }]);
+		const ch = zoneTransitions('Pacific/Chatham', Date.UTC(2024, 2, 1), Date.UTC(2024, 4, 1));
+		expect(ch.map((c) => [c.before, c.after])).toEqual([[825, 765]]);
+	});
+
+	it('none for UTC, a fixed offset, an empty range, or a range without a change', () => {
+		expect(zoneTransitions('utc', 0, 1e12)).toEqual([]);
+		expect(zoneTransitions('+05:30', 0, 1e12)).toEqual([]);
+		expect(zoneTransitions('Pacific/Auckland', 10, 10)).toEqual([]);
+		expect(zoneTransitions('Pacific/Auckland', Date.UTC(2024, 4, 1), Date.UTC(2024, 5, 1))).toEqual(
+			[]
+		);
+	});
+
+	it('a ten-year range is quick (one lookup a day)', () => {
+		const t0 = performance.now();
+		const t = zoneTransitions('Pacific/Auckland', Date.UTC(2010, 0, 1), Date.UTC(2020, 0, 1));
+		expect(t.length).toBe(20);
+		expect(performance.now() - t0).toBeLessThan(2000);
 	});
 });

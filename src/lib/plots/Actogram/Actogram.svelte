@@ -46,8 +46,9 @@
 	import { rowGeometry, MAX_ACTOGRAM_ROWS } from './rowHeight.js';
 	import { rasterizeRows, rasterImageURI, parseColour } from './actogramRaster.js';
 	import { core } from '$lib/core/core.svelte.js';
-	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
-	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import { columnClock, clockDstChanges } from '$lib/core/columnTimeZone.js';
+	import { dayjsInZone, zoneLabel } from '$lib/utils/time/zones.js';
+	import { actogramDstNote } from '$lib/utils/time/dstNotes.js';
 	import {
 		rowLabelText,
 		rowLabelGutter as computeRowLabelGutter,
@@ -695,12 +696,12 @@
 		// $derived: a view override that was never saved and that no undo could reach.
 		startTimeIN = $state(null);
 		startTime = $derived(this.startTimeIN ?? this.autoStartTime);
-		autoStartTime = $derived.by(() => {
+		// The record's first and last valid time (x and y both valid), over every time series.
+		// A filter process replaces filtered rows with null, so no single index (not even the
+		// first valid-y one) can be trusted to have a valid x.
+		timeRange = $derived.by(() => {
 			let minTime = Infinity;
-
-			// Find the earliest x where BOTH x and y are valid. A filter process
-			// replaces filtered rows with null, so we can't trust that any single
-			// index (including the first valid-y index) has a valid x.
+			let maxTime = -Infinity;
 			this.data.forEach((datum) => {
 				if (datum.x.type == 'time') {
 					const xData = datum.x.getData();
@@ -716,21 +717,42 @@
 						) {
 							const t = Number(xData[i]);
 							if (t < minTime) minTime = t;
+							if (t > maxTime) maxTime = t;
 						}
 					}
 				}
 			});
+			return minTime === Infinity ? null : { min: minTime, max: maxTime };
+		});
 
-			//if no time data then make the startTime 0 (to start with)
-			if (minTime === Infinity) {
-				minTime = 0;
-			}
+		// The actogram's CLOCK (per-column time zone, phase 2): the first time series' column
+		// (core/columnTimeZone.js columnClock), never "Show times in" (decision 2). The day
+		// start, the row labels, the x labels and the start time field all read it, and the
+		// light bands sit on the rows, so they agree. Series in other zones use the first
+		// series' zone (decision 7) and the panel says so.
+		timeSeries = $derived(this.data.filter((d) => d.x?.type === 'time'));
+		clock = $derived(columnClock(this.timeSeries[0]?.x ?? null));
+		clockZone = $derived(this.clock.zone);
+		clockZonesDiffer = $derived(
+			!this.clock.legacy && this.timeSeries.some((d) => columnClock(d.x).named !== this.clock.named)
+		);
+		// Daylight saving inside the record (decision 5: rows stay elapsed periods in v1).
+		dstNote = $derived.by(() => {
+			const r = this.timeRange;
+			if (!r) return null;
+			const changes = clockDstChanges(this.clock, r.min, r.max);
+			return actogramDstNote(this.clock, changes, {
+				startTime: this.startTime,
+				periodHrs: Number(this.periodHrs)
+			});
+		});
 
-			// Snap to start-of-day in the configured display zone.
-			// Default 'utc' avoids DST jumps; switch via appState.displayTimezone.
-			const zone = getDisplayZone();
-			const dt = zone === 'utc' ? dayjs.utc(minTime) : dayjs(minTime).tz(zone);
-			return dt.startOf('day').valueOf();
+		autoStartTime = $derived.by(() => {
+			// No time data: start at 0.
+			const minTime = this.timeRange?.min ?? 0;
+			// Snap to the start of the day in the actogram's clock zone: the first series'
+			// column zone ('utc' for times as written), or a legacy session's one zone.
+			return dayjsInZone(minTime, this.clockZone).startOf('day').valueOf();
 		});
 
 		spaceBetween = $state(2);
@@ -1093,18 +1115,16 @@
 			startTime: theData.plot.startTime,
 			periodHrs: theData.plot.periodHrs,
 			dateFormat: theData.plot.dateFormat,
-			zone: getDisplayZone()
+			zone: theData.plot.clockZone
 		});
 	}
 
-	// Format an absolute-hours-since-plot-start value as a date/time string
-	// in the configured display zone (e.g. "24 Apr, 11:48").
+	// Format an absolute-hours-since-plot-start value as a date/time string in the
+	// actogram's clock zone (e.g. "24 Apr, 11:48"), as the rows and their labels are.
 	function actogramXFormatter(absHrs) {
 		if (absHrs == null || isNaN(absHrs)) return '';
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
-		const zone = getDisplayZone();
-		const dt = zone === 'utc' ? dayjs.utc(unixTime) : dayjs(unixTime).tz(zone);
-		return dt.format('D MMM, HH:mm');
+		return dayjsInZone(unixTime, theData.plot.clockZone).format('D MMM, HH:mm');
 	}
 
 	// allBins stores {start, end, y} in offset-corrected absolute hours.
@@ -1282,6 +1302,7 @@
 						<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js). -->
 						<DateTimeHrs
 							value={theData.startTime}
+							zone={theData.clockZone}
 							onChange={(v) => (theData.startTimeIN = v)}
 							label="Start time"
 						/>
@@ -1299,6 +1320,26 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- Per-column time zone (phase 2): which clock the rows follow, and what a
+			     daylight-saving change or a series in another zone does to them. -->
+			{#if theData.clock.named !== 'utc'}
+				<p class="time-zone-note" data-testid="actogram-clock-zone">
+					Days start at midnight {zoneLabel(theData.clock.named)}{theData.clock.wall
+						? ' (times as written)'
+						: ''}.
+				</p>
+			{/if}
+			{#if theData.clockZonesDiffer}
+				<p class="time-zone-note" data-testid="actogram-zone-note">
+					The series' times are in different zones; the rows follow {zoneLabel(
+						theData.clock.named
+					)}, the first series' zone.
+				</p>
+			{/if}
+			{#if theData.dstNote}
+				<p class="time-zone-note" data-testid="actogram-dst-note">{theData.dstNote}</p>
+			{/if}
 
 			<div class="control-input-horizontal">
 				<ControlInput label="Period">
@@ -1800,6 +1841,16 @@
 {/if}
 
 <style>
+	.time-zone-note {
+		margin: var(--space-1) 0 var(--space-2);
+		font-size: var(--font-xs);
+		line-height: 1.4;
+		color: var(--color-text-muted);
+	}
+	.time-zone-note + .time-zone-note {
+		margin-top: 0;
+	}
+
 	/* The parent `.control-component` uses `align-items: flex-start`, so an
 	   unstretched child shrinks-to-fit its widest content. When a data series has
 	   wide content (long column names, previews), `.dataBlock` grew wider than the

@@ -18,14 +18,14 @@
  *      Python export's ListedColormap of the same K colours indexes exactly the same way.
  *   4. COLOUR: bucket b takes the colormap at its centre, t = (b + 0.5) / K (`bucketColours`).
  *
- * The zone is an argument everywhere (the display zone today, decision 7; a column's own zone
- * once per-column zones land), so a colour bar and a clock-time acrophase never disagree:
- * both call clockHourOfDay.
+ * The zone is an argument everywhere (the encoded column's clock zone, core/columnTimeZone.js
+ * columnClock), so a colour bar and a clock-time acrophase never disagree: both call
+ * clockHourOfDay.
  */
 import { clockHourOfDay } from '$lib/utils/phaseReference.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { isMissingCategory } from '$lib/utils/chisquare.js';
-import dayjs from '$lib/utils/time/dayjsSetup.js';
+import { dayjsInZone } from '$lib/utils/time/zones.js';
 import { colormapRGB } from './colormaps.js';
 
 /** Colour buckets per scale (plan 3.5: no visible banding at 64; at most 64 paths). */
@@ -107,12 +107,12 @@ function hasClock(type, originMs) {
 }
 
 /**
- * Day of year (1 to 366) of an instant in `zone` ('utc' or an IANA name), from the local
+ * Day of year (1 to 366) of an instant in `zone` ('utc', a fixed offset or an IANA name), from the local
  * calendar date, so a time near midnight lands on the zone's day.
  */
 export function dayOfYear(ms, zone = 'utc') {
 	if (!Number.isFinite(ms)) return NaN;
-	const dt = !zone || zone === 'utc' ? dayjs.utc(ms) : dayjs(ms).tz(zone);
+	const dt = dayjsInZone(ms, zone || 'utc');
 	if (!dt.isValid()) return NaN;
 	const y = dt.year();
 	return Math.round((Date.UTC(y, dt.month(), dt.date()) - Date.UTC(y, 0, 1)) / MS_PER_DAY) + 1;

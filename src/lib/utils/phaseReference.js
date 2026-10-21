@@ -16,20 +16,21 @@
 //    onsets, profile bin times). By default these are hours after the first
 //    sample, which is what every saved session has always reported. A node can
 //    instead report them as clock time of day: hours after local midnight in the
-//    session's display timezone, wrapped to [0, period) (review FIT-9).
+//    x column's clock zone (core/columnTimeZone.js columnClock: its own zone, or a legacy
+//    session's one zone), wrapped to [0, period) (review FIT-9).
 //    `phaseOffsetHours` + `applyPhaseReference` do that conversion, so every
 //    node agrees on it.
 //
 // The phase reference only RELABELS a phase: it never changes a fit, a bin or
 // any statistic. Pure: no Svelte, no app state (the caller passes the zone).
 
-import dayjs from './time/dayjsSetup.js';
+import { dayjsInZone } from './time/zones.js';
 import { min, isInvalidValue } from './stats.js';
 import { wrapToPeriod } from './cosinorAddons.js';
 
 /** The default: hours after the first (earliest) sample. Saved sessions without the arg. */
 export const PHASE_REFERENCE_START = 'start';
-/** Hours after local midnight (display timezone), wrapped to [0, period). */
+/** Hours after local midnight (the x column's clock zone), wrapped to [0, period). */
 export const PHASE_REFERENCE_CLOCK = 'clock';
 
 /** The options a node's "Phase reference" control offers, in display order. */
@@ -98,8 +99,8 @@ export function fitTimeFrame(tCol, outputXCol = null) {
 }
 
 /**
- * Hours after local midnight of an instant, in `zone` ('utc' or an IANA name),
- * in [0, 24). NaN for a non-finite instant.
+ * Hours after local midnight of an instant, in `zone` ('utc', a fixed offset such as
+ * '+05:30', or an IANA name), in [0, 24). NaN for a non-finite instant.
  *
  * @param {number} ms  epoch milliseconds
  * @param {string} [zone='utc']
@@ -108,7 +109,7 @@ export function fitTimeFrame(tCol, outputXCol = null) {
 export function clockHourOfDay(ms, zone = 'utc') {
 	const n = Number(ms);
 	if (ms == null || !Number.isFinite(n)) return NaN;
-	const dt = !zone || zone === 'utc' ? dayjs.utc(n) : dayjs(n).tz(zone);
+	const dt = dayjsInZone(n, zone || 'utc');
 	if (!dt.isValid()) return NaN;
 	return dt.hour() + dt.minute() / 60 + dt.second() / 3600 + dt.millisecond() / 3600000;
 }
@@ -123,7 +124,7 @@ export function clockHourOfDay(ms, zone = 'utc') {
  *
  * @param {string|undefined} reference  'start' (default) | 'clock'
  * @param {number|null} originMs  the x column's `timeOriginMs`
- * @param {string} [zone='utc']  the session's display timezone
+ * @param {string} [zone='utc']  the x column's clock zone (columnClock(col).zone)
  * @returns {{clock: boolean, offsetHours: number, warning: string|null}}
  */
 export function resolvePhaseReference(reference, originMs, zone = 'utc') {

@@ -13,6 +13,7 @@
 	 * Props:
 	 *  - value (bindable): 'start' | 'clock'; undefined reads as 'start'
 	 *  - xIsTime: whether the node's x column is a time column
+	 *  - xCol: the node's x column, whose clock zone the hint names (core/columnTimeZone.js)
 	 *  - onchange: called after the value changes
 	 *  - numericOrigin: what hour 0 is when x is a plain number column. The fit
 	 *      nodes model the x values as given, so their phases are measured from
@@ -25,15 +26,20 @@
 		PHASE_REFERENCE_CLOCK,
 		PHASE_REFERENCE_START
 	} from '$lib/utils/phaseReference.js';
-	import { getClockZone } from '$lib/utils/time/displayTime.js';
+	import { columnClock } from '$lib/core/columnTimeZone.js';
 	import { zoneLabel } from '$lib/utils/time/zones.js';
 
 	let {
 		value = $bindable(),
 		xIsTime = false,
+		xCol = null,
 		onchange = () => {},
 		numericOrigin = 'x = 0'
 	} = $props();
+
+	// The zone the clock is in: the x column's own (a wall-clock column's as written), or a
+	// legacy session's one zone.
+	let clockName = $derived(zoneLabel(columnClock(xCol).named));
 </script>
 
 <!-- One wrapper, so the hint stacks under the select inside a horizontal control row. -->
@@ -59,7 +65,7 @@
 	</ControlInput>
 	{#if (value ?? PHASE_REFERENCE_START) === PHASE_REFERENCE_CLOCK}
 		<p class="phase-ref-hint">
-			Phases are hours after midnight {zoneLabel(getClockZone())}, wrapped to one period.
+			Phases are hours after midnight {clockName}, wrapped to one period.
 		</p>
 	{:else}
 		<p class="phase-ref-hint">

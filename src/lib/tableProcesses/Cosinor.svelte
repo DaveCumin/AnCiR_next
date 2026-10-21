@@ -43,6 +43,7 @@
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { applyPhaseReference, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 	import {
 		resolveOutputX,
 		outputXColumnId,
@@ -129,7 +130,7 @@
 		// What hour 0 means for every phase output (acrophase, bathyphase, their CIs,
 		// phase angle): 'start' = hours after the first sample (x = 0 for a numeric
 		// x; the default, and what sessions saved before this arg existed report),
-		// 'clock' = hours after local midnight in the display timezone, wrapped to
+		// 'clock' = hours after local midnight in the x column's clock zone, wrapped to
 		// [0, period). Review FIT-9; see utils/phaseReference.js.
 		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
@@ -859,7 +860,6 @@
 	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 	// Every stored-value button here is one entry per node, however many copies of this
@@ -950,11 +950,11 @@
 			p.args.maxPeriod +
 			'|' +
 			p.args.permutationScheme;
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
@@ -1272,6 +1272,7 @@
 		<PhaseReferenceSelect
 			bind:value={p.args.phaseReference}
 			xIsTime={xIN_col?.type === 'time'}
+			xCol={xIN_col}
 			onchange={() => getCosinor()}
 		/>
 	</div>

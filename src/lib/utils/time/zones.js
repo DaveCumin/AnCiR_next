@@ -374,3 +374,49 @@ export function suggestZoneFromOffsets(samples, { preferZone, zones } = {}) {
 		offsets
 	};
 }
+
+// ─── Daylight-saving changes (phase 2: clock-time consumers) ───────────────
+
+const DAY_MS = 86400000;
+
+/**
+ * The offset changes of `zone` between the instants `fromMs` and `toMs` (inclusive), in time
+ * order: `[{ at, before, after }]`, `at` the first instant of the new offset (epoch ms) and
+ * `before` / `after` the offsets in minutes east of UTC. 'utc' and fixed offsets have none.
+ *
+ * Sampled once a day and narrowed to the 15-minute bucket the change happens in (offsets only
+ * change on a quarter hour of UTC), so a ten-year record costs about 3,650 lookups. Two
+ * changes less than a day apart (which no zone has) would be seen as one, or none.
+ * @param {string} zone
+ * @param {number} fromMs
+ * @param {number} toMs
+ * @returns {{ at: number, before: number, after: number }[]}
+ */
+export function zoneTransitions(zone, fromMs, toMs) {
+	const z = normalizeZone(zone);
+	if (!z || z === UTC_ZONE || isFixedOffset(z)) return [];
+	if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return [];
+	const out = [];
+	let t0 = fromMs;
+	let o0 = zoneOffsetMinutes(z, t0);
+	while (t0 < toMs) {
+		const t1 = Math.min(t0 + DAY_MS, toMs);
+		const o1 = zoneOffsetMinutes(z, t1);
+		if (o1 !== o0) {
+			// Narrow (lo, hi] to one bucket: lo still has the old offset, hi the new one.
+			let lo = t0;
+			let hi = t1;
+			while (hi - lo > OFFSET_BUCKET_MS) {
+				const mid = lo + Math.floor((hi - lo) / 2);
+				if (zoneOffsetMinutes(z, mid) === o0) lo = mid;
+				else hi = mid;
+			}
+			// An offset is looked up per bucket, so the change is at the start of hi's bucket
+			// (lo, with the old offset, is in an earlier one).
+			out.push({ at: Math.floor(hi / OFFSET_BUCKET_MS) * OFFSET_BUCKET_MS, before: o0, after: o1 });
+		}
+		t0 = t1;
+		o0 = o1;
+	}
+	return out;
+}

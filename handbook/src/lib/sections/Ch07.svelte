@@ -83,10 +83,14 @@
 		default it is in hours after the first sample of a time column (after x = 0 for a numeric x), so
 		it is a time of day only when the record starts at midnight; set the node's
 		<strong>Phase reference</strong> to <strong>Clock time of day</strong> to report hours after
-		local midnight in the display timezone instead. The Cosinor node's <code>acrophase</code> port,
-		its panel, its stats table and Fit waveform model give the same number, and the confidence
-		interval is centred on it; Moving Analysis reports each window's peak on the same frame (folded
-		onto the fixed period, or onto 24 h for a free period). With more than one harmonic the
+		local midnight in the x column's own time zone instead (the zone set for that column at import
+		or in its Properties; a column with no zone reads its times as written). If the record crosses a
+		daylight-saving change, the first sample's offset is used for the whole record and the node says
+		so; Moving Analysis gives each window the offset in force at its centre. The Cosinor node's
+		<code>acrophase</code>
+		port, its panel, its stats table and Fit waveform model give the same number, and the confidence interval
+		is centred on it; Moving Analysis reports each window's peak on the same frame (folded onto the fixed
+		period, or onto 24 h for a free period). With more than one harmonic the
 		<code>acrophase</code> port is the time of the fitted curve's overall peak (the orthophase) and
 		<code>acrophase_h1</code> is harmonic 1's. Whichever convention you report,
 		<strong>always state the reference time</strong>, and note that when τ ≠ 24 h the acrophase

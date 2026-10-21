@@ -18,7 +18,6 @@ import {
 	parseShownTime,
 	shownZoneLabel,
 	getClockZone,
-	getDisplayZone,
 	getLegacyZone,
 	getShowTimesIn,
 	toTimeFrame,
@@ -125,7 +124,6 @@ describe('"Show times in" a chosen zone (display override)', () => {
 	it('does NOT move the clock-time zone analysis reads (decision 2)', () => {
 		appState.showTimesIn = NZ;
 		expect(getClockZone()).toBe('utc');
-		expect(getDisplayZone()).toBe('utc');
 	});
 });
 
@@ -154,7 +152,6 @@ describe('a legacy session (saved with a non-UTC Timezone setting)', () => {
 	it('keeps its zone for clock-time analysis', () => {
 		appState.displayTimezone = NZ;
 		expect(getClockZone()).toBe(NZ);
-		expect(getDisplayZone()).toBe(NZ);
 	});
 
 	it('utc (any case) is not legacy', () => {

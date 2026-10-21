@@ -808,6 +808,9 @@
 
 	const channelSpecs = $derived(OverlayClass.channelsFor(overlay?.kind, overlay?.form));
 	const isTimeX = $derived(!!inner?.overlayContext?.()?.xIsTime);
+	// The clock zone a typed time or a band start is read in: the host's x column's
+	// (per-column time zone, phase 2). Null falls back to DateTimeHrs's own default.
+	const xClockZone = $derived(inner?.overlayContext?.()?.xClockZone ?? null);
 	// The forms this host offers for the overlay's kind, and whether it has a legend.
 	const formChoices = $derived(allowedForms(capabilitiesOf(inner), overlay?.kind));
 	const hasLegend = $derived(capabilitiesOf(inner)?.legend !== false);
@@ -968,6 +971,7 @@
 					<div class="overlay-typed-time">
 						<DateTimeHrs
 							value={v}
+							zone={xClockZone}
 							onChange={(val) => setTypedAt(key, i, val)}
 							label={`Time ${i + 1}`}
 						/>
@@ -1008,7 +1012,12 @@
 		<div class="control-input">
 			<p>Start time (h)</p>
 			{#if isTimeX}
-				<DateTimeHrs step="0.5" bind:value={overlay.startTimeHours} label="Start time" />
+				<DateTimeHrs
+					step="0.5"
+					bind:value={overlay.startTimeHours}
+					zone={xClockZone}
+					label="Start time"
+				/>
 			{:else}
 				<NumberWithUnits step="0.5" bind:value={overlay.startTimeHours} />
 			{/if}

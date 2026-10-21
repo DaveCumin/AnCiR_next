@@ -116,8 +116,11 @@ export function getStatKeys(args) {
 //     fit uses one (per harmonic: period / k), the NPCRA period for NPCRA, else 24 h;
 //   - the node's phase reference then applies (clock time of day adds the origin's clock hour).
 //
-// `phase` = { recordStart, ref } where recordStart is the smallest valid x and ref the
-// resolved phase reference ({clock, offsetHours}). Absent `phase` = since first sample.
+// `phase` = { recordStart, ref, windowOffsetHours? } where recordStart is the smallest valid x,
+// ref the resolved phase reference ({clock, offsetHours}) and windowOffsetHours, when given,
+// each window's own clock offset (a record crossing a daylight-saving change in a column
+// with a real zone; tableProcesses/phaseReferenceSupport.js windowClockOffsets). Absent
+// `phase` = since first sample.
 const FREE_PHASE_FOLD_HOURS = 24;
 
 function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
@@ -461,7 +464,12 @@ export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, a
 				skips.fftGap++;
 				continue;
 			}
-			const s = computeStatsForWindow(tt, yy, args, phase, wStart + windowSize / 2);
+			// Clock time across a daylight-saving change: this window's own offset (decision 6).
+			const own = phase?.windowOffsetHours?.[w];
+			const wPhase = Number.isFinite(own)
+				? { ...phase, ref: { ...phase.ref, offsetHours: own } }
+				: phase;
+			const s = computeStatsForWindow(tt, yy, args, wPhase, wStart + windowSize / 2);
 			for (const k of statKeys) {
 				if (Number.isFinite(s[k])) perStat[k][w] = s[k];
 			}

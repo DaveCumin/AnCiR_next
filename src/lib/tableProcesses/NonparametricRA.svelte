@@ -18,6 +18,7 @@
 		PHASE_REFERENCE_START
 	} from '$lib/utils/phaseReference.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 
 	const displayName = 'Nonparametric RA';
 
@@ -33,7 +34,7 @@
 		['lWindow', { val: 5 }],
 		// What hour 0 means for M10onset / L5onset and the average-day time axis:
 		// 'start' = hours after the first sample (the default, and what saved sessions
-		// report), 'clock' = hours after local midnight in the display timezone, wrapped
+		// report), 'clock' = hours after local midnight in the x column's clock zone, wrapped
 		// to the period. Only relabels: IS, IV, RA, M10 and L5 never change. Review FIT-9.
 		['phaseReference', { val: PHASE_REFERENCE_START }],
 		[
@@ -239,7 +240,6 @@
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 	// Every stored-value button here is one entry per node, however many copies of this
@@ -274,11 +274,11 @@
 		out += p.args.period;
 		out += p.args.mWindow;
 		out += p.args.lWindow;
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -437,6 +437,7 @@
 		<PhaseReferenceSelect
 			bind:value={p.args.phaseReference}
 			xIsTime={xIN_col?.type === 'time'}
+			xCol={xIN_col}
 			numericOrigin="the first sample"
 		/>
 	</div>

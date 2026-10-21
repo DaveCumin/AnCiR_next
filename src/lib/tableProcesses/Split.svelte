@@ -508,7 +508,8 @@
 			{#each sortedSplitTimes as _time, idx (idx)}
 				<div class="split-time-row">
 					{#if xIsTime}
-						<DateTimeHrs bind:value={p.args.splitTimes[idx]} />
+						<!-- Read and typed as the x column's times are shown (its zone). -->
+						<DateTimeHrs bind:value={p.args.splitTimes[idx]} frame={xIN_col} />
 					{:else}
 						<NumberWithUnits bind:value={p.args.splitTimes[idx]} step="0.1" />
 					{/if}

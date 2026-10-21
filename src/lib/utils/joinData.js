@@ -22,7 +22,9 @@
  *  - Size: more than MAX_JOIN_ROWS output rows is refused, with the shared limit wording.
  *
  * Zone-less text times parse as UTC (utils/time/TimeUtils.js parseTimeStrict), so a wall clock
- * has no daylight-saving jump inside the join: the node only compares the stored ms.
+ * has no daylight-saving jump inside the join: the node only compares the stored ms. The
+ * joined time column takes A's zone (per-column time zone, decision 8), which the summary
+ * says; `joinZoneNotes` says when A and B are in different zones.
  *
  * STACK MODE (neither time wired): stackData, A's rows then B's, each in input order.
  *
@@ -33,6 +35,7 @@
 import { isInvalidValue } from './stats.js';
 import { MAX_GRID_POINTS } from './interpolate.js';
 import { isMissingCategory } from './chisquare.js';
+import { zoneLabel } from './time/zones.js';
 
 /** The largest join, in output rows: the same limit as Interpolate's resample grid. */
 export const MAX_JOIN_ROWS = MAX_GRID_POINTS;
@@ -279,4 +282,44 @@ export function joinSummary(counts) {
 export function suggestedBinSize(intervalA, intervalB) {
 	const ok = [intervalA, intervalB].filter((v) => Number.isFinite(v) && v > 0);
 	return ok.length ? Math.max(...ok) : 1;
+}
+
+/**
+ * What the summary and the warnings say about the two time columns' zones (per-column time
+ * zone, phase 2; plan section 3.8 and decision 8). The joined time column takes A's zone.
+ *
+ * - `summary`: "Joined times are in A's zone (Pacific/Auckland)." Empty for a legacy session
+ *   (one zone for every column), for two UTC columns, and (the caller) for number times.
+ * - `warning`, when A and B are in different zones:
+ *     both carry their offsets (true instants): they already line up, so a non-zero shift is
+ *     probably a double correction;
+ *     otherwise at least one side is a wall clock kept as written, so the two are compared as
+ *     written and do not line up by themselves.
+ *
+ * @param {{ named: string, wall: boolean, legacy: boolean }|null} a  A's clock (columnClock)
+ * @param {{ named: string, wall: boolean, legacy: boolean }|null} b  B's clock
+ * @param {number} shiftB  hours
+ * @returns {{ summary: string, warning: string|null }}
+ */
+export function joinZoneNotes(a, b, shiftB = 0) {
+	if (!a || !b || a.legacy) return { summary: '', warning: null };
+	// Two UTC columns (the default, "as written"): nothing to say.
+	if (a.named === 'utc' && b.named === 'utc') return { summary: '', warning: null };
+	const summary = `Joined times are in A's zone (${zoneLabel(a.named)}).`;
+	if (a.named === b.named) return { summary, warning: null };
+	const zones = `A's times are in ${zoneLabel(a.named)} and B's in ${zoneLabel(b.named)}`;
+	const shift = Number(shiftB) || 0;
+	if (!a.wall && !b.wall) {
+		return {
+			summary,
+			warning:
+				shift !== 0
+					? `${zones}; both carry their offsets, so they already line up. B's zone accounts for the difference: check the ${shift} h shift.`
+					: null
+		};
+	}
+	return {
+		summary,
+		warning: `${zones}, but times without an offset are joined as written, so the two clocks do not line up by themselves. Use Shift B's clock (h) for the difference.`
+	};
 }

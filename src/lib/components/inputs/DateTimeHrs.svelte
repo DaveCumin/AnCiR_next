@@ -1,14 +1,16 @@
 <script>
 	import { untrack } from 'svelte';
-	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { getClockZone, zonedDayjs, parseShownTime } from '$lib/utils/time/displayTime.js';
+	import { dayjsInZone, parseInZone } from '$lib/utils/time/zones.js';
 
 	// `label` names the two fields for assistive tech ("Start time (date)", "Start time (time)").
 	// The widget is two inputs, so one wrapping <label> cannot name it; each field gets its own.
 	// `frame`: the column (or its time frame) the value is a time of. Given, the fields read and
 	// write the time as that column's times are SHOWN (its zone, or "Show times in"), so an
-	// axis limit reads like the axis. Without it (and without `zone`) the fields use the
-	// clock-time zone, as before per-column zones (phase 2 gives those callers a column).
+	// axis limit reads like the axis. `zone`: a CLOCK zone ('utc', a fixed offset or an IANA
+	// name) to read and write the wall clock in, for a time of day that belongs to a column's
+	// clock (an actogram's start time, a light band): its `columnClock(col).zone`. With
+	// neither, the fields use getClockZone() (a legacy session's zone, else UTC).
 	let {
 		value = $bindable(),
 		zone = null,
@@ -21,11 +23,11 @@
 	let shown = $derived(zone == null && frame != null);
 
 	function inZone(input) {
-		if (shown) return zonedDayjs(input instanceof Date ? input.getTime() : input, frame);
-		// Anchor a Date or ms value to `effectiveZone`. UTC takes a fast path
-		// because dayjs.utc avoids the Intl.DateTimeFormat lookup.
-		if (effectiveZone === 'utc') return dayjs.utc(input);
-		return dayjs(input).tz(effectiveZone);
+		const ms = input instanceof Date ? input.getTime() : input;
+		if (shown) return zonedDayjs(ms, frame);
+		// dayjsInZone: UTC and fixed offsets without an Intl lookup, an IANA zone through
+		// dayjs's tz() exactly as before.
+		return dayjsInZone(ms, effectiveZone);
 	}
 
 	// Normalize value (supports Date object or timestamp)
@@ -33,7 +35,7 @@
 		if (value instanceof Date) return inZone(value);
 		if (typeof value === 'number') return inZone(value);
 		if (shown) return zonedDayjs(Date.now(), frame);
-		return effectiveZone === 'utc' ? dayjs.utc() : dayjs().tz(effectiveZone);
+		return dayjsInZone(Date.now(), effectiveZone);
 	});
 
 	let displayDate = $derived(dt.format('YYYY-MM-DD'));
@@ -68,10 +70,8 @@
 			}
 			return;
 		}
-		const newDt =
-			effectiveZone === 'utc' ? dayjs.utc(wallClock) : dayjs.tz(wallClock, effectiveZone);
-		if (newDt.isValid()) {
-			const newValue = newDt.valueOf();
+		const newValue = parseInZone(wallClock, null, effectiveZone);
+		if (Number.isFinite(newValue)) {
 			value = newValue;
 			onChange(newValue);
 		}

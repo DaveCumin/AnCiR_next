@@ -34,7 +34,7 @@
 import { Column as ColumnClass, getColumnById } from '$lib/core/Column.svelte';
 import { isWiredRef } from '$lib/core/seriesChannelRefs.js';
 import { displayNameById } from '$lib/core/columnLabels.js';
-import { getDisplayZone } from '$lib/utils/time/displayTime.js';
+import { columnClock } from '$lib/core/columnTimeZone.js';
 import { resolveStyle } from '$lib/plots/figureStyle.js';
 import { ColourEncodingClass, SizeEncodingClass } from './Encoding.svelte';
 import {
@@ -150,6 +150,10 @@ export class EncodingChannel {
 					finiteOrNull(this.column.originTime_ms))
 			: null
 	);
+	// The clock hour of day and day of year read (per-column time zone, phase 2): the encoded
+	// column's own zone (a wall-clock column as written), or a legacy session's one zone; the
+	// key's title names it. Never "Show times in" (decision 2).
+	clock = $derived(this.column ? columnClock(this.column) : null);
 	mode = $derived(
 		this.column
 			? this.#spec.effectiveMode(this.encoding?.mode, {
@@ -164,7 +168,7 @@ export class EncodingChannel {
 		return encodingValues(this.mode, columnData(this.column), {
 			type: this.column.type,
 			originTime_ms: this.origin,
-			zone: getDisplayZone()
+			zone: this.clock?.zone ?? 'utc'
 		});
 	});
 	warning = $derived(this.encoded?.warning ?? null);
@@ -230,7 +234,7 @@ export class EncodingChannel {
 			? colourBarTitle(this.mode, {
 					// As the user sees the column (a node output's label, "Binned: ambient temp").
 					columnName: displayNameById(this.column.refId, ''),
-					zone: getDisplayZone(),
+					zone: this.clock?.named ?? 'utc',
 					wrapped: !!this.warning && this.mode === 'hourOfDay'
 				})
 			: ''

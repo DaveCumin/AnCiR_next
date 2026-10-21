@@ -17,10 +17,11 @@
 // read), a frame `{ zone, wall }`, or a zone name (a true instant in that zone). Omitted,
 // the time is treated as a zone-less UTC column, which is how every time was shown before.
 //
-// Clock-time ANALYSIS (actogram day starts, clock phase, hour-of-day colour, light bands)
-// does not follow "Show times in" (decision 2). Until phase 2 gives each of those its
-// column's zone, they read `getClockZone()`: the legacy zone, else 'utc', which is exactly
-// what they computed before for every session.
+// Clock-time ANALYSIS (actogram day starts, clock phase, hour-of-day colour, light bands,
+// the Bin Data start field) does not follow "Show times in" (decision 2). Each reads its
+// column's clock (core/columnTimeZone.js `columnClock`): a legacy session's one zone, else
+// the column's own zone (a zone-less column as written). `getClockZone()` is that clock for
+// a time with no column.
 
 import { appState } from '$lib/core/core.svelte';
 import {
@@ -54,24 +55,13 @@ export function getLegacyZone() {
 }
 
 /**
- * The zone clock-time analysis reads (actogram day start, clock phase, hour-of-day colour,
- * light bands, the Bin Data and other date inputs that have no column). The legacy zone,
- * else 'utc': what those computed before per-column zones, for every session.
- *
- * PHASE 2 HOOK: each consumer swaps this for its column's zone (`clockZoneOf` in
- * core/columnTimeZone.js) and keeps the legacy zone when `getLegacyZone()` is set.
+ * The clock zone of a time that belongs to no column (a date input with no column, an AI
+ * edit's light band on a plot with no time series): the legacy zone, else 'utc', what those
+ * read before per-column zones. A time of a column reads `columnClock(col)` instead
+ * (core/columnTimeZone.js), which applies the legacy zone first.
  */
 export function getClockZone() {
 	return getLegacyZone() ?? UTC_ZONE;
-}
-
-/**
- * Deprecated name for `getClockZone()`, kept for the clock-time consumers phase 2 rewires
- * (the actogram reads it for its day start, row labels and x formatter). It is no longer
- * the zone times are DISPLAYED in; that is per column (see `zonedDayjs`).
- */
-export function getDisplayZone() {
-	return getClockZone();
 }
 
 /** "Show times in": COLUMN_ZONE, or the zone every time is relabelled in. */

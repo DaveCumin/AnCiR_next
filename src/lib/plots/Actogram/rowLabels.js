@@ -2,10 +2,10 @@
 // What the label beside each actogram row says, and how much room it needs.
 //
 // Pulled out of Actogram.svelte rather than left as two closures in the instance script.
-// The arithmetic is the interesting part (period drift, display zone, an unusable format
+// The arithmetic is the interesting part (period drift, the clock zone, an unusable format
 // string), and none of it is testable while it lives inside a component that needs a wired
 // plot and a browser to render. The component keeps the SVG; this keeps the decisions.
-import dayjs from '$lib/utils/time/dayjsSetup.js';
+import { dayjsInZone } from '$lib/utils/time/zones.js';
 import { DEFAULT_DATE_FORMAT } from '$lib/utils/time/displayTime.js';
 import { scaleLinear } from 'd3-scale';
 
@@ -27,15 +27,16 @@ export const ROW_LABEL_MODES = ['none', 'period', 'date'];
  * PERIOD MODE is the ordinal, 1-based, because "period 1" is what a chronobiologist says
  * about the first row.
  *
- * DATE MODE takes `startTime` (already snapped to the start of a day in the display zone)
+ * DATE MODE takes `startTime` (already snapped to the start of a day in the clock zone)
  * and adds n whole periods. `periodHrs` is part of the arithmetic rather than assumed to be
  * 24, and that matters: on a free-running record at tau = 23.7 the rows drift against the
  * calendar. The drift is the point. Each label states when that cycle actually began, not
  * which calendar day it approximately belongs to. Two adjacent rows can therefore carry the
  * same date, which is correct rather than a bug.
  *
- * Formatting uses the same display zone as the x axis, so a row cannot read as one date
- * while the axis beneath it reads as another.
+ * Formatting uses the actogram's clock zone (its first series' column, core/columnTimeZone.js
+ * columnClock), the same zone as the day start and the x axis, so a row cannot read as one
+ * date while the axis beneath it reads as another.
  *
  * @param {number} day 0-based row index
  * @param {object} opts
@@ -43,7 +44,7 @@ export const ROW_LABEL_MODES = ['none', 'period', 'date'];
  * @param {number|null} [opts.startTime] unix ms of the first row
  * @param {number} [opts.periodHrs]
  * @param {string} [opts.dateFormat] a dayjs format string
- * @param {string} [opts.zone] IANA zone, or 'utc'
+ * @param {string} [opts.zone] 'utc', a fixed offset or an IANA zone
  * @returns {string}
  */
 export function rowLabelText(day, { mode, startTime, periodHrs, dateFormat, zone } = {}) {
@@ -55,7 +56,7 @@ export function rowLabelText(day, { mode, startTime, periodHrs, dateFormat, zone
 
 	const hrs = Number.isFinite(periodHrs) && periodHrs > 0 ? periodHrs : 24;
 	const ms = startTime + day * hrs * 3600000;
-	const dt = zone === 'utc' || !zone ? dayjs.utc(ms) : dayjs(ms).tz(zone);
+	const dt = dayjsInZone(ms, zone || 'utc');
 	if (!dt.isValid()) return ordinal;
 
 	// dayjs echoes tokens it does not know, so a nonsense format produces nonsense rather

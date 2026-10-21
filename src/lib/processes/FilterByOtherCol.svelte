@@ -147,7 +147,7 @@
 					<!--TODO: bind a value here so it always shows in ui. The value needs
 					    formatting as new Date(condition.byColValue).toISOString().slice(0, 16),
 					    falling back to '' when byColValue is empty.-->
-					<DateTimeHrs bind:value={condition.byColValue} />
+					<DateTimeHrs bind:value={condition.byColValue} frame={getColumnById(condition.byColId)} />
 				{:else}
 					<NumberWithUnits bind:value={condition.byColValue} step="0.01" />
 				{/if}

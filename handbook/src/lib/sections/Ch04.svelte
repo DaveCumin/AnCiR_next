@@ -279,7 +279,8 @@
 			<li>
 				If one logger ran on another time zone, set <strong>Shift B's clock by (h)</strong>. Both
 				time inputs must be real times, or both numbers counting from the same origin; with numbers
-				the setting reads <strong>Shift B's x by (x units)</strong>.
+				the setting reads <strong>Shift B's x by (x units)</strong>. The joined time takes A's time
+				zone, which the summary names; when A and B are in different zones the node warns.
 			</li>
 			<li>
 				When A and B rarely share a time, the node offers <strong>+ Add Bin Data</strong>: one click

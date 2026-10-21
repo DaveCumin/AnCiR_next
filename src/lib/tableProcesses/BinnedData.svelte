@@ -291,11 +291,9 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
-	import {
-		formatDateTime,
-		formatDateTimeLocalInput,
-		parseDateTimeLocalInput
-	} from '$lib/utils/time/displayTime.js';
+	import { formatDateTime } from '$lib/utils/time/displayTime.js';
+	import { columnClock, formatClockInput, parseClockInput } from '$lib/core/columnTimeZone.js';
+	import { zoneLabel } from '$lib/utils/time/zones.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -333,14 +331,18 @@
 	// hoursSinceStart uses (min of raw), not getData()[0].
 	let xStartTime_ms = $derived(xIsTime ? (arrayMin(xIN_col?.getData() ?? []) ?? null) : null);
 
+	// The bin start is a CLOCK time of the x column (per-column time zone, phase 2): shown and
+	// typed in that column's zone (as written for zone-less text), never "Show times in", so
+	// "bins start at local midnight" means the column's midnight (plan section 3.5).
 	let binStartDatetimeStr = $derived(
 		xIsTime && xStartTime_ms != null
-			? formatDateTimeLocalInput(xStartTime_ms + p.args.binStart * 3600000)
+			? formatClockInput(xStartTime_ms + p.args.binStart * 3600000, xIN_col)
 			: ''
 	);
+	let binStartZone = $derived(xIsTime ? zoneLabel(columnClock(xIN_col).named) : '');
 
 	function handleBinStartDatetime(e) {
-		const ms = parseDateTimeLocalInput(e.target.value);
+		const ms = parseClockInput(e.target.value, xIN_col);
 		if (!isNaN(ms) && xStartTime_ms != null) {
 			p.args.binStart = (ms - xStartTime_ms) / 3600000;
 			getBinnedData();
@@ -578,7 +580,7 @@
 			<!-- Its own row: a date and time with seconds does not fit half the panel, and the
 			     field cut it to "05/04/20". -->
 			<div class="control-input bin-start-time">
-				<p>Bin start</p>
+				<p>Bin start ({binStartZone})</p>
 				<input
 					type="datetime-local"
 					step="1"

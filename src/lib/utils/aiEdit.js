@@ -25,7 +25,7 @@
 // Additions and parameter changes only: no deletes. A model deleting a user's work on a
 // misread instruction is a much worse failure than one that declines to.
 
-import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+import { core, appConsts } from '$lib/core/core.svelte.js';
 import { resolvePlotRef, ownerPlotOf } from '$lib/core/plotRefs.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
@@ -47,7 +47,8 @@ import {
 	draftSeriesEncodings,
 	applySeriesEncodings
 } from '$lib/components/plotbits/encodingSpec.js';
-import dayjs from '$lib/utils/time/dayjsSetup.js';
+import { dayjsInZone } from '$lib/utils/time/zones.js';
+import { getClockZone } from '$lib/utils/time/displayTime.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
 // looks like one Quick-Plot would produce: navy for measured data, terracotta for a fit.
@@ -785,23 +786,28 @@ export function planEdit(spec, { summary, facts, local = null }) {
  *     century to reach it.
  *
  * So for a time axis, find the first `fromHour` o'clock at or after the data starts, in the
- * session's own display timezone (18:00 is a LOCAL hour; using UTC would silently shift the
- * shading by the offset — the kind of error that looks plausible on screen).
+ * x column's clock zone (core/columnTimeZone.js columnClock; a legacy session's one zone).
+ * 18:00 is a LOCAL hour; using UTC would silently shift the shading by the offset, the kind
+ * of error that looks plausible on screen.
  *
  * @param {object} inner the plot's data object (plot.plot)
  * @param {number} fromHour clock hour 0–24
- * @param {string} tz IANA zone, e.g. 'Pacific/Auckland'
+ * @param {string} tz the clock zone: 'utc', a fixed offset or an IANA zone
  */
 export function firstBandStart(inner, fromHour, tz) {
 	const minX = inner?.xlims?.[0];
 	if (!inner?.anyXdataTime) return fromHour; // numeric axis: the hour is the value
 	if (!Number.isFinite(minX)) return fromHour; // no data yet — harmless; bands render off none
 
-	const zone = tz && tz !== 'utc' ? tz : 'UTC';
 	const h = Math.floor(fromHour);
 	const m = Math.round((fromHour % 1) * 60);
 	// The same clock hour on the data's own first day, then step forward if that's already past.
-	let start = dayjs(minX).tz(zone).hour(h).minute(m).second(0).millisecond(0);
+	// dayjsInZone: an IANA zone through dayjs's tz() as before, and a fixed offset ('+05:30').
+	let start = dayjsInZone(minX, tz || 'utc')
+		.hour(h)
+		.minute(m)
+		.second(0)
+		.millisecond(0);
 	if (start.valueOf() < minX) start = start.add(1, 'day');
 	return start.valueOf();
 }
@@ -1029,7 +1035,11 @@ export function applyEdit(plan) {
 			enabled: true,
 			repeatEveryHours: 24,
 			nightDurationHours: b.durationHours,
-			startTimeHours: firstBandStart(plot.plot, b.fromHour, appState?.displayTimezone),
+			startTimeHours: firstBandStart(
+				plot.plot,
+				b.fromHour,
+				plot.plot.overlayContext?.()?.xClockZone ?? getClockZone()
+			),
 			// The band starts at a clock time we computed, NOT at whenever the data happens
 			// to begin — which is what useDataMin would mean.
 			useDataMin: false

@@ -4,15 +4,15 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/core/core.svelte', () => ({ appState: { displayTimezone: 'utc' } }));
 
 import {
-	getDisplayZone,
+	getClockZone,
 	formatDateTime,
 	formatDateTimeLocalInput,
 	parseDateTimeLocalInput
 } from './displayTime.js';
 
-describe('getDisplayZone', () => {
-	it('returns the configured display timezone (utc in tests)', () => {
-		expect(getDisplayZone()).toBe('utc');
+describe('getClockZone', () => {
+	it('is utc for a session that is not legacy', () => {
+		expect(getClockZone()).toBe('utc');
 	});
 });
 

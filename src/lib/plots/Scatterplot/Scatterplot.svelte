@@ -5,6 +5,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleUtc, scaleLog } from 'd3-scale';
 	import { zoneAlignedTicks } from '$lib/utils/time/displayTime.js';
+	import { columnClock } from '$lib/core/columnTimeZone.js';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -900,7 +901,10 @@
 				// Where a band that follows the data starts: the data minimum (or the user's
 				// minimum), not the padded edge of the domain.
 				xAnchorMin: this.xlimsUnpadded[0],
-				xIsTime: this.anyXdataTime
+				xIsTime: this.anyXdataTime,
+				// The clock a typed time or a repeating band's start is read in (per-column time
+				// zone, phase 2): the first time series' column, as the axis.
+				xClockZone: this.anyXdataTime ? columnClock(this.xTimeSeries[0]?.x ?? null).zone : null
 			};
 		}
 

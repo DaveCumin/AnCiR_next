@@ -33,6 +33,7 @@
 		OUTPUT_X_MODE_COLUMN
 	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Rectangular Wave';
@@ -58,7 +59,7 @@
 		['fixedDutyCycle', { val: 0.5 }],
 		// What hour 0 means for the acrophase (panel, stored values, stats table):
 		// 'start' = hours after the first sample (x = 0 for a numeric x; the default),
-		// 'clock' = hours after local midnight in the display timezone, wrapped to the
+		// 'clock' = hours after local midnight in the x column's clock zone, wrapped to the
 		// fitted period. Review FIT-9; utils/phaseReference.js.
 		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
@@ -359,7 +360,6 @@
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 
 	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
@@ -470,11 +470,11 @@
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.fixedDutyCycle + '|' + p.args.fixedKappa + '|' + p.args.fixedPeriod;
 		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod + '|' + p.args.permutationScheme;
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -769,6 +769,7 @@
 		<PhaseReferenceSelect
 			bind:value={p.args.phaseReference}
 			xIsTime={xIN_col?.type === 'time'}
+			xCol={xIN_col}
 			onchange={getRwave}
 		/>
 	</div>

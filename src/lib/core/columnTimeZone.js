@@ -29,7 +29,15 @@
 import { core } from './core.svelte.js';
 import { producerInputColId } from './producerRuntime.js';
 import { formatHasOffset } from '$lib/utils/time/TimeUtils.js';
-import { normalizeZone, UTC_ZONE } from '$lib/utils/time/zones.js';
+import {
+	normalizeZone,
+	UTC_ZONE,
+	wallClockToInstant,
+	zoneTransitions,
+	dayjsInZone,
+	parseInZone
+} from '$lib/utils/time/zones.js';
+import { getLegacyZone } from '$lib/utils/time/displayTime.js';
 
 const MAX_DEPTH = 64;
 
@@ -140,14 +148,87 @@ export function resolveTimeFrame(col) {
 }
 
 /**
- * PHASE 2 HOOK: the zone a clock-time reading (day start, hour of day, clock phase) of this
- * column's STORED ms should be taken in. A wall-clock column's ms are its wall clock read
- * as UTC, so they are read in 'utc'; a true-instant column is read in its zone. A legacy
- * session keeps its one zone (utils/time/displayTime.js getLegacyZone), which callers apply
- * before this. Not wired to any consumer in phase 1.
+ * The zone a clock-time reading (day start, hour of day, clock phase) of this column's
+ * STORED ms is taken in. A wall-clock column's ms are its wall clock read as UTC, so they are
+ * read in 'utc'; a true-instant column is read in its zone. Ignores a legacy session; see
+ * `columnClock`, which is what clock-time consumers call.
  * @param {any} col a Column
  */
 export function clockZoneOf(col) {
 	const frame = col?.timeFrame ?? resolveTimeFrame(col);
 	return frame.wall ? UTC_ZONE : frame.zone;
+}
+
+/**
+ * How clock-time ANALYSIS reads a column (per-column time zone, phase 2; plan sections 3.4
+ * to 3.7). Every clock-time consumer (actogram day start and labels, clock phase, the
+ * hour-of-day colour, light bands, the Bin Data start field) asks this, never "Show times
+ * in", so changing how times are shown can never change a result (decision 2).
+ *
+ *   zone    the zone the stored ms are read in (`dayjsInZone(ms, zone)` is the local clock)
+ *   named   the zone the column's clock belongs to, to name in a label ("Hour of day
+ *           (Pacific/Auckland)"). Differs from `zone` only for a wall-clock column, whose ms
+ *           are read in 'utc' because they ARE its wall clock.
+ *   wall    the stored ms are the wall clock read as UTC (zone-less text)
+ *   legacy  a legacy session: its one zone, read exactly as before per-column zones
+ *
+ * A legacy session (a non-UTC "Timezone" saved before per-column zones) keeps that one zone
+ * for every column, so it computes exactly what it did. Reads `appState` (through
+ * getLegacyZone): node compute tests that mock core without it call this only in clock mode.
+ * @param {any} col a Column, or null (a time with no column: as written, UTC)
+ * @returns {{ zone: string, named: string, wall: boolean, legacy: boolean }}
+ */
+export function columnClock(col) {
+	const legacy = getLegacyZone();
+	if (legacy) return { zone: legacy, named: legacy, wall: false, legacy: true };
+	const frame = col ? (col.timeFrame ?? resolveTimeFrame(col)) : DEFAULT_FRAME;
+	const named = normalizeZone(frame?.zone) ?? UTC_ZONE;
+	const wall = frame?.wall !== false;
+	return { zone: wall ? UTC_ZONE : named, named, wall, legacy: false };
+}
+
+/**
+ * The part of a node's compute cache key that a clock-time result depends on: changes when
+ * the column's zone (or the legacy zone) does. 'utc' for an as-written UTC column and the
+ * legacy zone for a legacy session, which are what the key held before phase 2.
+ * @param {any} col
+ */
+export function clockCacheKey(col) {
+	const c = columnClock(col);
+	if (c.legacy) return c.zone;
+	if (c.wall && c.named === UTC_ZONE) return UTC_ZONE;
+	return c.wall ? `${c.named}/wall` : c.named;
+}
+
+/**
+ * The daylight-saving changes of the column's clock zone inside a record whose stored ms run
+ * from `minMs` to `maxMs`: `[{ at, before, after }]` (utils/time/zones.js zoneTransitions;
+ * `at` is an instant). A wall-clock column's ms are first read as wall clock in its zone.
+ * @param {{ named: string, wall: boolean }} clock from `columnClock`
+ * @param {number} minMs
+ * @param {number} maxMs
+ */
+export function clockDstChanges(clock, minMs, maxMs) {
+	if (!clock || !Number.isFinite(minMs) || !Number.isFinite(maxMs)) return [];
+	const lo = clock.wall ? wallClockToInstant(minMs, clock.named) : minMs;
+	const hi = clock.wall ? wallClockToInstant(maxMs, clock.named) : maxMs;
+	return zoneTransitions(clock.named, lo, hi);
+}
+
+/**
+ * A stored time as the `<input type="datetime-local">` value of a CLOCK field of this column
+ * (Bin Data's "Bin start"): its wall clock in the column's clock zone, "YYYY-MM-DDTHH:mm:ss".
+ * A legacy session reads its one zone, exactly as before.
+ * @param {number} ms
+ * @param {any} col
+ */
+export function formatClockInput(ms, col) {
+	if (ms == null || !Number.isFinite(Number(ms))) return '';
+	const dt = dayjsInZone(Number(ms), columnClock(col).zone);
+	return dt.isValid() ? dt.format('YYYY-MM-DD[T]HH:mm:ss') : '';
+}
+
+/** The inverse of `formatClockInput`: the stored ms a typed clock field names, or NaN. */
+export function parseClockInput(text, col) {
+	return parseInZone(text, null, columnClock(col).zone);
 }

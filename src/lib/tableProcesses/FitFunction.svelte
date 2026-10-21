@@ -42,6 +42,7 @@
 		OUTPUT_X_MODE_COLUMN
 	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitTooFewPointsWarning, fitModelParameters } from '$lib/utils/fitMinPoints.js';
 
@@ -90,7 +91,7 @@
 		// What hour 0 means for the phase outputs (acrophase, onset, offset):
 		// 'start' = hours after the first sample (x = 0 for a numeric x; the default,
 		// and what saved sessions report), 'clock' = hours after local midnight in the
-		// display timezone, wrapped to one period. Review FIT-9; utils/phaseReference.js.
+		// x column's clock zone, wrapped to one period. Review FIT-9; utils/phaseReference.js.
 		['phaseReference', { val: PHASE_REFERENCE_START }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
@@ -723,7 +724,6 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import {
 		usePeriodRangeAuto,
@@ -832,11 +832,11 @@
 			p.args.fixedK2 +
 			'|' +
 			p.args.fixedKappa;
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// The fit stats live only in transient state and aren't persisted with the
@@ -1695,6 +1695,7 @@
 		<PhaseReferenceSelect
 			bind:value={p.args.phaseReference}
 			xIsTime={xIN_col?.type === 'time'}
+			xCol={xIN_col}
 			onchange={() => getFit()}
 		/>
 	</div>

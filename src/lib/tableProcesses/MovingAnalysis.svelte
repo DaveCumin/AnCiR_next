@@ -22,7 +22,11 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/movinganalysis.worker-task.js';
 	import { PHASE_REFERENCE_START, timeOriginMs } from '$lib/utils/phaseReference.js';
-	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import {
+		resolveNodePhaseReference,
+		windowClockOffsets
+	} from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 	// MovingAnalysis.test.js imports getStatKeys from this component, and it is also used
 	// locally below. `export { <imported binding> }` is a re-export and assigns nothing; the
 	// rule misreads it inside a Svelte module script (the same code lints clean in a .js file).
@@ -174,8 +178,16 @@
 			if (!yCol) continue;
 			yEntries.push({ yId, yData: yCol.getData() });
 		}
-		// One phase frame for every window: the record start, plus the node's reference.
-		const phaseRef = resolveNodePhaseReference(argsIN, tCol);
+		// One phase frame for every window: the record start, plus the node's reference. In
+		// clock time each window takes the offset in force at its centre when the record
+		// crosses a daylight-saving change (decision 6; null keeps the one offset).
+		const phaseRef = resolveNodePhaseReference(argsIN, tCol, { perWindow: true });
+		const windowOffsetHours = isTimeX
+			? windowClockOffsets(
+					phaseRef,
+					starts.map((s) => s + windowSize / 2)
+				)
+			: null;
 		const maParams = {
 			tAll,
 			ys: yEntries.map((e) => e.yData),
@@ -183,7 +195,7 @@
 			windowSize,
 			statKeys,
 			args: argsIN,
-			phase: { recordStart: xMin, ref: phaseRef }
+			phase: { recordStart: xMin, ref: phaseRef, windowOffsetHours }
 		};
 		const perY = shouldUseWorkers({ work: starts.length * yEntries.length })
 			? await runComputeTask('movingAnalysis.compute', maParams)
@@ -264,7 +276,6 @@
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -376,11 +387,11 @@
 			p.args.pgAlpha +
 			'|' +
 			(p.args.summaryPercentile ?? '');
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -706,6 +717,7 @@
 			<PhaseReferenceSelect
 				bind:value={p.args.phaseReference}
 				{xIsTime}
+				xCol={xIN_col}
 				numericOrigin={p.args.analysis === 'npcra' ? 'the first sample' : 'x = 0'}
 			/>
 		</div>

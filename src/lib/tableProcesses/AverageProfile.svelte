@@ -12,6 +12,7 @@
 	import { averageDailyProfile } from '$lib/utils/averageProfile.js';
 	import { relabelFoldedProfile, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 
 	const displayName = 'Average Profile';
 
@@ -24,7 +25,7 @@
 		['nBins', { val: 24 }],
 		// What the profile's time axis means: 'start' = hours after the first sample
 		// (the default, and what saved sessions report), 'clock' = hours after local
-		// midnight in the display timezone, wrapped to the period. Only relabels and
+		// midnight in the x column's clock zone, wrapped to the period. Only relabels and
 		// reorders the bins; no value changes. Review FIT-9.
 		['phaseReference', { val: PHASE_REFERENCE_START }],
 		[
@@ -154,7 +155,6 @@
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
-	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -191,11 +191,11 @@
 		}
 		out += p.args.period;
 		out += p.args.nBins;
-		// Clock-time phases move with the display timezone, so it is an input then.
+		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
 			p.args.phaseReference +
-			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
+			(p.args.phaseReference === 'clock' ? '@' + clockCacheKey(xIN_col) : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -348,6 +348,7 @@
 		<PhaseReferenceSelect
 			bind:value={p.args.phaseReference}
 			xIsTime={xIN_col?.type === 'time'}
+			xCol={xIN_col}
 			numericOrigin="the first sample"
 		/>
 	</div>

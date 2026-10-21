@@ -17,7 +17,7 @@
 //   addOverlay(kind, form) / removeOverlay(id)
 //   overlayXScale, overlayYScale                 // d3-like; .range() = [0, w] / [h, 0]
 //   padding                                      // { left, top }: where the plot area starts
-//   overlayContext()                             // { xDomainMin, xDomainMax, xAnchorMin, xIsTime }
+//   overlayContext()                             // { xDomainMin, xDomainMax, xAnchorMin, xIsTime, xClockZone? }
 //   overlaySeriesColour()                        // ribbon default fill; null falls back
 //   overlayXValueFor(column)        (optional)   // x-channel mapper for a wired column, or null
 //   overlayXTransform(v)            (optional)   // stored x -> drawn x, or null to drop (FFT)

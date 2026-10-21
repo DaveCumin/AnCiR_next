@@ -248,12 +248,22 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start date/time</p>
-			<DateTimeHrs value={annotation.startDateTime} onChange={changedStartDateTime} label="Start" />
+			<DateTimeHrs
+				value={annotation.startDateTime}
+				zone={annotation.parentData?.clockZone}
+				onChange={changedStartDateTime}
+				label="Start"
+			/>
 		</div>
 
 		<div class="control-input">
 			<p>End date/time</p>
-			<DateTimeHrs value={annotation.endDateTime} onChange={changedEndDateTime} label="End" />
+			<DateTimeHrs
+				value={annotation.endDateTime}
+				zone={annotation.parentData?.clockZone}
+				onChange={changedEndDateTime}
+				label="End"
+			/>
 		</div>
 	</div>
 {/snippet}

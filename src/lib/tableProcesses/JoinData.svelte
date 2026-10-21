@@ -14,6 +14,7 @@
 	// No worker path, so no worker size gate: see utils/joinData.js.
 	import { core } from '$lib/core/core.svelte';
 	import { getColumnById as getColumnByIdForJoin } from '$lib/core/Column.svelte';
+	import { columnClock, clockCacheKey } from '$lib/core/columnTimeZone.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { columnNamer } from '$lib/core/columnLabels.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -25,6 +26,7 @@
 		timeKind,
 		timeKindProblem,
 		joinSummary,
+		joinZoneNotes,
 		NUMERIC_NOTE
 	} from '$lib/utils/joinData.js';
 
@@ -154,6 +156,11 @@
 			);
 		}
 		notes.push(...pairTypeNotes(plan));
+		// The joined time takes A's zone (decision 8); different zones are said (phase 2).
+		const zoneNotes =
+			kind === 'time'
+				? joinZoneNotes(columnClock(colA), columnClock(colB), argsIN.shiftB)
+				: { summary: '', warning: null };
 
 		const processHash = crypto.randomUUID();
 		const out = argsIN.out ?? {};
@@ -185,7 +192,8 @@
 				kind,
 				outputs: plan.outputs,
 				pairOf: plan.pairOf,
-				summary: joinSummary(res.counts)
+				summary: [joinSummary(res.counts), zoneNotes.summary].filter(Boolean).join(' '),
+				zoneWarning: zoneNotes.warning
 			},
 			res.ok
 		];
@@ -345,6 +353,12 @@
 	// The output keys this node should have right now (the reconcile target).
 	let wantKeys = $derived(joinOutKeys(p.args, nameOf));
 
+	/** The node's warnings badge: a refusal, or two time columns in zones that need a look. */
+	function joinWarnings(r) {
+		if (r?.error) return [r.error];
+		return r?.zoneWarning ? [r.zoneWarning] : [];
+	}
+
 	let getHash = $derived.by(() => {
 		let h = '';
 		for (const id of [p.args.aTimeIN, p.args.bTimeIN, ...ids.aIds, ...ids.bIds]) {
@@ -355,6 +369,8 @@
 		h += '|pairing:' + JSON.stringify(p.args.pairing ?? {});
 		// The stored choice (null follows the mode) and what it means for these wires.
 		h += '|shift:' + p.args.shiftB + '|src:' + p.args.sourceColumn + ':' + joinSourceOn(p.args);
+		// The zones decide the summary and the zone warning (not the joined ms, in phase 2).
+		h += '|zones:' + (colA ? clockCacheKey(colA) : '') + '/' + (colB ? clockCacheKey(colB) : '');
 		if (joinSourceOn(p.args)) {
 			const labels =
 				joinMode(p.args) === 'stack'
@@ -370,13 +386,13 @@
 	});
 	function restore(cached) {
 		result = cached;
-		p.warnings = cached?.error ? [cached.error] : [];
+		p.warnings = joinWarnings(cached);
 	}
 	$effect(() => memo.follow(getHash, restore));
 
 	function recompute() {
 		[result, p.args.valid] = joindata(p.args);
-		p.warnings = result?.error ? [result.error] : [];
+		p.warnings = joinWarnings(result);
 		memo.hash = getHash;
 	}
 
@@ -386,7 +402,7 @@
 		if (h !== memo.hash) {
 			untrack(() => {
 				[result, p.args.valid] = joindata(p.args);
-				p.warnings = result?.error ? [result.error] : [];
+				p.warnings = joinWarnings(result);
 			});
 			memo.hash = h;
 		}
@@ -620,6 +636,9 @@
 	{/if}
 	{#if result?.error}
 		<p class="warn">{result.error}</p>
+	{/if}
+	{#if !result?.error && result?.zoneWarning}
+		<p class="warn" data-testid="join-zone-warning">{result.zoneWarning}</p>
 	{/if}
 	{#each result?.notes ?? [] as note (note)}
 		<p class="note">{note}</p>
