@@ -20,7 +20,7 @@ const HEADER = `#!/usr/bin/env python3
 
 Reproduces the analyses in an AnCiR session. Requires: numpy, pandas, scipy.
 Run it (\`python this_file.py\`) to write <name>_output/ with columns.csv,
-columns_after_tables.csv, and any plots.
+columns_after_tables.csv, any plots and their computed data (plot_*_data.csv).
 """
 from __future__ import annotations
 import json
@@ -150,9 +150,12 @@ def main():
     print(f"[ancir] wrote {out_path / 'columns_after_tables.csv'} "
           f"({len(df_final)} rows, {len(df_final.columns)} cols)")
 
-    # Render plots
+    # Render plots (PNG) and export their computed data (CSV). The CSVs mirror
+    # the app's "Show/Save data" for calculating plots (periodogram, FFT,
+    # correlogram, actogram, wavelet scalogram): the numbers the plot derives, not the raw input.
     if PLOTS:
         render_plots(PLOTS, columns_index, out_path)
+        export_plot_data(PLOTS, columns_index, out_path, zone=DISPLAY_TIMEZONE)
 
     # Loud summary of any unsupported processes (only reachable when
     # STRICT_PROCESSES was set to False; strict mode aborts earlier).
@@ -461,8 +464,13 @@ function dataSectionLines(session, dataAsCsv) {
 	lines.push(embed('TABLE_PROCESSES', tpsClean));
 	lines.push(embed('PLOTS', plots));
 	lines.push(embed('STORED_VALUES', storedValues));
-	// The display zone clock-time phase outputs are reported in (phaseReference 'clock').
-	lines.push(`set_display_timezone(${JSON.stringify(session.appState?.displayTimezone ?? 'utc')})`);
+	// The app's display zone: actogram rows start at local midnight in it, so the exported
+	// actogram plot data folds in the same zone (export_plot_data reads DISPLAY_TIMEZONE, bound
+	// HERE so it holds in split mode too, where the helpers' own global is a separate name).
+	// Clock-time phase outputs (phaseReference 'clock') read it through the runtime.
+	const zone = JSON.stringify(session.appState?.displayTimezone || 'utc');
+	lines.push(`DISPLAY_TIMEZONE = ${zone}`);
+	lines.push(`set_display_timezone(${zone})`);
 	return { lines, csvText };
 }
 
@@ -481,7 +489,8 @@ functions themselves live in ancir_helpers.py, exported alongside this file;
 keep both (and any ${DATA_CSV_NAME}) in the SAME folder.
 
 Requires: numpy, pandas, scipy. Run it (\`python this_file.py\`) to write
-<name>_output/ with columns.csv, columns_after_tables.csv, and any plots.
+<name>_output/ with columns.csv, columns_after_tables.csv, any plots and their
+computed data (plot_*_data.csv).
 """
 from __future__ import annotations
 import json

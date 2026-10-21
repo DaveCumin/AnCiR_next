@@ -470,6 +470,25 @@ describe('every plot control panel edit is one exact undo step', () => {
 		}, 240000);
 	}
 
+	// The actogram's light-band controls only show once a band exists, so audit it with bands:
+	// the bar's Height (saved since 2026-10-21; before, the edit changed nothing saved and so
+	// was never recorded), each band's colour and its share of the period.
+	it('actogram with light bands (Height, each band colour and share)', async () => {
+		const prepare = (plot) => {
+			plot.plot.lightBands.addBand({ col: '#000000', pc: 50 });
+			plot.plot.lightBands.addBand({ col: '#ffffff', pc: 50 });
+		};
+		const results = await auditType('actogram', prepare);
+		const failures = Object.fromEntries(
+			Object.entries(results).filter(
+				([k, v]) => v !== 'ok' && !(k in EXCLUSIONS) && !(k in NO_SAVED_CHANGE)
+			)
+		);
+		expect(failures).toEqual({});
+		const height = Object.entries(results).filter(([k]) => / \| Height$/.test(k));
+		expect(height.map(([, v]) => v)).toContain('ok');
+	}, 240000);
+
 	it('records something for every plot type (guards a harness that edits nothing)', () => {
 		for (const type of PLOT_TYPES) {
 			const ok = Object.values(RESULTS[type] ?? {}).filter((v) => v === 'ok').length;

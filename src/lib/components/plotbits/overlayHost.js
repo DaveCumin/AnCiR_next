@@ -21,6 +21,7 @@
 //   overlaySeriesColour()                        // ribbon default fill; null falls back
 //   overlayXValueFor(column)        (optional)   // x-channel mapper for a wired column, or null
 //   overlayXTransform(v)            (optional)   // stored x -> drawn x, or null to drop (FFT)
+//   overlayHorizontalLineAt(v)      (optional)   // stored y -> drawn y, or null to skip (CWT)
 //   overlayRangeHint(axis)          (optional)   // remedy for the "outside the range" note
 //
 // `overlayXValueFor` returns a function `(v) => axisValue` (or null for identity) rather than
@@ -30,6 +31,9 @@
 // `overlayXTransform` is applied by `geometry()` only, so channels, saved JSON and warnings
 // keep the STORED units: an FFT stores vertical positions as periods in hours and draws them
 // at 1/p while its axis shows frequency, so toggling the axis never rewrites an overlay.
+// `overlayHorizontalLineAt` is read only where a horizontal line is DRAWN
+// (OverlayClass.drawnLinePositions): a host whose y range never widens (CWT) skips a line
+// outside it rather than placing it off the plot, while the range note still sees it.
 //
 // On a facet panel (the host's `parentBox.generator` is set), a channel wired to one of the
 // generator's own per-series metric outputs reads only the panel's series' rows

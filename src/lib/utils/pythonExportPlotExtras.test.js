@@ -49,11 +49,24 @@ afterAll(() => {
 	for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
+/**
+ * The PLOTS the script embeds, decoded. A long embed is split into adjacent string literals
+ * (pythonExport.js embed), so a name can straddle two of them: searching the raw text
+ * failed as soon as a new fixture case moved a chunk boundary onto a plot name.
+ */
+function embeddedPlots(text) {
+	const m = /\nPLOTS = json\.loads\(([\s\S]*?)\)\n/.exec(text);
+	expect(m, 'PLOTS embed').toBeTruthy();
+	const literals = m[1].trim().split(/\n\s*/);
+	return JSON.parse(literals.map((l) => JSON.parse(l)).join(''));
+}
+
 describe('the Python export carries the plots these features live on', () => {
 	it('every case plot, with its settings, reaches the script', () => {
 		for (const g of GROUPS.values()) {
 			const [file] = sessionToPythonFiles(sessionFor(g), PY_RUNTIME);
-			for (const p of g.plots) expect(file.text).toContain(`Extras ${p.name.slice(7)}`);
+			const names = embeddedPlots(file.text).map((p) => p.name);
+			for (const p of g.plots) expect(names).toContain(p.name);
 		}
 		const fft = GROUPS.get('demo-fft-rhythm');
 		const [file] = sessionToPythonFiles(sessionFor(fft), PY_RUNTIME);

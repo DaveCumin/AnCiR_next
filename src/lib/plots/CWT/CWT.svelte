@@ -212,6 +212,17 @@
 			return null;
 		}
 
+		/**
+		 * A horizontal line at period `v` is drawn at `v`, or not at all outside the period
+		 * range: nothing widens here, so such a line would only be placed off the plot and
+		 * clipped (its block's note says it is not drawn).
+		 */
+		overlayHorizontalLineAt(v) {
+			const [lo, hi] = this.overlayYScale.domain();
+			const tol = Math.abs(hi - lo) * 1e-9;
+			return v >= Math.min(lo, hi) - tol && v <= Math.max(lo, hi) + tol ? v : null;
+		}
+
 		/** The remedy an Overlays-tab block offers when its mark is outside the period range. */
 		overlayRangeHint(axis) {
 			return axis === 'y'
@@ -372,38 +383,108 @@
 	}
 
 	/**
+	 * Image rows the scalogram is painted with on a LINEAR period axis (at least one per
+	 * scale). Each row is H / 1024 px tall at most, under a pixel for any plot up to 1024 px.
+	 */
+	export const SCALOGRAM_LINEAR_ROWS = 1024;
+
+	/**
+	 * What each image row shows, row 0 at the TOP of the plot (the longest period):
+	 * `{ j0, j1, w }`, row r painted as scale j0[r]'s colours blended with scale j1[r]'s at
+	 * weight w[r] (0 = all j0).
+	 *
+	 * The scales are log2-spaced, so on a log period axis one evenly spaced row per scale is
+	 * the honest picture (row r is scale n - 1 - r, w = 0; the browser smooths between rows as
+	 * it stretches the image). On a LINEAR axis the same rows sat at the wrong periods (the
+	 * 24 h power drew at about 26 h on a 4 to 30 h axis), so the image is resampled onto the
+	 * axis instead: SCALOGRAM_LINEAR_ROWS evenly spaced rows, each at the period of its centre
+	 * on the linear axis, blending the two scales whose periods bracket it by its distance
+	 * from each in log period. That is the log axis's own picture, moved: each scale's colour
+	 * is exactly at its own period, where periodToY puts its tick, the cone, the ridge and the
+	 * overlays, and it fades into its neighbours as it does on the log axis.
+	 * Mirrored by tools/ancir_runtime.py cwt_image_rows.
+	 */
+	export function scalogramImageRows(periods, logScale, nLinearRows = SCALOGRAM_LINEAR_ROWS) {
+		const n = periods.length;
+		if (logScale || n < 2) {
+			const j = Int32Array.from({ length: n }, (_, r) => n - 1 - r);
+			return { j0: j, j1: j, w: new Float64Array(n) };
+		}
+		const lo = periods[0];
+		const hi = periods[n - 1];
+		const R = Math.max(n, nLinearRows);
+		const j0 = new Int32Array(R);
+		const j1 = new Int32Array(R);
+		const w = new Float64Array(R);
+		let k = 1; // walking up from the bottom row: periods[k - 1] <= p <= periods[k]
+		for (let r = R - 1; r >= 0; r--) {
+			const p = lo + (1 - (r + 0.5) / R) * (hi - lo);
+			while (k < n - 1 && periods[k] < p) k++;
+			j0[r] = k - 1;
+			j1[r] = k;
+			const t = Math.log(p / periods[k - 1]) / Math.log(periods[k] / periods[k - 1]);
+			w[r] = Math.min(1, Math.max(0, t));
+		}
+		return { j0, j1, w };
+	}
+
+	/**
 	 * Paint the power field to an offscreen canvas and return a data URI.
 	 *
 	 * Row 0 of the image is the TOP of the plot, and the top of a scalogram is the
-	 * LONGEST period, so the scale index is walked in reverse.
+	 * LONGEST period. `rows` says what each image row shows (scalogramImageRows); without
+	 * it, one row per scale, the longest at the top (the log axis).
 	 *
 	 * Returns '' when there is no DOM (SSR / unit tests) so the caller can fall
 	 * back to a plain message instead of throwing.
 	 */
-	export function renderScalogramURI(power, colormap, powerMax) {
+	export function renderScalogramURI(power, colormap, powerMax, rows = null) {
 		if (typeof document === 'undefined') return '';
 		power = downsampleColumns(power, SCALOGRAM_MAX_COLUMNS);
 		const nScales = power.length;
 		const nTimes = power[0]?.length ?? 0;
 		if (nScales === 0 || nTimes === 0) return '';
+		rows =
+			rows ??
+			scalogramImageRows(
+				power.map((_, j) => j + 1),
+				true
+			);
+		const nRows = rows.j0.length;
+		if (nRows === 0) return '';
 
 		const canvas = document.createElement('canvas');
 		canvas.width = nTimes;
-		canvas.height = nScales;
+		canvas.height = nRows;
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return '';
-		const img = ctx.createImageData(nTimes, nScales);
+		const img = ctx.createImageData(nTimes, nRows);
 
-		for (let row = 0; row < nScales; row++) {
-			const j = nScales - 1 - row; // longest period at the top
+		// Each scale's colours once (the colour lookup is the costly part), then every row
+		// blended from its two scales' (scalogramImageRows).
+		const scaleRGB = new Array(nScales);
+		const rgbOf = (j) => {
+			if (scaleRGB[j]) return scaleRGB[j];
+			const px = new Uint8Array(nTimes * 3);
 			for (let i = 0; i < nTimes; i++) {
-				const v = power[j][i];
-				const rgb = colormapRGB(colormap, normaliseTo01(v, 0, powerMax));
-				const [r, g, b] = parseRGB(rgb);
-				const o = (row * nTimes + i) * 4;
-				img.data[o] = r;
-				img.data[o + 1] = g;
-				img.data[o + 2] = b;
+				const [r, g, b] = parseRGB(colormapRGB(colormap, normaliseTo01(power[j][i], 0, powerMax)));
+				px[i * 3] = r;
+				px[i * 3 + 1] = g;
+				px[i * 3 + 2] = b;
+			}
+			return (scaleRGB[j] = px);
+		};
+		for (let row = 0; row < nRows; row++) {
+			const a = rgbOf(rows.j0[row]);
+			const wt = rows.w[row];
+			const b = wt > 0 ? rgbOf(rows.j1[row]) : a;
+			const base = row * nTimes * 4;
+			for (let i = 0; i < nTimes; i++) {
+				const o = base + i * 4;
+				for (let c = 0; c < 3; c++) {
+					const va = a[i * 3 + c];
+					img.data[o + c] = wt > 0 ? Math.round(va + (b[i * 3 + c] - va) * wt) : va;
+				}
 				img.data[o + 3] = 255;
 			}
 		}
@@ -474,7 +555,12 @@
 				{tr.reason === 'no data' ? 'Wire a time column and a value column.' : tr.reason}
 			</text>
 		{:else}
-			{@const uri = renderScalogramURI(tr.power, plot.colormap, plot.powerMax)}
+			{@const uri = renderScalogramURI(
+				tr.power,
+				plot.colormap,
+				plot.powerMax,
+				scalogramImageRows(tr.periods, plot.logScale)
+			)}
 			{@const t0 = tr.times[0]}
 			{@const t1 = tr.times[tr.times.length - 1]}
 			{@const ticks = periodTicks(tr.periods)}

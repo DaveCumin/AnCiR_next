@@ -2,16 +2,25 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
+	/** The bar's height in px for a session saved without one (it was not saved before). */
+	export const LIGHT_BAND_DEFAULT_HEIGHT = 10;
+
+	/** A saved height, or the default for a missing or unusable one. */
+	function validHeight(h) {
+		return typeof h === 'number' && Number.isFinite(h) && h > 0 ? h : LIGHT_BAND_DEFAULT_HEIGHT;
+	}
+
 	export class LightBandClass {
 		parent;
 		bands = $state([]);
-		height = $state(10);
+		height = $state(LIGHT_BAND_DEFAULT_HEIGHT);
 		length = $derived(this.bands.length);
 		allOrSingle = $state('all');
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 			this.bands = dataIN?.bands ?? [];
+			this.height = validHeight(dataIN?.height);
 		}
 
 		addBand(band) {
@@ -103,13 +112,15 @@
 
 		toJSON() {
 			return {
-				bands: this.bands
+				bands: this.bands,
+				height: this.height
 			};
 		}
 
 		static fromJSON(json, parent) {
 			return new LightBandClass(parent, {
-				bands: json.bands
+				bands: json?.bands,
+				height: json?.height
 			});
 		}
 	}
@@ -121,12 +132,25 @@
 	import BlockAdd from '$lib/components/plotbits/BlockAdd.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	let { bands = $bindable(), which } = $props();
-	let singleWidth = $derived.by(() => {
-		const plotwidth =
-			bands.parentPlot.parentBox.width -
-			bands.parentPlot.paddingIN.left -
-			bands.parentPlot.paddingIN.right;
-		return plotwidth / bands.parentPlot.doublePlot;
+	// The bar spans exactly the rows: it starts where they start (the plot's laid-out left
+	// padding, which includes the row-label gutter) and is as wide as they are (after an
+	// outside legend takes its share, at the view's size). Each plotted period gets its own
+	// copy of the bands, so a double plot shows the light schedule over both days. It used to
+	// be placed from the SAVED padding and the figure's width, so row labels pushed the rows
+	// right but not the bar, and an outside legend narrowed the rows but not the bar.
+	let copies = $derived(Math.max(1, Math.round(Number(bands.parentPlot.doublePlot) || 1)));
+	let singleWidth = $derived(bands.parentPlot.plotwidth / copies);
+	let layout = $derived.by(() => {
+		const out = [];
+		for (let c = 0; c < copies; c++) {
+			let x = c * singleWidth;
+			for (const b of bands.bands) {
+				const w = singleWidth * 0.01 * b.pc;
+				out.push({ x, w, col: b.col });
+				x += w;
+			}
+		}
+		return out;
 	});
 </script>
 
@@ -200,16 +224,13 @@
 {#snippet plot(bands)}
 	<g
 		class="actogram"
-		style="transform: translate({bands.parentPlot.paddingIN.left}px, {bands.height}px);"
+		style="transform: translate({bands.parentPlot.padding.left}px, {bands.height}px);"
 	>
-		{#each bands.bands as b, i (i)}
-			{@const xPos = bands.bands
-				.slice(0, i)
-				.reduce((sum, band) => sum + singleWidth * 0.01 * band.pc, 0)}
+		{#each layout as b, i (i)}
 			<rect
-				x={xPos}
+				x={b.x}
 				y="0"
-				width={singleWidth * 0.01 * b.pc}
+				width={b.w}
 				height={bands.height}
 				fill={b.col}
 				stroke="gray"

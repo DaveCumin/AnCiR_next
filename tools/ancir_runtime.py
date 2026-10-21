@@ -14578,7 +14578,7 @@ def _js_min_max(values):
 ACTOGRAM_MAX_SVG_HEATMAP_CELLS = 20000
 # rowHeight.js MAX_ACTOGRAM_ROWS: past this many rows the actogram draws nothing and says why.
 MAX_ACTOGRAM_ROWS = 20000
-# LightBandClass: the bar's height in px (not saved by the app, so always its default).
+# LightBandClass: the bar's height in px for a session saved without one.
 ACTOGRAM_LIGHT_BAND_HEIGHT = 10
 
 
@@ -14724,32 +14724,40 @@ def _fig_px_transform(fig):
         0, (fh - band) / _FIG_PX_PER_IN) + fig.dpi_scale_trans
 
 
-def _draw_actogram_light_bar(ax, p, total_w):
+def _actogram_light_band_height(lb):
+    """LightBandClass: the bar's saved height in px, or the default for a missing or unusable
+    one (a session saved before the height was)."""
+    h = (lb or {}).get('height')
+    return h if _style_valid(h, 'number') and h > 0 else ACTOGRAM_LIGHT_BAND_HEIGHT
+
+
+def _draw_actogram_light_bar(ax, p):
     """LightBand.svelte: the light bar above the actogram, each band a rect `pc`% of one
-    period's width in its colour with a 1 px grey outline, side by side from the plot's SAVED
-    left padding, `height` px tall and as far down from the top (it is drawn over the saved
-    padding, not the plot area: a row-label gutter or an outside legend does not move it)."""
+    period's width in its colour with a 1 px grey outline, side by side, one copy of the bands
+    per plotted period, so the bar spans exactly the rows (from the plot area's left edge,
+    after any row-label gutter, to its right edge, before any outside legend), `height` px
+    tall and as far down from the top of the figure."""
     from matplotlib.patches import Rectangle
     lb = p.get('lightBands') or {}
     bands = lb.get('bands') or []
     if not bands:
         return []
-    pad_in = p.get('paddingIN') or {'top': 30, 'right': 20, 'bottom': 10, 'left': 20}
-    height = lb.get('height')
-    height = height if _style_valid(height, 'number') else ACTOGRAM_LIGHT_BAND_HEIGHT
-    double = max(1, int(p.get('doublePlot', 2) or 1))
-    single = (total_w - (pad_in.get('left') or 0) - (pad_in.get('right') or 0)) / double
+    height = _actogram_light_band_height(lb)
+    copies = max(1, int(p.get('doublePlot', 2) or 1))  # as the rows read it
+    left, _top, width, _h = _axes_frame_px(ax)
+    single = width / copies
     tr = _fig_px_transform(ax.figure)
-    x = float(pad_in.get('left') or 0)
     arts = []
-    for b in bands:
-        pc = _js_number(b.get('pc')) or 0
-        w = single * 0.01 * pc
-        arts.append(ax.figure.add_artist(Rectangle(
-            (x, height), w, height, transform=tr, facecolor=_mpl_colour(b.get('col'), 'none'),
-            edgecolor='gray', linewidth=_PX_TO_PT, clip_on=False, zorder=3,
-            gid='actogram-light-band')))
-        x += w
+    for c in range(copies):
+        x = left + c * single
+        for b in bands:
+            pc = _js_number(b.get('pc')) or 0
+            w = single * 0.01 * pc
+            arts.append(ax.figure.add_artist(Rectangle(
+                (x, height), w, height, transform=tr,
+                facecolor=_mpl_colour(b.get('col'), 'none'), edgecolor='gray',
+                linewidth=_PX_TO_PT, clip_on=False, zorder=3, gid='actogram-light-band')))
+            x += w
     return arts
 
 
@@ -15013,7 +15021,6 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     heat = p.get('renderMode') == 'heatmap'
     base_w, h_px = _axes_px(ax)
     fig = ax.figure
-    total_w = float(plot.get('width') or 520)
     refused = rows_needed > MAX_ACTOGRAM_ROWS
     n_rows = 0 if refused else rows_needed
     geom = actogram_row_geometry(h_px, n_rows, p.get('spaceBetween', 2))
@@ -15163,7 +15170,7 @@ def plot_actogram(plot, columns_index, ax, zone=None):
         ax.text(0.5, 0.5, msg, transform=ax.transAxes, ha='center', va='center', wrap=True,
                 fontsize=look['px']['tick'] * _PX_TO_PT, color='#555555',
                 gid='actogram-refused')
-    _draw_actogram_light_bar(ax, p, total_w)
+    _draw_actogram_light_bar(ax, p)
     x_axis = p.get('xAxis') or {'gridlines': False, 'nticks': 6}
     specs = {'top': {'kind': 'linear', 'domain': (0, span), 'axis': x_axis,
                      'label': x_axis.get('label') or ''}}
@@ -15461,6 +15468,47 @@ def downsample_columns(power, max_cols):
     return out
 
 
+# CWT.svelte SCALOGRAM_LINEAR_ROWS: image rows on a linear period axis (at least one per scale).
+SCALOGRAM_LINEAR_ROWS = 1024
+
+
+def cwt_image_rows(periods, log_scale, n_linear_rows=SCALOGRAM_LINEAR_ROWS):
+    """CWT.svelte scalogramImageRows: what each image row shows, row 0 at the top (the longest
+    period), as (j0, j1, w): row r is scale j0[r]'s colours blended with scale j1[r]'s at
+    weight w[r]. On a log axis one row per scale (row r is scale n - 1 - r, w 0); on a linear
+    one max(n, 1024) evenly spaced rows, each at the period of its centre, blending the two
+    scales whose periods bracket it by its distance from each in log period, so every scale's
+    colour sits at its own period where the ticks, cone, ridge and overlays put it."""
+    n = len(periods)
+    if log_scale or n < 2:
+        j = [n - 1 - r for r in range(n)]
+        return j, list(j), [0.0] * n
+    lo, hi = periods[0], periods[-1]
+    R = max(n, n_linear_rows)
+    j0, j1, w = [0] * R, [0] * R, [0.0] * R
+    k = 1
+    for r in range(R - 1, -1, -1):
+        p = lo + (1 - (r + 0.5) / R) * (hi - lo)
+        while k < n - 1 and periods[k] < p:
+            k += 1
+        j0[r], j1[r] = k - 1, k
+        t = math.log(p / periods[k - 1]) / math.log(periods[k] / periods[k - 1])
+        w[r] = min(1.0, max(0.0, t))
+    return j0, j1, w
+
+
+def cwt_image_rgb(scale_rgb, rows):
+    """CWT.svelte renderScalogramURI's rows from each scale's colours (scale_rgb: scales x
+    columns x 3, 0..255): row r is scale j0's colours, or blended toward j1's at weight w and
+    rounded half up per channel (Math.round)."""
+    j0, j1, w = rows
+    A = scale_rgb[np.asarray(j0, dtype=int)]
+    B = scale_rgb[np.asarray(j1, dtype=int)]
+    W = np.asarray(w, dtype=np.float64)[:, None, None]
+    blend = np.floor(A + (B - A) * W + 0.5)
+    return np.where(W > 0, blend, A)
+
+
 def cwt_period_to_y(period, periods, h, log_scale):
     """CWT.svelte periodToY: a period's px down the plot area (longest at the top)."""
     if len(periods) < 2:
@@ -15516,9 +15564,9 @@ _CWT_SURFACE = '#ffffff'   # --surface-card
 
 def plot_cwt(plot, columns_index, ax):
     """The wavelet scalogram as CWT.svelte draws it, in the plot area's px (x right, y down):
-    the power field as one image (time across, the longest period at the top, scale rows
-    evenly spaced, at most 4096 columns, each cell the colormap at its power over 0 .. the
-    largest power), the shaded period bands over it, the cone of influence (white dashed
+    the power field as one image (time across, the longest period at the top, one row per
+    scale on a log axis and resampled onto a linear one by cwt_image_rows, at most 4096
+    columns, each cell the colormap at its power over 0 .. the largest power), the shaded period bands over it, the cone of influence (white dashed
     curve, everything outside it washed with the card colour at 45%), the ridge (red), the
     frame, the period ticks and the time ticks (fixed 10 / 11 px type, scaled with the
     figure only through its view), the reference lines, and the colour scale ("Power", 0 ..
@@ -15548,9 +15596,11 @@ def plot_cwt(plot, columns_index, ax):
     fin = P[np.isfinite(P)]
     pmax = float(fin.max()) if fin.size and fin.max() > 0 else 1.0
     ax._ancir_cwt['powerMax'] = pmax
-    img = downsample_columns(P, SCALOGRAM_MAX_COLUMNS)[::-1]
+    # Each scale's colours, then one row per scale on a log axis or resampled onto a linear
+    # one (cwt_image_rows), as the app's canvas paints them.
+    img = downsample_columns(P, SCALOGRAM_MAX_COLUMNS)
     t = np.where(np.isfinite(img), np.clip(img / pmax, 0, 1), 0.0)
-    rgb = colormap_rgb_array(cmap, t) / 255.0
+    rgb = cwt_image_rgb(colormap_rgb_array(cmap, t), cwt_image_rows(periods, log_scale)) / 255.0
     ax.imshow(rgb, extent=(0, W, H, 0), aspect='auto', interpolation='bilinear', zorder=0.2,
               gid='cwt-power')
     ax.set_xlim(0, W)
@@ -15639,7 +15689,9 @@ def plot_cwt(plot, columns_index, ax):
     for ov, g, gid in lines_later:
         width = ov['strokeWidth']
         for v in g.get('positions') or []:
-            if not _finite(v) or (log_scale and v <= 0) or not (p_lo <= v <= p_hi):
+            # CWTClass.overlayHorizontalLineAt: a period outside the range is not drawn.
+            tol = abs(p_hi - p_lo) * 1e-9
+            if not _finite(v) or (log_scale and v <= 0) or not (p_lo - tol <= v <= p_hi + tol):
                 continue
             y = ypx(v)
             ax.add_line(Line2D([0, W], [y, y], color=_overlay_colour(ov['colour'], '#2C2C2C'),
@@ -15754,10 +15806,7 @@ def _plot_padding(plot, columns_index=None):
     pad = dict(p.get('paddingIN') or {'top': 30, 'right': 20, 'bottom': 10, 'left': 20})
     bands = (p.get('lightBands') or {})
     if bands.get('bands'):
-        # LightBandClass.height is not saved: the bar is always its default height.
-        height = bands.get('height')
-        pad['top'] = (pad.get('top') or 0) + 2 * (height if _style_valid(height, 'number')
-                                                  else ACTOGRAM_LIGHT_BAND_HEIGHT)
+        pad['top'] = (pad.get('top') or 0) + 2 * _actogram_light_band_height(bands)
     mode = _actogram_row_labels_mode(p)
     if mode in ('period', 'date') and columns_index is not None:
         _, rows = actogram_download_data(plot, columns_index, DISPLAY_TIMEZONE)

@@ -42,7 +42,11 @@ import { loadProcesses } from '$test/processRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 import { colormapRGB, normaliseTo01 } from '$lib/components/plotbits/colormaps.js';
-import { downsampleColumns, SCALOGRAM_MAX_COLUMNS } from '$lib/plots/CWT/CWT.svelte';
+import {
+	downsampleColumns,
+	scalogramImageRows,
+	SCALOGRAM_MAX_COLUMNS
+} from '$lib/plots/CWT/CWT.svelte';
 import { rasterizeRows } from '$lib/plots/Actogram/actogramRaster.js';
 import { plotByName, demoRefs } from './demoRefs.js';
 
@@ -288,7 +292,7 @@ const CASES = [
 		}
 	},
 	{
-		// Row labels widen the left padding; the bar keeps to the saved padding (as drawn).
+		// Row labels widen the left padding; the bar starts where the rows do.
 		name: 'actogramBandsRowLabels',
 		kind: 'actogram',
 		demo: 'demo-workflow-masking',
@@ -300,6 +304,26 @@ const CASES = [
 				bands: [
 					{ col: '#ffffff', pc: 30 },
 					{ col: '#202020', pc: 70 }
+				]
+			};
+		}
+	},
+	{
+		// An outside legend narrows the rows; the bar (double-plotted: one copy per period)
+		// narrows with them. A taller bar than the default, saved with the plot.
+		name: 'actogramBandsLegendOutside',
+		kind: 'actogram',
+		demo: 'demo-workflow-masking',
+		plot: 'Actogram: truly entrained',
+		edit: (p) => {
+			p.plot.rowLabels = 'date';
+			legendOn(p, 'outsideright');
+			p.plot.lightBands = {
+				height: 16,
+				bands: [
+					{ col: '#000000', pc: 25 },
+					{ col: '#ffee88', pc: 50 },
+					{ col: '#000000', pc: 25 }
 				]
 			};
 		}
@@ -773,15 +797,24 @@ function drawnCwt(container, inner) {
 		for (let i = 0; i < nT; i += colStep) samples.push([j, i, round(tr.power[j][i])]);
 	}
 	const img = downsampleColumns(tr.power, SCALOGRAM_MAX_COLUMNS);
+	// The scale each image row shows, as the plot paints it: one row per scale on a log axis,
+	// resampled onto a linear one.
+	// resampled (two scales blended) onto a linear one.
+	const rows = scalogramImageRows(tr.periods, inner.logScale);
+	const nR = rows.j0.length;
+	const imgRowStep = Math.max(1, Math.floor(nR / 9));
+	const rgbAt = (j, i) =>
+		colormapRGB(inner.colormap, normaliseTo01(img[j][i], 0, inner.powerMax))
+			.match(/\d+/g)
+			.map(Number);
 	const cells = [];
-	for (let row = 0; row < nS; row += rowStep) {
-		const j = nS - 1 - row;
+	for (let row = 0; row < nR; row += imgRowStep) {
+		const wt = rows.w[row];
 		for (let i = 0; i < img[0].length; i += colStep) {
-			cells.push([
-				row,
-				i,
-				colormapRGB(inner.colormap, normaliseTo01(img[j][i], 0, inner.powerMax))
-			]);
+			const a = rgbAt(rows.j0[row], i);
+			const b = rgbAt(rows.j1[row], i);
+			const c = wt > 0 ? a.map((v, k) => Math.round(v + (b[k] - v) * wt)) : a;
+			cells.push([row, i, `rgb(${c.join(', ')})`]);
 		}
 	}
 	const g = [...container.querySelectorAll('svg > g')].find(
@@ -818,6 +851,11 @@ function drawnCwt(container, inner) {
 		powerMax: round(inner.powerMax),
 		powerSamples: samples,
 		imageCells: cells,
+		imageRows: {
+			j0: Array.from(rows.j0),
+			j1: Array.from(rows.j1),
+			w: roundAll(Array.from(rows.w))
+		},
 		imageColumns: img[0].length,
 		ridge: inner.showRidge ? roundAll(inner.ridge.ridgePeriod) : null,
 		groupTranslate: g ? translateOf(g.getAttribute('transform')) : null,

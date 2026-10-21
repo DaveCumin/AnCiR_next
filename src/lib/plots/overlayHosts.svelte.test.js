@@ -42,7 +42,7 @@ import QQPlot from './QQPlot/QQPlot.svelte';
 import Boxplot, { niceAxisLimit } from './Boxplot/Boxplot.svelte';
 import MeanSEM from './MeanSEM/MeanSEM.svelte';
 import FFT from './FFT/FFT.svelte';
-import CWT, { periodToY } from './CWT/CWT.svelte';
+import CWT, { periodToY, SCALOGRAM_LINEAR_ROWS } from './CWT/CWT.svelte';
 import { logAxisDomain } from './logAxis.js';
 
 // happy-dom has no Web Animations; the Overlays tab's blocks slide in.
@@ -1152,6 +1152,71 @@ describe('cwt: horizontal lines and bands on the period axis', () => {
 			)}), so it is not drawn. Overlays never widen the period range, because it is the range the scalogram is computed over; change Min and Max period in Properties.`
 		);
 	});
+
+	// The plot paints its power image through scalogramImageRows (CWT.linearAxis.test.js pins
+	// the mapping): one row per scale on a log axis, resampled rows on a linear one.
+	it.each([true, false])('the power image follows the period axis (log axis: %s)', (log) => {
+		const plot = makePlot('cwt');
+		plot.plot.logScale = log;
+		const heights = [];
+		const real = document.createElement.bind(document);
+		const spy = vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+			if (tag !== 'canvas') return real(tag);
+			return {
+				width: 0,
+				height: 0,
+				getContext: () => ({
+					createImageData: (w, h) => ({
+						width: w,
+						height: h,
+						data: new Uint8ClampedArray(w * h * 4)
+					}),
+					putImageData: (img) => heights.push(img.height)
+				}),
+				toDataURL: () => 'data:image/png;base64,stub'
+			};
+		});
+		try {
+			const { container } = render(CWT, { props: { theData: plot, which: 'plot' } });
+			const n = plot.plot.transform.periods.length;
+			expect(heights.at(-1)).toBe(log ? n : Math.max(n, SCALOGRAM_LINEAR_ROWS));
+			expect(container.querySelector('image')).toBeTruthy();
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	// It used to be placed off the plot (y -694 px on a 4 to 30 h linear axis) and clipped:
+	// nothing to see, but a mark in the SVG (and in an exported SVG) that the note says is
+	// not drawn. Now it is skipped; a line inside the range on the same overlay still draws.
+	it.each([true, false])(
+		'a line outside the period range is not drawn at all (log axis: %s)',
+		(log) => {
+			const plot = makePlot('cwt');
+			const inner = plot.plot;
+			inner.logScale = log;
+			const o = typedLine(inner, 'horizontal', [24, 100, 0.01]);
+			const { container } = render(CWT, { props: { theData: plot, which: 'plot' } });
+			const rules = [...container.querySelectorAll('g.overlay-lines-layer line.overlay-rule')];
+			expect(rules).toHaveLength(1);
+			close(
+				num(rules[0], 'y1'),
+				inner.padding.top + periodToY(24, inner.transform.periods, inner.plotheight, log)
+			);
+			expect(overlayRangeNote(inner, o)).toMatch(/^Partly outside the visible y range/);
+			// Wholly outside: nothing drawn, and the note says so.
+			const far = typedLine(inner, 'horizontal', [100]);
+			o.enabled = false;
+			cleanup();
+			const again = render(CWT, { props: { theData: plot, which: 'plot' } });
+			expect(
+				again.container.querySelectorAll('g.overlay-lines-layer line.overlay-rule')
+			).toHaveLength(0);
+			expect(overlayRangeNote(inner, far)).toMatch(
+				/^Outside the visible y range .*, so it is not drawn\./
+			);
+		}
+	);
 
 	it('bands sit over the power image and under the cone of influence; lines above everything', () => {
 		const plot = makePlot('cwt');

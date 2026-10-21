@@ -6,8 +6,8 @@ src/lib/_parity/emitPlotExtras.svelte.test.js).
 
 Pinned here, in the app's plot px (to 1e-6 px unless said otherwise):
   - the light bar: each band's rect (place, size, fill, 1 px grey outline) above the plot, and
-    the room it adds to the top padding; with row labels on, it keeps to the SAVED padding as
-    the app draws it;
+    the room it adds to the top padding; it spans exactly the rows (one copy of the bands per
+    plotted period) with row labels on or an outside legend, at its saved height;
   - phase markers: every block's fitted line and its copies (a tau apart; the primary last),
     its colour and width, and every dot (centre, radius, colour), for own blocks (onset,
     hand-placed, a fixed line) and marker rules (one following each series' colour, one fixed);

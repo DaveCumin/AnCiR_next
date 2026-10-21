@@ -10,7 +10,7 @@
  * machine both exist and these tests RUN.
  */
 import { describe, it, expect, afterAll } from 'vitest';
-import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -130,6 +130,73 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts execute (tools/.venv)', () 
 		expect(res.stderr).toContain('WARNING');
 		expect(res.stderr).toContain('0.0-other');
 	}, 240_000);
+});
+
+// REPORTED (v82.53 export work): the in-app export never called export_plot_data, so it
+// wrote no plot-data CSVs (the numbers a periodogram, FFT, correlogram, actogram or
+// scalogram derives) while the CLI exporter, which it is meant to mirror, did. The same
+// session through the CLI and through every in-app shape must write the same files, byte
+// for byte, in the session's display zone (the actogram folds its rows in it).
+describe.runIf(HAVE_PYTHON)('exported Python scripts write the plot-data CSVs (as the CLI)', () => {
+	const ZONE = 'Pacific/Auckland';
+	function plotSession() {
+		const s = JSON.parse(
+			readFileSync(
+				join(ROOT, 'static', 'sessions', 'demos', 'demo-workflow-free-running.json'),
+				'utf8'
+			)
+		);
+		s.appState = { ...(s.appState ?? {}), displayTimezone: ZONE };
+		return s;
+	}
+	/** { name: text } of every plot-data CSV in `dir`. */
+	function plotCsvs(dir) {
+		return Object.fromEntries(
+			readdirSync(dir)
+				.filter((f) => /^plot_.*_data\.csv$/.test(f))
+				.sort()
+				.map((f) => [f, readFileSync(join(dir, f), 'utf8')])
+		);
+	}
+
+	let cli = null;
+	it('the CLI writes one per calculating plot (the reference)', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ancir-export-exec-'));
+		tempDirs.push(dir);
+		writeFileSync(join(dir, 'in.json'), JSON.stringify(plotSession()));
+		const emit = spawnSync(
+			PYTHON,
+			[join(ROOT, 'tools', 'ancir_to_python.py'), join(dir, 'in.json'), '-o', 'session.py'],
+			{ cwd: dir, encoding: 'utf8', timeout: 180_000 }
+		);
+		expect(emit.status, emit.stderr).toBe(0);
+		const run = spawnSync(PYTHON, ['session.py'], { cwd: dir, encoding: 'utf8', timeout: 180_000 });
+		expect(run.status, run.stderr).toBe(0);
+		cli = plotCsvs(join(dir, 'session_output'));
+		// The actogram and the periodogram; the table plot computes nothing.
+		expect(Object.keys(cli)).toHaveLength(2);
+		expect(Object.keys(cli).join()).toMatch(/Actogram/i);
+		for (const text of Object.values(cli)) expect(text.split('\n').length).toBeGreaterThan(3);
+	}, 240_000);
+
+	for (const [label, opts, entry, outDir] of [
+		['single inline', {}, 'session.py', 'session_output'],
+		['split + CSV data', { split: true, dataAsCsv: true }, 'analysis.py', 'analysis_output']
+	]) {
+		it(`${label}: the same files, byte for byte`, () => {
+			const files = sessionToPythonFiles(plotSession(), PY_RUNTIME, opts);
+			// The zone the pipeline hands export_plot_data, as the script sees it. In split mode
+			// the helpers' DISPLAY_TIMEZONE is another module's global, so the script binds its own.
+			const main = files.find((f) => f.name === entry);
+			main.text += '\nprint("[zone]", DISPLAY_TIMEZONE)\n';
+			const { dir, res } = runExport(files, PYTHON, entry);
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.stdout).toContain(`[zone] ${ZONE}`);
+			expect(res.stdout).toContain('[ancir-plotdata] wrote');
+			expect(cli).not.toBeNull();
+			expect(plotCsvs(join(dir, outDir))).toEqual(cli);
+		}, 240_000);
+	}
 });
 
 describe.runIf(HAVE_R)('exported R scripts execute (Rscript)', () => {

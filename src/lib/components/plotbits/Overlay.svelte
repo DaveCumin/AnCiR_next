@@ -583,6 +583,24 @@
 		}
 
 		/**
+		 * The positions a line of geometry `g` is DRAWN at: a horizontal line's go through the
+		 * host's `overlayHorizontalLineAt(v)` when it has one (the y each is drawn at, or null
+		 * to skip it: CWT skips a period outside the range it is computed over, which it never
+		 * widens). Only drawing reads this; geometry(), the range note and the domain extension
+		 * keep every stored position, so the note can say a mark is not drawn.
+		 */
+		drawnLinePositions(g, host = this.parentPlot) {
+			if (g?.orientation !== 'horizontal' || typeof host?.overlayHorizontalLineAt !== 'function')
+				return g?.positions ?? [];
+			const out = [];
+			for (const v of g.positions ?? []) {
+				const y = host.overlayHorizontalLineAt(v);
+				if (typeof y === 'number' && Number.isFinite(y)) out.push(y);
+			}
+			return out;
+		}
+
+		/**
 		 * `{ x: [min,max]|null, y: [min,max]|null }` from what would be drawn, so
 		 * the plot can widen its AUTO limits and never leave a reference mark
 		 * off-screen. Empty when disabled, when nothing resolves, and always for
@@ -1102,7 +1120,7 @@
 		{#if g.kind === 'line'}
 			<Line
 				lineData={overlay}
-				positions={g.positions}
+				positions={overlay.drawnLinePositions(g, inner)}
 				orientation={g.orientation}
 				xscale={inner.overlayXScale}
 				yscale={inner.overlayYScale}

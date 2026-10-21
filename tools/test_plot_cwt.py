@@ -8,8 +8,10 @@ colour scale in a corner, a Paul and a DOG wavelet.
 Pinned here:
   - the transform (utils/cwt.js ported in cwt_from_series): every period to 1e-9, the sample
     interval, the largest power to 1e-9 and a grid of power samples to 1e-7 of it;
-  - the image: its column count (at most 4096) and the colour of a grid of cells, as the
-    app's canvas paints them (the colormap at power over 0 .. the largest);
+  - the image: which scale each row shows (one row per scale on a log axis, resampled onto a
+    linear one so each scale sits at its own period), its column count (at most 4096) and
+    the colour of a grid of cells, as the app's canvas paints them (the colormap at power
+    over 0 .. the largest);
   - the cone of influence (curve and shade), the ridge, the period and time ticks and titles,
     in the app's px to 1e-6;
   - the period overlays (a band with its edges, lines; one outside the range draws nothing);
@@ -26,7 +28,7 @@ import numpy as np
 import pytest
 
 from plot_extras_support import (CASES, app_bbox, cases_of, close_all, data_to_app, render,
-                                 rgb255)
+                                 rgb255, rt)
 
 CWT = cases_of("cwt")
 
@@ -67,7 +69,8 @@ def test_the_image_is_the_apps(name):
     w = exp_of(name)
     im = [i for i in ax.images if i.get_gid() == "cwt-power"][0]
     arr = np.asarray(im.get_array())
-    assert arr.shape[0] == len(w["periods"])
+    # One row per scale on a log axis, resampled onto a linear one (as the app paints it).
+    assert arr.shape[0] == len(w["imageRows"]["j0"])
     assert arr.shape[1] == w["imageColumns"]
     for row, col, css in w["imageCells"]:
         got = tuple(int(round(v * 255)) for v in arr[row, col][:3])
@@ -77,6 +80,44 @@ def test_the_image_is_the_apps(name):
         im.get_extent()[2]
     pad = CASES[name]["expected"]["padding"]
     assert app_xy(ax, left, top) == pytest.approx((pad["left"], pad["top"]), abs=1e-6)
+
+
+@pytest.mark.parametrize("name", CWT)
+def test_the_image_rows_are_the_apps(name):
+    """What each image row shows (two scales and a blend weight): the app's
+    scalogramImageRows, row for row."""
+    _fig, ax, case = render(name)
+    w = exp_of(name)["imageRows"]
+    log = case["plotJSON"]["plot"].get("logScale", True) is not False
+    j0, j1, wt = rt.cwt_image_rows(ax._ancir_cwt["transform"]["periods"], log)
+    assert (j0, j1) == (w["j0"], w["j1"])
+    assert wt == pytest.approx(w["w"], abs=1e-9)
+    n = len(exp_of(name)["periods"])
+    if log:
+        assert j0 == list(range(n - 1, -1, -1)) and not any(wt)
+    else:
+        assert len(j0) == max(n, rt.SCALOGRAM_LINEAR_ROWS)
+
+
+def test_on_a_linear_axis_each_scale_is_drawn_at_its_period():
+    """cwtLinearRaw (4 to 30 h, linear): at each scale's own period on the axis (where its
+    tick, the cone and the overlays go) the image row shows that scale at (near) full weight.
+    It used to keep one evenly spaced row per scale, which put the 24 h power near 26 h."""
+    _fig, ax, _case = render("cwtLinearRaw")
+    periods = ax._ancir_cwt["transform"]["periods"]
+    j0, j1, wt = rt.cwt_image_rows(periods, False)
+    _w, h = rt._axes_px(ax)
+
+    def weight(r, j):
+        return (1 - wt[r] if j0[r] == j else 0) + (wt[r] if j1[r] == j else 0)
+    for j, per in enumerate(periods):
+        y = rt.cwt_period_to_y(per, periods, h, False)
+        r = min(len(j0) - 1, int(y / h * len(j0)))
+        assert weight(r, j) > 0.9, (j, per)
+    old = list(range(len(periods) - 1, -1, -1))   # the old evenly spaced rows
+    j24 = min(range(len(periods)), key=lambda j: abs(periods[j] - 24))
+    y24 = rt.cwt_period_to_y(periods[j24], periods, h, False)
+    assert old[min(len(old) - 1, int(y24 / h * len(old)))] != j24
 
 
 @pytest.mark.parametrize("name", CWT)
@@ -137,8 +178,10 @@ def test_the_period_overlays_are_the_apps(name):
     pad = CASES[name]["expected"]["padding"]
     plot_h = CASES[name]["expected"]["plotSize"][1]
     lines = [ln for ln in ax.get_lines() if (ln.get_gid() or "").startswith("overlay-")]
-    # A line the app clips away entirely (outside the period range) is not drawn here.
+    # A line outside the period range is drawn by neither (the app used to place it off the
+    # plot and clip it away).
     visible = [ln for ln in w["overlayLines"] if pad["top"] <= ln["y1"] <= pad["top"] + plot_h]
+    assert visible == w["overlayLines"]
     edges = w["bandEdges"]
     assert len(lines) == len(visible) + len(edges)
     got = sorted(round(app_xy(ax, 0, ln.get_ydata()[0])[1], 6) for ln in lines)
