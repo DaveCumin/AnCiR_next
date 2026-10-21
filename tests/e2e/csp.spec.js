@@ -100,7 +100,8 @@ async function importFile(page, file) {
 
 test('the page carries the policy (header or meta) with no unsafe-eval', async ({ page }) => {
 	const res = await page.goto('/');
-	const isDevServer = (await res.text()).includes('/@vite/client');
+	// Vite's client, or (SvelteKit's dev page, which loads its entry through Vite) an /@fs/ path.
+	const isDevServer = /\/@vite\/client|\/@fs\//.test(await res.text());
 	test.skip(isDevServer, 'the dev server serves no policy; point E2E_BASE_URL at a build');
 	const header = res.headers()['content-security-policy'] ?? '';
 	const meta =

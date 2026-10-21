@@ -91,7 +91,6 @@
 	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
 	import NodeActions from './NodeActions.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { tourState } from '$lib/core/tourRunner.svelte.js';
 	import {
 		COMPACT_W,
 		SQUARED_KINDS,
@@ -101,8 +100,8 @@
 	import { NODE_HEADER_H, nodeRowCentreY, nodePortAreaHeight } from './nodeRows.js';
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
-	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
-	import { registerCanvasBoxes } from '$lib/core/canvasPlacement.js';
+	import { settleBoxes } from './settleOverlaps.js';
+	import { registerCanvas, placeNewNodes } from '$lib/core/canvasPlacement.js';
 	import { computeNodeLayers } from './nodeLayers.js';
 	import { isEditableTarget, yieldEscapeToField } from '$lib/utils/editableTarget.js';
 	import {
@@ -425,11 +424,10 @@
 	// AFTER its layout was adopted (plots / free processes appear last).
 	let _importedLayout = null;
 
-	// Queue of canvas-coord {x, y} positions to assign to the NEXT N newly-
-	// appeared nodes (one position consumed per node). Pushed by NodePalette
-	// before each user-initiated spawn so the new node lands at the centre of
-	// the current viewport instead of wherever the topo layout placed it.
-	let _spawnPositionQueue = [];
+	// Whether the new-node effect below has run once. Nodes already in the session when the
+	// canvas first lays itself out with nothing placed take the topological default; every
+	// node that appears after that is one the user just added, and goes to the view centre.
+	let _placedOnce = false;
 
 	// Per-node stacking order so the most-recently added / selected node renders on
 	// top (new nodes otherwise inherit graph order and can appear behind existing
@@ -452,23 +450,26 @@
 		const currentIds = new Set(currentNodes.map((n) => n.id));
 		const defaults = defaultPositions.positions;
 		const prev = _knownNodeIds;
-		// Nodes given the topo default after the canvas was already laid out (see
-		// clearOfOthers below). Not during a session import: its own settle pass runs then.
-		const lateDefaults = [];
+		// Nodes the user just added, centred on the view below (canvasPlacement.js). Not during
+		// a session import (its nodes keep their saved spots, or take the topo default and
+		// its own settle pass), nor for the nodes already there when the canvas first lays
+		// itself out with nothing placed.
+		const fresh = [];
 		const importSettling = untrack(
 			() =>
 				!!appState.settleLayoutRequest &&
 				appState.settleLayoutRequest !== appState.settleLayoutHandled
 		);
+		const live = !importSettling && (prev.size > 0 || _placedOnce);
 
 		// Assign positions to newly appeared nodes only. Priority order:
-		//   1. Already pinned in stablePositions before the effect ran (e.g.
-		//      paste writes the position directly so the user sees the new
-		//      node at the intended +40,+40 offset, not at whatever stale
-		//      entry the palette queue happens to hold).
-		//   2. Group nodes use their own persisted x/y (createGroup sets it).
-		//   3. Palette-spawned queue (viewport-centred) — consumed FIFO.
-		//   4. Fall back to the topo-layered default.
+		//   1. Already pinned in stablePositions before the effect ran (a paste, a column
+		//      dragged out of a group to where it was dropped).
+		//   2. Group nodes use their own persisted x/y (createGroup sets it; an add places
+		//      it by the same view-centre rule, newGroupPosition).
+		//   3. A saved session layout entry (a load, an undone delete).
+		//   4. A node the user just added: the view centre, cascading (canvasPlacement.js).
+		//   5. Fall back to the topo-layered default.
 		for (const node of currentNodes) {
 			if (prev.has(node.id)) continue;
 			const saved = _importedLayout?.[node.id] ?? core.nodeLayout?.[node.id];
@@ -483,11 +484,10 @@
 				// adopted) loses its saved position and gets re-flowed by the topo
 				// default, which can land it on top of another node.
 				stablePositions[node.id] = { x: saved.x, y: saved.y };
-			} else if (_spawnPositionQueue.length > 0) {
-				stablePositions[node.id] = _spawnPositionQueue.shift();
+			} else if (live) {
+				fresh.push(node.id);
 			} else if (defaults[node.id]) {
 				stablePositions[node.id] = { ...defaults[node.id] };
-				if (prev.size > 0 && !importSettling && node.type !== 'group') lateDefaults.push(node.id);
 			}
 
 			// Same story for a saved preview size: plot nodes load AFTER the
@@ -505,16 +505,22 @@
 			}
 		}
 
-		// Clean up positions (and any saved preview size) for removed nodes
+		// Clean up positions (and any saved preview size) for removed nodes. A node folded into
+		// a composite is hidden, not removed: it keeps its spot (persistPositions pins it), so
+		// uncombining puts it back where it was rather than placing it as a new node.
+		const folded = untrack(() => new Set(core.composites.flatMap((c) => c.memberIds ?? [])));
 		for (const id of prev) {
-			if (!currentIds.has(id)) {
+			if (!currentIds.has(id) && !folded.has(id)) {
 				delete stablePositions[id];
 				delete plotPreviewSizes[id];
 			}
 		}
 
 		_knownNodeIds = currentIds;
-		if (lateDefaults.length > 0) tick().then(() => clearOfOthers(lateDefaults));
+		_placedOnce = true;
+		// By their drawn size: this runs after the DOM update, so the new nodes have already
+		// rendered (at the topo fallback) and an expanded analysis is measured at its full height.
+		if (fresh.length > 0) untrack(() => placeAtViewCentre(fresh));
 	});
 
 	// Hold the preview box on the plot's aspect ratio when the PLOT changes shape.
@@ -754,16 +760,15 @@
 			addNotification('Wire an input into this node first to quick-plot it.');
 			return;
 		}
-		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id] ?? { x: 0, y: 0 };
-		const plotData = plotDataFromSpec(spec, {
-			x: pos.x + getNodeWidth(node) + 40,
-			y: pos.y,
-			sourceNodeId: node.id
-		});
+		// The x/y here are the plot's WORKSHEET spot, tiled like a palette plot. On the canvas
+		// it lands in the middle of the view like every new node (the new-node effect), so
+		// there is nothing to pan to; the dashed reference edge leads back to its source.
+		const plotData = plotDataFromSpec(spec, { ...nextPlotSpawnPosition(), sourceNodeId: node.id });
 		const p = mutationService.addPlot(plotData);
 		if (p) {
-			appState.canvasSelectedNodeId = `plot_${p.id}`;
-			tick().then(() => panToNode(`plot_${p.id}`));
+			const nodeId = `plot_${p.id}`;
+			appState.canvasSelectedNodeId = nodeId;
+			multiSelectedNodeIds = new Set([nodeId]);
 		}
 	}
 
@@ -822,68 +827,66 @@
 		});
 	});
 
-	/**
-	 * Compute the canvas-coord of the current viewport centre, minus half a
-	 * default node so the spawn lands centred under the cursor's mental model.
-	 * Small random jitter so consecutive spawns don't stack pixel-perfect.
-	 */
-	function getViewportSpawnPoint() {
+	// --- New-node placement: the middle of the view (canvasPlacement.js) ---
+	/** The canvas element's size in screen px, or null before it is laid out. */
+	function canvasViewSize() {
 		const rect = canvasViewportEl?.getBoundingClientRect();
-		if (!rect) return { x: 80, y: 80 };
-		const cx = (rect.width / 2 - panX) / zoom - NODE_WIDTH / 2;
-		const cy = (rect.height / 2 - panY) / zoom - NODE_HEIGHT;
-		const jitter = () => Math.round((Math.random() - 0.5) * 60);
-		return { x: Math.round(cx + jitter()), y: Math.round(cy + jitter()) };
+		return rect && rect.width > 0 && rect.height > 0 ? { w: rect.width, h: rect.height } : null;
 	}
 
-	// Place a new node just to the right of the current right-most node, aligned to
-	// its row. Returns null when there are no positioned nodes yet.
-	function getRightmostSpawnPoint() {
-		let maxRight = -Infinity;
-		let yAtMax = null;
-		for (const node of allNodes) {
-			const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
-			if (!pos) continue;
-			const right = pos.x + getNodeWidth(node);
-			if (right > maxRight) {
-				maxRight = right;
-				yAtMax = pos.y;
-			}
+	/**
+	 * Put just-added nodes in the middle of the view, each centred by its drawn size (its
+	 * estimate if it has not rendered), cascading off any node already at the same spot and
+	 * off one another.
+	 */
+	function placeAtViewCentre(ids) {
+		const targets = ids.map((id) => allNodes.find((n) => n.id === id)).filter(Boolean);
+		if (targets.length === 0) return;
+		const mine = new Set(targets.map((n) => n.id));
+		const spots = placeNewNodes(targets.map(nodeSize), {
+			viewport: { x: panX, y: panY, z: zoom },
+			viewSize: canvasViewSize(),
+			others: drawnNodeBoxes().filter((b) => !mine.has(b.id))
+		});
+		targets.forEach((node, i) => {
+			stablePositions[node.id] = spots[i];
+		});
+	}
+
+	/**
+	 * Move a set of nodes that were just created together (a paste) as one block, keeping
+	 * their layout, so the block is centred in the view by the same rule as a single node.
+	 */
+	function placeBlockAtViewCentre(ids) {
+		const set = new Set(ids);
+		const boxes = drawnNodeBoxes();
+		const block = boxes.filter((b) => set.has(b.id));
+		if (block.length === 0) return;
+		const x0 = Math.min(...block.map((b) => b.x));
+		const y0 = Math.min(...block.map((b) => b.y));
+		const x1 = Math.max(...block.map((b) => b.x + b.w));
+		const y1 = Math.max(...block.map((b) => b.y + b.h));
+		const [spot] = placeNewNodes([{ w: x1 - x0, h: y1 - y0 }], {
+			viewport: { x: panX, y: panY, z: zoom },
+			viewSize: canvasViewSize(),
+			others: boxes.filter((b) => !set.has(b.id))
+		});
+		for (const b of block) {
+			stablePositions[b.id] = { x: b.x + spot.x - x0, y: b.y + spot.y - y0 };
 		}
-		if (maxRight === -Infinity) return null;
-		return { x: Math.round(maxRight + 70), y: Math.round(yAtMax ?? 80) };
-	}
-
-	// During a guided tour, spawn nodes to the right of the right-most node so the
-	// growing pipeline stays readable and easy to wire (rather than stacking at the
-	// viewport centre). Falls back to the viewport point otherwise.
-	function getSpawnPoint() {
-		if (tourState.activeTour) {
-			const p = getRightmostSpawnPoint();
-			if (p) return p;
-		}
-		return getViewportSpawnPoint();
-	}
-
-	function queueSpawnPositionAtViewport() {
-		_spawnPositionQueue.push(getSpawnPoint());
 	}
 
 	/**
 	 * Palette entry point for column processes. Spawns the process as an
 	 * orphan (no parent column) so it appears disconnected; the user then
-	 * wires it to a data column's output to attach it. Uses the queued
-	 * viewport-spawn position so the node lands under the cursor's mental
-	 * model rather than at a topo-derived default.
+	 * wires it to a data column's output to attach it. It lands in the middle of the view,
+	 * like every new node (placeAtViewCentre, from the new-node effect).
 	 */
 	function spawnColumnProcessFromPalette(processType) {
 		// Recorded, so the spawn is one undo step like every other palette add.
 		const proc = mutationService.record(() => createOrphanProcess(processType, {}));
 		if (!proc) return { ok: false, reason: 'create-failed' };
 		const newId = `process_${proc.id}`;
-		const queued = _spawnPositionQueue.shift();
-		const pos = queued ?? getSpawnPoint();
-		stablePositions[newId] = { x: pos.x, y: pos.y };
 		appState.canvasSelectedNodeId = newId;
 		multiSelectedNodeIds = new Set([newId]);
 		bringNodeToFront(newId);
@@ -898,7 +901,6 @@
 	function spawnTableProcessFromPalette(tpType) {
 		const entry = appConsts.tableProcessMap.get(tpType);
 		if (!entry) return { ok: false, reason: 'unknown-type' };
-		queueSpawnPositionAtViewport();
 		const tp = mutationService.addFreeTableProcess(tpType, buildTableProcessDefaults(entry));
 		if (!tp) return { ok: false };
 		const nodeId = `tableprocess_${tp.id}`;
@@ -910,10 +912,9 @@
 	}
 
 	function spawnPlotFromPalette(plotType) {
-		queueSpawnPositionAtViewport();
 		const displayName = appConsts.plotMap.get(plotType)?.displayName ?? plotType;
-		// Give the plot a tiled WORKSHEET position (its canvas position comes from the
-		// spawn-position queue above) so plots added here don't stack in workspace view.
+		// Give the plot a tiled WORKSHEET position (its canvas position is the view centre,
+		// from the new-node effect) so plots added here don't stack in workspace view.
 		const pos = nextPlotSpawnPosition();
 		const plot = mutationService.addPlot({ name: displayName, type: plotType, x: pos.x, y: pos.y });
 		if (!plot) return { ok: false };
@@ -1114,9 +1115,8 @@
 	// pointermove tracks whether the pointer has left the group's bbox →
 	// pointerup decides between cancel (still inside) and extract (outside).
 	// Extract removes the column from its group, which makes ProcessNode re-
-	// derive a standalone `data_${colId}` node. We seed `_spawnPositionQueue`
-	// so the new node lands where the user dropped instead of at the topo-
-	// derived default.
+	// derive a standalone `data_${colId}` node. Its position is pinned first,
+	// so the new node lands where the user dropped it.
 	let extractGesture = $state(null);
 
 	// --- Collapsed (compact) nodes. We track the COLLAPSED set so the default is
@@ -1360,48 +1360,31 @@
 		return boxes;
 	}
 
-	// Every node's drawn box, groups included, for placing a new group (an import, a palette
-	// group) in free space: canvasPlacement.js newGroupPosition reads it while this is mounted.
+	/** A node's drawn size (canvas px, unaffected by zoom), or its estimate before it renders. */
+	function nodeSize(node) {
+		const el = document.querySelector(
+			`.workflow-node-wrapper[data-node-id="${CSS.escape(node.id)}"]`
+		);
+		return {
+			w: el?.offsetWidth || getNodeWidth(node),
+			h:
+				el?.offsetHeight ||
+				(node.type === 'group' ? (node.groupObj?.height ?? 0) : getNodeRenderHeight(node))
+		};
+	}
+
+	// Every placed node's drawn box, groups included, for placing a new node in the middle
+	// of the view (canvasPlacement.js reads it, with the canvas size, while this is mounted).
 	function drawnNodeBoxes() {
 		const boxes = [];
 		for (const node of allNodes) {
 			const pos = stablePositions[node.id];
 			if (!pos) continue;
-			const el = document.querySelector(
-				`.workflow-node-wrapper[data-node-id="${CSS.escape(node.id)}"]`
-			);
-			boxes.push({
-				id: node.id,
-				x: pos.x,
-				y: pos.y,
-				w: el?.offsetWidth || getNodeWidth(node),
-				h:
-					el?.offsetHeight ||
-					(node.type === 'group' ? (node.groupObj?.height ?? 0) : getNodeRenderHeight(node))
-			});
+			boxes.push({ id: node.id, x: pos.x, y: pos.y, ...nodeSize(node) });
 		}
 		return boxes;
 	}
-	$effect(() => registerCanvasBoxes(drawnNodeBoxes));
-
-	/**
-	 * Move nodes that the topo default placed into an already laid-out canvas (a table
-	 * edit's Edit value node, say) down until they cover no other node or note card.
-	 * The default knows only the graph's layers, not note cards or where the user has
-	 * dragged things. Nothing else moves.
-	 */
-	function clearOfOthers(ids) {
-		const boxes = renderedNodeBoxes();
-		const fresh = new Set(ids);
-		const obstacles = boxes.filter((b) => !fresh.has(b.id));
-		for (const id of ids) {
-			const b = boxes.find((x) => x.id === id);
-			if (!b || !stablePositions[id]) continue;
-			const y = clearPlacementY(b, obstacles);
-			if (y !== b.y) stablePositions[id].y = y;
-			obstacles.push({ ...b, y });
-		}
-	}
+	$effect(() => registerCanvas({ boxes: drawnNodeBoxes, viewSize: canvasViewSize }));
 
 	// Session import: settle overlaps once the imported nodes have rendered. Nodes
 	// arrive over several frames (plots last), so, as for the tidy request, every change
@@ -2622,7 +2605,7 @@
 		if (!g.outside) return;
 		// Land the resurfaced data_X node at the drop pointer (top-left of card).
 		const c = toCanvasCoords(e.clientX - NODE_WIDTH / 2, e.clientY - HEADER_H / 2);
-		_spawnPositionQueue.push({ x: c.x, y: c.y });
+		stablePositions[`data_${g.colId}`] = { x: c.x, y: c.y };
 		extractColumnFromAnyGroup(g.colId);
 	}
 
@@ -3936,10 +3919,14 @@
 		return mutationService.record(() => _pasteEntries(entries));
 	}
 	function _pasteEntries(entries) {
+		// Workspace (worksheet) spots for pasted plots and notes: just off the original's.
 		const PASTE_OFFSET = 40;
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id set built inside pasteEntries and assigned wholesale to the $state holder afterwards
 		const newIds = new Set();
 		for (const entry of entries) {
+			// On the canvas the pasted nodes keep their copied layout, then move as one block
+			// to the middle of the view (placeBlockAtViewCentre below), like any new node.
+			const canvasPos = { x: entry.pos?.x ?? 80, y: entry.pos?.y ?? 80 };
 			const newPos = {
 				x: (entry.pos?.x ?? 80) + PASTE_OFFSET,
 				y: (entry.pos?.y ?? 80) + PASTE_OFFSET
@@ -3967,7 +3954,7 @@
 					_dbg('paste: createNote →', id);
 					newCanvasId = id;
 				} else if (entry.type === 'group') {
-					const id = createGroup({ x: newPos.x, y: newPos.y, name: `${entry.name} copy` });
+					const id = createGroup({ ...canvasPos, name: `${entry.name} copy` });
 					const g = core.groups.find((gg) => gg.id === id);
 					if (g) {
 						if (entry.width) g.width = entry.width;
@@ -3993,10 +3980,10 @@
 			}
 			if (newCanvasId) {
 				newIds.add(newCanvasId);
-				// Pin the position synchronously so it doesn't depend on the
-				// $effect that consumes _spawnPositionQueue. Belt-and-braces.
-				stablePositions[newCanvasId] = { x: newPos.x, y: newPos.y };
-				_dbg('paste: pinned position for', newCanvasId, '@', newPos);
+				// Pin it (keeping the copied layout) so the new-node effect leaves it to the
+				// block placement below.
+				stablePositions[newCanvasId] = { ...canvasPos };
+				_dbg('paste: pinned position for', newCanvasId, '@', canvasPos);
 			}
 		}
 		if (newIds.size === 0) {
@@ -4012,6 +3999,9 @@
 			);
 			return;
 		}
+		// Once drawn (so the block is measured at its real size), into the middle of the view.
+		const pasted = [...newIds];
+		tick().then(() => placeBlockAtViewCentre(pasted));
 		// Focus the newly pasted set so the user sees what landed.
 		multiSelectedNodeIds = newIds;
 		appState.canvasSelectedNodeId = newIds.values().next().value;
@@ -4530,7 +4520,6 @@
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
 		<NodePalette
-			queueSpawnPosition={queueSpawnPositionAtViewport}
 			onSpawnColumnProcess={spawnColumnProcessFromPalette}
 			onSpawnTableProcess={spawnTableProcessFromPalette}
 			onSpawnPlot={spawnPlotFromPalette}

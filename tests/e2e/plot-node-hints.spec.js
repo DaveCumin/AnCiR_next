@@ -57,8 +57,9 @@ test('the trailing series and line slots are hints that fit; the * is explained'
 	await empty.first().focus(); // the empty pair's x, then Tab (keyboard focus) to its y*
 	await page.keyboard.press('Tab');
 	await expect(empty.last()).toBeFocused();
+	// The port's description (portDescriptions.js, since v82.39) sits between the name and the hint.
 	await expect(page.locator('.app-tooltip')).toHaveText(
-		/^Input: y\*\. Drop columns here to start series \d+\. The \* means it takes one or more columns\.$/
+		/^Input: y\*\. Number columns, one or more, plotted against this series’ x\. Drop columns here to start series \d+\. The \* means it takes one or more columns\.$/
 	);
 });
 

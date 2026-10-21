@@ -10,7 +10,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { buildNlSession, editNlSession, NL_URL } from '$lib/utils/nlSession.js';
-	import { core, appState } from '$lib/core/core.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import {
 		summariseSession,
 		sessionFacts,
@@ -111,7 +111,7 @@
 		const url = baseUrl.trim();
 		if (url && !/^https?:\/\/.+/i.test(url)) {
 			tab = 'advanced';
-			error = `"${url}" isn't a valid endpoint URL. It should look like https://api.groq.com/openai/v1, or leave it blank to use the default model.`;
+			error = `"${url}" isn't a valid endpoint URL. It should look like https://generativelanguage.googleapis.com/v1beta/openai, or leave it blank to use the default model.`;
 			return;
 		}
 
@@ -210,9 +210,8 @@
 		if (res.warnings?.length) {
 			addNotification(`Please note:\n${res.warnings.join('\n')}`, 'info', 12000);
 		}
-		// New nodes land at the origin until the canvas places them; same request the shared-link
-		// path makes.
-		appState.tidyLayoutRequest = (appState.tidyLayoutRequest ?? 0) + 1;
+		// The new nodes land in the middle of the canvas view, cascading, like any node the user
+		// adds (canvasPlacement.js); the rest of the user's layout is left as it was.
 
 		busy = false;
 		prompt = '';

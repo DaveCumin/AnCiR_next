@@ -135,10 +135,9 @@
 		return 'gear';
 	}
 
+	// Every node added here lands in the middle of the canvas view, by the one rule in
+	// canvasPlacement.js (WorkflowEditor's new-node effect, or newGroupPosition for a group).
 	let {
-		// Called by NodePalette right before any user-initiated spawn so the
-		// next-to-appear node lands at the centre of the current viewport.
-		queueSpawnPosition = null,
 		// Spawns a column process on the currently-focused data column (or the
 		// first data column if none is focused). Returns
 		// { ok: boolean, columnId?: number, reason?: string }.
@@ -295,21 +294,17 @@
 		}
 
 		if (item.kind === 'note') {
-			// Notes carry x/y on the entity itself; ask WorkflowEditor where the
-			// viewport is and seed createNote with that point. The
-			// stablePositions effect will still pick the same spot via the
-			// spawn queue, so the node visually lands at the viewport centre.
-			queueSpawnPosition?.();
-			// Recorded, so one undo removes the note and redo restores it.
+			// The note's own x/y is its WORKSPACE spot; on the canvas it lands in the middle
+			// of the view like any new node. Recorded, so one undo removes the note and redo
+			// restores it.
 			mutationService.record(() => createNote());
 			closeMenu();
 			return;
 		}
 
 		if (item.kind === 'group') {
-			// In free space at the top left of the view, as an imported table lands. (Queuing a
-			// spawn position here left it unused, since a group keeps its own x/y, and the next
-			// palette node took that stale spot.)
+			// A group keeps its own x/y, so it is placed here: the middle of the view, as an
+			// imported table lands.
 			const at = newGroupPosition();
 			mutationService.record(() => createGroup(at));
 			closeMenu();
@@ -334,11 +329,9 @@
 
 		// item.kind === 'process' — column-level. WorkflowEditor handles the
 		// "which column?" decision (currently: focused data node, else first
-		// non-TP-output data column). Spawn at the viewport centre via the
-		// queued position; the user can then drag-onto-edge to splice into a
-		// different chain if they want.
+		// non-TP-output data column). It lands in the middle of the view; the user
+		// can then drag-onto-edge to splice into a different chain if they want.
 		if (typeof onSpawnColumnProcess === 'function') {
-			queueSpawnPosition?.();
 			const result = onSpawnColumnProcess(item.type);
 			if (!result?.ok) {
 				if (result?.reason === 'no-columns') {

@@ -12,9 +12,9 @@ import { resolve } from 'node:path';
 // load stalls on "Loading N columns". Headless Chromium is not hidden.
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
-// v77.0 pins: v77.0 changed histogram rendering for every plot (axis padding, no gridline on
-// the axis), so the v76.4 pins are kept as history; see snapshots/facet-eda-v77.0/README.md.
-const PIN_DIR = resolve(ROOT, 'tests/e2e/snapshots/facet-eda-v77.0');
+// v82.60 pins: v82 added the (empty) overlay layers and a legend wrapper to every plot, so the
+// v76.4 and v77.0 pins are kept as history; see snapshots/facet-eda-v82.60/README.md.
+const PIN_DIR = resolve(ROOT, 'tests/e2e/snapshots/facet-eda-v82.60');
 const FIXTURES = resolve(ROOT, 'src/test/fixtures');
 const EDA = '/sessions/demos/demo-workflow-stats-eda.json';
 
@@ -106,7 +106,16 @@ test.describe('facets as views', () => {
 			const pin = readFileSync(`${PIN_DIR}/${spec.column}.svg`, 'utf8');
 			// The only `id` in a pin is the root's (README); normalise it on both sides.
 			const normId = (s) => s.replace(/^(<svg[^>]*?)id="plot[^"]*"/, '$1id="plotX"');
-			const a = normId(live);
+			// Svelte's per-component scope classes (`s-…` in dev, `svelte-…` in a build) change
+			// whenever a component's CSS changes, not its drawing; the pins are written without them.
+			const noScope = (s) =>
+				s.replace(/ class="([^"]*)"/g, (m, c) => {
+					const keep = c
+						.split(/\s+/)
+						.filter((t) => t && !/^s(?:velte)?-[A-Za-z0-9_-]{4,}$/.test(t));
+					return keep.length ? ` class="${keep.join(' ')}"` : '';
+				});
+			const a = noScope(normId(live));
 			const b = normId(pin);
 			// Colour: the pinned child drew its series in the first palette colour; the panel draws
 			// it in the generator's colour for that column. Normalise ONLY that token, and count it.

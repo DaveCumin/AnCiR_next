@@ -1847,7 +1847,7 @@
 		const keys = Object.keys(dataObj);
 		if (keys.length === 0) return;
 
-		// In free space, so it does not cover an earlier import (canvasPlacement.js).
+		// In the middle of the canvas view, stepped off any table already there (canvasPlacement.js).
 		const groupId = createGroup({ name: tableName, ...newGroupPosition({ rows: keys.length }) });
 
 		for (const key of keys) {
@@ -3487,7 +3487,7 @@
 		let newGroupId = null;
 		if (newEntries.length > 0) {
 			const baseName = fname ? fname.replace(/\.[^.]+$/, '') : 'imported';
-			// In free space, so it does not cover an earlier import (canvasPlacement.js).
+			// In the middle of the canvas view, stepped off any table already there (canvasPlacement.js).
 			newGroupId = createGroup({
 				name: baseName,
 				...newGroupPosition({ rows: newEntries.length })

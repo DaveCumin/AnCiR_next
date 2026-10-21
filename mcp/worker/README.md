@@ -158,8 +158,8 @@ Every `/build` writes one structured line, so you can review what people actuall
 	"event": "build",
 	"ts": "2026-07-17T00:12:49.650Z",
 	"prompt": "Simulate 4 days of a 24 h rhythm, fit a cosinor, and plot it",
-	"model": "openai/gpt-oss-120b",
-	"baseUrl": "https://api.groq.com/openai/v1",
+	"model": "gemini-flash-latest",
+	"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
 	"llmKeySource": "worker-default",
 	"outcome": "ok",
 	"ms": 23,
@@ -420,7 +420,7 @@ Every session this Worker builds is stamped, beside its `version`:
   "generatedBy": {
     "source": "ancir-nl", "route": "build",
     "sessionId": "75e8c0de-…",
-    "model": "openai/gpt-oss-120b",
+    "model": "gemini-flash-latest",
     "generatedAt": "2026-07-17T00:12:49.650Z"
   }
 ```
