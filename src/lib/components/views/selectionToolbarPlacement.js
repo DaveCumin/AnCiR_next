@@ -1,20 +1,23 @@
-// Where the workspace selection toolbar sits (PlotDisplay.svelte).
+// Where the workspace selection toolbar sits (PlotDisplay.svelte): the layout toolbar of
+// two or more selected plots (one plot's own actions are docked in its card's header,
+// Draggable.svelte).
 //
 // The toolbar is anchored to the selection, like Figma: right-aligned with the selection's
 // right edge and just above its top. All rects are in one coordinate space (PlotDisplay
 // uses the canvas element's own box, so the view's origin is 0,0) as
 // { left, top, right, bottom }.
 //
-// Order of preference:
+// It is never placed over the selection, where it would cover the plots' legends and data
+// (it used to drop inside the top-right corner when there was no room above). Order of
+// preference:
 //   1. above: just above the selection's top-right corner, when there is room above.
-//   2. inside: inside the selection, just under the header bands of the selected cards (so
-//      it never covers a header's note / maximise / delete controls), when the selection
-//      is tall enough. If the headers have scrolled above the view, it pins to the view's
-//      top instead, still dropping below any header band it would land on.
-//   3. below: just under the selection's bottom edge.
-//   4. otherwise: clamped inside the view.
-// Then it is clamped horizontally inside the view, and nudged off any occluder (a card
-// such as the zoom controls) by moving left, or up when moving left has no room.
+//   2. below: just under the selection's bottom edge.
+//   3. right: beside the selection's right edge, level with its top (or the view's).
+//   4. left: beside its left edge.
+//   5. otherwise (the selection fills the view): clamped to the view's top.
+// Above and below are clamped horizontally inside the view; then the toolbar is nudged off
+// any occluder (a card such as the zoom controls) by moving left, or up when moving left
+// has no room.
 
 /** Default gap between the toolbar and the thing it is anchored to, in px. */
 export const TOOLBAR_GAP = 8;
@@ -45,18 +48,15 @@ export function unionRect(rects) {
  * @param {{left:number, top:number, right:number, bottom:number}} args.view
  * @param {{width:number, height:number}} args.toolbar
  * @param {Array<{left:number, top:number, right:number, bottom:number}>} [args.occluders]
- * @param {Array<{left:number, top:number, right:number, bottom:number}>} [args.headers] the
- *   header bands of the selected cards; the inside placement never overlaps one
  * @param {number} [args.gap]
  * @param {number} [args.margin]
- * @returns {{left:number, top:number, placement:'above'|'inside'|'below'|'clamped', visible:boolean}}
+ * @returns {{left:number, top:number, placement:'above'|'below'|'right'|'left'|'clamped', visible:boolean}}
  */
 export function placeSelectionToolbar({
 	selection,
 	view,
 	toolbar,
 	occluders = [],
-	headers = [],
 	gap = TOOLBAR_GAP,
 	margin = VIEW_MARGIN
 }) {
@@ -70,34 +70,32 @@ export function placeSelectionToolbar({
 	// A selection wholly outside the view has nothing to point at.
 	const visible = intersects(selection, view);
 
-	// Right-aligned with the selection; inside, it is inset by the gap so its border
-	// does not sit on the selection's border.
-	const outsideLeft = clampLeft(selection.right - w, minLeft, maxLeft);
-	const insideLeft = clampLeft(selection.right - gap - w, minLeft, maxLeft);
-
-	// Inside: start at the selection's top (or the view's), then step below every header
-	// band the toolbar would overlap, top to bottom.
-	let insideTop = Math.max(selection.top + gap, minTop);
-	for (const band of [...headers].sort((a, b) => a.top - b.top)) {
-		const box = { left: insideLeft, top: insideTop, right: insideLeft + w, bottom: insideTop + h };
-		if (intersects(box, band)) insideTop = band.bottom + gap;
-	}
+	// Right-aligned with the selection, kept inside the view.
+	const alignedLeft = clampLeft(selection.right - w, minLeft, maxLeft);
+	// Beside the selection, level with its top (or the view's top when that has scrolled away).
+	const besideTop = Math.min(Math.max(selection.top, minTop), maxTop);
 
 	let top;
-	let left = outsideLeft;
+	let left = alignedLeft;
 	let placement;
 	const aboveTop = selection.top - gap - h;
 	const belowTop = selection.bottom + gap;
+	const rightLeft = selection.right + gap;
+	const leftLeft = selection.left - gap - w;
 	if (aboveTop >= minTop) {
 		top = aboveTop;
 		placement = 'above';
-	} else if (insideTop + h <= Math.min(selection.bottom - gap, maxTop)) {
-		top = insideTop;
-		left = insideLeft;
-		placement = 'inside';
 	} else if (belowTop <= maxTop) {
 		top = belowTop;
 		placement = 'below';
+	} else if (rightLeft <= maxLeft) {
+		top = besideTop;
+		left = rightLeft;
+		placement = 'right';
+	} else if (leftLeft >= minLeft) {
+		top = besideTop;
+		left = leftLeft;
+		placement = 'left';
 	} else {
 		top = Math.min(Math.max(aboveTop, minTop), maxTop);
 		placement = 'clamped';

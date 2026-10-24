@@ -156,12 +156,12 @@ describe('getSharedSchema', () => {
 		});
 	});
 
-	it('infers boolean input from value type and title-cases the label', () => {
+	it('infers boolean input from value type and labels it in sentence case', () => {
 		const schema = getSharedSchema(makeWrapper());
 		const show = schema.find((f) => f.path === 'plot.showDayNumbers');
 		expect(show).toEqual({
 			path: 'plot.showDayNumbers',
-			label: 'Show Day Numbers',
+			label: 'Show day numbers',
 			input: 'boolean'
 		});
 	});
@@ -243,13 +243,13 @@ describe('descend descriptor', () => {
 		const shape = schema.find((f) => f.path === 'style.shape');
 		expect(colour).toEqual({
 			path: 'style.colour',
-			label: 'Style Colour',
+			label: 'Style colour',
 			input: 'color',
 			group: 'Style'
 		});
 		expect(shape).toEqual({
 			path: 'style.shape',
-			label: 'Style Shape',
+			label: 'Style shape',
 			input: 'select',
 			options: ['circle', 'square'],
 			group: 'Style'
@@ -286,7 +286,7 @@ describe('descend descriptor', () => {
 		const schema = getSharedDataSchema({ width: 1, height: 1, name: 'p', plot: inner });
 		expect(schema.find((f) => f.path === 'marker.colour')).toEqual({
 			path: 'marker.colour',
-			label: 'Marker Colour',
+			label: 'Marker colour',
 			input: 'color',
 			group: 'Marker'
 		});

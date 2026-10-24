@@ -194,6 +194,13 @@
 		};
 	}
 
+	/** `{ key: -1 }` for every output key a node declares in its `out` default, else `{}`. */
+	function declaredOutKeys(entry) {
+		const declared = entry?.defaults?.get?.('out');
+		if (!declared || typeof declared !== 'object') return {};
+		return Object.fromEntries(Object.keys(declared).map((k) => [k, -1]));
+	}
+
 	export class TableProcess {
 		id; //Unique Id
 		name = '';
@@ -224,13 +231,24 @@
 			const tableProcessInfo = appConsts.tableProcessMap.get(this.name);
 			this.displayName = dataIN.displayName || tableProcessInfo?.displayName || this.name;
 
+			// A caller may pass only the parameters it cares about (an agent, a script, a test):
+			// with no `out`, take the output keys the node declares in its defaults (each minted
+			// below), else an empty map that the node's own reconcile fills in. Missing `args`
+			// altogether still throws: a saved node without args is corrupt, and a session load
+			// relies on that throw to roll back (importJson.safeLoad.test.js). The mutation API
+			// already defaults `args` to {}.
+			const argsIN = dataIN.args;
+			if (!argsIN.out || typeof argsIN.out !== 'object') {
+				argsIN.out = declaredOutKeys(tableProcessInfo);
+			}
+
 			//If there is a column out ref set (i.e. reading from JSON)
-			if (dataIN.args.out[Object.keys(dataIN.args.out)[0]] >= 0) {
-				this.args = dataIN.args;
+			if (argsIN.out[Object.keys(argsIN.out)[0]] >= 0) {
+				this.args = argsIN;
 			}
 			//If the out refs are not yet defined (i.e. creating new)
-			else if (dataIN.args) {
-				this.args = dataIN.args;
+			else {
+				this.args = argsIN;
 				// Outputs go straight to core.data (free-standing TPs).
 
 				// Pre-seed dynamic per-Y output keys for multi-Y table processes

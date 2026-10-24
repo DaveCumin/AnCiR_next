@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import pytest
 
-from plot_extras_support import (CASES, app_bbox, cases_of, close_all, columns_for, render,
-                                 data_to_app, rgb255, rt)
+from plot_extras_support import (CASES, app_bbox, app_px_of_display, cases_of, close_all,
+                                 columns_for, render, data_to_app, rgb255, rt)
 
 ACTO = cases_of("actogram")
 
@@ -130,6 +130,39 @@ def test_the_annotations_are_the_apps(name):
 def test_the_legend_lists_the_apps_entries(name):
     _fig, ax, _case = render(name)
     assert [t.get_text() for t in ax.get_legend().get_texts()] == exp_of(name)["legend"]["labels"]
+
+
+# A chosen start (`startTimeIN`) on a time column in a non-UTC zone: the rows, their date
+# labels and the exported plot-data rows fold at the chosen instant, as the app's do.
+START_CHOSEN = [n for n in ACTO if CASES[n]["plotJSON"]["plot"].get("startTimeIN") is not None]
+
+
+def test_the_chosen_start_cases_exist():
+    assert {"actogramStartTimeZoned", "actogramStartTimeBeforeRecord"} <= set(START_CHOSEN)
+
+
+@pytest.mark.parametrize("name", START_CHOSEN)
+def test_a_chosen_start_folds_the_rows_where_the_app_does(name):
+    _fig, ax, case = render(name)
+    a = exp_of(name)["actogram"]
+    got = ax._ancir_actogram
+    assert got["start"] == a["startTime"] == case["plotJSON"]["plot"]["startTimeIN"]
+    assert got["n_rows"] == a["Ndays"]
+    _h, rows = rt.actogram_download_data(case["plotJSON"], columns_for(case))
+    assert len(rows) == len(a["download"])
+    for r, want in zip(rows, a["download"]):
+        assert list(r) == pytest.approx(want, abs=1e-6)
+
+
+@pytest.mark.parametrize("name", [n for n in ACTO if exp_of(n)["actogram"]["rowLabels"]])
+def test_the_row_labels_are_the_apps(name):
+    fig, ax, _case = render(name)
+    want = exp_of(name)["actogram"]["rowLabels"]
+    texts = [t for t in ax.texts if t.get_gid() == "actogram-row-label"]
+    assert [t.get_text() for t in texts] == [w["text"] for w in want]
+    for t, w in zip(texts, want):
+        _x, y = app_px_of_display(fig, *t.get_transform().transform(t.get_position()))
+        assert y == pytest.approx(w["y"], abs=1e-6)
 
 
 @pytest.mark.parametrize("name", [n for n in ACTO if exp_of(n)["actogram"]["rasterRows"]])

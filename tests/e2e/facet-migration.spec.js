@@ -46,11 +46,11 @@ async function load(page, url) {
 
 const panelSvg = (page, id) => page.locator(`svg[id="plot${id}"]`);
 
-/** Live panel state through the app's own modules (dev server exposes them under /src). */
+/** Live panel state through the app's own module instances (dev-only window.__modules). */
 const panelInfo = (page) =>
 	page.evaluate(async () => {
-		const m = await import('/src/lib/core/facetPanels.svelte.js');
-		const n = await import('/src/lib/core/notifications.svelte.js');
+		const m = window.__modules.facetPanels;
+		const n = window.__modules.notifications;
 		return {
 			plotIds: window.__core.plots.map((p) => p.id),
 			warnings: n.notifications.list.filter((x) => x.type === 'warning').map((x) => x.message),
@@ -171,14 +171,14 @@ test.describe('facets as views', () => {
 		const gname = 'Onset vs day — immediate delay versus advance transients';
 		expect(info.warnings).toEqual([
 			[
-				`Panel 'onset_delay' of '${gname}' had its own Padding Top (40); facets now share the plot's value (15)`,
-				`Panel 'onset_delay' of '${gname}' had its own Padding Right (50); facets now share the plot's value (30)`,
-				`Panel 'onset_advance' of '${gname}' had its own series 3 Points Colour ("#A6ACD5"); facets now share the plot's value ("#BE796B")`,
-				`Panel 'onset_advance' of '${gname}' had its own series 3 Points Radius (7); facets now share the plot's value (3)`
+				`Panel 'onset_delay' of '${gname}' had its own padding top (40); facets now share the plot's value (15)`,
+				`Panel 'onset_delay' of '${gname}' had its own padding right (50); facets now share the plot's value (30)`,
+				`Panel 'onset_advance' of '${gname}' had its own series 3 points colour ("#A6ACD5"); facets now share the plot's value ("#BE796B")`,
+				`Panel 'onset_advance' of '${gname}' had its own series 3 points radius (7); facets now share the plot's value (3)`
 			].join('\n')
 		]);
 		// And it is on screen as one toast, not four.
-		const toast = page.getByText('had its own Padding Top (40)');
+		const toast = page.getByText('had its own padding top (40)');
 		await expect(toast).toBeVisible();
 		await expect(page.locator('.toast-close')).toHaveCount(1);
 	});
@@ -204,7 +204,7 @@ test.describe('facets as views', () => {
 		await page.waitForTimeout(400);
 		const target = '49:y375#0';
 		const geom = await page.evaluate(async (id) => {
-			const m = await import('/src/lib/core/plotRefs.js');
+			const m = window.__modules.plotRefs;
 			const p = m.resolvePlotRef(id);
 			const r = document.getElementById('plot' + id).getBoundingClientRect();
 			return {
@@ -254,8 +254,8 @@ test.describe('facets as views', () => {
 	}) => {
 		await load(page, EDA);
 		await page.evaluate(async () => {
-			const m = await import('/src/lib/core/facetPanels.svelte.js');
-			const refs = await import('/src/lib/core/plotRefs.js');
+			const m = window.__modules.facetPanels;
+			const refs = window.__modules.plotRefs;
 			refs.deselectAllRefs();
 			const g = window.__core.plots[0];
 			window.__els = Object.fromEntries(
@@ -276,7 +276,7 @@ test.describe('facets as views', () => {
 		await page.waitForTimeout(800);
 
 		const after = await page.evaluate(async () => {
-			const m = await import('/src/lib/core/facetPanels.svelte.js');
+			const m = window.__modules.facetPanels;
 			const g = window.__core.plots[0];
 			return {
 				order: g.plot.data.map((d) => d.column.refId),

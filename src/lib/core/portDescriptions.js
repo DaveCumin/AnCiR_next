@@ -295,8 +295,28 @@ export const NODE_PORT_DESCRIPTIONS = {
 			phase_angle: perY(
 				(ctx) =>
 					`Peak time minus the reference time set in the panel, in ${xUnit(ctx)}, within half a period. Positive: the peak is later.`
-			)
-		}
+			),
+			// Curves 2..Ncurves of a free-period fit (curve 1 is on the ports above).
+			'period_c*': perY((ctx) => `Fitted period of a further cosine curve, in ${xUnit(ctx)}.`),
+			'amplitude_c*': perY('Amplitude of a further cosine curve, in y units.'),
+			'acrophase_c*': perY((ctx) => `Peak time of a further cosine curve, ${phaseFrame(ctx)}.`),
+			'bathyphase_c*': perY((ctx) => `Trough time of a further cosine curve, ${phaseFrame(ctx)}.`)
+		},
+		special: [
+			{
+				name: 'period_c*',
+				re: /^(period|amplitude|acrophase|bathyphase)_c(\d+)$/,
+				text: (m, ctx) =>
+					perY(
+						{
+							period: `Fitted period of cosine curve ${m[2]}, in ${xUnit(ctx)}.`,
+							amplitude: `Amplitude of cosine curve ${m[2]}, in y units.`,
+							acrophase: `Peak time of cosine curve ${m[2]}, ${phaseFrame(ctx)}.`,
+							bathyphase: `Trough time of cosine curve ${m[2]} (half its period after the peak), ${phaseFrame(ctx)}.`
+						}[m[1]]
+					)(ctx)
+			}
+		]
 	},
 	FitFunction: {
 		inputs: {

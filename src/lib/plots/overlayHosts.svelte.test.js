@@ -42,7 +42,7 @@ import QQPlot from './QQPlot/QQPlot.svelte';
 import Boxplot, { niceAxisLimit } from './Boxplot/Boxplot.svelte';
 import MeanSEM from './MeanSEM/MeanSEM.svelte';
 import FFT from './FFT/FFT.svelte';
-import CWT, { periodToY, SCALOGRAM_LINEAR_ROWS } from './CWT/CWT.svelte';
+import CWT, { periodToY, SCALOGRAM_IMAGE_ROWS } from './CWT/CWT.svelte';
 import { logAxisDomain } from './logAxis.js';
 
 // happy-dom has no Web Animations; the Overlays tab's blocks slide in.
@@ -1154,7 +1154,7 @@ describe('cwt: horizontal lines and bands on the period axis', () => {
 	});
 
 	// The plot paints its power image through scalogramImageRows (CWT.linearAxis.test.js pins
-	// the mapping): one row per scale on a log axis, resampled rows on a linear one.
+	// the mapping): rows resampled onto the period axis, log or linear.
 	it.each([true, false])('the power image follows the period axis (log axis: %s)', (log) => {
 		const plot = makePlot('cwt');
 		plot.plot.logScale = log;
@@ -1179,7 +1179,7 @@ describe('cwt: horizontal lines and bands on the period axis', () => {
 		try {
 			const { container } = render(CWT, { props: { theData: plot, which: 'plot' } });
 			const n = plot.plot.transform.periods.length;
-			expect(heights.at(-1)).toBe(log ? n : Math.max(n, SCALOGRAM_LINEAR_ROWS));
+			expect(heights.at(-1)).toBe(Math.max(n, SCALOGRAM_IMAGE_ROWS));
 			expect(container.querySelector('image')).toBeTruthy();
 		} finally {
 			spy.mockRestore();

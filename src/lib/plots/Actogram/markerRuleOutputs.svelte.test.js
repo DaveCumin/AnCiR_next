@@ -306,6 +306,67 @@ describe('rename and delete keep column ids (history)', () => {
 		expect(getColumnById(tauCol)).toBeTruthy();
 		expect(plot.metricOut.r1_tau).toBe(tauCol);
 	});
+
+	// ROB-U4: adding a rule used to record only the rule list; the metric effect then minted
+	// the columns outside history. Undo of the add deleted them (unrecorded) and redo minted
+	// NEW ids, so redoing a later wire pointed it at a column that no longer existed.
+	it('add, wire, undo both, redo both: the SAME column ids and the wire comes back', () => {
+		const plot = restActogram();
+		const depth = history.undoStack.length;
+		addRuleRecorded(plot.plot, ONSET);
+		expect(history.undoStack.length).toBe(depth + 1);
+		// The add itself creates the columns (one step), before any effect runs.
+		expect(Object.keys(plot.metricOut)).toEqual(SUFFIXES.map((s) => `r1_${s}`));
+		sync(plot);
+		const ids = { ...plot.metricOut };
+		const tauCol = ids.r1_tau;
+		expect(getColumnById(tauCol).name).toBe(`Rule_1_tau_${plot.id}`);
+		const tau = [...col(plot, 'r1_tau')];
+		const tp = mutationService.addFreeTableProcess('DescribeData', { yIN: [tauCol], out: {} });
+		const wired = () =>
+			graph().connections.some(
+				(c) =>
+					c.fromId === `plot_${plot.id}` &&
+					c.fromPort === `col_${tauCol}` &&
+					c.toId.includes(String(tp.id))
+			);
+		expect(wired()).toBe(true);
+
+		history.undo(); // the wire (the Describe Data node)
+		history.undo(); // the rule
+		sync(plot);
+		expect(plot.plot.markerRules).toEqual([]);
+		expect(plot.metricOut).toEqual({});
+		for (const s of SUFFIXES) expect(getColumnById(ids[`r1_${s}`]), s).toBeFalsy();
+
+		history.redo(); // the rule
+		sync(plot);
+		expect(plot.metricOut).toEqual(ids);
+		for (const s of SUFFIXES) expect(getColumnById(ids[`r1_${s}`]), s).toBeTruthy();
+		expect(col(plot, 'r1_tau')).toEqual(tau);
+		history.redo(); // the wire
+		expect(wired()).toBe(true);
+		expect(core.tableProcesses.find((t) => t.id === tp.id).args.yIN).toEqual([tauCol]);
+	});
+
+	it('"Make rule" creates the rule\'s columns in its own undo step; redo keeps their ids', () => {
+		const plot = restActogram();
+		const d = plot.plot.data[0];
+		d.phaseMarkers = [PhaseMarkerClass.fromJSON({ ...ONSET, name: 'marker_1' }, d)];
+		promoteRecorded(plot.plot.data[0].phaseMarkers[0]);
+		const ruleId = plot.plot.markerRules[0].id;
+		const keys = SUFFIXES.map((s) => `${ruleId}_${s}`);
+		expect(Object.keys(plot.metricOut)).toEqual(keys);
+		sync(plot);
+		const ids = { ...plot.metricOut };
+		history.undo();
+		sync(plot);
+		expect(plot.metricOut).toEqual({});
+		history.redo();
+		sync(plot);
+		expect(plot.metricOut).toEqual(ids);
+		for (const k of keys) expect(getColumnById(ids[k]), k).toBeTruthy();
+	});
 });
 
 describe('stored values', () => {

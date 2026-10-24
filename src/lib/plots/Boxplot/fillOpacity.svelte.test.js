@@ -146,7 +146,7 @@ describe('the multi-select panel and the AI editor can set it', () => {
 		const y = mkCol('number', VALS);
 		const plot = new Plot({ type: 'boxplot', name: 'b', plot: { data: [{ y: { refId: y } }] } });
 		const field = getSharedDataSchema(plot).find((f) => f.path === 'boxPlot.fillOpacity');
-		expect(field).toMatchObject({ label: 'Box Fill opacity', input: 'number', step: 0.05, min: 0 });
+		expect(field).toMatchObject({ label: 'Box fill opacity', input: 'number', step: 0.05, min: 0 });
 		const prop = plotProps(plot).find((p) => p.path === 'plot.data[0].boxPlot.fillOpacity');
 		expect(prop).toMatchObject({ input: 'number', value: 0.3 });
 	});

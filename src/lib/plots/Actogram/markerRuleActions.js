@@ -3,7 +3,11 @@
 // 2026-09-30-actogram-marker-rules-and-outputs, section 4).
 //
 //   rule setting edit          setMarkerRule op, applied IN PLACE (no inner rebuild)
-//   add / delete a rule        recordInnerEdit (the rule list changes)
+//   add a rule                 recordInnerEdit + addColumn per output column + setPlotMetricOut,
+//                              one atomicBatch, so redo recreates the columns WITH THEIR IDS
+//                              (ROB-U4: the metric effect used to mint them outside history,
+//                              and redo minted new ids under any wire made after the add)
+//   delete a rule              (see below)
 //   detach / reattach          recordInnerEdit (series arrays change)
 //   detach by an instance edit the detach and the edit inside ONE recordInnerEdit callback
 //   promote                    recordInnerEdit, plus the promoted block's legacy stored values
@@ -22,8 +26,12 @@ import { mutationService } from '$lib/core/mutationService.js';
 import { history } from '$lib/core/opHistory.svelte.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { recordInnerEdit, removeFromInnerWithUndo } from '$lib/plots/seriesDelete.js';
-import { getColumnById } from '$lib/core/Column.svelte';
-import { parseRuleOutputKey, plotMetricColumnName } from '$lib/plots/plotMetricDefs.js';
+import { Column, getColumnById } from '$lib/core/Column.svelte';
+import {
+	parseRuleOutputKey,
+	plotMetricColumnName,
+	plotMetricKeys
+} from '$lib/plots/plotMetricDefs.js';
 import { promoteStoredValueOps } from '$lib/core/phaseMarkerStoredValueMigration.js';
 import {
 	addRule,
@@ -112,12 +120,46 @@ function ruleColumnRemovalOps(plot, ruleId) {
 	return [{ kind: 'setPlotMetricOut', id: plot.id, metricOut: next }, ...ops];
 }
 
-/** Add a rule (one undo step). Returns the new rule's id. */
+/**
+ * The ops that create a new rule's output columns in the same undo step as the rule: one
+ * addColumn per key the plot has no column for yet (with an id taken now, so the op's
+ * canonical form and every redo name that id), then the plot's metric map with those keys.
+ * Without these, the metric effect minted the columns outside history: undo of the add
+ * removed them unrecorded and redo minted NEW ids, so redoing a wire made after the add
+ * pointed it at a column that no longer existed (ROB-U4). `inner` is the edited inner.
+ */
+function ruleColumnCreationOps(inner, ruleId) {
+	const plot = inner?.parentBox;
+	if (!plot || ruleId == null) return [];
+	const shaped = { type: plot.type, id: plot.id, plot: inner };
+	const current = plot.metricOut ?? {};
+	const missing = plotMetricKeys(shaped).filter(
+		(k) => parseRuleOutputKey(k)?.ruleId === ruleId && !getColumnById(current[k])
+	);
+	if (missing.length === 0) return [];
+	const next = { ...current };
+	const adds = [];
+	for (const key of missing) {
+		// Never pushed: it only takes the next id and carries the name into the snapshot that
+		// the addColumn op restores (exactly as syncPlotMetricColumns would have named it).
+		const col = new Column({});
+		col.name = plotMetricColumnName(shaped, key);
+		adds.push({ kind: 'addColumn', columnData: JSON.parse(JSON.stringify(col)) });
+		next[key] = col.id;
+	}
+	return [...adds, { kind: 'setPlotMetricOut', id: plot.id, metricOut: next }];
+}
+
+/** Add a rule (one undo step, its output columns included). Returns the new rule's id. */
 export function addRuleRecorded(inner, init = {}) {
 	let id = null;
-	recordInnerEdit(inner, (i) => {
-		id = addRule(i, init).id;
-	});
+	recordInnerEdit(
+		inner,
+		(i) => {
+			id = addRule(i, init).id;
+		},
+		(after) => (isLive(inner) ? ruleColumnCreationOps(after, id) : [])
+	);
 	return id;
 }
 
@@ -188,13 +230,17 @@ export function promoteRecorded(block, { alsoReplace = [] } = {}) {
 	};
 	// "Make rule" makes the block's legacy stored values live again (plan 5.2): a formula
 	// using `tau_<block>` now reads the rule's tau column at that series, same undo step.
-	const repoint = () =>
+	// The rule's output columns are created in the same step too (see addRuleRecorded).
+	const repoint = (after) =>
 		isLive(inner)
-			? promoteStoredValueOps(core.storedValues, promoted, {
-					plotId: inner.parentBox.id,
-					ruleId,
-					ruleName: name
-				})
+			? [
+					...ruleColumnCreationOps(after, ruleId),
+					...promoteStoredValueOps(core.storedValues, promoted, {
+						plotId: inner.parentBox.id,
+						ruleId,
+						ruleName: name
+					})
+				]
 			: [];
 	const result = recordInnerEdit(inner, mutate, repoint);
 	if (!result) return;

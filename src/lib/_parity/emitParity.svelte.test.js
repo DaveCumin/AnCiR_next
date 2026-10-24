@@ -1304,6 +1304,7 @@ async function runClockZone(fx) {
 	appState.displayTimezone = fx.legacyZone ?? 'utc';
 	appState.showTimesIn = fx.showTimesIn ?? 'column';
 	try {
+		const startTimeIN = fixtureStartTimeIN(fx);
 		const specA = clockZoneSpec(fx.column);
 		const specB = clockZoneSpec(fx.columnB ?? { values: ['2024-01-01T00:00:00'] });
 		const a = mkZoneCol(specA, 'a');
@@ -1355,7 +1356,13 @@ async function runClockZone(fx) {
 			type: 'actogram',
 			width: 600,
 			height: 400,
-			plot: { periodHrs: 24, data: series }
+			// `startTimeIN` (optional): the user's chosen first-row start (Properties > Time,
+			// epoch ms; an ISO string in the fixture for readability). Absent: the automatic start.
+			plot: {
+				periodHrs: 24,
+				data: series,
+				...(startTimeIN != null ? { startTimeIN } : {})
+			}
 		});
 		core.plots.push(plot);
 		const act = plot.plot;
@@ -1415,6 +1422,7 @@ async function runClockZone(fx) {
 				hostZone: fx.hostZone ?? 'UTC',
 				legacyZone: fx.legacyZone ?? null,
 				actogramWithB: !!fx.columnB,
+				startTimeIN: startTimeIN ?? null,
 				showTimesIn: fx.showTimesIn ?? 'column',
 				y: yValues,
 				centresHrs: centres,

@@ -550,3 +550,107 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 		240_000
 	);
 });
+
+// The Actogram's chosen start (`startTimeIN`, Properties > Time, saved since v82.23) must reach
+// the exported figure and its plot-data CSV: the rows fold at that instant, not at midnight
+// before the first sample. The session is parity-zoned-time (the hive's Auckland text, every
+// 15 min from 1 Apr 2024, across the end of NZDT on 7 Apr) with an actogram of it whose chosen
+// start is 7 Apr 00:00 NZDT, the DST day itself. The expected rows are the hive's own instants
+// as the script resolved them (columns.csv): every sample from the start on, a left-edge bar
+// 0.25 h wide at its elapsed hours from the start, in row floor(h / 24) + 1. The app's side of
+// the same fold is pinned by the `tz-*-start-time-in-*` clockZone parity fixtures.
+describe.runIf(HAVE_PYTHON)('exported Python scripts fold the actogram at its chosen start', () => {
+	// 7 Apr 2024 00:00 NZDT (+13:00).
+	const START = Date.parse('2024-04-06T11:00:00Z');
+	function actogramSession(withStart) {
+		const s = JSON.parse(
+			readFileSync(join(ROOT, 'tools', 'parity', 'sessions', 'parity-zoned-time.json'), 'utf8')
+		);
+		s.plots = [
+			{
+				id: 70,
+				name: 'Hive actogram',
+				type: 'actogram',
+				x: 0,
+				y: 0,
+				width: 600,
+				height: 400,
+				plot: {
+					periodHrs: 24,
+					doublePlot: 2,
+					data: [{ x: { refId: 1 }, y: { refId: 2 }, colour: '#000000' }],
+					...(withStart ? { startTimeIN: START } : {})
+				}
+			}
+		];
+		return s;
+	}
+	const rowsOf = (text) =>
+		text
+			.trim()
+			.split('\n')
+			.slice(1)
+			.map((l) => l.split(',').map(Number));
+	/** Header index by name in a CSV header line (quotes stripped). */
+	const col = (head, name) =>
+		head
+			.split(',')
+			.map((h) => h.replaceAll('"', ''))
+			.indexOf(name);
+
+	for (const [label, opts, entry, outDir] of [
+		['single inline', {}, 'session.py', 'session_output'],
+		['split + CSV data', { split: true, dataAsCsv: true }, 'analysis.py', 'analysis_output']
+	]) {
+		it(`${label}: rows start at startTimeIN, in the column's zone, across the DST day`, () => {
+			const { dir, res } = runExport(
+				sessionToPythonFiles(actogramSession(true), PY_RUNTIME, opts),
+				PYTHON,
+				entry
+			);
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			const out = join(dir, outDir);
+			const csv = readdirSync(out).find((f) => /^plot_70_.*_data\.csv$/.test(f));
+			expect(csv, readdirSync(out).join()).toBeTruthy();
+			const got = rowsOf(readFileSync(join(out, csv), 'utf8'));
+
+			const [head, ...lines] = readFileSync(join(out, 'columns.csv'), 'utf8').trim().split('\n');
+			const ti = col(head, 'hive time');
+			const yi = col(head, 'activity');
+			expect(ti).toBeGreaterThanOrEqual(0);
+			const want = [];
+			for (const l of lines) {
+				const cells = l.split(',');
+				const t = Number(cells[ti]);
+				const h = (t - START) / 3600000;
+				if (!(h >= 0)) continue;
+				want.push([0, Math.floor(h / 24) + 1, h, h + 0.25, Number(cells[yi])]);
+			}
+			// A 15 min logger for 14 days from 1 Apr: the 7 Apr 00:00 start keeps 8 days of it.
+			expect(want.length).toBeGreaterThan(700);
+			expect(got).toHaveLength(want.length);
+			for (let i = 0; i < want.length; i++) {
+				for (let k = 0; k < 5; k++) expect(got[i][k]).toBeCloseTo(want[i][k], 9);
+			}
+			// The export's DST note counts rows from the chosen start.
+			expect(res.stderr.replace(/\s+/g, ' ')).toContain(
+				'Daylight saving ended on 7 Apr 2024 in Pacific/Auckland. Rows are 24 h of elapsed time, so rows after it start at 23:00 local time.'
+			);
+		}, 240_000);
+	}
+
+	it('without a chosen start the rows begin at midnight before the first sample', () => {
+		const { dir, res } = runExport(
+			sessionToPythonFiles(actogramSession(false), PY_RUNTIME, {}),
+			PYTHON,
+			'session.py'
+		);
+		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		const out = join(dir, 'session_output');
+		const csv = readdirSync(out).find((f) => /^plot_70_.*_data\.csv$/.test(f));
+		const got = rowsOf(readFileSync(join(out, csv), 'utf8'));
+		// 1 Apr 00:00 NZDT is the first sample: every one of the 1344 samples is drawn.
+		expect(got).toHaveLength(1344);
+		expect(got[0].slice(1, 4)).toEqual([1, 0, 0.25]);
+	}, 240_000);
+});

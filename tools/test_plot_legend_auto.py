@@ -156,3 +156,70 @@ def test_measured_label_widths_place_the_same_legends():
         assert lay["box"]["width"] > 0
         assert math.isfinite(lay["box"]["width"])
         close_all()
+
+
+# ---- The frame itself (Legend.svelte's <rect>, legendBoxSize) ------------------------------
+#
+# matplotlib's own legend box pads the entries by one `borderpad` all round and spaces rows
+# only BETWEEN them, so the exported frame was 6 px narrower (the app adds 2 px + half the
+# padding after the widest label) and about 12 px shorter (every app row is fontSize +
+# itemSpacing + 4 px, the last one too) than the app's. Now it is the app's box to the pixel,
+# the entries placed as Legend.svelte places them.
+
+DRAWN = sorted(n for n, c in CASES.items()
+               if (c["expected"].get("legend") or {}).get("drawn"))
+
+
+@pytest.mark.parametrize("name", DRAWN)
+def test_the_frame_is_the_apps_rect(name):
+    fig, _ax, case = render(name)
+    d = case["expected"]["legend"]["drawn"]
+    left, top, right, bottom = app_bbox(fig, legend_of(fig).get_frame())
+    assert (right - left, bottom - top) == pytest.approx((d["width"], d["height"]), abs=1e-6)
+    assert (left, top) == pytest.approx((d["x"], d["y"]), abs=1e-6)
+
+
+@pytest.mark.parametrize("name", [n for n in DRAWN if (CASES[n]["plotJSON"]["plot"].get(
+    "legend") or {}).get("orientation", "vertical") != "horizontal"])
+def test_the_entries_sit_where_the_app_draws_them(name):
+    """Entry i: its label `padding + 25 + 4` px in, its baseline `padding + i * lineH +
+    lineH / 2` down plus 0.35 em (the text's dy); a line swatch from 2 to 18 px, butt ends."""
+    fig, ax, case = render(name)
+    leg = legend_of(fig)
+    box = case["expected"]["legend"]["box"]
+    fs = case["expected"]["legend"]["fontPx"]
+    left, top, _r, _b = app_bbox(fig, leg.get_frame())
+    k = rt._FIG_PX_PER_IN / fig.dpi
+    for i, t in enumerate(leg.get_texts()):
+        x, y = t.get_transform().transform(t.get_position())
+        ax_, ay = x * k, fig._ancir_geometry["fig_h"] - y * k - fig._ancir_geometry["band"]
+        assert ax_ - left == pytest.approx(box["padding"] + 25 + 4, abs=1e-6), (name, i)
+        want = box["padding"] + i * box["lineH"] + box["lineH"] / 2 + 0.35 * fs
+        assert ay - top == pytest.approx(want, abs=1e-6), (name, i)
+    from matplotlib.lines import Line2D
+    lines = [h for h in leg.legend_handles if isinstance(h, Line2D)
+             and h.get_linestyle() not in ("None", "none", "")]
+    for ln in lines:
+        (x0, _), (x1, _) = (ln.get_transform().transform((xx, 0)) for xx in ln.get_xdata()[[0, -1]])
+        assert (x1 - x0) * k == pytest.approx(16, abs=1e-6), name
+        assert ln.get_solid_capstyle() == "butt"
+
+
+def test_the_frame_is_measured_from_the_labels_without_a_layout():
+    """A legend drawn with no layout box (as _legend_with_overlays may be) is still
+    legendBoxSize over its labels as drawn, at the default figure style."""
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(5.2, 3), dpi=96)
+    ax.plot([0, 1], [0, 1], label="Data")
+    ax.plot([0, 1], [1, 0], label="A longer label")
+    look = rt.resolve_figure_style(None)
+    leg = rt._legend_with_overlays(ax, [], legend_json={"show": True}, look=look)
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    bb = leg.get_frame().get_window_extent(r)
+    px = r.points_to_pixels(rt._PX_TO_PT)
+    widths = [t.get_window_extent(r).width / px for t in leg.get_texts()]
+    want = rt.legend_box_size(widths, look["px"]["legend"])
+    assert (bb.width / px, bb.height / px) == pytest.approx((want["width"], want["height"]),
+                                                          abs=1e-6)
+    assert want["height"] == 2 * (look["px"]["legend"] + 8) + 16

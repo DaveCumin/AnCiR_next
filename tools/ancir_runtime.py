@@ -275,6 +275,14 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
         cols.append(np.cos(k * omega * t))
         cols.append(np.sin(k * omega * t))
     X = np.column_stack(cols)
+    # cosinor.js solves the normal equations by Gaussian elimination and gives up (null) on a
+    # pivot below 1e-12, e.g. x only on whole periods, where every sine column is zero.
+    # lstsq would return a minimum-norm "fit" there instead, so the same rule is applied here
+    # first (the coefficients still come from lstsq).
+    try:
+        _solve_linear_js((X.T @ X).tolist(), (X.T @ y).tolist())
+    except ValueError:
+        return None
     try:
         beta, *_ = np.linalg.lstsq(X, y, rcond=None)
     except np.linalg.LinAlgError:
@@ -3793,13 +3801,53 @@ _COSINOR_METRIC_KEYS = ('period', 'mesor', 'amplitude', 'amplitude_ciLow', 'ampl
                         'pvalue', 'perm_pvalue', 'bathyphase', 'phase_angle', 'amplitude_h1',
                         'acrophase_h1', 'bathyphase_h1')
 
+# Cosinor.svelte CURVE_METRICS: the per-curve metrics of a free-period fit with Ncurves > 1.
+_COSINOR_CURVE_METRICS = ('period', 'amplitude', 'acrophase', 'bathyphase')
+
+
+def cosinor_curve_out_keys(args):
+    """Cosinor.svelte cosinorCurveOutKeys: `<metric>_c<c>` for curves 2..Ncurves of a
+    free-period fit, curve by curve; none with a fixed period (curve 1 is on the main ports)."""
+    if args.get('useFixedPeriod'):
+        return []
+    try:
+        n = int(float(args.get('Ncurves')))
+    except (TypeError, ValueError):
+        n = 0
+    return [f'{m}_c{c}' for c in range(2, n + 1) for m in _COSINOR_CURVE_METRICS]
+
+
+def _cosinor_curve_metrics(free_res, args, phase_ref):
+    """Cosinor.svelte cosinorCurveMetrics: curves 2..Ncurves' period, amplitude, time of
+    peak and of trough (each phase on its own curve's period, in the phase reference), NaN
+    where the fit has no such curve."""
+    cs = [] if args.get('useFixedPeriod') or free_res is None else \
+        (free_res['parameters'].get('cosines') or [])
+    out = {}
+    for key in cosinor_curve_out_keys(args):
+        metric, c = key.split('_c')
+        cd = cs[int(c) - 1] if int(c) - 1 < len(cs) else None
+        w = cd['frequency'] if cd else 0  # cycles per unit in this port
+        period = (1.0 / w) if w else _NAN
+        peak = -cd['phase'] / (2 * math.pi * w) if w else _NAN
+        if metric == 'period':
+            out[key] = period
+        elif metric == 'amplitude':
+            out[key] = cd['amplitude'] if cd else _NAN
+        elif metric == 'acrophase':
+            out[key] = apply_phase_reference(wrap_to_period(peak, period), phase_ref, period)
+        else:
+            out[key] = apply_phase_reference(bathyphase(peak, period), phase_ref, period)
+    return out
+
 
 def cosinor_metrics(fixed_res, free_res, args, phase_ref):
     """Cosinor.svelte cosinorMetrics: every scalar metric of one y series, in the node's
     phase reference. With a fixed period and nHarmonics > 1, amplitude / acrophase /
     bathyphase are the OVERALL waveform's (multi_component_waveform; phase_angle from its
     orthophase) and the *_h1 keys harmonic 1's; otherwise both families are harmonic 1
-    (free period: curve 1). perm_pvalue is NaN (the permutation test is not ported)."""
+    (free period: curve 1), and curves 2..Ncurves add `<metric>_c<c>`
+    (_cosinor_curve_metrics). perm_pvalue is NaN (the permutation test is not ported)."""
     use_fixed = bool(args.get('useFixedPeriod', False))
     fixed_period = args.get('fixedPeriod', 24)
     reference_hrs = args.get('referenceHrs', 0)
@@ -3851,6 +3899,7 @@ def cosinor_metrics(fixed_res, free_res, args, phase_ref):
         'rsquared': rsq,
         'pvalue': (fixed_res or {}).get('pF', nan) if use_fixed else nan,
         'perm_pvalue': nan,
+        **_cosinor_curve_metrics(free_res, args, phase_ref),
     }
 
 
@@ -3920,6 +3969,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
     metrics_by_y = {}
     any_valid = False
     curves = {}
+    failed = []  # fitted but the fit failed: the app writes an empty curve for these
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -3935,6 +3985,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
         if use_fixed:
             fixed_res = fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
             if fixed_res is None:
+                failed.append(y_id)
                 continue
             xs = output_x_data if output_x_data is not None else tt
             ys = (evaluate_cosinor_at_points({**fixed_res, 'period': fixed_period}, xs)
@@ -3942,6 +3993,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
         else:
             free_res = fit_cosine_curves(tt, yy, n_curves, period_range)
             if free_res is None:
+                failed.append(y_id)
                 continue
             xs = output_x_data if output_x_data is not None else tt
             ys = (evaluate_cosinor_at_points(free_res['parameters'], xs)
@@ -3976,8 +4028,15 @@ def tp_cosinor(args, cols, raw_data, _sv):
             if y_out_id == -1:
                 y_out_id = _out_id(args, 'cosinory')
             _set_col(raw_data, cols, y_out_id, ys, type_='number')
+        # A series whose fit failed has no curve: the app writes it empty (no stale curve),
+        # and no pre-process runs on it.
+        for y_id in failed:
+            y_out_id = _out_id(args, f'cosinory_{y_id}')
+            if y_out_id == -1:
+                y_out_id = _out_id(args, 'cosinory')
+            _set_col(raw_data, cols, y_out_id, [], type_='number')
         empty = cosinor_metrics(None, None, args, phase_ref)
-        for key in _COSINOR_METRIC_KEYS:
+        for key in (*_COSINOR_METRIC_KEYS, *cosinor_curve_out_keys(args)):
             _set_col(raw_data, cols, _out_id(args, key),
                      [metrics_by_y.get(y, empty)[key] for y in y_ins], type_='number')
     return any_valid
@@ -11532,7 +11591,7 @@ def _legend_with_overlays(ax, overlay_legend, extra_axes=(), legend_json=None, l
         # On the top-most axes (`on`: a twin y axis is drawn after `ax` and would otherwise
         # paint its series over the legend; the app draws the legend after every series).
         leg = (on or ax).legend(handles, labels, **kw)
-        style_legend(leg, frame)
+        style_legend(leg, frame, (layout or {}).get('box'))
         return leg
     return None
 
@@ -13416,9 +13475,17 @@ def legend_kwargs(legend_json, look, n_items=0):
         kw['ncols'] = n_items
         kw['columnspacing'] = 10 / fs_px  # LEGEND_H_SPACING
     show_box = look['legend_box'] and (lj.get('borderWidth', 1) or 0) > 0
+    # A line swatch as Legend.svelte draws it: from 2 to 18 px of the 25 px swatch column,
+    # its marker at 10 px (matplotlib's spans the whole column, the marker at its middle).
+    from matplotlib.lines import Line2D
+    kw['handler_map'] = {Line2D: _app_line_swatch_handler()}
     kw['frameon'] = True
     kw['fancybox'] = True
     kw['_frame'] = {
+        # What sizes the frame as legendBoxSize does (style_legend, _AppLegendBox).
+        'app': {'font_px': fs_px, 'padding': pad, 'itemSpacing': spacing,
+                'orientation': 'horizontal' if lj.get('orientation') == 'horizontal'
+                else 'vertical'},
         'facecolor': _css_colour(lj.get('backgroundColor'), (1, 1, 1, 0.9)),
         'edgecolor': (_css_colour(lj.get('borderColor'), _LEGEND_BORDER_DEFAULT)
                       if show_box else 'none'),
@@ -13426,6 +13493,32 @@ def legend_kwargs(legend_json, look, n_items=0):
         'radius': 3 / fs_px,
     }
     return kw
+
+
+_APP_LINE_SWATCH = None
+
+
+def _app_line_swatch_handler():
+    """A HandlerLine2D drawing a line swatch as Legend.svelte does: x 2 to 18 px of the
+    swatch column (1.5 to 13.5 pt) with butt ends (an SVG <line>'s; matplotlib's solid lines
+    project half their width past each end), its one marker in the middle at 10 px."""
+    global _APP_LINE_SWATCH
+    if _APP_LINE_SWATCH is None:
+        from matplotlib.legend_handler import HandlerLine2D
+
+        class AppLineSwatch(HandlerLine2D):
+            def get_xdata(self, legend, xdescent, ydescent, width, height, fontsize):
+                return ([-xdescent + 2 * _PX_TO_PT, -xdescent + 18 * _PX_TO_PT],
+                        [-xdescent + 10 * _PX_TO_PT])
+
+            def create_artists(self, *args, **kwargs):
+                arts = super().create_artists(*args, **kwargs)
+                for a in arts:
+                    a.set_solid_capstyle('butt')
+                return arts
+
+        _APP_LINE_SWATCH = AppLineSwatch(numpoints=1)
+    return _APP_LINE_SWATCH
 
 
 def _css_colour(c, fallback):
@@ -13436,9 +13529,89 @@ def _css_colour(c, fallback):
     return m if m is not None and is_color_like(m) else fallback
 
 
-def style_legend(leg, frame):
+def _app_legend_box_class():
+    """The legend's outer box laid out as Legend.svelte lays it (legendLayout.js
+    legendBoxSize), not as matplotlib's VPacker does. matplotlib pads the entries by the same
+    `borderpad` on every side and spaces the rows by `labelspacing` BETWEEN them, so its frame
+    came out short of the app's: the app adds 2 px + half the padding after the widest label,
+    and every row is `fontSize + itemSpacing + 4` px tall, the last one included (for the
+    default legend 6 px narrower and about 12 px shorter). This box is exactly the app's size
+    (the layout's box, or one measured from the legend's own labels when drawn), with the
+    swatch column `padding` px in from the left and entry i's baseline where the app's text
+    sits: `padding + i * lineH + lineH / 2` down, plus 0.35 em (its dy). Returns
+    (box class, column class)."""
+    global _APP_LEGEND_BOX
+    if _APP_LEGEND_BOX is not None:
+        return _APP_LEGEND_BOX
+    from matplotlib.offsetbox import VPacker
+    from matplotlib.transforms import Bbox
+
+    class AppLegendColumn(VPacker):
+        """One column of entries, every baseline `_ancir_pitch` (display px) below the last
+        (matplotlib stacks rows by their own heights, which follow each label's glyphs)."""
+        _ancir_pitch = 0.0
+
+        def _get_bbox_and_child_offsets(self, renderer):
+            rows = self.get_visible_children()
+            if not rows:
+                return Bbox.from_bounds(0, 0, 0, 0), []
+            bbs = [r.get_bbox(renderer) for r in rows]
+            offs = [(0.0, -i * self._ancir_pitch) for i in range(len(rows))]
+            x0 = min(b.x0 for b in bbs)
+            x1 = max(b.x1 for b in bbs)
+            y0 = min(b.y0 + oy for b, (_, oy) in zip(bbs, offs))
+            y1 = max(b.y1 + oy for b, (_, oy) in zip(bbs, offs))
+            return Bbox.from_extents(x0, y0, x1, y1), offs
+
+    class AppLegendBox(VPacker):
+        _ancir_box = None       # {'width', 'height', 'lineH', 'padding'} in app px, or None
+        _ancir_app = None       # legend_kwargs' sizing settings (font_px, padding, ...)
+        _ancir_legend = None
+
+        def ancir_box(self, renderer):
+            """The box in app px: the one given, else legendBoxSize over the labels as drawn."""
+            if self._ancir_box is not None:
+                return self._ancir_box
+            a = self._ancir_app
+            px = renderer.points_to_pixels(_PX_TO_PT)
+            widths = [t.get_window_extent(renderer).width / px for t in self._ancir_legend.texts]
+            return legend_box_size(widths, a['font_px'], a['padding'], a['itemSpacing'],
+                                   a['orientation'])
+
+        def _get_bbox_and_child_offsets(self, renderer):
+            box = self.ancir_box(renderer)
+            px = renderer.points_to_pixels(_PX_TO_PT)  # display px per app px
+            entries = self._ancir_legend._legend_handle_box
+            for col in entries.get_visible_children():
+                col.__class__ = AppLegendColumn
+                col._ancir_pitch = box['lineH'] * px
+            eb = entries.get_bbox(renderer)
+            w, h = box['width'] * px, box['height'] * px
+            baseline = (box['padding'] + box['lineH'] / 2
+                        + 0.35 * self._ancir_app['font_px']) * px
+            # The entries' own origin is the first baseline (HPacker/VPacker 'baseline').
+            return Bbox.from_bounds(0, 0, w, h), [(box['padding'] * px - eb.x0, h - baseline)]
+
+    _APP_LEGEND_BOX = AppLegendBox
+    return AppLegendBox
+
+
+_APP_LEGEND_BOX = None
+
+
+def style_legend(leg, frame, box=None):
+    """The legend's frame as the app draws it: its fill, border and 3 px corners, and its size
+    and entry rows as Legend.svelte lays them (_app_legend_box_class): `box` is the layout's
+    box (legend_layout) when the plot has one, so the frame is the box the placement used;
+    without one it is measured from the legend's labels when drawn."""
     if leg is None:
         return
+    if frame.get('app') is not None:
+        lb = leg._legend_box
+        lb.__class__ = _app_legend_box_class()
+        lb._ancir_box = box
+        lb._ancir_app = frame['app']
+        lb._ancir_legend = leg
     f = leg.get_frame()
     f.set_facecolor(frame['facecolor'])
     f.set_edgecolor(frame['edgecolor'])
@@ -15224,9 +15397,9 @@ def _boxplot_legend(ax, items, overlay_legend, legend_json, look, layout=None):
     if anchor:
         kw.pop('bbox_to_anchor', None)
         kw.update(anchor)
-    leg = ax.legend(handles, labels, handler_map={_BoxSwatch: HandlerPatch(patch_func=swatch)},
-                    **kw)
-    style_legend(leg, frame)
+    kw['handler_map'] = {**kw['handler_map'], _BoxSwatch: HandlerPatch(patch_func=swatch)}
+    leg = ax.legend(handles, labels, **kw)
+    style_legend(leg, frame, (layout or {}).get('box'))
     return leg
 
 
@@ -16175,8 +16348,9 @@ def _actogram_legend(ax, items, legend_json, look, layout):
         kw.update(anchor)
     hmap = {h: HandlerPatch(patch_func=swatch) for h in handles
             if getattr(h, '_ancir_box_swatch', False)}
-    leg = ax.legend(handles, labels, handler_map=hmap, **kw)
-    style_legend(leg, frame)
+    kw['handler_map'] = {**kw['handler_map'], **hmap}
+    leg = ax.legend(handles, labels, **kw)
+    style_legend(leg, frame, layout.get('box'))
     return leg
 
 
@@ -16425,27 +16599,30 @@ def downsample_columns(power, max_cols):
     return out
 
 
-# CWT.svelte SCALOGRAM_LINEAR_ROWS: image rows on a linear period axis (at least one per scale).
-SCALOGRAM_LINEAR_ROWS = 1024
+# CWT.svelte SCALOGRAM_IMAGE_ROWS: image rows the scalogram is painted with (at least one per
+# scale), on either axis.
+SCALOGRAM_IMAGE_ROWS = 1024
 
 
-def cwt_image_rows(periods, log_scale, n_linear_rows=SCALOGRAM_LINEAR_ROWS):
+def cwt_image_rows(periods, log_scale, n_rows=SCALOGRAM_IMAGE_ROWS):
     """CWT.svelte scalogramImageRows: what each image row shows, row 0 at the top (the longest
     period), as (j0, j1, w): row r is scale j0[r]'s colours blended with scale j1[r]'s at
-    weight w[r]. On a log axis one row per scale (row r is scale n - 1 - r, w 0); on a linear
-    one max(n, 1024) evenly spaced rows, each at the period of its centre, blending the two
-    scales whose periods bracket it by its distance from each in log period, so every scale's
-    colour sits at its own period where the ticks, cone, ridge and overlays put it."""
+    weight w[r]. max(n, 1024) evenly spaced rows on the axis the image is drawn against (log
+    or linear), each at the period of its centre, blending the two scales whose periods
+    bracket it by its distance from each in log period, so every scale's colour sits at its
+    own period where the ticks, cone, ridge and overlays put it. Fewer than two scales: one
+    row per scale, all scale 0."""
     n = len(periods)
-    if log_scale or n < 2:
-        j = [n - 1 - r for r in range(n)]
+    if n < 2:
+        j = [0] * n
         return j, list(j), [0.0] * n
     lo, hi = periods[0], periods[-1]
-    R = max(n, n_linear_rows)
+    R = max(n, n_rows)
     j0, j1, w = [0] * R, [0] * R, [0.0] * R
     k = 1
     for r in range(R - 1, -1, -1):
-        p = lo + (1 - (r + 0.5) / R) * (hi - lo)
+        f = 1 - (r + 0.5) / R
+        p = lo * (hi / lo) ** f if log_scale else lo + f * (hi - lo)
         while k < n - 1 and periods[k] < p:
             k += 1
         j0[r], j1[r] = k - 1, k
@@ -16522,7 +16699,7 @@ _CWT_SURFACE = '#ffffff'   # --surface-card
 def plot_cwt(plot, columns_index, ax):
     """The wavelet scalogram as CWT.svelte draws it, in the plot area's px (x right, y down):
     the power field as one image (time across, the longest period at the top, one row per
-    scale on a log axis and resampled onto a linear one by cwt_image_rows, at most 4096
+    scale resampled onto the period axis (log or linear) by cwt_image_rows, at most 4096
     columns, each cell the colormap at its power over 0 .. the largest power), the shaded period bands over it, the cone of influence (white dashed
     curve, everything outside it washed with the card colour at 45%), the ridge (red), the
     frame, the period ticks and the time ticks (fixed 10 / 11 px type, scaled with the
@@ -16553,8 +16730,8 @@ def plot_cwt(plot, columns_index, ax):
     fin = P[np.isfinite(P)]
     pmax = float(fin.max()) if fin.size and fin.max() > 0 else 1.0
     ax._ancir_cwt['powerMax'] = pmax
-    # Each scale's colours, then one row per scale on a log axis or resampled onto a linear
-    # one (cwt_image_rows), as the app's canvas paints them.
+    # Each scale's colours, then resampled onto the period axis, log or linear
+    # (cwt_image_rows), as the app's canvas paints them.
     img = downsample_columns(P, SCALOGRAM_MAX_COLUMNS)
     t = np.where(np.isfinite(img), np.clip(img / pmax, 0, 1), 0.0)
     rgb = cwt_image_rgb(colormap_rgb_array(cmap, t), cwt_image_rows(periods, log_scale)) / 255.0

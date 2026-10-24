@@ -256,4 +256,34 @@ describe('TourOverlay card heading in a narrow card', () => {
 			]);
 		}
 	});
+
+	// Seen at 1024 px: the getting-started step "Pick a rhythm to plot" broke its body at
+	// "Free-" over "running" in the squeezed card. The body is HTML, so the same rule applies
+	// through markup, leaving tags and the rest of the copy as they were.
+	it('keeps hyphenated words of the step body whole, inside markup too', async () => {
+		stubRect(dialog, SHORT_DIALOG);
+		stubRect(target, TARGET);
+		render(TourOverlay);
+		tourState.activeTour = {
+			id: 't',
+			name: 'T',
+			steps: [
+				{
+					target: '#tour-target',
+					title: 'Pick',
+					body: 'Choose <strong>“Free-running period”</strong>, a day-to-day drift.',
+					advance: {}
+				}
+			]
+		};
+		tourState.index = 0;
+		await tick();
+		const body = document.querySelector('.tour-body');
+		expect(body.textContent).toBe('Choose “Free-running period”, a day-to-day drift.');
+		expect([...body.querySelectorAll('.tour-nobreak')].map((s) => s.textContent)).toEqual([
+			'Free-running',
+			'day-to-day'
+		]);
+		expect(body.querySelector('strong .tour-nobreak').textContent).toBe('Free-running');
+	});
 });

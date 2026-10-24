@@ -116,7 +116,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { displayNameById } from '$lib/core/columnLabels.js';
+	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { onMount, tick, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -223,6 +223,8 @@
 	}
 
 	// ── Available columns list ────────────────────────────────────────────────
+	// Listed by the name a person reads (displayNameOf: "Binned: x", not `binnedx_12_3`), as the
+	// inserted token shows it; typing either finds the column.
 	let allColumns = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set built and consumed inside this $derived body; never read reactively
 		const seen = new Set();
@@ -245,7 +247,8 @@
 						seen.add(id);
 						cols.push({
 							id: col.id,
-							name: col.name,
+							name: displayNameOf(col),
+							storedName: col.name,
 							tableName: proc.displayName || proc.name
 						});
 					}
@@ -258,7 +261,8 @@
 			seen.add(col.id);
 			cols.push({
 				id: col.id,
-				name: col.name,
+				name: displayNameOf(col),
+				storedName: col.name,
 				tableName: colToGroupName.get(col.id) ?? ''
 			});
 		}
@@ -294,7 +298,10 @@
 		if (!ac.filter) return allColumns;
 		const f = ac.filter.toLowerCase();
 		return allColumns.filter(
-			(c) => c.name.toLowerCase().includes(f) || c.tableName.toLowerCase().includes(f)
+			(c) =>
+				c.name.toLowerCase().includes(f) ||
+				c.storedName.toLowerCase().includes(f) ||
+				c.tableName.toLowerCase().includes(f)
 		);
 	});
 

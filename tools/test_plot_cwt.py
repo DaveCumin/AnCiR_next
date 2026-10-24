@@ -8,8 +8,8 @@ colour scale in a corner, a Paul and a DOG wavelet.
 Pinned here:
   - the transform (utils/cwt.js ported in cwt_from_series): every period to 1e-9, the sample
     interval, the largest power to 1e-9 and a grid of power samples to 1e-7 of it;
-  - the image: which scale each row shows (one row per scale on a log axis, resampled onto a
-    linear one so each scale sits at its own period), its column count (at most 4096) and
+  - the image: which scales each row blends (resampled onto the period axis, log or linear,
+    so each scale sits at its own period), its column count (at most 4096) and
     the colour of a grid of cells, as the app's canvas paints them (the colormap at power
     over 0 .. the largest);
   - the cone of influence (curve and shade), the ridge, the period and time ticks and titles,
@@ -93,10 +93,7 @@ def test_the_image_rows_are_the_apps(name):
     assert (j0, j1) == (w["j0"], w["j1"])
     assert wt == pytest.approx(w["w"], abs=1e-9)
     n = len(exp_of(name)["periods"])
-    if log:
-        assert j0 == list(range(n - 1, -1, -1)) and not any(wt)
-    else:
-        assert len(j0) == max(n, rt.SCALOGRAM_LINEAR_ROWS)
+    assert len(j0) == max(n, rt.SCALOGRAM_IMAGE_ROWS)
 
 
 def test_on_a_linear_axis_each_scale_is_drawn_at_its_period():

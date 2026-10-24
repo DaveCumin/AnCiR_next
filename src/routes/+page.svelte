@@ -71,6 +71,9 @@
 	import { queueHelpHint } from '$lib/core/helpHint.svelte.js';
 	import { wasNewAtSessionStart } from '$lib/utils/firstRun.js';
 	import { isEditableTarget, isTextEntryTarget } from '$lib/utils/editableTarget.js';
+	// Dev-only window.__modules (published in the DEV block below); last, so it adds no
+	// module-evaluation order of its own.
+	import { devModules } from '$lib/core/devModules.js';
 
 	// --- start screen -------------------------------------------------------
 	// Shown only when there is nothing to resume: an empty session, no deep-linked load in
@@ -174,6 +177,7 @@
 	//   __core.plots / __core.data                          // inspect state
 	//   __appConsts.plotMap / __appConsts.tableProcessMap   // the loaded node registries
 	//   await __session.load(JSON.parse(__session.save()))  // save and reload the session
+	//   __modules.facetPanels.panelsFor(__core.plots[0])    // app's own modules (devModules.js)
 	// Stripped from production builds by the import.meta.env.DEV guard.
 	if (import.meta.env.DEV && typeof window !== 'undefined') {
 		window.__history = history;
@@ -182,6 +186,7 @@
 		window.__session = { save: outputCoreAsJson, load: importJson };
 		window.__mutationService = mutationService;
 		window.__appState = appState;
+		window.__modules = devModules;
 	}
 
 	// Facets are VIEWS (core/facetPanels.svelte.js): a generator's panels are derived on read

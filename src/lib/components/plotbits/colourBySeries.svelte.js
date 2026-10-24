@@ -941,6 +941,8 @@ export class EncodingKeyLayout {
 
 	/** The keys' font sizes, as ColourScale.svelte and SizeKey.svelte draw them. */
 	fontPx = $derived(this.#scale?.fontSize ?? resolveStyle(this.#host.viewStyle).sizes.legend);
+	/** The family the keys are drawn in, so the room reserved is the room the text takes. */
+	fontFamily = $derived(resolveStyle(this.#host.viewStyle).fontFamily);
 	sizeFontPx = $derived(
 		this.#sizeScale?.fontSize ?? resolveStyle(this.#host.viewStyle).sizes.legend
 	);
@@ -959,7 +961,8 @@ export class EncodingKeyLayout {
 				noValue: key.noValue,
 				title: key.title,
 				fontSize: this.fontPx,
-				length
+				length,
+				fontFamily: this.fontFamily
 			});
 		}
 		return colourScaleGeometry({
@@ -969,7 +972,8 @@ export class EncodingKeyLayout {
 			fontSize: this.fontPx,
 			tickLabels: key.ticks.map((t) => t.label),
 			label: key.title,
-			noValueLabel: key.noValue ? key.noValue.label : null
+			noValueLabel: key.noValue ? key.noValue.label : null,
+			fontFamily: this.fontFamily
 		});
 	}
 
@@ -997,7 +1001,9 @@ export class EncodingKeyLayout {
 	/** How far the bar's title runs along it (ColourScale.titleRunLength), px; 0 for a
 	 *  category key (its title sits across the top). */
 	titleLength = $derived(
-		this.categorical ? 0 : titleRunLength(this.key?.title, this.fontPx, this.vertical)
+		this.categorical
+			? 0
+			: titleRunLength(this.key?.title, this.fontPx, this.vertical, this.fontFamily)
 	);
 
 	/**
@@ -1012,7 +1018,8 @@ export class EncodingKeyLayout {
 				items: this.key.categories,
 				noValue: this.key.noValue,
 				title: null,
-				fontSize: this.fontPx
+				fontSize: this.fontPx,
+				fontFamily: this.fontFamily
 			}).natural;
 			// Beside the plot under a legend placed outside on the right (its box does not depend
 			// on where it goes), the room starts below it, so every column the rows wrap into is
@@ -1032,7 +1039,8 @@ export class EncodingKeyLayout {
 				items: this.key.categories,
 				noValue: this.key.noValue,
 				title: this.key.title,
-				fontSize: this.fontPx
+				fontSize: this.fontPx,
+				fontFamily: this.fontFamily
 			}).titleH;
 			return Math.max(this.minLength, Math.min(natural, room - titleH));
 		}
@@ -1184,10 +1192,10 @@ export class EncodingKeyLayout {
 		if (!at || !key || !this.base) return null;
 		if (key.categorical) return { ticks: [], title: key.title };
 		const vertical = this.vertical;
-		const o = { vertical, barLen: at.length, fontSize: this.fontPx };
+		const o = { vertical, barLen: at.length, fontSize: this.fontPx, fontFamily: this.fontFamily };
 		const title =
 			key.title && (this.base.rotateLabel || !vertical)
-				? fitScaleTitle(key.title, at.length, this.fontPx)
+				? fitScaleTitle(key.title, at.length, this.fontPx, this.fontFamily)
 				: key.title;
 		return { ticks: fitBarTicks(key.ticks, o), title };
 	});

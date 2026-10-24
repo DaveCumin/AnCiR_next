@@ -90,6 +90,7 @@
 <script>
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById, removeColumn, Column } from '$lib/core/Column.svelte';
+	import { displayNameOf } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -697,7 +698,8 @@
 				<div class="vt-head" style="grid-template-columns:{gridTemplate};">
 					<span class="vt-h-row">Row</span>
 					{#each outputCols as oc (oc.colId)}
-						<span class="vt-h-val" title={oc.col?.name}>{oc.col?.name ?? ''}</span>
+						{@const shown = displayNameOf(oc.col)}
+						<span class="vt-h-val" title={shown}>{shown}</span>
 					{/each}
 				</div>
 				<VirtualList items={editableData} height={tableHeight} itemHeight={ROW_H}>

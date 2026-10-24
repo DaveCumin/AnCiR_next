@@ -39,6 +39,18 @@ export function rankAverage(arr) {
 	return ranks;
 }
 
+/**
+ * The pairwise-complete rows as NUMBERS. validPairs keeps a numeric string ("3": isNaN("3") is
+ * false) as it is, and the sums below would then concatenate ("0" + "1" + "2"), and ties
+ * would be judged by spelling ("2" vs "2.0"). A number column can hold strings when a session
+ * was written that way (the AI draft path used to bake "1.5" as text: STAT-U4), so every value
+ * is read as the number it spells here, once, for both coefficients.
+ */
+function numericPairs(x, y) {
+	const { tt, yy } = validPairs(x, y);
+	return { xs: tt.map(Number), ys: yy.map(Number) };
+}
+
 /** Are there any ties in this array? (Spearman's t-approx p degrades with ties.) */
 function hasTies(arr) {
 	return new Set(arr).size < arr.length;
@@ -49,7 +61,7 @@ function hasTies(arr) {
  * @returns {{r:number, n:number}} r is NaN if n<2 or either column has zero variance.
  */
 export function pearson(x, y) {
-	const { tt: xs, yy: ys } = validPairs(x, y);
+	const { xs, ys } = numericPairs(x, y);
 	const n = xs.length;
 	if (n < 2) return { r: NaN, n };
 	const mx = xs.reduce((s, v) => s + v, 0) / n;
@@ -73,7 +85,7 @@ export function pearson(x, y) {
  * @returns {{r:number, n:number, tiesX:boolean, tiesY:boolean}}
  */
 export function spearman(x, y) {
-	const { tt: xs, yy: ys } = validPairs(x, y);
+	const { xs, ys } = numericPairs(x, y);
 	const n = xs.length;
 	if (n < 2) return { r: NaN, n, tiesX: false, tiesY: false };
 	const { r } = pearson(rankAverage(xs), rankAverage(ys));

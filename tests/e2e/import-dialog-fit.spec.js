@@ -145,3 +145,24 @@ for (const [w, h] of [
 		expect(m.cellWith).toBeLessThanOrEqual(m.cellWithout + 1);
 	});
 }
+
+// A blank preview cell read as an em dash, which looks like a value (a minus, or "not
+// applicable"). It now says "Blank", muted and italic.
+test('blank preview cells say "Blank", never a dash', async ({ page }) => {
+	await page.setViewportSize({ width: 1024, height: 768 });
+	await openApp(page);
+	await page.locator('button.primary-card', { hasText: 'Import data' }).click();
+	const [chooser] = await Promise.all([
+		page.waitForEvent('filechooser'),
+		page.locator('button.dialog-button', { hasText: /Choose File|Change file/ }).click()
+	]);
+	await chooser.setFiles({ name: 'sparse.csv', mimeType: 'text/csv', buffer: sparseCsv() });
+	const table = page.locator('.preview-table');
+	await expect(table.locator('.blank-cell').first()).toHaveText('Blank', { timeout: 30000 });
+	expect(await table.locator('tbody').innerText()).not.toContain('—');
+	const style = await table
+		.locator('.blank-cell')
+		.first()
+		.evaluate((el) => getComputedStyle(el).fontStyle);
+	expect(style).toBe('italic');
+});

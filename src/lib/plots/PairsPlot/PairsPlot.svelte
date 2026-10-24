@@ -14,7 +14,12 @@
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { displayNameOf } from '$lib/core/columnLabels.js';
-	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import {
+		viewFontScale,
+		viewStyleFor,
+		scalePadding,
+		viewPadFloorFor
+	} from '$lib/plots/viewBox.js';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
 	import {
 		colormapRGB,
@@ -69,7 +74,15 @@
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
 		// set; the raw value is what gets saved. See plots/viewBox.js.
 		#padding = $state({ top: 24, right: 16, bottom: 16, left: 60 });
-		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		// A node view's own measured floor (fitViewPadding, plots/viewBox.js); never saved.
+		viewPadFloor = $state(null);
+		paddingScaled = $derived(
+			scalePadding(
+				this.#padding,
+				this.fontScale,
+				viewPadFloorFor(this.viewPadFloor, this.renderBox)
+			)
+		);
 		get padding() {
 			return this.renderBox ? this.paddingScaled : this.#padding;
 		}

@@ -18,23 +18,14 @@ async function blankCanvas(page) {
 	await page.goto('/');
 	await page.waitForFunction(() => window.__core, null, { timeout: 60_000 });
 	await page.locator('button.primary-card', { hasText: 'Start with a blank canvas' }).click();
-	// Import the app's own module instances (the URLs the page loaded), not second copies.
-	await page.evaluate(() => {
-		window.__imp = (path) => {
-			const u = performance
-				.getEntriesByType('resource')
-				.map((e) => e.name)
-				.find((n) => n.includes(path + '?') || n.endsWith(path));
-			return import(/* @vite-ignore */ u ?? path);
-		};
-	});
 }
 
 /** Push a number or time column and return its id. */
 async function addColumns(page, specs) {
 	return page.evaluate(async (specs) => {
-		const { Column } = await window.__imp('/src/lib/core/Column.svelte');
-		const { pushObj, core } = await window.__imp('/src/lib/core/core.svelte.js');
+		// The app's own module instances (dev-only window.__modules, core/devModules.js).
+		const { Column } = window.__modules.Column;
+		const { pushObj, core } = window.__modules.core;
 		return specs.map(({ name, type, n, start, step, pattern }) => {
 			const c = new Column({ type, data: -1 });
 			c.customName = name;
@@ -56,8 +47,8 @@ async function addColumns(page, specs) {
 async function addPlot(page, type, plot, series = []) {
 	await page.evaluate(
 		async ({ type, plot, series }) => {
-			const { Plot } = await window.__imp('/src/lib/core/Plot.svelte');
-			const { pushObj } = await window.__imp('/src/lib/core/core.svelte.js');
+			const { Plot } = window.__modules.Plot;
+			const { pushObj } = window.__modules.core;
 			const p = new Plot({ type, name: type, x: 300, y: 60, width: 500, height: 500, plot });
 			for (const [x, y] of series) p.plot.addData({ x: { refId: x }, y: { refId: y } });
 			pushObj(p);

@@ -405,6 +405,69 @@ const CASES = [
 		}
 	},
 	{
+		// The user's chosen start (startTimeIN) on a TIME column in a non-UTC zone, on the day
+		// daylight saving ends there: rows, date labels, markers and annotations all fold at the
+		// chosen instant (the rows after the change start at 23:00 NZST).
+		name: 'actogramStartTimeZoned',
+		kind: 'actogram',
+		demo: 'demo-workflow-masking',
+		plot: 'Actogram: truly entrained',
+		edit: (p, ref, session) => {
+			zonedTimeAxis(session, p, {
+				zone: 'Pacific/Auckland',
+				first: Date.parse('2024-03-31T11:00:00Z'), // 1 Apr 2024 00:00 NZDT
+				stepHrs: 1
+			});
+			p.plot.startTimeIN = Date.parse('2024-04-06T11:00:00Z'); // 7 Apr 00:00 NZDT
+			p.plot.rowLabels = 'date';
+			p.plot.dateFormat = 'DD MMM HH:mm';
+			p.plot.lightBands = {
+				bands: [
+					{ col: '#ffffff', pc: 50 },
+					{ col: '#000000', pc: 50 }
+				]
+			};
+			p.plot.markerRules = [{ id: 'r1', name: 'Onset', type: 'onset', colour: '#d62728' }];
+			p.plot.data[0].phaseMarkers = [
+				{
+					name: 'by hand',
+					type: 'manual',
+					colour: '#1f77b4',
+					showLine: true,
+					lineWidth: 1,
+					markerSize: 3,
+					manualMarkers: [6, 30.5, 55, 79.25]
+				}
+			];
+			const t0 = p.plot.startTimeIN;
+			p.plot.annotations = [
+				// Starts before the chosen start (a negative hour), and one across a row end.
+				{ name: 'early', startMs: t0 - 2 * 3600000, duration: 5, colour: '#ff000080' },
+				{ name: 'late', startMs: t0 + 70 * 3600000, duration: 6, colour: '#00aa00' }
+			];
+			legendOn(p, 'topright');
+		}
+	},
+	{
+		// A chosen start that is not a midnight, a day BEFORE a London record that crosses the
+		// start of BST: the first row is empty and the labels read 06:30, then 07:30 BST.
+		name: 'actogramStartTimeBeforeRecord',
+		kind: 'actogram',
+		demo: 'demo-workflow-masking',
+		plot: 'Actogram: truly entrained',
+		edit: (p, ref, session) => {
+			zonedTimeAxis(session, p, {
+				zone: 'Europe/London',
+				first: Date.parse('2024-03-25T00:00:00Z'),
+				stepHrs: 1
+			});
+			p.plot.startTimeIN = Date.parse('2024-03-24T06:30:00Z');
+			p.plot.rowLabels = 'date';
+			p.plot.dateFormat = 'DD MMM HH:mm';
+			p.plot.doublePlot = 1;
+		}
+	},
+	{
 		// More rows than the plot has pixels: every row drawn into one image.
 		name: 'actogramRasterBars',
 		kind: 'actogram',
@@ -647,6 +710,20 @@ function actogramStart(session, p) {
 	return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
+/**
+ * Give an actogram a TIME x axis: a new column of epoch-ms instants (`first`, then every
+ * `stepHrs`, as many as the plot's first series has samples) in `zone`, added to the session
+ * (the ports rebuild it from the case's `addedColumns`) and wired as every series' x.
+ */
+function zonedTimeAxis(session, p, { zone, first, stepHrs }) {
+	const xs = session.data.find((c) => c.id === p.plot.data[0].x.refId);
+	const n = (session.rawData[String(xs.data)] ?? []).length;
+	const id = Math.max(...session.data.map((c) => c.id)) + 1000;
+	session.rawData[String(id)] = Array.from({ length: n }, (_, i) => first + i * stepHrs * 3600000);
+	session.data.push({ id, name: 'zoned time', type: 'time', data: id, timeZone: zone });
+	for (const d of p.plot.data) d.x = { refId: id };
+}
+
 const attrs = (el, names) =>
 	Object.fromEntries(
 		names.map((n) => {
@@ -694,9 +771,18 @@ function drawnActogram(container, inner) {
 		points: g.querySelector('polyline')?.getAttribute('points') ?? '',
 		fill: g.querySelector('polyline')?.getAttribute('fill') ?? null
 	}));
+	// The row labels as drawn (Actogram.svelte "DAY/PERIOD NUMBERS": end-anchored, 10 px left
+	// of the rows), with the centre each sits on.
+	const labelX = inner.padding.left - 10;
+	const rowLabels = [...container.querySelectorAll('text[text-anchor="end"]')]
+		.filter((t) => Number(t.getAttribute('x')) === labelX)
+		.map((t) => ({ text: t.textContent, y: round(Number(t.getAttribute('y'))) }));
 	const out = {
 		Ndays: inner.Ndays,
 		startTime: inner.startTime,
+		rowLabels,
+		// The "Show/Save data" rows (the export's plot-data CSV), for a chosen start only.
+		...(inner.startTimeIN != null ? { download: inner.getDownloadData().rows.map(roundAll) } : {}),
 		eachplotheight: round(inner.eachplotheight),
 		rowGap: round(inner.rowGap),
 		rasterRows: !!inner.rasterRows,
@@ -797,9 +883,8 @@ function drawnCwt(container, inner) {
 		for (let i = 0; i < nT; i += colStep) samples.push([j, i, round(tr.power[j][i])]);
 	}
 	const img = downsampleColumns(tr.power, SCALOGRAM_MAX_COLUMNS);
-	// The scale each image row shows, as the plot paints it: one row per scale on a log axis,
-	// resampled onto a linear one.
-	// resampled (two scales blended) onto a linear one.
+	// The scale each image row shows, as the plot paints it: resampled onto the period axis
+	// (log or linear), two scales blended per row.
 	const rows = scalogramImageRows(tr.periods, inner.logScale);
 	const nR = rows.j0.length;
 	const imgRowStep = Math.max(1, Math.floor(nR / 9));
@@ -901,7 +986,16 @@ async function runCase(c) {
 	resetCore();
 	const session = JSON.parse(readFileSync(join(DEMOS, c.demo + '.json'), 'utf8'));
 	const plotJSON = structuredClone(plotByName(session, c.plot, c.demo));
+	const savedIds = new Set(session.data.map((cd) => cd.id));
 	c.edit?.(plotJSON, demoRefs(session, c.demo), session);
+	// Columns a case adds to the demo (zonedTimeAxis): the ports add the same ones.
+	const added = session.data.filter((cd) => !savedIds.has(cd.id));
+	const addedColumns = added.length
+		? {
+				data: added,
+				rawData: Object.fromEntries(added.map((cd) => [cd.data, session.rawData[cd.data]]))
+			}
+		: null;
 	appState.displayTimezone = c.zone ?? 'utc';
 	core.storedValues = session.storedValues ?? {};
 	core.groups = session.groups ?? [];
@@ -951,6 +1045,7 @@ async function runCase(c) {
 		demo: c.demo,
 		zone: c.zone ?? 'utc',
 		plotJSON: { ...savedJSON, ...(seriesColours ? { seriesColours } : {}) },
+		...(addedColumns ? { addedColumns } : {}),
 		columnLabels,
 		expected
 	};

@@ -1,13 +1,15 @@
 <script>
 	// @ts-nocheck
-	// Floating toolbar shown when exactly ONE plot or facet panel is selected in the
-	// workspace. `plot` is a Plot or a FacetPanel (same surface: id, type, plot).
+	// The actions of the ONE selected plot or facet panel in the workspace, docked in the
+	// card's header (Draggable.svelte), so they never cover the plot. `plot` is a Plot or a
+	// FacetPanel (same surface: id, type, plot).
 	// - Zoom: toggles zoom mode for this plot (drag-to-box-zoom + scroll-to-zoom).
 	//         Shift+scroll always zooms regardless (handled in the plot).
 	// - Reset: clears the zoom back to auto limits (on a panel: the shared x on the
 	//         generator and this panel's y override).
 	// - Save: the same PNG/SVG/data export menu the control panel offers.
-	// Presentational shell around shared helpers; positioned by the parent host.
+	// Presentational shell around shared helpers: flat, its buttons the size of the header's
+	// other actions (NodeActions .na-btn).
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { isZoomMode, toggleZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
@@ -50,7 +52,7 @@
 			aria-label="Zoom mode"
 			{@attach tooltip('Zoom: drag a box or scroll to zoom (Shift+scroll always zooms)')}
 		>
-			<Icon name="search" width={18} height={18} />
+			<Icon name="search" width={15} height={15} />
 		</button>
 		<button
 			type="button"
@@ -63,7 +65,7 @@
 			aria-label="Reset zoom"
 			{@attach tooltip('Reset zoom to fit the data')}
 		>
-			<Icon name="reset" width={18} height={18} />
+			<Icon name="reset" width={15} height={15} />
 		</button>
 		<span class="pt-sep" aria-hidden="true"></span>
 	{/if}
@@ -79,7 +81,7 @@
 		aria-label="Save plot"
 		{@attach tooltip('Save / export this plot')}
 	>
-		<Icon name="disk" width={18} height={18} />
+		<Icon name="disk" width={15} height={15} />
 	</button>
 </div>
 
@@ -90,12 +92,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 2px;
-		padding: 4px 6px;
-		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-card);
+		gap: 1px;
 		pointer-events: auto;
 	}
 
@@ -103,11 +100,11 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 28px;
-		height: 26px;
+		width: 24px;
+		height: 24px;
 		padding: 0;
 		border: none;
-		border-radius: 5px;
+		border-radius: var(--radius-sm);
 		background: transparent;
 		color: var(--color-lightness-35);
 		cursor: pointer;
@@ -117,7 +114,7 @@
 	}
 
 	.pt-btn:hover:not(:disabled) {
-		background: var(--color-lightness-95);
+		background: var(--color-lightness-88);
 		color: var(--color-accent);
 	}
 
@@ -133,8 +130,8 @@
 
 	.pt-sep {
 		width: 1px;
-		align-self: stretch;
-		margin: 2px 3px;
-		background: var(--color-lightness-90);
+		height: 14px;
+		margin: 0 3px;
+		background: var(--color-lightness-85);
 	}
 </style>

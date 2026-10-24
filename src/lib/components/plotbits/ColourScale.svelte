@@ -24,6 +24,7 @@
 	import { LegendClass, LEGEND_MARGIN, cornerFraction } from './Legend.svelte';
 	import { colormapRGB } from '$lib/components/plotbits/colormaps.js';
 	import { wrapKeyTitle } from './SizeKey.svelte';
+	import { measureTextWidths } from './legendLayout.js';
 
 	/** How many stops the SVG gradient is built from. Enough that the eye cannot
 	 *  find the joins in any of the shipped ramps, cheap enough to inline. */
@@ -76,6 +77,31 @@
 		return String(Number(v.toPrecision(3)));
 	}
 
+	/** A character's estimated width, in em, where text cannot be measured. */
+	const CHAR_EM = 0.6;
+
+	/**
+	 * Text widths in px: MEASURED in `fontFamily` on a canvas in the browser, so a label is as
+	 * wide as it is drawn ("36800" is 3.16 em in system-ui, not the 3 em a 0.6 em average
+	 * gives, and the bar's turned title overlapped it by 2 px), else estimated at 0.6 em a
+	 * character (no family given, or no canvas: jsdom, SSR, and the Python export's port).
+	 * @param {string[]} texts
+	 * @param {number} fontSize
+	 * @param {string|null} [fontFamily]
+	 * @returns {number[]}
+	 */
+	export function scaleTextWidths(texts, fontSize, fontFamily = null) {
+		return (
+			measureTextWidths(texts, fontSize, fontFamily) ??
+			texts.map((t) => String(t ?? '').length * fontSize * CHAR_EM)
+		);
+	}
+
+	/** One text's width (scaleTextWidths). */
+	export function scaleTextWidth(text, fontSize, fontFamily = null) {
+		return scaleTextWidths([text], fontSize, fontFamily)[0];
+	}
+
 	/** Gap between the bar and its tick labels, px. */
 	export const TICK_GAP = 5;
 	/** Side of the "no value" swatch relative to the font size, and its gap below the bar. */
@@ -86,10 +112,10 @@
 	 * must reserve room for it or place it (the Scatterplot's colour by, encodingHost.js).
 	 * Pure, so a host's reservation and the drawn key cannot disagree.
 	 *
-	 * Tick label widths are ESTIMATED from the character count rather than measured with a
-	 * canvas: the bar only needs to know how much room to leave beside itself, an
-	 * average-width estimate is within a character of the truth for the short numbers it
-	 * prints, and it keeps the geometry testable (jsdom's measureText returns 0).
+	 * Text widths are measured in `fontFamily` (scaleTextWidths), so the turned title beside a
+	 * vertical bar clears its widest tick label however wide its digits are drawn. A host that
+	 * reserves room for the key passes the same family the component draws in. Without a
+	 * family (or a canvas) they are estimated at 0.6 em a character, as the Python export does.
 	 *
 	 * @param {object} o
 	 * @param {boolean} o.vertical
@@ -99,6 +125,7 @@
 	 * @param {string[]} o.tickLabels
 	 * @param {string|null} [o.label]
 	 * @param {string|null} [o.noValueLabel] the "no value" entry's text, or null for none
+	 * @param {string|null} [o.fontFamily] the family the key is drawn in (null: estimate)
 	 */
 	export function colourScaleGeometry({
 		vertical,
@@ -107,19 +134,25 @@
 		fontSize,
 		tickLabels,
 		label = null,
-		noValueLabel = null
+		noValueLabel = null,
+		fontFamily = null
 	}) {
-		const tickTextW = Math.max(...tickLabels.map((t) => t.length), 1) * fontSize * 0.6;
+		const tickTextW = Math.max(
+			...scaleTextWidths(tickLabels, fontSize, fontFamily),
+			fontSize * CHAR_EM
+		);
 		// A one- or two-character label ('r', '\u03c1') rotated onto its side reads as a stray
 		// mark rather than a word, so only a real word is turned. Short ones stay upright.
 		const rotateLabel = !!label && String(label).length > 2;
 		const labelGap = label
 			? rotateLabel
 				? fontSize + 4
-				: String(label).length * fontSize * 0.6 + 4
+				: scaleTextWidth(label, fontSize, fontFamily) + 4
 			: 0;
 		const swatch = Math.max(6, Math.round(fontSize * 0.8));
-		const noValueW = noValueLabel ? swatch + 4 + noValueLabel.length * fontSize * 0.6 : 0;
+		const noValueW = noValueLabel
+			? swatch + 4 + scaleTextWidth(noValueLabel, fontSize, fontFamily)
+			: 0;
 		const noValueH = noValueLabel ? NO_VALUE_GAP + Math.max(swatch, fontSize) : 0;
 		const width = vertical
 			? Math.max(thickness + TICK_GAP + tickTextW + labelGap, noValueW)
@@ -159,7 +192,8 @@
 	/**
 	 * The category key's geometry, shared by the component and the host (placement, reserved
 	 * room) and ported one for one by the Python export (ancir_runtime.category_key_geometry).
-	 * Pure. Text widths are estimated at 0.6 em a character, as the bar's are.
+	 * Pure. Text widths are measured in `fontFamily` when given (scaleTextWidths), else
+	 * estimated at 0.6 em a character, as the bar's are.
 	 *
 	 * @param {object} o
 	 * @param {{label: string, colour: string}[]} o.items the categories, in key order
@@ -167,6 +201,7 @@
 	 * @param {string|null} [o.title]
 	 * @param {number} o.fontSize
 	 * @param {number|null} [o.length] the room for the rows' height, px (null: one column)
+	 * @param {string|null} [o.fontFamily] the family the key is drawn in (null: estimate)
 	 * @returns {{width: number, height: number, swatch: number, rowH: number, step: number,
 	 *   titleH: number, natural: number, perColumn: number, columns: number,
 	 *   titleLines: {text: string, y: number}[],
@@ -177,7 +212,8 @@
 		noValue = null,
 		title = null,
 		fontSize,
-		length = null
+		length = null,
+		fontFamily = null
 	}) {
 		const entries = [
 			...(items ?? []).map((it) => ({
@@ -202,8 +238,12 @@
 		const charW = fontSize * CHAR_EM;
 		const colWs = [];
 		for (let c = 0; c < columns; c++) {
-			const names = entries.slice(c * perColumn, (c + 1) * perColumn).map((e) => e.label.length);
-			colWs.push(swatch + CATEGORY_LABEL_GAP + Math.max(0, ...names) * charW);
+			const names = scaleTextWidths(
+				entries.slice(c * perColumn, (c + 1) * perColumn).map((e) => e.label),
+				fontSize,
+				fontFamily
+			);
+			colWs.push(swatch + CATEGORY_LABEL_GAP + Math.max(0, ...names));
 		}
 		const entriesW = colWs.reduce((a, w) => a + w, 0) + (columns - 1) * CATEGORY_COLUMN_GAP;
 		const maxChars = Math.max(CATEGORY_TITLE_MIN_CHARS, Math.floor(entriesW / charW));
@@ -223,7 +263,7 @@
 			});
 			x += colWs[c] + CATEGORY_COLUMN_GAP;
 		}
-		const titleW = Math.max(0, ...lines.map((l) => l.length * charW));
+		const titleW = Math.max(0, ...scaleTextWidths(lines, fontSize, fontFamily));
 		return {
 			width: Math.max(entriesW, titleW),
 			height: titleH + perColumn * step - CATEGORY_ROW_GAP,
@@ -242,22 +282,19 @@
 
 	/** Space kept between two neighbouring tick labels along the bar, px. */
 	export const TICK_LABEL_SPACE = 2;
-	/** A character's estimated width, in em (as colourScaleGeometry estimates text). */
-	const CHAR_EM = 0.6;
-
 	/**
 	 * Where a tick's label runs along the bar: [from, to] in px from the bar's LOW end. A label
 	 * at an end sits inside the bar's length (flush with that end); any other is centred on its
-	 * tick. Along a vertical bar a label takes one em; along a horizontal one its estimated
-	 * width.
+	 * tick. Along a vertical bar a label takes one em; along a horizontal one its width
+	 * (scaleTextWidth: measured in `fontFamily`, else estimated).
 	 * @param {number} t the tick's place along the bar, 0 (low) to 1 (high)
 	 * @param {string} label
-	 * @param {{vertical: boolean, barLen: number, fontSize: number}} o
+	 * @param {{vertical: boolean, barLen: number, fontSize: number, fontFamily?: string|null}} o
 	 * @returns {[number, number]}
 	 */
-	export function tickLabelSpan(t, label, { vertical, barLen, fontSize }) {
+	export function tickLabelSpan(t, label, { vertical, barLen, fontSize, fontFamily = null }) {
 		const at = t * barLen;
-		const ext = vertical ? fontSize : String(label ?? '').length * fontSize * CHAR_EM;
+		const ext = vertical ? fontSize : scaleTextWidth(label ?? '', fontSize, fontFamily);
 		if (t <= 0) return [at, at + ext];
 		if (t >= 1) return [at - ext, at];
 		return [at - ext / 2, at + ext / 2];
@@ -280,7 +317,7 @@
 	 * range), so they always stay: on a bar too short even for them (only a stored length
 	 * under minBarLength can be) they are drawn anyway.
 	 * @param {{t: number, label: string}[]} ticks low end first
-	 * @param {{vertical: boolean, barLen: number, fontSize: number}} o
+	 * @param {{vertical: boolean, barLen: number, fontSize: number, fontFamily?: string|null}} o
 	 */
 	export function fitBarTicks(ticks, o) {
 		const n = ticks?.length ?? 0;
@@ -300,13 +337,18 @@
 	 * @param {string|null} title
 	 * @param {number} room px
 	 * @param {number} fontSize
+	 * @param {string|null} [fontFamily] the family it is drawn in (null: estimate widths)
 	 */
-	export function fitScaleTitle(title, room, fontSize) {
+	export function fitScaleTitle(title, room, fontSize, fontFamily = null) {
 		const s = String(title ?? '');
-		const charW = fontSize * CHAR_EM;
-		if (s.length * charW <= room) return s;
-		const keep = Math.floor(room / charW) - 1;
-		return keep >= 1 ? s.slice(0, keep).trimEnd() + '\u2026' : '';
+		if (scaleTextWidth(s, fontSize, fontFamily) <= room) return s;
+		// Every shortening at once (one measuring pass), then the longest that fits.
+		const cuts = Array.from({ length: s.length - 1 }, (_, i) => s.slice(0, i + 1) + '\u2026');
+		const widths = scaleTextWidths(cuts, fontSize, fontFamily);
+		for (let keep = cuts.length; keep >= 1; keep--) {
+			if (widths[keep - 1] <= room) return s.slice(0, keep).trimEnd() + '\u2026';
+		}
+		return '';
 	}
 
 	/**
@@ -327,12 +369,13 @@
 	 * @param {string|null} label
 	 * @param {number} fontSize
 	 * @param {boolean} vertical
+	 * @param {string|null} [fontFamily] the family it is drawn in (null: estimate)
 	 */
-	export function titleRunLength(label, fontSize, vertical) {
+	export function titleRunLength(label, fontSize, vertical, fontFamily = null) {
 		if (!label) return 0;
 		const s = String(label);
 		if (vertical && s.length <= 2) return 0;
-		return s.length * fontSize * CHAR_EM;
+		return scaleTextWidth(s, fontSize, fontFamily);
 	}
 
 	/**
@@ -456,7 +499,10 @@
 	const barLen = $derived(
 		length ??
 			scaleData?.barLength ??
-			autoBarLength(vertical ? boxH : boxW, titleRunLength(label, fontSize, vertical))
+			autoBarLength(
+				vertical ? boxH : boxW,
+				titleRunLength(label, fontSize, vertical, resolved.fontFamily)
+			)
 	);
 
 	const stops = $derived(gradientStops(colormap));
@@ -475,7 +521,8 @@
 			fontSize,
 			tickLabels: tickItems.map((t) => t.label),
 			label,
-			noValueLabel: noValue ? (noValue.label ?? 'no value') : null
+			noValueLabel: noValue ? (noValue.label ?? 'no value') : null,
+			fontFamily: resolved.fontFamily
 		})
 	);
 	const tickTextW = $derived(geom.tickTextW);
@@ -484,9 +531,13 @@
 	// title that runs along the bar (turned beside a vertical bar, under a horizontal one)
 	// shortened to the bar's length, the whole title kept as its tooltip. The geometry above is
 	// the full set's, so the room a host reserved does not change with the bar's length.
-	const shownTicks = $derived(fitBarTicks(tickItems, { vertical, barLen, fontSize }));
+	const shownTicks = $derived(
+		fitBarTicks(tickItems, { vertical, barLen, fontSize, fontFamily: resolved.fontFamily })
+	);
 	const shownLabel = $derived(
-		label && (rotateLabel || !vertical) ? fitScaleTitle(label, barLen, fontSize) : label
+		label && (rotateLabel || !vertical)
+			? fitScaleTitle(label, barLen, fontSize, resolved.fontFamily)
+			: label
 	);
 	const labelShortened = $derived(!!label && shownLabel !== label);
 
@@ -497,7 +548,8 @@
 					noValue,
 					title: label,
 					fontSize,
-					length: length ?? null
+					length: length ?? null,
+					fontFamily: resolved.fontFamily
 				})
 			: null
 	);

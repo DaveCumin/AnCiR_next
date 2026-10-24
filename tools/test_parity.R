@@ -186,7 +186,9 @@ run_clock_zone_fixture <- function(fx, rec) {
     series[[2]] <- list(xType = "time", x = xb, y = rep(1, length(xb)))
     clocks[[2]] <- column_clock(b, cols, raw)
   }
-  start <- actogram_start_time(series, clock$zone)
+  # The plot's start: the user's chosen first row (`startTimeIN`) when the fixture has one,
+  # else the automatic one (midnight in the clock zone before the first sample).
+  start <- actogram_plot_start_time(list(startTimeIN = inp$startTimeIN), series, clock$zone)
   frames <- lapply(series, function(sr) actogram_series_frame(sr$x, sr$y, "time", start, 24))
   ndays <- actogram_ndays(frames)
   xs <- unlist(lapply(series, function(sr) sr$x[!is.na(sr$x) & !is.na(sr$y)]))

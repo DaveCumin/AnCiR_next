@@ -6,7 +6,8 @@
 	import { removePlots } from '$lib/core/Plot.svelte';
 	import { resolvePlotRef, renderables, ownerPlotOf, isFacetPanel } from '$lib/core/plotRefs.js';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
-	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
+	import { getCanvasWidthPx, RIGHT_CHROME_GUTTER } from '$lib/components/views/PlotDisplay.svelte';
+	import PlotSelectionToolbar from './PlotSelectionToolbar.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import NodeActions from '$lib/components/workflow/NodeActions.svelte';
 	import NodeNoteButton from '$lib/components/workflow/NodeNoteButton.svelte';
@@ -97,6 +98,14 @@
 	// Hover state drives the action cluster's reveal (matches the workflow nodes).
 	let hovered = $state(false);
 	let plotHasNote = $derived(!!core.nodeNotes[`plot_${id}`]?.trim());
+	// The plot's own actions (zoom, reset zoom, save) are docked in its header while it is the
+	// ONLY selected card. They used to float over the card: above it, or, with no room above
+	// (a plot at the top of the view, or maximised), inside its top-right corner, over the
+	// legend and the data. In the header they never cover the plot. Two or more selected cards
+	// get the layout toolbar instead (PlotDisplay.svelte).
+	let soleSelection = $derived(
+		selected && !!ref && renderables().filter((p) => p.selected).length === 1
+	);
 	let smallvalues = $state();
 
 	// Touch-specific variables
@@ -418,10 +427,18 @@
 		fullscreen = !fullscreen;
 		if (fullscreen) {
 			smallvalues = { x, y, width, height };
-			x = 0;
-			y = 0;
-			width = getCanvasWidthPx() / appState.canvasScale - 20;
-			height = window.innerHeight / appState.canvasScale - 50;
+			// Fill the VISIBLE view (it used to go to the canvas origin, off screen once the
+			// view was panned), less the strip on the right where the add-plot button, the
+			// control panel's toggle and the zoom card float, so none of them sits on the plot.
+			// The card is width + 20 by height + 50, snapped to the grid: rounded down here so
+			// the snap never pushes it past the view.
+			const z = appState.canvasScale || 1;
+			const grid = appState.gridSize || 1;
+			const fit = (px) => Math.floor(px / z / grid) * grid;
+			x = -(appState.canvasOffset?.x ?? 0) / z;
+			y = -(appState.canvasOffset?.y ?? 0) / z;
+			width = fit(getCanvasWidthPx() - RIGHT_CHROME_GUTTER) - 20;
+			height = fit(window.innerHeight) - 50;
 		} else {
 			x = smallvalues.x;
 			y = smallvalues.y;
@@ -533,6 +550,18 @@
 			/>
 		</p>
 
+		{#if soleSelection}
+			<div
+				class="plot-toolbar-dock"
+				onmousedown={(e) => e.stopPropagation()}
+				onpointerdown={(e) => e.stopPropagation()}
+				ontouchstart={(e) => e.stopPropagation()}
+				role="presentation"
+			>
+				<PlotSelectionToolbar plot={ref} />
+			</div>
+		{/if}
+
 		<!-- Shared action cluster (maximise · delete), revealed on hover/selection. -->
 		<div
 			class="plot-actions-host"
@@ -628,6 +657,14 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	/* The selected plot's own actions, docked before the maximise/delete cluster. */
+	.plot-toolbar-dock {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+		cursor: default;
 	}
 
 	/* Container for the shared action cluster (maximise/delete). NodeActions

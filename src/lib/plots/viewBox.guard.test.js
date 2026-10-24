@@ -75,5 +75,17 @@ describe('view-box wiring', () => {
 			const strays = [...body.matchAll(/this\.parentBox\.(width|height)/g)].map((m) => m[0]);
 			expect(strays, `${name}: ${strays.join(', ')} should read viewWidth/viewHeight`).toEqual([]);
 		});
+
+		// A node view scales the FIGURE's padding, which a session opened straight into the
+		// canvas has never had measured: without the view's own measured floor its axis titles
+		// were cut off (the Join Data demo). EmbeddedPlot measures every plot with the field.
+		if (/paddingScaled\s*=/.test(src)) {
+			it(`${name} raises its scaled padding to the view's measured floor`, () => {
+				expect(src).toMatch(/viewPadFloor = \$state\(null\);/);
+				expect(src).toMatch(
+					/scalePadding\(\s*this\.#padding,\s*this\.fontScale,\s*viewPadFloorFor\(this\.viewPadFloor, this\.renderBox\)\s*\)/
+				);
+			});
+		}
 	}
 });

@@ -12,7 +12,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { core, appState } from '$lib/core/core.svelte.js';
+import { core, appState, outputCoreAsJson } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { history } from '$lib/core/opHistory.svelte.js';
 import {
@@ -68,6 +68,22 @@ describe('AppearanceMapEditor', () => {
 		const target = appState.appColours[3];
 		await pickPaletteColour(container, 3);
 		expect(record()).toEqual({
+			colour: { hex: target },
+			shape: 'circle',
+			dash: 'solid',
+			edited: true
+		});
+	});
+
+	// The vault TODO still listed this as a probable bug after v82.33 fixed it; re-checked
+	// 2026-10-22 end to end (pick, save, reload: the hex survives) and pinned here at the save.
+	it('a picked colour is in the saved session (what a reload reads back)', async () => {
+		const { container } = render(AppearanceMapEditor);
+		await tick();
+		const target = appState.appColours[3];
+		await pickPaletteColour(container, 3);
+		const saved = JSON.parse(outputCoreAsJson());
+		expect(saved.seriesAppearance[colId]).toEqual({
 			colour: { hex: target },
 			shape: 'circle',
 			dash: 'solid',

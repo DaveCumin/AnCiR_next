@@ -52,10 +52,22 @@ const headerOf = (page, id) =>
 // Marker rules live on the Overlays tab (UI-12, v82.25); each series' markers and lines,
 // including its instance of every rule, sit in that series' block on the Data tab.
 async function openOverlays(page, plotId) {
-	// Click the header's right end: a demo's note card can overlap its left end.
+	// A demo's note card can overlap the header's left end, and on its right an already-selected
+	// plot docks its own buttons (zoom, reset, save) beside the maximise/delete cluster, which a
+	// fixed offset from the right end would press (it opened the Save dialog).
+	// So find the right-most point of the header that hits the header or its title, nothing on top.
 	const header = headerOf(page, plotId);
+	const x = await header.evaluate((h) => {
+		const r = h.getBoundingClientRect();
+		const y = r.top + r.height / 2;
+		for (let px = r.right - 4; px > r.left; px -= 4) {
+			const hit = document.elementFromPoint(px, y);
+			if (hit === h || hit?.closest?.('.plot-title')?.parentElement === h) return px - r.left;
+		}
+		return r.width / 2;
+	});
 	const box = await header.boundingBox();
-	await header.click({ position: { x: box.width - 70, y: box.height / 2 } });
+	await header.click({ position: { x, y: box.height / 2 } });
 	await page.evaluate(() => {
 		window.__appState.showControlPanel = true;
 		window.__appState.currentControlTab = 'overlays';
@@ -103,7 +115,7 @@ function outputs(page, plotId) {
 function wireExists(page, plotId, colId, tpId) {
 	return page.evaluate(
 		async ({ plotId, colId, tpId }) => {
-			const m = await import('/src/lib/core/ProcessNode.svelte.js');
+			const m = window.__modules.ProcessNode;
 			m.clearProcessNodeGraphCache();
 			// The app's live core and registries (dev-only hooks), not a re-imported copy.
 			const g = m.getCachedProcessNodeGraph(window.__core, window.__appConsts);
@@ -139,7 +151,7 @@ async function dragWire(page, from, to) {
 /** Per series: the rule instances' fitted tau, phi, n, and the detachments, read live. */
 function state(page, plotId) {
 	return page.evaluate(async (id) => {
-		const m = await import('/src/lib/plots/Actogram/markerRules.svelte.js');
+		const m = window.__modules.markerRules;
 		const plot = window.__core.plots.find((p) => p.id === id);
 		const inner = plot.plot;
 		return {
@@ -383,7 +395,7 @@ test.describe('actogram marker rules', () => {
 		await load(page, `/@fs/${FIXTURES}/facet-actogram-markers.json`);
 		for (const x of await page.locator('.toast-close').all()) await x.click();
 		const panelIds = await page.evaluate(async () => {
-			const m = await import('/src/lib/core/facetPanels.svelte.js');
+			const m = window.__modules.facetPanels;
 			return m.panelsFor(window.__core.plots.find((p) => p.id === 0)).map((p) => p.id);
 		});
 		expect(panelIds).toHaveLength(2);
@@ -565,7 +577,7 @@ test.describe('actogram marker rules', () => {
 		await load(page, `/@fs/${FIXTURES}/facet-actogram-markers.json`);
 		for (const x of await page.locator('.toast-close').all()) await x.click();
 		const panelIds = await page.evaluate(async () => {
-			const m = await import('/src/lib/core/facetPanels.svelte.js');
+			const m = window.__modules.facetPanels;
 			return m.panelsFor(window.__core.plots.find((p) => p.id === 0)).map((p) => p.id);
 		});
 		expect(panelIds).toHaveLength(2);
@@ -586,7 +598,7 @@ test.describe('actogram marker rules', () => {
 		for (const c of Object.values(o.cols)) expect(c.values).toHaveLength(2);
 		// Panels carry no metric columns of their own: the generator's ARE the per-panel values.
 		const panelMaps = await page.evaluate(async () => {
-			const m = await import('/src/lib/core/facetPanels.svelte.js');
+			const m = window.__modules.facetPanels;
 			return m
 				.panelsFor(window.__core.plots.find((p) => p.id === 0))
 				.map((p) => Object.keys(p.metricOut ?? {}).length);
@@ -611,7 +623,7 @@ test.describe('actogram marker rules', () => {
 		o = await outputs(page, 0);
 		const writes = await page.evaluate(() => window.__ruleWrites);
 		const expected = await page.evaluate(async () => {
-			const m = await import('/src/lib/plots/plotMetricOutputs.svelte.js');
+			const m = window.__modules.plotMetricOutputs;
 			return m.plotMetricStats(window.__core.plots.find((p) => p.id === 0));
 		});
 		let changed = 0;

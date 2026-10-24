@@ -14,10 +14,45 @@ export const WRAPPER_FIELDS = [
 // Top-level keys that always belong to other UIs and never appear in shared props.
 const TOP_LEVEL_SKIP = new Set(['data', 'annotations', 'parentBox']);
 
-function titleCase(key) {
+/**
+ * A field's label from its key, in sentence case: `yLogScaleLeft` -> "Y log scale left",
+ * `showCOI` -> "Show COI", `xlimsIN` -> "Xlims". Later words are lower case except a single
+ * letter (an axis, X or Y) or an acronym. It used to title-case every word ("Y Log Scale Left").
+ */
+export function keyLabel(key) {
 	const stripped = String(key).endsWith('IN') ? String(key).slice(0, -2) : String(key);
-	const spaced = stripped.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
-	return spaced.trim();
+	const words = stripped
+		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+	return words
+		.map((w, i) => {
+			if (i === 0) return w.charAt(0).toUpperCase() + w.slice(1);
+			return /^[A-Z]+$/.test(w) ? w : w.toLowerCase();
+		})
+		.join(' ');
+}
+
+/**
+ * A label as it reads INSIDE a sentence or after another label: its first letter lower case,
+ * unless its first word is a single letter or an acronym ("Colour" -> "colour", "X log scale"
+ * stays, "DPI" stays).
+ */
+export function lowerLead(label) {
+	const c = String(label ?? '');
+	const first = c.split(/\s+/)[0] ?? '';
+	const keep = /^[A-Z]$/.test(first) || /^[A-Z][A-Z0-9²]+s?$/.test(first);
+	return keep ? c : c.charAt(0).toLowerCase() + c.slice(1);
+}
+
+/**
+ * A parent label and a child's, read as one sentence-case label: "X axis" + "Colour" ->
+ * "X axis colour", "Padding" + "Top" -> "Padding top", "Line" + "X" -> "Line X".
+ */
+export function joinLabel(parent, child) {
+	return `${parent} ${lowerLead(child)}`.trim();
 }
 
 function isClassInstance(v) {
@@ -62,7 +97,7 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 	const desc = descriptors?.[key] ?? {};
 	if (desc.skip) return [];
 
-	const parentLabel = desc.label ?? titleCase(key);
+	const parentLabel = desc.label ?? keyLabel(key);
 	const parentGroup = desc.group;
 
 	if (isClassInstance(value)) {
@@ -92,7 +127,7 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 			const field = buildScalarField(
 				`${pathPrefix}${key}.${leafKey}`,
 				leafVal,
-				`${parentLabel} ${cdLabel ?? titleCase(leafKey)}`,
+				joinLabel(parentLabel, cdLabel ?? keyLabel(leafKey)),
 				cdRest.group ?? groupForChildren,
 				{},
 				cdRest
@@ -111,7 +146,7 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 			const field = buildScalarField(
 				`${pathPrefix}${key}.${leafKey}`,
 				leafVal,
-				titleCase(leafKey),
+				keyLabel(leafKey),
 				groupForChildren,
 				{},
 				children[leafKey] ?? {}

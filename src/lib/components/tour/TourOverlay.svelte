@@ -7,6 +7,7 @@
 	import { untrack } from 'svelte';
 	import { tourState, nextStep, prevStep, stopTour } from '$lib/core/tourRunner.svelte.js';
 	import { yieldEscapeToField } from '$lib/utils/editableTarget.js';
+	import { keepHyphenatedWordsWhole } from './tourText.js';
 
 	const step = $derived(
 		tourState.activeTour ? (tourState.activeTour.steps[tourState.index] ?? null) : null
@@ -45,7 +46,10 @@
 		String(text ?? '')
 			.split(/(\s+)/)
 			.filter((t) => t !== '');
-	const bodyHtml = $derived(typeof step?.body === 'function' ? step.body() : (step?.body ?? ''));
+	// The body is HTML, so its hyphenated words are kept whole by markup (tourText.js).
+	const bodyHtml = $derived(
+		keepHyphenatedWordsWhole(typeof step?.body === 'function' ? step.body() : (step?.body ?? ''))
+	);
 
 	let targetRect = $state(null); // {top,left,width,height} or null → centered
 	let targetInDialog = $state(false); // target lives inside a modal <dialog> → suppress the ring
@@ -813,7 +817,9 @@
 	.tour-progress > span:last-child {
 		white-space: nowrap;
 	}
-	.tour-nobreak {
+	.tour-nobreak,
+	/* The body's spans come from {@html}, which carries no scope class. */
+	.tour-body :global(.tour-nobreak) {
 		white-space: nowrap;
 	}
 

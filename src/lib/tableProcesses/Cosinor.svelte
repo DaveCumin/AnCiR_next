@@ -11,7 +11,11 @@
 		FREE_PERIOD_DEFAULTS
 	} from '$lib/utils/cosinor.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
-	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
+	import {
+		periodUnitForColumn,
+		periodInputProps,
+		PERIOD_UNIT_HOURS
+	} from '$lib/utils/periodUnits.js';
 	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
@@ -147,8 +151,39 @@
 		['tableProcesses', { val: [] }]
 	]);
 
+	// The metrics a free-period fit has per cosine curve. Curve 1's are the `period`,
+	// `amplitude`, `acrophase` and `bathyphase` ports (and the `*_h1` ones); curve c >= 2 has
+	// `period_c<c>`, `amplitude_c<c>`, `acrophase_c<c>` and `bathyphase_c<c>`, named like the
+	// harmonic ports (`amplitude_h1`). The mesor, R² and p-values belong to the whole fit.
+	const CURVE_METRICS = ['period', 'amplitude', 'acrophase', 'bathyphase'];
+	const CURVE_KEY_RE = /^(period|amplitude|acrophase|bathyphase)_c\d+$/;
+
+	/** True for a per-curve metric out-key (`amplitude_c2`, ...). */
+	export function isCosinorCurveKey(key) {
+		return CURVE_KEY_RE.test(key);
+	}
+
+	/**
+	 * The per-curve metric out-keys the node has for these args: curves 2..Ncurves of a
+	 * free-period fit, curve by curve; none with a fixed period or a single curve. Curve 1 keeps
+	 * the original ports, so a saved session's wires never move.
+	 * @param {object} args
+	 * @returns {string[]}
+	 */
+	export function cosinorCurveOutKeys(args) {
+		if (args?.useFixedPeriod) return [];
+		const n = Math.trunc(Number(args?.Ncurves));
+		const keys = [];
+		for (let c = 2; c <= (Number.isFinite(n) ? n : 0); c++) {
+			for (const m of CURVE_METRICS) keys.push(`${m}_c${c}`);
+		}
+		return keys;
+	}
+
 	export const definition = {
 		displayName,
+		// Param-dependent metric ports (seeded by the MCP engine, reconciled by the component).
+		paramOutKeys: cosinorCurveOutKeys,
 		defaults,
 		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
 		newNodeArgs: newPeriodRangeArgs,
@@ -187,7 +222,16 @@
 				{ name: 'phase_angle', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'amplitude_h1', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'acrophase_h1', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'bathyphase_h1', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'bathyphase_h1', kind: 'column', cardinality: 'one', metric: true },
+				// Free period with N cosine curves: curve 1 is on the ports above, and each further
+				// curve c gets its own `<metric>_c<c>` ports (cosinorCurveOutKeys).
+				...CURVE_METRICS.map((m) => ({
+					name: `${m}_c*`,
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: `${m}_c`,
+					metric: true
+				}))
 			]
 		}
 	};
@@ -421,13 +465,15 @@
 			if (result.t.length === 0) result.t = tt;
 		}
 
-		// Apply pre-processes to y results before writing
+		// Apply pre-processes to y results before writing. A series whose fit failed has no
+		// curve (`yOutData` null): it is skipped, so the node reports the failed fit with its
+		// usual warning instead of the process function throwing on null.
 		for (const pp of argsIN.preProcesses ?? []) {
 			if (!pp.processName) continue;
 			const proc = appConsts.processMap.get(pp.processName);
 			if (proc?.func) {
 				for (const yId of yINs) {
-					if (result.y_results[yId]) {
+					if (Array.isArray(result.y_results[yId]?.yOutData)) {
 						result.y_results[yId].yOutData = proc.func(
 							result.y_results[yId].yOutData,
 							pp.processArgs ?? {}
@@ -453,6 +499,8 @@
 	 * review FIT-13) and `phase_angle` is measured from that orthophase; the `*_h1`
 	 * keys and the acrophase/amplitude CIs are harmonic 1's. Otherwise both families
 	 * are harmonic 1 (free period: curve 1), computed exactly as before FIT-13.
+	 * A free period with Ncurves > 1 adds `<metric>_c<c>` for every further curve
+	 * (cosinorCurveOutKeys), NaN where the fit has no such curve.
 	 *
 	 * @param {object|undefined} yr  one entry of result.y_results
 	 * @param {object} args  the node args
@@ -536,8 +584,36 @@
 			// The permutation p is a DIFFERENT test (model vs chance, empirical
 			// null), already computed against the same null-filtered pairs the fit
 			// used; it keeps its own port and is NaN when the test did not run.
-			perm_pvalue: yr?.pValue ?? NaN
+			perm_pvalue: yr?.pValue ?? NaN,
+			...cosinorCurveMetrics(yr, args, phaseRef)
 		};
+	}
+
+	/**
+	 * Curves 2..Ncurves of a free-period fit, one `<metric>_c<c>` entry each (curve 1 is on
+	 * the main ports): the period, amplitude, time of peak and time of trough, the phases in
+	 * the node's phase reference on that curve's own period, as the panel and stats table
+	 * show them.
+	 */
+	function cosinorCurveMetrics(yr, args, phaseRef) {
+		const out = {};
+		const cosines = args.useFixedPeriod ? [] : (yr?.fittedData?.parameters?.cosines ?? []);
+		for (const key of cosinorCurveOutKeys(args)) {
+			const [metric, c] = key.split('_c');
+			const cd = cosines[Number(c) - 1];
+			const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : NaN;
+			const peak = cd?.frequency ? -cd.phase / cd.frequency : NaN;
+			const ref = (h) => applyPhaseReference(h, phaseRef, period);
+			out[key] =
+				metric === 'period'
+					? period
+					: metric === 'amplitude'
+						? (cd?.amplitude ?? NaN)
+						: metric === 'acrophase'
+							? ref(wrapToPeriod(peak, period))
+							: ref(bathyphase(peak, period));
+		}
+		return out;
 	}
 
 	function writeCosinorOutputs(argsIN, result) {
@@ -549,7 +625,12 @@
 
 		const processHash = crypto.randomUUID();
 
-		const firstYId = Object.keys(result.y_results)[0];
+		// The x of the first series (by column id) that has a curve: a series whose fit failed
+		// keeps `yOutData` null and only its own valid rows in `t`, so taking it gave an x
+		// output that did not line up with the curves that were written.
+		const firstYId =
+			Object.keys(result.y_results).find((k) => Array.isArray(result.y_results[k]?.yOutData)) ??
+			Object.keys(result.y_results)[0];
 		const firstYResult = result.y_results[firstYId];
 		const xOutData = firstYResult.xOutData ?? result.outputXData ?? firstYResult.t;
 		writeXOutput(xOUT, xOutData, { originTime_ms: result.originTime_ms, processHash });
@@ -597,7 +678,8 @@
 			'phase_angle',
 			'amplitude_h1',
 			'acrophase_h1',
-			'bathyphase_h1'
+			'bathyphase_h1',
+			...cosinorCurveOutKeys(argsIN)
 		];
 		const perY = yINs.map((yId) => cosinorMetrics(result.y_results[yId], argsIN, result.phaseRef));
 		for (const key of metricKeys) {
@@ -633,11 +715,16 @@
 		}
 		const span = hi - lo;
 		const cycles = span / period;
+		// "a 24 h period" / "per 24 h cycle" on a time x; a number x has no unit to put
+		// before the noun, so "a period of 24 (x units)" / "per cycle of 24 (x units)".
+		const hours = unit === PERIOD_UNIT_HOURS;
+		const aPeriod = hours ? `a ${period} h period` : `a period of ${period} (${unit})`;
+		const perCyclePhrase = hours ? `per ${period} h cycle` : `per cycle of ${period} (${unit})`;
 		const perCycle = finite.length / Math.max(cycles, 1e-9);
 
 		if (argsIN.useFixedPeriod && cycles < COSINOR_MIN_CYCLES) {
 			warnings.push(
-				`Short record: ${cycles.toFixed(1)} cycles at a ${period} ${unit} period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump. The amplitude and acrophase will look precise, but no repetition supports them.`
+				`Short record: ${cycles.toFixed(1)} cycles at ${aPeriod}. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump. The amplitude and acrophase will look precise, but no repetition supports them.`
 			);
 		}
 
@@ -645,7 +732,7 @@
 		const needed = COSINOR_MIN_POINTS_PER_CYCLE * Math.max(1, nHarmonics);
 		if (Number.isFinite(perCycle) && perCycle < needed) {
 			warnings.push(
-				`Sparse sampling: about ${perCycle.toFixed(1)} points per ${period} ${unit} cycle, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
+				`Sparse sampling: about ${perCycle.toFixed(1)} points ${perCyclePhrase}, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
 			);
 		}
 
@@ -1075,6 +1162,32 @@
 		'acrophase_h1',
 		'bathyphase_h1'
 	];
+	// The metric keys this node reconciles: the fixed ones above, plus curves 2..Ncurves of a
+	// free-period fit (cosinorCurveOutKeys), which come and go with Ncurves and the mode.
+	function syncCosinorMetricColumns() {
+		return syncMetricOutColumns(
+			p,
+			[...METRIC_KEYS, ...cosinorCurveOutKeys(p.args)],
+			(k) => METRIC_KEYS.includes(k) || isCosinorCurveKey(k)
+		);
+	}
+
+	// Reconcile the per-curve ports when the number of curves or the mode changes. Deferred
+	// out of the effect: syncMetricOutColumns constructs Columns, which must not happen under
+	// an active reaction (derived_inert).
+	$effect(() => {
+		void p.args.Ncurves;
+		void p.args.useFixedPeriod;
+		if (!mounted) return;
+		// A half-typed count (the field cleared on the way to a new number) keeps the ports
+		// and their wires until the count is a number again.
+		if (!p.args.useFixedPeriod && !(Number(p.args.Ncurves) >= 1)) return;
+		queueMicrotask(() =>
+			untrack(() => {
+				if (syncCosinorMetricColumns()) getCosinor();
+			})
+		);
+	});
 
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
@@ -1088,7 +1201,7 @@
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		// Backfill scalar-metric out-columns for sessions saved before they existed.
-		if (syncMetricOutColumns(p, METRIC_KEYS, (k) => METRIC_KEYS.includes(k))) {
+		if (syncCosinorMetricColumns()) {
 			needsCompute = true;
 		}
 		if (p.args.out.cosinorx == null || p.args.out.cosinorx < 0) {

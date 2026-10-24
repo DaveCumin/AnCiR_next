@@ -251,7 +251,13 @@ export function normalizeSession(
 			}
 			timeFormat = fmt.format;
 		}
-		addColumn(c.name, c.type ?? 'number', c.values, timeFormat, zone.zone);
+		addColumn(
+			c.name,
+			c.type ?? 'number',
+			bakedValues(c.type ?? 'number', c.values),
+			timeFormat,
+			zone.zone
+		);
 	}
 
 	// ---- 2. analyses (run_table_process) ----
@@ -715,6 +721,21 @@ function draftOverlays(list, type, plotSchemas, resolveRef, data, errors) {
  * `0.60000000000000001` ends and `0.8` begins without guessing, and a plausible reconstruction
  * of fabricated data is the worst outcome available: it would look right.
  */
+/**
+ * The values a column is baked with. A number column's numeric STRINGS ("1.5", which
+ * columnValuesIssue accepts) are stored as the numbers they spell, and a blank or
+ * whitespace-only cell as null (Number(" ") is 0, not missing). Baked as text, the app read
+ * them as text: Correlation's sums concatenated ("0" + "1" + "2") and Pearson reported
+ * r = 0.99999999 for data whose r is 0.93 (STAT-U4). Other types keep their values as given.
+ */
+export function bakedValues(type, values) {
+	if (type !== 'number') return values;
+	return values.map((v) => {
+		if (typeof v !== 'string') return v;
+		return v.trim() === '' ? null : Number(v);
+	});
+}
+
 function columnValuesIssue(name, type, values) {
 	if (!values.length) return `Column "${name}" has an empty values[] — skipped.`;
 

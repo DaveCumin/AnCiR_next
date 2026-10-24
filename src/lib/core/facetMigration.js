@@ -38,20 +38,12 @@
 import { COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
 import { isOverridablePath } from '$lib/core/facetOverrides.js';
 import { SERIES_COLUMN_FIELDS } from '$lib/core/seriesChannelRefs.js';
+import { keyLabel, joinLabel, lowerLead } from '$lib/plots/sharedControls.js';
 
 const deepCopy = (v) => JSON.parse(JSON.stringify(v));
 const fmt = (v) => JSON.stringify(v === undefined ? null : v);
 const isPlainObject = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const isLeaf = (v) => v == null || typeof v !== 'object';
-
-/** `xlimsIN` -> "Xlims", `yLogScaleLeft` -> "Y Log Scale Left"; the sharedControls rule. */
-function titleCase(key) {
-	const stripped = String(key).endsWith('IN') ? String(key).slice(0, -2) : String(key);
-	return stripped
-		.replace(/([A-Z])/g, ' $1')
-		.replace(/^./, (c) => c.toUpperCase())
-		.trim();
-}
 
 // Top-level inner keys that are never shared properties (sharedControls.TOP_LEVEL_SKIP plus
 // overlays, which are generator-owned and replicated, plan 1.6).
@@ -128,7 +120,7 @@ function sharedPathDiffs(childInner, genInner) {
 		if (TOP_LEVEL_SKIP.has(key)) continue;
 		if (!(key in childInner)) continue;
 		const cv = childInner[key];
-		const label = titleCase(key);
+		const label = keyLabel(key);
 		if (isLeaf(gv)) {
 			if (isLeaf(cv) && fmt(cv) !== fmt(gv))
 				out.push({ path: key, label, childValue: cv, genValue: gv });
@@ -156,7 +148,7 @@ function sharedPathDiffs(childInner, genInner) {
 			if (fmt(cv[leafKey]) !== fmt(leaf)) {
 				out.push({
 					path: `${key}.${leafKey}`,
-					label: `${label} ${titleCase(leafKey)}`,
+					label: joinLabel(label, keyLabel(leafKey)),
 					childValue: cv[leafKey],
 					genValue: leaf
 				});
@@ -173,7 +165,7 @@ function seriesDiffs(childSeries, genSeries) {
 	for (const [key, gv] of Object.entries(genSeries)) {
 		if (SERIES_SKIP.has(key) || !(key in childSeries)) continue;
 		const cv = childSeries[key];
-		const label = titleCase(key);
+		const label = keyLabel(key);
 		if (isLeaf(gv)) {
 			if (isLeaf(cv) && fmt(cv) !== fmt(gv))
 				out.push({ path: key, label, childValue: cv, genValue: gv });
@@ -185,7 +177,7 @@ function seriesDiffs(childSeries, genSeries) {
 			if (fmt(cv[leafKey]) !== fmt(leaf)) {
 				out.push({
 					path: `${key}.${leafKey}`,
-					label: `${label} ${titleCase(leafKey)}`,
+					label: joinLabel(label, keyLabel(leafKey)),
 					childValue: cv[leafKey],
 					genValue: leaf
 				});
@@ -299,7 +291,7 @@ export function migrateFacetChildren(jsonData, opts = {}) {
 			} else if (!equalsDefault(defaults?.inner, d.path, d.childValue)) {
 				report(
 					gen.id,
-					`Panel '${child.name}' of '${gen.name}' had its own ${d.label} (${fmt(d.childValue)}); facets now share the plot's value (${fmt(d.genValue)})`
+					`Panel '${child.name}' of '${gen.name}' had its own ${lowerLead(d.label)} (${fmt(d.childValue)}); facets now share the plot's value (${fmt(d.genValue)})`
 				);
 			}
 		}
@@ -332,7 +324,7 @@ export function migrateFacetChildren(jsonData, opts = {}) {
 				if (equalsDefault(defaults?.series, d.path, d.childValue)) continue;
 				report(
 					gen.id,
-					`Panel '${child.name}' of '${gen.name}' had its own series ${n} ${d.label} (${fmt(d.childValue)}); facets now share the plot's value (${fmt(d.genValue)})`
+					`Panel '${child.name}' of '${gen.name}' had its own series ${n} ${lowerLead(d.label)} (${fmt(d.childValue)}); facets now share the plot's value (${fmt(d.genValue)})`
 				);
 			}
 		});

@@ -20,48 +20,51 @@ describe('placeSelectionToolbar', () => {
 		expect(r).toEqual({ left: 500, top: 300 - 8 - 36, placement: 'above', visible: true });
 	});
 
-	it('flips inside, under the header band, when the selection is near the top of the view', () => {
+	// REPORTED (2026-10-22): with no room above, the toolbar dropped INSIDE the selection's
+	// top-right corner, over the plots' legends and data. It now goes below, then beside.
+	it('flips below when there is no room above', () => {
 		const r = placeSelectionToolbar({
 			selection: rect(200, 30, 400, 300),
 			view: VIEW,
-			toolbar: TB,
-			headers: [rect(200, 30, 400, 30)]
+			toolbar: TB
 		});
-		expect(r.placement).toBe('inside');
-		// Below the header (30 + 30 header + 8 gap), inset from the right edge by the gap.
-		expect(r.top).toBe(68);
-		expect(r.left).toBe(600 - 8 - 100);
+		expect(r).toMatchObject({ placement: 'below', top: 330 + 8, left: 500 });
 	});
 
-	it('pins inside to the top of the view when the header has scrolled above it', () => {
-		const r = placeSelectionToolbar({
-			selection: rect(200, -200, 400, 600),
+	it('goes beside the selection, right then left, when it is too tall for above or below', () => {
+		const right = placeSelectionToolbar({
+			selection: rect(200, 20, 400, 770),
 			view: VIEW,
-			toolbar: TB,
-			headers: [rect(200, -200, 400, 30)]
+			toolbar: TB
 		});
-		expect(r).toMatchObject({ placement: 'inside', top: 8 });
+		expect(right).toMatchObject({ placement: 'right', left: 600 + 8, top: 20 });
+		const left = placeSelectionToolbar({
+			selection: rect(300, -200, 650, 1200),
+			view: VIEW,
+			toolbar: TB
+		});
+		// Level with the view's top when the selection's top has scrolled above it.
+		expect(left).toMatchObject({ placement: 'left', left: 300 - 8 - 100, top: 8 });
 	});
 
-	it('inside a multi-selection, drops below a lower card header it would cover', () => {
-		// One selected card starts far above the view; another's header is at the view top.
-		const r = placeSelectionToolbar({
-			selection: rect(100, -500, 600, 1000),
-			view: VIEW,
-			toolbar: TB,
-			headers: [rect(100, -500, 300, 30), rect(400, 20, 300, 30)]
-		});
-		expect(r).toMatchObject({ placement: 'inside', top: 58, left: 700 - 8 - 100 });
-	});
-
-	it('flips below when there is no room above and the selection is too short to hold it', () => {
-		const r = placeSelectionToolbar({
-			selection: rect(200, 20, 400, 60),
-			view: VIEW,
-			toolbar: TB,
-			headers: [rect(200, 20, 400, 30)]
-		});
-		expect(r).toMatchObject({ placement: 'below', top: 80 + 8 });
+	it('never covers the selection while the view has room for it anywhere outside it', () => {
+		const overlaps = (r, sel) =>
+			r.left < sel.right &&
+			r.left + TB.width > sel.left &&
+			r.top < sel.bottom &&
+			r.top + TB.height > sel.top;
+		for (let top = -300; top <= 700; top += 50) {
+			for (const [left, width, height] of [
+				[100, 400, 300],
+				[150, 800, 760],
+				[0, 300, 1200]
+			]) {
+				const sel = rect(left, top, width, height);
+				const r = placeSelectionToolbar({ selection: sel, view: VIEW, toolbar: TB });
+				if (r.placement === 'clamped') continue;
+				expect(overlaps(r, sel), JSON.stringify(sel)).toBe(false);
+			}
+		}
 	});
 
 	it('clamps horizontally inside the view on both sides', () => {

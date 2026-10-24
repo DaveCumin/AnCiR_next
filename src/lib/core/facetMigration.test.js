@@ -298,7 +298,7 @@ describe('migrateFacetChildren: per-panel whole-plot differences (step 3)', () =
 		const { json, warnings } = migrateFacetChildren(session([gen(), a]));
 		expect(json.plots[0]).not.toHaveProperty('facetOverrides');
 		expect(warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own Padding Top (40); facets now share the plot's value (15)"
+			"Panel 'c11' of 'Sc' had its own padding top (40); facets now share the plot's value (15)"
 		]);
 	});
 
@@ -317,8 +317,8 @@ describe('migrateFacetChildren: per-panel whole-plot differences (step 3)', () =
 		);
 		const { warnings } = migrateFacetChildren(session([gen(), a]));
 		expect(warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own X Log Scale (true); facets now share the plot's value (false)\n" +
-				"Panel 'c11' of 'Sc' had its own X Axis Label (\"Time (h)\"); facets now share the plot's value (\"\")"
+			"Panel 'c11' of 'Sc' had its own X log scale (true); facets now share the plot's value (false)\n" +
+				"Panel 'c11' of 'Sc' had its own X axis label (\"Time (h)\"); facets now share the plot's value (\"\")"
 		]);
 	});
 
@@ -336,7 +336,7 @@ describe('migrateFacetChildren: per-panel whole-plot differences (step 3)', () =
 			'y11#0': { 'ylimsLeftIN[0]': 0, 'ylimsLeftIN[1]': 10 }
 		});
 		expect(warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own Y Log Scale Left (true); facets now share the plot's value (false)"
+			"Panel 'c11' of 'Sc' had its own Y log scale left (true); facets now share the plot's value (false)"
 		]);
 	});
 });
@@ -363,7 +363,7 @@ describe('migrateFacetChildren: per-series differences (step 4)', () => {
 		const { json, warnings } = migrateFacetChildren(session([gen, a]));
 		expect(json.plots[0].plot.data[0].points.radius).toBe(4);
 		expect(warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own series 1 Points Radius (6); facets now share the plot's value (4)"
+			"Panel 'c11' of 'Sc' had its own series 1 points radius (6); facets now share the plot's value (4)"
 		]);
 	});
 
@@ -394,7 +394,7 @@ describe('migrateFacetChildren: per-series differences (step 4)', () => {
 		);
 		const { warnings } = migrateFacetChildren(session([gen, a]));
 		expect(warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own series 3 Line Colour (\"#ff0000\"); facets now share the plot's value (null)"
+			"Panel 'c11' of 'Sc' had its own series 3 line colour (\"#ff0000\"); facets now share the plot's value (null)"
 		]);
 	});
 
@@ -492,7 +492,7 @@ describe('migrateFacetChildren: autoscaled padding sides and the defaults hook (
 		);
 		const { warnings } = migrateFacetChildren(session([g, a]));
 		expect(warnings).toEqual([
-			"Panel 'c41' of 'Act' had its own Padding Left (99); facets now share the plot's value (20)"
+			"Panel 'c41' of 'Act' had its own padding left (99); facets now share the plot's value (20)"
 		]);
 	});
 
@@ -525,18 +525,18 @@ describe('migrateFacetChildren: autoscaled padding sides and the defaults hook (
 		const withHook = migrateFacetChildren(session([genPlot, a, b]), { childDefaults });
 		// Without the hook: the axis label (both children), the log scale, the line style (both) and the radius.
 		expect(without.warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own X Log Scale (true); facets now share the plot's value (false)\n" +
-				"Panel 'c11' of 'Sc' had its own X Axis Label (\"\"); facets now share the plot's value (\"Day\")\n" +
-				"Panel 'c11' of 'Sc' had its own series 1 Line Colour (null); facets now share the plot's value (\"#8A9BA8\")\n" +
-				"Panel 'c11' of 'Sc' had its own series 1 Line Stroke Width (2); facets now share the plot's value (2.5)\n" +
-				"Panel 'c11' of 'Sc' had its own series 1 Line Show (false); facets now share the plot's value (true)\n" +
-				"Panel 'c11' of 'Sc' had its own series 1 Points Radius (7); facets now share the plot's value (4)\n" +
-				"Panel 'c12' of 'Sc' had its own X Axis Label (\"\"); facets now share the plot's value (\"Day\")"
+			"Panel 'c11' of 'Sc' had its own X log scale (true); facets now share the plot's value (false)\n" +
+				"Panel 'c11' of 'Sc' had its own X axis label (\"\"); facets now share the plot's value (\"Day\")\n" +
+				"Panel 'c11' of 'Sc' had its own series 1 line colour (null); facets now share the plot's value (\"#8A9BA8\")\n" +
+				"Panel 'c11' of 'Sc' had its own series 1 line stroke width (2); facets now share the plot's value (2.5)\n" +
+				"Panel 'c11' of 'Sc' had its own series 1 line show (false); facets now share the plot's value (true)\n" +
+				"Panel 'c11' of 'Sc' had its own series 1 points radius (7); facets now share the plot's value (4)\n" +
+				"Panel 'c12' of 'Sc' had its own X axis label (\"\"); facets now share the plot's value (\"Day\")"
 		]);
 		// With it: only what the user changed away from the default.
 		expect(withHook.warnings).toEqual([
-			"Panel 'c11' of 'Sc' had its own X Log Scale (true); facets now share the plot's value (false)\n" +
-				"Panel 'c11' of 'Sc' had its own series 1 Points Radius (7); facets now share the plot's value (4)"
+			"Panel 'c11' of 'Sc' had its own X log scale (true); facets now share the plot's value (false)\n" +
+				"Panel 'c11' of 'Sc' had its own series 1 points radius (7); facets now share the plot's value (4)"
 		]);
 		// Limits carry regardless of the hook.
 		const c = child(
@@ -746,8 +746,8 @@ describe('migrateFacetChildren: warnings are grouped one entry per generator', (
 		);
 		const { warnings } = migrateFacetChildren(session([g1, g2, h, a]));
 		expect(warnings).toEqual([
-			"Panel 'c112' of 'Distributions' had its own Padding Top (1); facets now share the plot's value (15)",
-			"Panel 'c11' of 'Sc' had its own X Log Scale (true); facets now share the plot's value (false)"
+			"Panel 'c112' of 'Distributions' had its own padding top (1); facets now share the plot's value (15)",
+			"Panel 'c11' of 'Sc' had its own X log scale (true); facets now share the plot's value (false)"
 		]);
 	});
 });
@@ -851,10 +851,10 @@ describe('browser-captured fixtures (with the registry defaults hook, as importJ
 			// that per-series value is reported beside the radius.
 			const N = "'Onset vs day — immediate delay versus advance transients'";
 			expect(out.warnings).toEqual([
-				`Panel 'onset_delay' of ${N} had its own Padding Top (40); facets now share the plot's value (15)\n` +
-					`Panel 'onset_delay' of ${N} had its own Padding Right (50); facets now share the plot's value (30)\n` +
-					`Panel 'onset_advance' of ${N} had its own series 3 Points Colour ("#A6ACD5"); facets now share the plot's value ("#BE796B")\n` +
-					`Panel 'onset_advance' of ${N} had its own series 3 Points Radius (7); facets now share the plot's value (3)`
+				`Panel 'onset_delay' of ${N} had its own padding top (40); facets now share the plot's value (15)\n` +
+					`Panel 'onset_delay' of ${N} had its own padding right (50); facets now share the plot's value (30)\n` +
+					`Panel 'onset_advance' of ${N} had its own series 3 points colour ("#A6ACD5"); facets now share the plot's value ("#BE796B")\n` +
+					`Panel 'onset_advance' of ${N} had its own series 3 points radius (7); facets now share the plot's value (3)`
 			]);
 			// Never written onto the generator.
 			expect(gen.plot.data[2].points.radius).toBe(3);

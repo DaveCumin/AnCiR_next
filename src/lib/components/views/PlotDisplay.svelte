@@ -1,4 +1,11 @@
 <script module>
+	// Chrome that overhangs the canvas's right edge from outside it: the new-plot button
+	// (ControlPanel.svelte, 34px wide at right + 5px), the control panel's toggle (about 29px
+	// into the canvas) and the zoom-controls card below. The selection toolbar keeps out of
+	// that strip, and a maximised plot stops short of it (Draggable.svelte), so neither sits
+	// under them.
+	export const RIGHT_CHROME_GUTTER = 44;
+
 	export function getCanvasWidthPx() {
 		return canvasWidthPx;
 	}
@@ -35,7 +42,6 @@
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
-	import PlotSelectionToolbar from '$lib/components/reusables/PlotSelectionToolbar.svelte';
 	import { isZoomMode, setZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
 	import { alignBoxes, distributeBoxes, arrangeGrid } from '$lib/core/layoutHelpers.js';
 	import { snapToGrid } from '$lib/core/core.svelte.js';
@@ -103,8 +109,9 @@
 	}
 
 	// --- Selection toolbar anchoring -------------------------------------------------
-	// The toolbar (PlotSelectionToolbar for one plot, SelectionLayoutToolbar for 2+) sits
-	// just above the selection's top-right corner, like Figma. Everything is derived from
+	// The layout toolbar of two or more selected plots (SelectionLayoutToolbar; one plot's own
+	// actions are docked in its card's header, Draggable.svelte) sits just above the
+	// selection's top-right corner, like Figma, and never over the selection. Everything is derived from
 	// state (plot/panel x, y, width, height plus the pan offset and zoom), so it tracks
 	// pan, zoom, drag and resize live without reading the DOM. The only measured sizes
 	// come from bind:client/offset* (Svelte's own ResizeObserver, torn down with the
@@ -115,23 +122,14 @@
 	let toolbarH = $state(0);
 	let zoomCardW = $state(0);
 	let zoomCardH = $state(0);
-	// Draggable's header band in canvas px: 1px card border + 28px min-height header + 1px
-	// divider. The toolbar's inside placement drops below it so it never covers the note,
-	// maximise or delete controls.
-	const PLOT_HEADER_PX = 30;
 	const DRAGGABLE_MIN_WIDTH = 200;
-	// Chrome that overhangs the canvas's right edge from outside it: the new-plot button
-	// (ControlPanel.svelte, 34px wide at right + 5px), the control panel's close chevron
-	// (about 29px into the canvas) and the zoom-controls card below. The toolbar keeps out
-	// of that strip so it never sits under them.
-	const RIGHT_CHROME_GUTTER = 44;
 	// The zoom-controls card is fixed at right: rightPx + 5px, bottom: 10px, and the canvas
 	// ends at the control panel's left edge, so in canvas-local coords it is inset 5 / 10.
 	const ZOOM_CARD_RIGHT = 5;
 	const ZOOM_CARD_BOTTOM = 10;
 
 	let selectionToolbarPos = $derived.by(() => {
-		if (selectedPlots.length === 0 || canvasW <= 0 || canvasH <= 0) return null;
+		if (selectedPlots.length < 2 || canvasW <= 0 || canvasH <= 0) return null;
 		const z = appState.canvasScale ?? 1;
 		const offX = appState.canvasOffset?.x ?? 0;
 		const offY = appState.canvasOffset?.y ?? 0;
@@ -147,7 +145,6 @@
 				bottom: top + snapToGrid((p.height ?? 150) + 50) * z
 			};
 		});
-		const headers = boxes.map((b) => ({ ...b, bottom: b.top + PLOT_HEADER_PX * z }));
 		const occluders =
 			zoomCardW > 0
 				? [
@@ -163,8 +160,7 @@
 			selection: unionRect(boxes),
 			view: { left: 0, top: 0, right: canvasW - RIGHT_CHROME_GUTTER, bottom: canvasH },
 			toolbar: { width: toolbarW, height: toolbarH },
-			occluders,
-			headers
+			occluders
 		});
 	});
 
@@ -464,7 +460,7 @@
 		<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>
 	{/if}
 
-	{#if selectedPlots.length > 0}
+	{#if selectedPlots.length >= 2}
 		<!-- Pointer and click events stop here: a press on the toolbar (even on its padding,
 		     between buttons) must not start a canvas pan, deselect, or close the control panel. -->
 		<div
@@ -480,17 +476,13 @@
 			ondblclick={(e) => e.stopPropagation()}
 			role="presentation"
 		>
-			{#if selectedPlots.length >= 2}
-				<SelectionLayoutToolbar
-					onAlign={alignSelectedPlots}
-					onDistribute={distributeSelectedPlots}
-					onGrid={gridSelectedPlots}
-					showGrid={true}
-					canDistribute={selectedPlots.length >= 3}
-				/>
-			{:else}
-				<PlotSelectionToolbar plot={selectedPlots[0]} />
-			{/if}
+			<SelectionLayoutToolbar
+				onAlign={alignSelectedPlots}
+				onDistribute={distributeSelectedPlots}
+				onGrid={gridSelectedPlots}
+				showGrid={true}
+				canDistribute={selectedPlots.length >= 3}
+			/>
 		</div>
 	{/if}
 	<div

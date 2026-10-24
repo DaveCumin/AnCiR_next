@@ -196,3 +196,37 @@ describe('correlationCI — Fisher z interval', () => {
 		expect(b[1] - b[0]).toBeGreaterThan(a[1] - a[0]);
 	});
 });
+
+// STAT-U4: numeric STRINGS in a number column. validPairs keeps "3" (isNaN("3") is false),
+// and `reduce((s, v) => s + v, 0)` then concatenated: the mean of ["1".."8"] was 1234567.
+// Reached in the app by a session whose number column holds strings, which the AI draft path
+// produced (mcp/src/emit/normalizer.js accepted "1.5" as a number and baked it as text):
+// Pearson read r = 0.99999999999 (p ~ 3e-38) for data whose r is 0.932.
+describe('numeric strings are read as the numbers they spell (STAT-U4)', () => {
+	const A = [1, 2, 3, 4, 5, 6, 7, 8];
+	const B = [2, 1, 4, 3, 6, 5, 8, 9];
+	const S = (arr) => arr.map(String);
+
+	it('pearson on strings equals pearson on the numbers', () => {
+		const want = pearson(A, B);
+		expect(want.r).toBeCloseTo(0.9320546490018, 12);
+		expect(pearson(S(A), S(B))).toEqual(want);
+		expect(pearson(S(A), B)).toEqual(want);
+	});
+
+	it('spearman ties are found by value, not by spelling ("2" and "2.0" tie)', () => {
+		const x = [1, 2, 2, 3, 4];
+		const y = [5, 3, 4, 1, 2];
+		const want = spearman(x, y);
+		expect(spearman(['1', '2', '2.0', '3', '4'], S(y))).toEqual(want);
+		expect(want.tiesX).toBe(true);
+	});
+
+	it('correlate and the matrix agree on strings and numbers; blanks still drop', () => {
+		const want = correlate([...A, null], [...B, 3], 'pearson');
+		expect(correlate([...S(A), ''], [...S(B), '3'], 'pearson')).toEqual(want);
+		expect(want.n).toBe(8);
+		const [row] = correlationMatrix([S(A), S(B)], ['a', 'b'], 'pearson');
+		expect(row.r).toBeCloseTo(0.9320546490018, 12);
+	});
+});

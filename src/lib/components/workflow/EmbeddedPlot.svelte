@@ -22,6 +22,7 @@
 	import ComputeClaim from '$lib/components/views/ComputeClaim.svelte';
 	import { computeKey } from '$lib/core/computeOwners.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
+	import { fitViewPadding } from '$lib/plots/viewBox.js';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -46,8 +47,44 @@
 		target.renderBox = { w: inner.w, h: inner.h };
 		return () => {
 			target.renderBox = null;
+			if ('viewPadFloor' in target) target.viewPadFloor = null;
 		};
 	});
+
+	// The node's padding floor: whenever the drawing changes (data, labels, the node's size),
+	// measure what its axes need and raise any side the scaled figure padding leaves short
+	// (viewBox.js fitViewPadding). Measured after the change has landed (a timer, not rAF,
+	// which is frozen in a hidden tab), and given up after a few changes in a row so two
+	// layouts that each ask for the other cannot loop.
+	const MAX_FIT_CHANGES = 5;
+	function fitPaddingToView(node) {
+		const target = plot.plot;
+		if (!target || !('viewPadFloor' in target)) return;
+		let timer = null;
+		let changes = 0;
+		const run = () => {
+			timer = null;
+			if (changes >= MAX_FIT_CHANGES) return;
+			if (fitViewPadding(target)) changes++;
+			else changes = 0;
+		};
+		const schedule = () => {
+			if (timer === null) timer = setTimeout(run, 0);
+		};
+		const observer = new MutationObserver(schedule);
+		observer.observe(node, {
+			subtree: true,
+			childList: true,
+			characterData: true,
+			attributes: true,
+			attributeFilter: ['width', 'height', 'transform', 'x', 'y']
+		});
+		schedule();
+		return () => {
+			observer.disconnect();
+			if (timer !== null) clearTimeout(timer);
+		};
+	}
 	// Fit the real plot into the (independently-sized) preview box, preserving the
 	// plot's aspect ratio. The workflow box size is owned by the canvas
 	// (plotPreviewSizes); the plot's real width/height belong to the workspace and
@@ -137,6 +174,7 @@
 				     size and scaled to fit, which shrinks the text along with the plot. -->
 				<div
 					class="plot-preview-inner"
+					{@attach laysOutToBox ? fitPaddingToView : null}
 					style={laysOutToBox
 						? `width:${inner.w}px; height:${inner.h}px;`
 						: `transform:scale(${previewScale}); transform-origin:top left; width:${plot.width}px; height:${plot.height}px;`}

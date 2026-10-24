@@ -54,13 +54,19 @@ def estimated_label_widths():
 
 
 def columns_for(case):
-    """The demo's columns after its analyses run, with the app's names for node outputs."""
-    if case["demo"] not in _SESSIONS:
+    """The demo's columns after its analyses run, with the app's names for node outputs, plus
+    any columns the case added to the demo (`addedColumns`: a zoned time axis, say)."""
+    added = case.get("addedColumns")
+    key = (case["demo"], case["name"] if added else None)
+    if key not in _SESSIONS:
         session = json.loads((DEMOS / f"{case['demo']}.json").read_text())
+        if added:
+            session["data"] = list(session.get("data") or []) + list(added["data"])
+            session["rawData"] = {**(session.get("rawData") or {}), **added["rawData"]}
         cols, _raw, errors = run_session(session)
         assert not errors, errors
-        _SESSIONS[case["demo"]] = cols
-    cols = _SESSIONS[case["demo"]]
+        _SESSIONS[key] = cols
+    cols = _SESSIONS[key]
     for cid, label in (case.get("columnLabels") or {}).items():
         if int(cid) in cols:
             cols[int(cid)].label = label

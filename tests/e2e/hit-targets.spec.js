@@ -14,8 +14,8 @@ import { openApp } from './helpers.js';
 // Scope: the node header (note, quick plot, maximise, collapse, delete), the node rows (row
 // chevrons and wiring port dots of data, group, analysis, metric and plot rows, which are
 // NODE_ROW_H = 24 px apart, see nodeRows.js), compact nodes' port dots (COMPACT_PORT_H apart),
-// the workspace plot header and its selection
-// toolbar, and the control panel's rows (series blocks, banner).
+// the workspace plot header (with the selected plot's docked actions), and the control
+// panel's rows (series blocks, banner).
 
 const DEMO = path.resolve('static/sessions/demos/demo-tp-cosinor.json');
 
@@ -167,10 +167,11 @@ test('workspace plot header, its toolbar and the control panel rows have 24 x 24
 	await plotHeader.hover();
 	expect(await failing(page, '.canvas-inner .draggable .plot-header button', 3)).toEqual([]);
 
-	// Selecting the plot shows its toolbar and opens the control panel on it.
+	// Selecting the plot docks its actions (zoom, save) in its header and opens the control
+	// panel on it.
 	await plotHeader.click({ position: { x: 250, y: 10 } });
-	await expect(page.locator('.selection-toolbar-host button').first()).toBeVisible();
-	expect(await failing(page, '.selection-toolbar-host button', 2)).toEqual([]);
+	await expect(page.locator('.plot-header .plot-toolbar button').first()).toBeVisible();
+	expect(await failing(page, '.plot-header button', 4)).toEqual([]);
 
 	const panel = page.locator('div.control-display');
 	if (!(await panel.isVisible()))

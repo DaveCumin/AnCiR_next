@@ -123,6 +123,33 @@ describe('trendfit', async () => {
 	});
 });
 
+describe('trendfit domain refusal names the columns as the user sees them', () => {
+	// A referencing column renamed by the user: internal `name` and display name differ.
+	const named = (internal, shown, data) => ({
+		type: 'number',
+		name: internal,
+		customName: shown,
+		isReferencial: () => true,
+		getData: () => data
+	});
+
+	it('logarithmic on an x with a zero quotes the x display name, not the internal name', async () => {
+		mockColumns[1] = named('col_17', 'Day', [0, 1, 2, 3, 4, 5]);
+		mockColumns[2] = named('col_18', 'Activity', [1, 2, 3, 4, 5, 6]);
+		const [result, valid] = await trendfit({
+			xIN: 1,
+			yIN: [2],
+			model: 'logarithmic',
+			out: { trendx: -1 },
+			outputX: -1
+		});
+		expect(valid).toBe(false);
+		const text = result.warnings.join('\n');
+		expect(text).toContain('"Day"');
+		expect(text).not.toContain('col_17');
+	});
+});
+
 describe('trendfit metric outputs (one value per y, in yIN order)', () => {
 	function metricCol() {
 		return { data: null, type: null, tableProcessGUId: null };

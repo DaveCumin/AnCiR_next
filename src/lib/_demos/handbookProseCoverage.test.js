@@ -116,6 +116,12 @@ const CONCEPT = {
 	amplitude_h1: /first harmonic|fundamental/,
 	acrophase_h1: /first harmonic|fundamental/,
 	bathyphase_h1: /first harmonic|fundamental/,
+	// A free-period cosinor's further cosine curves (curve 2..Ncurves); curve 1 is on the
+	// plain period/amplitude/acrophase/bathyphase ports.
+	'period_c*': /further cosine curve/,
+	'amplitude_c*': /further cosine curve/,
+	'acrophase_c*': /further cosine curve/,
+	'bathyphase_c*': /further cosine curve/,
 	phase_angle: /phase angle|entrain/,
 	period: /period/,
 	// FitFunction's per-model parameter ports (v72.29): the rectangular wave's

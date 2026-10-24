@@ -355,6 +355,9 @@ def run_clock_zone(fx, js):
         if inp.get("actogramWithB"):
             series.append({"x": {"refId": 2}, "y": {"refId": 5}})
         plot = {"type": "actogram", "name": fx["id"], "plot": {"periodHrs": 24, "data": series}}
+        # The user's chosen first-row start (Actogram `startTimeIN`), when the fixture has one.
+        if inp.get("startTimeIN") is not None:
+            plot["plot"]["startTimeIN"] = inp["startTimeIN"]
         info = rt.actogram_dst_info(plot, cols)
         zone = info["clock"]["zone"]
         _, start, ndays = rt._actogram_series(plot, cols)

@@ -305,6 +305,19 @@ export const NODE_OUTPUT_LABELS = {
 		perInput: [
 			{ prefix: 'cosinory_', label: 'Cosinor fit', autoPrefixes: ['cosinor_'] },
 			{ prefix: 'resid_', label: 'Residuals' }
+		],
+		// Curves 2..Ncurves of a free-period fit (`amplitude_c2`, ...), labelled like Moving
+		// analysis's per-curve stats ("C2 amplitude").
+		special: [
+			{
+				re: /^(period|amplitude|acrophase|bathyphase)_c(\d+)$/,
+				label: (m, ctx) =>
+					m[1] === 'period'
+						? `C${m[2]} period (${fitUnit(ctx)})`
+						: m[1] === 'amplitude'
+							? `C${m[2]} amplitude`
+							: fitPhaseLabel(`C${m[2]} ${m[1]}`, ctx)
+			}
 		]
 	},
 	CrossCorrelation: {

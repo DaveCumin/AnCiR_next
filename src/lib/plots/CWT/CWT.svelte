@@ -16,14 +16,26 @@
 	// <image> element; axes, COI, ridge and legend stay ordinary SVG on top. One
 	// element regardless of resolution, and SVG/PNG export still works.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import {
+		viewFontScale,
+		viewStyleFor,
+		scalePadding,
+		viewPadFloorFor
+	} from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
 	import {
 		colormapRGB,
 		normaliseTo01,
 		COLORMAP_LABELS
 	} from '$lib/components/plotbits/colormaps.js';
-	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
+	import {
+		ColourScaleClass,
+		colourScaleGeometry,
+		scaleTickValues,
+		formatScaleValue
+	} from '$lib/components/plotbits/ColourScale.svelte';
+	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 	import { overlaysFromJSON, overlaysToJSON } from '$lib/components/plotbits/overlayHost.js';
@@ -96,9 +108,18 @@
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
 		// set; the raw value is what gets saved. See plots/viewBox.js.
 		#padding = $state({ top: 20, right: 70, bottom: 46, left: 62 });
-		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		// A node view's own measured floor (fitViewPadding, plots/viewBox.js); never saved.
+		viewPadFloor = $state(null);
+		paddingScaled = $derived(
+			scalePadding(
+				this.#padding,
+				this.fontScale,
+				viewPadFloorFor(this.viewPadFloor, this.renderBox)
+			)
+		);
 		get padding() {
-			return this.renderBox ? this.paddingScaled : this.#padding;
+			const p = this.renderBox ? this.paddingScaled : this.#padding;
+			return this.keyRoom > p.right ? { ...p, right: this.keyRoom } : p;
 		}
 		set padding(v) {
 			this.#padding = v;
@@ -154,6 +175,31 @@
 			const tr = this.transform;
 			if (!tr.valid || !this.showRidge) return { ridgePeriod: [], ridgePower: [] };
 			return waveletRidge(tr);
+		});
+
+		/**
+		 * The room the power key takes beside the plot (its "Beside plot" place, a vertical bar):
+		 * the legend margin and the key's width as drawn (colourScaleGeometry, text measured in
+		 * the view's family). The right padding is never less, so the key is never squeezed back
+		 * over the scalogram: the raw (unrectified) power's five-digit labels need more than the
+		 * stored 70 px, and the clamp in ColourScale.svelte pushed the bar onto the plot frame.
+		 * 0 when the key is hidden, inside the plot, or horizontal (its length follows the plot
+		 * width, so it is not reserved for).
+		 */
+		keyRoom = $derived.by(() => {
+			const cs = this.colourScale;
+			if (!cs?.show || cs.position !== 'right' || cs.orientation === 'horizontal') return 0;
+			const style = resolveStyle(this.viewStyle);
+			const g = colourScaleGeometry({
+				vertical: true,
+				thickness: cs.barThickness ?? 10,
+				barLen: 0,
+				fontSize: cs.fontSize ?? style.sizes.legend,
+				tickLabels: scaleTickValues([0, this.powerMax]).map(formatScaleValue),
+				label: 'Power',
+				fontFamily: style.fontFamily
+			});
+			return Math.ceil(LEGEND_MARGIN + g.width);
 		});
 
 		/** Global max, used to normalise the colour scale. */
@@ -383,42 +429,47 @@
 	}
 
 	/**
-	 * Image rows the scalogram is painted with on a LINEAR period axis (at least one per
-	 * scale). Each row is H / 1024 px tall at most, under a pixel for any plot up to 1024 px.
+	 * Image rows the scalogram is painted with (at least one per scale). Each row is H / 1024
+	 * px tall at most, under a pixel for any plot up to 1024 px.
 	 */
-	export const SCALOGRAM_LINEAR_ROWS = 1024;
+	export const SCALOGRAM_IMAGE_ROWS = 1024;
 
 	/**
 	 * What each image row shows, row 0 at the TOP of the plot (the longest period):
 	 * `{ j0, j1, w }`, row r painted as scale j0[r]'s colours blended with scale j1[r]'s at
 	 * weight w[r] (0 = all j0).
 	 *
-	 * The scales are log2-spaced, so on a log period axis one evenly spaced row per scale is
-	 * the honest picture (row r is scale n - 1 - r, w = 0; the browser smooths between rows as
-	 * it stretches the image). On a LINEAR axis the same rows sat at the wrong periods (the
-	 * 24 h power drew at about 26 h on a 4 to 30 h axis), so the image is resampled onto the
-	 * axis instead: SCALOGRAM_LINEAR_ROWS evenly spaced rows, each at the period of its centre
-	 * on the linear axis, blending the two scales whose periods bracket it by its distance
-	 * from each in log period. That is the log axis's own picture, moved: each scale's colour
-	 * is exactly at its own period, where periodToY puts its tick, the cone, the ridge and the
-	 * overlays, and it fades into its neighbours as it does on the log axis.
+	 * The image is resampled onto the axis it is drawn against: SCALOGRAM_IMAGE_ROWS evenly
+	 * spaced rows, each at the period of its centre on that axis (log or linear), blending the
+	 * two scales whose periods bracket it by its distance from each in log period. So each
+	 * scale's colour is exactly at its own period, where periodToY puts its tick, the cone,
+	 * the ridge and the overlays, and it fades into its neighbours in between.
+	 *
+	 * Both axes used to go wrong differently. On a LINEAR axis one evenly spaced row per
+	 * (log2-spaced) scale put the 24 h power at about 26 h on a 4 to 30 h axis (fixed in
+	 * v82.54). On a LOG axis the same one-row-per-scale image was half a row off at the edges:
+	 * n rows stretched over the axis put scale j's row centre at (j + 0.5) / n of the height,
+	 * while its tick is at j / (n - 1), so the shortest and longest periods sat half a row
+	 * inside the plot (6 px at the default 0.125 octave spacing on a 300 px plot).
 	 * Mirrored by tools/ancir_runtime.py cwt_image_rows.
 	 */
-	export function scalogramImageRows(periods, logScale, nLinearRows = SCALOGRAM_LINEAR_ROWS) {
+	export function scalogramImageRows(periods, logScale, nRows = SCALOGRAM_IMAGE_ROWS) {
 		const n = periods.length;
-		if (logScale || n < 2) {
-			const j = Int32Array.from({ length: n }, (_, r) => n - 1 - r);
+		if (n < 2) {
+			const j = Int32Array.from({ length: n }, () => 0);
 			return { j0: j, j1: j, w: new Float64Array(n) };
 		}
 		const lo = periods[0];
 		const hi = periods[n - 1];
-		const R = Math.max(n, nLinearRows);
+		// The period at fraction f of the way up the axis.
+		const periodAt = logScale ? (f) => lo * (hi / lo) ** f : (f) => lo + f * (hi - lo);
+		const R = Math.max(n, nRows);
 		const j0 = new Int32Array(R);
 		const j1 = new Int32Array(R);
 		const w = new Float64Array(R);
 		let k = 1; // walking up from the bottom row: periods[k - 1] <= p <= periods[k]
 		for (let r = R - 1; r >= 0; r--) {
-			const p = lo + (1 - (r + 0.5) / R) * (hi - lo);
+			const p = periodAt(1 - (r + 0.5) / R);
 			while (k < n - 1 && periods[k] < p) k++;
 			j0[r] = k - 1;
 			j1[r] = k;
@@ -433,7 +484,7 @@
 	 *
 	 * Row 0 of the image is the TOP of the plot, and the top of a scalogram is the
 	 * LONGEST period. `rows` says what each image row shows (scalogramImageRows); without
-	 * it, one row per scale, the longest at the top (the log axis).
+	 * it, the scales are taken as evenly spaced on a log axis (as cwt.js spaces them).
 	 *
 	 * Returns '' when there is no DOM (SSR / unit tests) so the caller can fall
 	 * back to a plain message instead of throwing.
@@ -447,7 +498,7 @@
 		rows =
 			rows ??
 			scalogramImageRows(
-				power.map((_, j) => j + 1),
+				power.map((_, j) => 2 ** j),
 				true
 			);
 		const nRows = rows.j0.length;

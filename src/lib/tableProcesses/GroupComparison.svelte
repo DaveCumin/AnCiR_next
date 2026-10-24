@@ -907,10 +907,28 @@
 		return rows.slice(Math.max(0, start - 1), Math.max(0, start - 1) + count);
 	}
 
+	// The stats readout's labels, in sentence case (the keys stay the CSV headers): it used to
+	// title-case the keys ("Group Count", "Ci Low").
+	const STAT_READOUT_LABELS = {
+		column: 'Column',
+		test: 'Test',
+		group_count: 'Group count',
+		n_total: 'N total',
+		statistic: 'Statistic',
+		df1: 'df1',
+		df2: 'df2',
+		p_value: 'p-value',
+		effect_size: 'Effect size',
+		ci_low: 'CI low',
+		ci_high: 'CI high',
+		warnings: 'Warnings'
+	};
+
 	function formatValueLabel(label) {
-		return String(label ?? '')
-			.replaceAll('_', ' ')
-			.replace(/\b\w/g, (c) => c.toUpperCase());
+		const key = String(label ?? '');
+		if (Object.hasOwn(STAT_READOUT_LABELS, key)) return STAT_READOUT_LABELS[key];
+		const text = key.replaceAll('_', ' ');
+		return text.charAt(0).toUpperCase() + text.slice(1);
 	}
 
 	function formatValueDisplay(value) {

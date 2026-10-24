@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.60",
+  "generatedFromVersion": "β.82.61",
   "count": 62,
   "nodes": [
     {
@@ -1729,6 +1729,38 @@
           "cardinality": "one",
           "metric": true,
           "description": "Trough time of harmonic 1 alone, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
+        },
+        {
+          "name": "period_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "period_c",
+          "description": "Fitted period of a further cosine curve, in hours (x units for a number x). One value per wired y column."
+        },
+        {
+          "name": "amplitude_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "amplitude_c",
+          "description": "Amplitude of a further cosine curve, in y units. One value per wired y column."
+        },
+        {
+          "name": "acrophase_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "acrophase_c",
+          "description": "Peak time of a further cosine curve, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
+        },
+        {
+          "name": "bathyphase_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "bathyphase_c",
+          "description": "Trough time of a further cosine curve, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"

@@ -796,6 +796,12 @@ export class AncirSession {
 				Object.assign(a.out, dyn);
 				synthesizedKeys = new Set([...Object.keys(tmpl ?? {}), ...Object.keys(dyn)]);
 			}
+			// …plus param-dependent metric ports the node declares itself (Cosinor's
+			// `<metric>_c<c>` for curves 2..Ncurves), which the app reconciles on mount.
+			for (const k of entry.definition?.paramOutKeys?.(a) ?? []) {
+				if (!(k in a.out)) a.out[k] = -1;
+				synthesizedKeys?.add(k);
+			}
 		}
 
 		// Construct via the real class: this allocates the output Column(s), wires

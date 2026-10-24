@@ -79,6 +79,36 @@ describe('dynamic-output processes auto-seed their out keys', () => {
 		expect(res.outputs.map((o) => o.key).sort()).toEqual(['joined_0', 'source']);
 	});
 
+	it('Cosinor with free curves: curves 2..Ncurves get their own metric ports', async () => {
+		const s = new AncirSession('dyn-cosinor-curves');
+		s.importColumns([
+			{ name: 'x', values: seq(168, (i) => i) },
+			{
+				name: 'y',
+				values: seq(
+					168,
+					(i) =>
+						50 +
+						12 * Math.cos((2 * Math.PI * (i - 7)) / 24) +
+						5 * Math.cos((2 * Math.PI * (i - 2)) / 8.5)
+				)
+			}
+		]);
+		const free = { xIN: 0, yIN: [1], useFixedPeriod: false, minPeriod: 4, maxPeriod: 30 };
+		const two = await s.runTableProcess('Cosinor', { ...free, Ncurves: 2 });
+		expect(two.valid).toBe(true);
+		const byKey = Object.fromEntries(two.outputs.map((o) => [o.key, o]));
+		for (const k of ['period_c2', 'amplitude_c2', 'acrophase_c2', 'bathyphase_c2']) {
+			expect(byKey[k]?.length).toBe(1);
+		}
+		const periods = [byKey.period.preview[0], byKey.period_c2.preview[0]].sort((a, b) => a - b);
+		expect(periods[0]).toBeCloseTo(8.5, 1);
+		expect(periods[1]).toBeCloseTo(24, 1);
+		// One curve (or a fixed period) adds none.
+		const one = await s.runTableProcess('Cosinor', { ...free, Ncurves: 1 });
+		expect(one.outputs.some((o) => /_c\d+$/.test(o.key))).toBe(false);
+	});
+
 	it('CollectColumns — per-input col_<id> keys', async () => {
 		const s = new AncirSession('dyn-collect');
 		s.importColumns([

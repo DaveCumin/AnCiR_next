@@ -176,6 +176,36 @@ def test_fitfunction_cosinor_fixed_recovers_perfect_cosine():
     assert raw_data[10] == t
 
 
+def test_cosinor_failed_fit_with_preprocess_clears_its_curve():
+    # Cosinor.svelte evaluateCosinor + writeCosinorOutputs: a series whose fixed fit fails
+    # (x only on whole periods, so the sine column is zero and cosinor.js solveLinearSystem
+    # refuses the singular normal equations) keeps no curve. The pre-process skips it, the
+    # app writes its output column EMPTY (a curve left from an earlier run does not survive),
+    # its metrics are NaN, and the x output comes from the series that did fit.
+    whole = [0.0, 24.0, 48.0, 72.0, 96.0, 120.0, 144.0, 168.0]
+    t = [6.0 * i for i in range(29)]
+    a = [20.0 + 0.1 * i if h in whole else None for i, h in enumerate(t)]
+    b = [25 + 6 * math.cos(2 * math.pi * (h - 9) / 24) for h in t]
+    stale = [1.0, 2.0, 3.0]
+    cols = {1: _col(1, 't', t), 2: _col(2, 'a', a), 3: _col(3, 'b', b)}
+    raw_data = {20: stale}
+    for cid, name in ((10, 'cosinorx'), (20, 'cosinory_2'), (21, 'cosinory_3'), (30, 'mesor')):
+        cols[cid] = rt.Column(id=cid, name=name, type='number', data=cid, raw_data=raw_data)
+    args = {
+        'xIN': 1, 'yIN': [2, 3], 'Ncurves': 1, 'useFixedPeriod': True, 'fixedPeriod': 24,
+        'nHarmonics': 1, 'alpha': 0.05,
+        'preProcesses': [{'processName': 'Add', 'processArgs': {'value': 1}}],
+        'out': {'cosinorx': 10, 'cosinory_2': 20, 'cosinory_3': 21, 'mesor': 30},
+    }
+    assert rt.fit_cosinor_fixed(whole, [20.0 + i for i in range(8)], 24, 1) is None
+    assert rt.tp_cosinor(args, cols, raw_data, {}) is True
+    assert raw_data[20] == []
+    assert raw_data[10] == t
+    assert len(raw_data[21]) == len(t)
+    assert all(approx(f, y + 1, tol=1e-9) for f, y in zip(raw_data[21], b))
+    assert math.isnan(raw_data[30][0]) and approx(raw_data[30][1], 25, tol=1e-9)
+
+
 def test_fitfunction_invalid_when_no_y():
     cols = {1: _col(1, 't', [0, 1, 2])}
     valid = rt.tp_fitfunction({'xIN': 1, 'yIN': [], 'model': 'cosinor'},

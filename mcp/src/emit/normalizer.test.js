@@ -22,6 +22,22 @@ test('import columns → data + baked rawData', () => {
 	assert.equal(session.data.find((c) => c.name === 'values').data, 1);
 });
 
+// STAT-U4: a number column drafted as numeric strings was baked as text, which the app's
+// Correlation summed by concatenation (r 0.99999999 for data whose r is 0.93).
+test('number columns bake numeric strings as numbers; blank cells as null', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'a', values: ['1', '2.5', ' 3 ', '', '  ', null, 4] },
+			{ name: 'g', type: 'category', values: ['1', '2', '3', '4', '5', '6', '7'] }
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	const id = (n) => session.data.find((c) => c.name === n).id;
+	assert.deepEqual(session.rawData[id('a')], [1, 2.5, 3, null, null, null, 4]);
+	// Only number columns: a category column's text is its value.
+	assert.deepEqual(session.rawData[id('g')], ['1', '2', '3', '4', '5', '6', '7']);
+});
+
 test('Cosinor by NAME resolves refs, pre-allocates out, leaves outputs empty', () => {
 	const { session, errors } = normalizeSession({
 		columns: [

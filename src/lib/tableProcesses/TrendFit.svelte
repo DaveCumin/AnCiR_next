@@ -235,6 +235,24 @@
 		for (const k of coefKeys) writeOutputColumn(argsIN.out?.[k], coefArrs.get(k), { processHash });
 	}
 
+	/**
+	 * Run the node's pre-processes over each series' fitted curve (`yOutData`), in place,
+	 * before it is written. The ONE place both paths do it: the plain fit (trendfit) and the
+	 * component's permutation run (computeTrend), which used to skip them, so running the
+	 * permutation test rewrote the curve without them. A series with no curve is left alone.
+	 */
+	export function applyTrendPreProcesses(yResults, yIds, preProcesses) {
+		for (const pp of preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (!proc?.func) continue;
+			for (const yId of yIds) {
+				const r = yResults[yId];
+				if (Array.isArray(r?.yOutData)) r.yOutData = proc.func(r.yOutData, pp.processArgs ?? {});
+			}
+		}
+	}
+
 	export async function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -292,7 +310,7 @@
 			// wrong instead; see utils/fitDomain.js for why refusing beats quietly
 			// dropping the offending points.
 			const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
-				xLabel: tCol?.name ? `"${tCol.name}"` : 'x',
+				xLabel: displayNameOf(tCol) ? `"${displayNameOf(tCol)}"` : 'x',
 				yLabel: displayNameOf(yCol) ? `"${displayNameOf(yCol)}"` : 'y'
 			});
 			if (shouldRefuse(domainIssues)) {
@@ -318,21 +336,7 @@
 			if (fittedData.fitted.length > 0) anyValid = true;
 		}
 
-		// Apply pre-processes to y results before writing
-		for (const pp of argsIN.preProcesses ?? []) {
-			if (!pp.processName) continue;
-			const proc = appConsts.processMap.get(pp.processName);
-			if (proc?.func) {
-				for (const yId of yINs) {
-					if (result.y_results[yId]) {
-						result.y_results[yId].yOutData = proc.func(
-							result.y_results[yId].yOutData,
-							pp.processArgs ?? {}
-						);
-					}
-				}
-			}
-		}
+		applyTrendPreProcesses(result.y_results, yINs, argsIN.preProcesses);
 
 		// Write output columns
 		if (anyValid && xOUT !== -1) {
@@ -647,6 +651,10 @@
 
 				if (result.t.length === 0) result.t = tt;
 			}
+
+			// The same pre-processes as the plain fit, so the curve does not change when the
+			// permutation test is run.
+			applyTrendPreProcesses(result.y_results, yINs, p.args.preProcesses);
 
 			const anyValid = Object.values(result.y_results).some(
 				(r) => (r?.fittedData?.fitted?.length ?? 0) > 0
@@ -1005,7 +1013,7 @@
 				{#if permutationInProgress}
 					Testing... {permutationProgress}%
 				{:else}
-					Run Permutation Test
+					Run permutation test
 				{/if}
 			</button>
 		</div>

@@ -58,10 +58,10 @@ describe('importJson migrates legacy facet children', () => {
 		const w = warnings();
 		expect(w).toHaveLength(1);
 		expect(w[0]).toContain("Panel 'onset_delay'");
-		expect(w[0]).toContain('Padding Top (40)');
-		expect(w[0]).toContain('Padding Right (50)');
+		expect(w[0]).toContain('padding top (40)');
+		expect(w[0]).toContain('padding right (50)');
 		expect(w[0]).toContain("Panel 'onset_advance'");
-		expect(w[0]).toContain('Points Radius (7)');
+		expect(w[0]).toContain('points radius (7)');
 		// The panel whose limits were carried projects them; its siblings do not.
 		const panels = panelsFor(gen);
 		expect(panels.map((p) => p.unitKey)).toEqual(['y375#0', 'y376#0', 'y377#0']);

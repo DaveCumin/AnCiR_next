@@ -54,3 +54,36 @@ test('CWT legend and axis titles fit inside the plot, in a node and in the works
 	await expect(page.locator('svg[id^="plot"]').first().getByText('Power')).toBeVisible();
 	expect(await clippedLabels(page)).toEqual([]);
 });
+
+// REPORTED (2026-10-22): with Rectify off the raw power labels ("36800") are wider than the
+// 0.6 em a character the key estimated, so the turned "Power" title overlapped them by about
+// 2 px and the key, clamped into the stored 70 px of right padding, sat on the plot frame.
+// The key now measures its text and the plot reserves the room it takes beside the plot.
+test('raw power labels clear the Power title, and the key clears the plot', async ({ page }) => {
+	await loadDemo(page);
+	await page.getByTestId('nav-workspace-view').click();
+	const svg = page.locator('svg[id^="plot"]').first();
+	await expect(svg.getByText('Power')).toBeVisible();
+	await page.evaluate(() => {
+		window.__core.plots.find((p) => p.type === 'cwt').plot.rectify = false;
+	});
+	await expect(svg.locator('text.colour-scale-tick').first()).toHaveText(/^\d{4,}$/);
+	const m = await page.evaluate(() => {
+		const svg = document.querySelector('svg[id^="plot"]');
+		const key = svg.querySelector('g.colour-scale');
+		const ticks = [...key.querySelectorAll('text.colour-scale-tick')];
+		const title = key.querySelector('text.colour-scale-label').getBoundingClientRect();
+		const bar = key.querySelector('rect').getBoundingClientRect();
+		const frame = [...svg.querySelectorAll('rect[fill="none"]')]
+			.map((r) => r.getBoundingClientRect())
+			.sort((a, b) => b.width - a.width)[0];
+		return {
+			tickRight: Math.max(...ticks.map((t) => t.getBoundingClientRect().right)),
+			titleLeft: title.left,
+			barLeft: bar.left,
+			frameRight: frame.right
+		};
+	});
+	expect(m.titleLeft).toBeGreaterThanOrEqual(m.tickRight - 0.5);
+	expect(m.barLeft).toBeGreaterThan(m.frameRight + 4);
+});

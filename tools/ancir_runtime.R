@@ -1968,6 +1968,39 @@ COSINOR_METRIC_KEYS <- c("period", "mesor", "amplitude", "amplitude_ciLow", "amp
                          "pvalue", "perm_pvalue", "bathyphase", "phase_angle", "amplitude_h1",
                          "acrophase_h1", "bathyphase_h1")
 
+# Cosinor.svelte cosinorCurveOutKeys: `<metric>_c<c>` for curves 2..Ncurves of a free-period
+# fit, curve by curve; none with a fixed period (curve 1 is on the main ports).
+COSINOR_CURVE_METRICS <- c("period", "amplitude", "acrophase", "bathyphase")
+cosinor_curve_out_keys <- function(args) {
+  if (isTRUE(args$useFixedPeriod)) return(character(0))
+  n <- suppressWarnings(trunc(as.numeric(if (is.null(args$Ncurves)) NA else args$Ncurves)))
+  if (length(n) != 1 || is.na(n) || n < 2) return(character(0))
+  as.vector(t(outer(2:n, COSINOR_CURVE_METRICS, function(c, m) paste0(m, "_c", c))))
+}
+
+# Cosinor.svelte cosinorCurveMetrics: curves 2..Ncurves' period, amplitude, time of peak and
+# of trough (each phase on its own curve's period, in the phase reference), NaN where the
+# fit has no such curve.
+.cosinor_curve_metrics <- function(free_res, args, phase_ref) {
+  cs <- if (isTRUE(args$useFixedPeriod) || is.null(free_res)) list() else
+    free_res$parameters$cosines
+  out <- list()
+  for (key in cosinor_curve_out_keys(args)) {
+    parts <- strsplit(key, "_c", fixed = TRUE)[[1]]
+    c <- as.integer(parts[2])
+    cd <- if (c <= length(cs)) cs[[c]] else NULL
+    w <- if (is.null(cd)) 0 else cd$frequency  # cycles per unit in this port
+    period <- if (w) 1 / w else NaN
+    peak <- if (w) -cd$phase / (2 * pi * w) else NaN
+    out[[key]] <- switch(parts[1],
+      period = period,
+      amplitude = if (is.null(cd)) NaN else cd$amplitude,
+      acrophase = apply_phase_reference(wrap_to_period(peak, period), phase_ref, period),
+      bathyphase = apply_phase_reference(bathyphase(peak, period), phase_ref, period))
+  }
+  out
+}
+
 # Cosinor.svelte cosinorMetrics (see the Python port cosinor_metrics).
 cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
   use_fixed <- isTRUE(args$useFixedPeriod)
@@ -1998,7 +2031,7 @@ cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
   peak_ref <- if (isTRUE(phase_ref$clock)) peak + phase_ref$offsetHours else peak
   ci_a <- if (use_fixed && !is.null(h1)) h1$CI_A else NULL
   ci_p <- if (use_fixed && !is.null(h1)) h1$CI_acrophase else NULL
-  list(period = period, mesor = mesor,
+  c(list(period = period, mesor = mesor,
        amplitude = if (!is.null(overall)) overall$amplitude else amp,
        acrophase = if (!is.null(overall)) rf(overall$orthophase) else acro_h1,
        bathyphase = if (!is.null(overall)) rf(overall$bathyphase) else bathy_h1,
@@ -2010,7 +2043,8 @@ cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
        acrophase_ciHigh = if (is.null(ci_p)) NaN else rf(wrap_to_period(ci_p[2], period)),
        rsquared = rsq,
        pvalue = if (use_fixed && !is.null(fixed_res)) fixed_res$pF else NaN,
-       perm_pvalue = NaN)
+       perm_pvalue = NaN),
+    .cosinor_curve_metrics(free_res, args, phase_ref))
 }
 
 # Port of Cosinor.svelte (matching the Python port): output x from the input's minimum time
@@ -2070,6 +2104,7 @@ tp_cosinor <- function(args, env) {
   phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data, node = "Cosinor")
 
   any_valid <- FALSE; curves <- list(); metrics <- list()
+  failed <- character(0)  # fitted but the fit failed: the app writes an empty curve for these
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -2088,7 +2123,10 @@ tp_cosinor <- function(args, env) {
                         if (is.null(args$maxPeriod)) FREE_PERIOD_DEFAULTS$maxPeriod else args$maxPeriod)
       res <- free_res
     }
-    if (is.null(res)) next
+    if (is.null(res)) {
+      failed <- c(failed, yk)
+      next
+    }
     params <- if (!is.null(res$harmonics)) res else res$parameters
     xs <- if (!is.null(fr$out)) fr$out else tt
     metrics[[yk]] <- cosinor_metrics(fixed_res, free_res, args, phase_ref)
@@ -2119,8 +2157,15 @@ tp_cosinor <- function(args, env) {
       if (yo == -1) yo <- out_id(args, "cosinory")
       set_col(env, env$cols, yo, curves[[yk]]$y, type = "number")
     }
+    # A series whose fit failed has no curve: the app writes it empty (no stale curve), and
+    # no pre-process runs on it.
+    for (yk in failed) {
+      yo <- out_id(args, paste0("cosinory_", yk))
+      if (yo == -1) yo <- out_id(args, "cosinory")
+      set_col(env, env$cols, yo, numeric(0), type = "number")
+    }
     empty <- cosinor_metrics(NULL, NULL, args, phase_ref)
-    for (key in COSINOR_METRIC_KEYS) {
+    for (key in c(COSINOR_METRIC_KEYS, cosinor_curve_out_keys(args))) {
       v <- vapply(y_ins, function(y) {
         m <- metrics[[as.character(y)]]
         x <- if (is.null(m)) empty[[key]] else m[[key]]

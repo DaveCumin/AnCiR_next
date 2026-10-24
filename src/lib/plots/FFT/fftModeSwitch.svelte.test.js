@@ -4,7 +4,7 @@
  *
  * The x limits (`xlimsIN`) are stored in the units of the CURRENT mode, so a switch must
  * convert them (periods [4, 30] are frequencies [1/30, 1/4]). Only the Properties checkbox
- * used to, so the multi-select "Show Period" field and an AI edit left period limits on a
+ * used to, so the multi-select "Show period" field and an AI edit left period limits on a
  * frequency axis: it read 4 to 0.5 and drew nothing. The conversion now lives in ONE place
  * (FFTclass.pairedEdits, fftAxis.setFftShowPeriod) that every edit route goes through, and a
  * switch is one undo step that restores the mode and the limits together.
@@ -80,7 +80,7 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('the multi-select "Show Period" field (the reported route)', () => {
+describe('the multi-select "Show period" field (the reported route)', () => {
 	it('converts every selected plot, draws a valid range, and undoes in one step', async () => {
 		const a = makeFft([4, 30]);
 		const b = makeFft([5, 40]);
@@ -89,7 +89,7 @@ describe('the multi-select "Show Period" field (the reported route)', () => {
 		render(ControlDisplay);
 		await tick();
 
-		const box = screen.getByLabelText('Show Period');
+		const box = screen.getByLabelText('Show period');
 		expect(box.checked).toBe(true);
 		await fireEvent.click(box);
 		flushSync();
@@ -213,7 +213,7 @@ describe('state application is not a switch', () => {
 		makeFft([4, 30]).selected = true;
 		render(ControlDisplay);
 		await tick();
-		await fireEvent.click(screen.getByLabelText('Show Period'));
+		await fireEvent.click(screen.getByLabelText('Show period'));
 		flushSync();
 
 		const g = live(gen);
@@ -284,7 +284,7 @@ describe('overlays keep their stored periods across a switch', () => {
 		b.selected = true;
 		render(ControlDisplay);
 		await tick();
-		await fireEvent.click(screen.getByLabelText('Show Period'));
+		await fireEvent.click(screen.getByLabelText('Show period'));
 		flushSync();
 		const inner = live(a).plot;
 		expect(inner.overlays[0].toJSON().channels.at.typed).toEqual([24]);

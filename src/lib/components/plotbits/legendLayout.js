@@ -38,6 +38,38 @@ export const LEGEND_H_SPACING = 10;
 const EST_CHAR_EM = 0.55;
 
 let measureCtx = null;
+/** A 2-D context that can measure text, or null where there is none (tests, SSR). */
+function textMeasurer() {
+	if (measureCtx) return measureCtx;
+	if (typeof document === 'undefined') return null;
+	try {
+		const ctx = document.createElement('canvas').getContext('2d');
+		// Only a context that really measures is kept: jsdom has none, and a test that stubs
+		// the canvas for painting returns one without measureText.
+		if (ctx && typeof ctx.measureText === 'function') measureCtx = ctx;
+	} catch {
+		// no canvas
+	}
+	return measureCtx;
+}
+
+/**
+ * Text widths in px, measured in the figure's family on a canvas, or null when there is no
+ * canvas to measure with (tests, SSR), for a caller to estimate instead.
+ *
+ * @param {string[]} labels
+ * @param {number} fontPx
+ * @param {string} fontFamily
+ * @returns {number[] | null}
+ */
+export function measureTextWidths(labels, fontPx, fontFamily) {
+	const ctx = fontFamily ? textMeasurer() : null;
+	if (!ctx) return null;
+	ctx.font = `${fontPx}px ${fontFamily}`;
+	const widths = labels.map((l) => ctx.measureText(String(l ?? '')).width);
+	return widths.every(Number.isFinite) ? widths : null;
+}
+
 /**
  * Label widths in px, measured in the figure's family when a canvas is available, else
  * estimated from the character count (tests, SSR).
@@ -48,18 +80,10 @@ let measureCtx = null;
  * @returns {number[]}
  */
 export function measureLabelWidths(labels, fontPx, fontFamily) {
-	if (measureCtx === null && typeof document !== 'undefined') {
-		try {
-			measureCtx = document.createElement('canvas').getContext('2d') ?? false;
-		} catch {
-			measureCtx = false;
-		}
-	}
-	if (measureCtx) {
-		measureCtx.font = `${fontPx}px ${fontFamily}`;
-		return labels.map((l) => measureCtx.measureText(String(l ?? '')).width);
-	}
-	return labels.map((l) => String(l ?? '').length * fontPx * EST_CHAR_EM);
+	return (
+		measureTextWidths(labels, fontPx, fontFamily) ??
+		labels.map((l) => String(l ?? '').length * fontPx * EST_CHAR_EM)
+	);
 }
 
 /**

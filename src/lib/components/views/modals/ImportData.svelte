@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import Papa from 'papaparse';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { isBlankEntry } from '$lib/utils/cellEntry.js';
 	import { sniffFile, looksLikeSession } from '$lib/utils/fileTypeSniff.js';
 	import { loadSessionFile as loadSessionFileViaRegistry } from '$lib/core/dataSourceActions.js';
 	import { newGroupPosition } from '$lib/core/canvasPlacement.js';
@@ -4643,7 +4644,12 @@
 															class:selected={selectedColumns.has(col)}
 															class:unselected={!selectedColumns.has(col)}
 														>
-															{parsedData[col]?.[rowIdx] ?? '—'}
+															{#if isBlankEntry(parsedData[col]?.[rowIdx])}
+																<!-- A blank cell says so, muted and italic so it never reads as a value. -->
+																<span class="blank-cell">Blank</span>
+															{:else}
+																{parsedData[col][rowIdx]}
+															{/if}
 														</td>
 													{/if}
 												{/each}
@@ -5118,6 +5124,13 @@
 		color: var(--color-text-muted);
 		text-align: left;
 		white-space: normal;
+	}
+	/* A blank preview cell, in words rather than a dash (which reads as a value: a minus, or
+	   "not applicable"), set apart from the file's own text. */
+	.blank-cell {
+		font-size: var(--font-xs);
+		font-style: italic;
+		color: var(--color-text-muted);
 	}
 	/* A one-click type suggestion (Unix time in a numeric column). Wraps like .type-warn. */
 	.type-suggest {

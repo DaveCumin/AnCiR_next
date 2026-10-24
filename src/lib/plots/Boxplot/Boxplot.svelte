@@ -4,6 +4,7 @@
 		viewFontScale,
 		viewStyleFor,
 		scalePadding,
+		viewPadFloorFor,
 		autoPadWhenDrawn
 	} from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
@@ -405,7 +406,15 @@
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
 		// set; the raw value is what gets saved. See plots/viewBox.js.
 		#padding = $state({ top: 15, right: 30, bottom: 30, left: 50 });
-		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		// A node view's own measured floor (fitViewPadding, plots/viewBox.js); never saved.
+		viewPadFloor = $state(null);
+		paddingScaled = $derived(
+			scalePadding(
+				this.#padding,
+				this.fontScale,
+				viewPadFloorFor(this.viewPadFloor, this.renderBox)
+			)
+		);
 		get padding() {
 			return this.renderBox ? this.paddingScaled : this.#padding;
 		}
