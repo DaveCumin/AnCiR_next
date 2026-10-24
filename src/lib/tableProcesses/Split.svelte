@@ -116,6 +116,10 @@
 
 	export const definition = {
 		displayName,
+		// The args that add or remove output ports: an edit of one is recorded with the port
+		// reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		// One segment port per split time, plus one.
+		outputShapingArgs: ['splitTimes'],
 		defaults,
 		func: split,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },

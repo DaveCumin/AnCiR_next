@@ -282,6 +282,11 @@ function captureAround(fn) {
  */
 export function recordGraphMutation(fn) {
 	if (captureDepth > 0) return fn();
+	// Called from an effect while a gesture is still settling: the graph's reaction to that
+	// gesture (the parameter watcher recording a wire scrubbed by the ports the gesture
+	// removed), which the open step absorbs as emit() absorbs a plain op. Recording it as a
+	// gesture of its own would close the open step early and split one edit into two steps.
+	if (settling && inReaction()) return fn();
 	settleGraphMutation();
 	captureDepth++;
 	const before = captureGraph();

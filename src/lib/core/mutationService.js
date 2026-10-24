@@ -4,17 +4,22 @@ import { applyOp, applyOps, recordGraphMutation } from './operations.js';
 import { core, appConsts } from './core.svelte.js';
 
 /**
- * Whether `key` is an arg of this free table process that decides WHICH output ports it has
- * (its definition's `outputShapingArgs`: Cosinor's `useFixedPeriod` / `Ncurves`, a fit's
- * `model`). The node reconciles those ports a microtask after the edit (it must not build
- * Columns inside an effect), removing a port's column and every wire into it.
+ * Whether `key` is an arg of this free table process that decides WHICH output ports it has:
+ * one of its definition's `outputShapingArgs` (Cosinor's `useFixedPeriod` / `Ncurves`, a fit's
+ * `model`, Moving Analysis's `analysis`, Split's `splitTimes`), or one of its column inputs
+ * (`columnIdFields`: a per-input port such as `trendy_<yId>` comes and goes with its input).
+ * The node reconciles those ports a microtask after the edit (it must not build Columns
+ * inside an effect), removing a port's column and every wire into it.
  */
 function reshapesOutputs(tpId, key) {
 	const tp = (core.tableProcesses ?? []).find((t) => t.id === tpId);
-	const shaping = tp
-		? appConsts.tableProcessMap?.get?.(tp.name)?.definition?.outputShapingArgs
-		: null;
-	return Array.isArray(shaping) && shaping.includes(key);
+	const def = tp ? appConsts.tableProcessMap?.get?.(tp.name)?.definition : null;
+	if (!def) return false;
+	const inputs = [...(def.columnIdFields?.scalar ?? []), ...(def.columnIdFields?.array ?? [])];
+	return (
+		(Array.isArray(def.outputShapingArgs) && def.outputShapingArgs.includes(key)) ||
+		inputs.includes(key)
+	);
 }
 
 /**

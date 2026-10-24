@@ -68,6 +68,10 @@
 
 	export const definition = {
 		displayName,
+		// The args that change which coef_* ports exist (the model's coefficients, and a
+		// polynomial's degree): an edit of one is recorded with the port reconcile it sets off
+		// as ONE undo step (mutationService.setFreeTableProcessArg).
+		outputShapingArgs: ['model', 'polyDegree'],
 		defaults,
 		func: trendfit,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },

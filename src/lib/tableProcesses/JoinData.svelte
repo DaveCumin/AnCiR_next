@@ -289,6 +289,10 @@
 
 	export const definition = {
 		displayName,
+		// The args that add or remove output ports: an edit of one is recorded with the port
+		// reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		// The pairing merges value ports; the source switch adds or removes `source`.
+		outputShapingArgs: ['pairing', 'sourceColumn'],
 		defaults,
 		func: joindata,
 		columnIdFields: { scalar: ['aTimeIN', 'bTimeIN'], array: ['aValuesIN', 'bValuesIN'] },

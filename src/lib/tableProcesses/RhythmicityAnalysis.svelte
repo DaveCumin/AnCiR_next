@@ -47,6 +47,10 @@
 
 	export const definition = {
 		displayName,
+		// The args that add or remove output ports: an edit of one is recorded with the port
+		// reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		// The args getOutputKeys and getStatKeys read.
+		outputShapingArgs: ['analysis', 'pgMethod'],
 		defaults,
 		func: rhythmicityanalysis,
 		// A NEW node's periodogram bin size follows its x (binSizeAuto.svelte.js). Not in

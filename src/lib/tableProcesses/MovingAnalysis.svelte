@@ -100,6 +100,20 @@
 
 	export const definition = {
 		displayName,
+		// The args that add or remove output ports: an edit of one is recorded with the port
+		// reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		// The args getStatKeys reads (the analysis, and each analysis's own options that change
+		// which per-window stats it reports).
+		outputShapingArgs: [
+			'analysis',
+			'pgMethod',
+			'useFixedPeriod',
+			'nHarmonics',
+			'Ncurves',
+			'dlPeriodic',
+			'trendModel',
+			'trendPolyDegree'
+		],
 		defaults,
 		func: movinganalysis,
 		// A NEW node's periodogram bin size follows its x (binSizeAuto.svelte.js). Not in

@@ -193,6 +193,26 @@ test.describe('new nodes land in the middle of the canvas view', () => {
 		expect(page.errors).toEqual([]);
 	});
 
+	test('two palette nodes of different sizes, added without moving, cascade one step', async ({
+		page
+	}) => {
+		// Simulate Data (a source with no inputs) then Cosinor, much taller: the second is
+		// centred one step down and right of the first, not on top of it.
+		await startBlankCanvas(page);
+		const v = await view(page);
+		const z = v.z ?? 1;
+		const [source] = await pick(page, 'SimulatedData');
+		const first = await nodeBox(page, source);
+		expectCentred(v, first, 0, z);
+		const [analysis] = await pick(page, 'Cosinor');
+		const second = await nodeBox(page, analysis);
+		expect(second.height).toBeGreaterThan(first.height);
+		expectCentred(v, second, 1, z);
+		// The first stays where it landed.
+		expect(await nodeBox(page, source)).toEqual(first);
+		expect(page.errors).toEqual([]);
+	});
+
 	test('zoomed in, a node taller than the view keeps its header on screen', async ({ page }) => {
 		await openApp(page);
 		await importFiles(page, ['first'], { fromStart: true });
