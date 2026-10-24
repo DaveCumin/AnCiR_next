@@ -1,7 +1,21 @@
 // src/lib/core/mutationService.js
 // @ts-nocheck
 import { applyOp, applyOps, recordGraphMutation } from './operations.js';
-import { core } from './core.svelte.js';
+import { core, appConsts } from './core.svelte.js';
+
+/**
+ * Whether `key` is an arg of this free table process that decides WHICH output ports it has
+ * (its definition's `outputShapingArgs`: Cosinor's `useFixedPeriod` / `Ncurves`, a fit's
+ * `model`). The node reconciles those ports a microtask after the edit (it must not build
+ * Columns inside an effect), removing a port's column and every wire into it.
+ */
+function reshapesOutputs(tpId, key) {
+	const tp = (core.tableProcesses ?? []).find((t) => t.id === tpId);
+	const shaping = tp
+		? appConsts.tableProcessMap?.get?.(tp.name)?.definition?.outputShapingArgs
+		: null;
+	return Array.isArray(shaping) && shaping.includes(key);
+}
 
 /**
  * Typed public API for graph mutations. All mutation-emitting code in the
@@ -90,7 +104,18 @@ export const mutationService = {
 		applyOp({ kind: 'removeFreeTableProcess', tpId });
 	},
 	setFreeTableProcessArg(tpId, key, value) {
-		applyOp({ kind: 'setFreeTableProcessArg', tpId, key, value });
+		const op = { kind: 'setFreeTableProcessArg', tpId, key, value };
+		// An edit that changes the node's ports is recorded as a graph gesture, so the port
+		// reconcile it sets off (columns removed or added, wires into them scrubbed) is folded
+		// into the same undo step: one undo brings the ports back with their column ids, data
+		// and wires, and redo removes them again (see recordGraphMutation's settling window).
+		// As a plain op, undo restored only the arg and left the ports gone, or an output map
+		// naming columns that no longer existed.
+		if (reshapesOutputs(tpId, key)) {
+			recordGraphMutation(() => applyOp(op));
+			return;
+		}
+		applyOp(op);
 	},
 
 	// --- Free (orphan) process ops: a process node not yet owned by a column.

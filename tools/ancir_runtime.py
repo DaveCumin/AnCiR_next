@@ -3019,6 +3019,52 @@ def dayjs_width_pattern(fmt):
     return re.compile(''.join(out))
 
 
+# Numbers saved as TEXT in a number column (core/numericTextMigration.js). The importer's own
+# number test (importColumnTypes.js numberFromText: PapaParse's FLOAT and its +/-2^53 bound).
+# ASCII digits only, as in JS (Python's \d would also take other scripts' digits).
+_NUMERIC_TEXT = re.compile(r'\s*-?([0-9]+\.?|\.[0-9]+|[0-9]+\.[0-9]+)([eE][-+]?[0-9]+)?\s*')
+_MISSING_MARKERS = ('NaN', 'NA', 'null')
+
+
+def number_from_text(v):
+    """The number a text cell reads as under the import rule, or None."""
+    if not isinstance(v, str) or not _NUMERIC_TEXT.fullmatch(v):
+        return None
+    n = float(v)
+    return n if -2.0 ** 53 < n < 2.0 ** 53 else None
+
+
+def coerce_numeric_text(values):
+    """A number column's values with numeric text read as numbers and blank text as None;
+    other values unchanged. The same list when it holds no text."""
+    if not isinstance(values, list) or not any(isinstance(v, str) for v in values):
+        return values
+    out = []
+    for v in values:
+        if isinstance(v, str):
+            if v.strip() == '':
+                v = None
+            else:
+                n = number_from_text(v)
+                if n is not None:
+                    # A whole number as the app saves it after the load (JSON 10, not 10.0).
+                    v = int(n) if n.is_integer() else n
+        out.append(v)
+    return out
+
+
+def non_numeric_text_warning(values):
+    """columnWarnings.js nonNumericTextWarning: text in a number column that is not a number
+    (nor blank, nor a missing marker), which every analysis reads as missing; or None."""
+    bad = [v for v in (values or []) if isinstance(v, str) and v.strip() != ''
+           and v not in _MISSING_MARKERS and number_from_text(v) is None]
+    if not bad:
+        return None
+    one = len(bad) == 1
+    return (f'{len(bad)} {"value is" if one else "values are"} not a number '
+            f'(e.g. "{bad[0]}"), so {"it is" if one else "they are"} read as missing.')
+
+
 @dataclass
 class Column:
     id: int
@@ -3057,6 +3103,8 @@ class Column:
     wall_clock_counts: dict | None = None
     # The column warnings those counts give (dst_count_warnings) are printed once.
     dst_warned: bool = False
+    # The not-a-number text warning (non_numeric_text_warning) is printed once.
+    text_warned: bool = False
 
     def is_referencial(self):
         return self.ref_id is not None
@@ -3111,6 +3159,16 @@ class Column:
             return ref.get_data() if ref else []
         raw = self.raw_data.get(self.data, [])
         data = self._decompress(raw)
+        if self.type == 'number':
+            # Numbers saved as text read as numbers, blank text as missing; other text stays
+            # and the column warns once, as the app does on load (numericTextMigration.js,
+            # columnWarnings.js nonNumericTextWarning).
+            data = coerce_numeric_text(data)
+            if not self.text_warned:
+                self.text_warned = True
+                w = non_numeric_text_warning(data)
+                if w:
+                    node_warning(f'Column "{self.name}"', w)
         if self.type == 'time' and self.compression != 'awd':
             # Already-numeric (UNIX ms, e.g. written by SimulatedData TP): leave alone.
             # Judged on the first PRESENT value: judging on data[0] sent an epoch-ms column
@@ -3952,8 +4010,14 @@ def tp_cosinor(args, cols, raw_data, _sv):
     y_ins = _id_list(args.get('yIN'))
     if x_in == -1 or x_in not in cols or not y_ins:
         return False
-    n_curves = int(args.get('Ncurves', 0) or 0)
+    # A node saved without Ncurves gets the app's default, one curve (an explicit 0 or null
+    # fits nothing, as in the app).
+    n_curves = int(args.get('Ncurves', 1) or 0)
     use_fixed = bool(args.get('useFixedPeriod', False))
+    # evaluateCosinor canRunBase: a free-period fit needs at least one curve (Ncurves 0 used
+    # to fit a mesor-only "curve" here while the app fitted nothing).
+    if not use_fixed and n_curves < 1:
+        return False
     fixed_period = float(args.get('fixedPeriod', 24))
     # Free-period range (h); sessions saved before it existed use the defaults.
     period_range = {'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
@@ -7528,6 +7592,26 @@ def _ff_evaluate_at_points(fit_result, model, t_points):
     return [float('nan')] * len(t_points)
 
 
+# FitFunction.svelte FIT_CURVE_METRICS: the per-curve metrics of a free-period cosinor with
+# Ncurves > 1 (curve 1 is on period / amplitude / acrophase).
+_FF_CURVE_METRICS = ('period', 'amplitude', 'acrophase')
+_FF_CURVE_KEY_RE = re.compile(r'^(period|amplitude|acrophase)_c(\d+)$')
+
+
+def ff_curve_out_keys(args):
+    """FitFunction.svelte fitCurveOutKeys: `<metric>_c<c>` for curves 2..Ncurves of a
+    free-period cosinor, curve by curve; none for a fixed period (the default) or another
+    model."""
+    uf = args.get('useFixedPeriod')
+    if (args.get('model') or 'cosinor') != 'cosinor' or (True if uf is None else bool(uf)):
+        return []
+    try:
+        n = int(float(args.get('Ncurves')))
+    except (TypeError, ValueError, OverflowError):
+        n = 0
+    return [f'{m}_c{c}' for c in range(2, n + 1) for m in _FF_CURVE_METRICS]
+
+
 def ff_metric_keys(args):
     """FitFunction.svelte getFitMetricKeys."""
     shared = ['r2', 'rmse', 'perm_pvalue']
@@ -7537,7 +7621,7 @@ def ff_metric_keys(args):
         uf = args.get('useFixedPeriod')
         fixed = ['rmse_n'] if (True if uf is None else bool(uf)) else []
         return shared + fixed + ['period', 'mesor', 'amplitude', 'acrophase', 'amplitude_h1',
-                                 'acrophase_h1']
+                                 'acrophase_h1'] + ff_curve_out_keys(args)
     if model == 'rectangular':
         return shared + ['period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa']
     if model == 'doublelogistic':
@@ -7616,6 +7700,9 @@ def ff_metric_value(key, model, fr, phase_ref):
     """FitFunction.svelte fitMetricValue: phase keys expressed in the phase reference, wrapped
     to the cosinor period, the rectangular wave's period, or the double logistic's T (24 when
     non-periodic)."""
+    curve = _FF_CURVE_KEY_RE.match(key) if model == 'cosinor' else None
+    if curve:
+        return _ff_curve_metric(curve.group(1), int(curve.group(2)), fr, phase_ref)
     v = _ff_raw_metric(key, model, fr)
     if not (phase_ref and phase_ref.get('clock')) or key not in _FF_PHASE_KEYS:
         return v
@@ -7629,6 +7716,25 @@ def ff_metric_value(key, model, fr, phase_ref):
     else:
         per = _NAN
     return apply_phase_reference(v, phase_ref, per)
+
+
+def _ff_curve_metric(metric, c, fr, phase_ref):
+    """FitFunction.svelte fitCurveMetricValue: curve c of a free-period cosinor (its period,
+    amplitude, or time of peak in the phase reference on its own period); NaN for a fixed
+    fit or a curve the fit does not have."""
+    cs = ((fr.get('parameters') or {}).get('cosines') or []) \
+        if fr and fr.get('mode') != 'fixed' else []
+    cd = cs[c - 1] if 0 <= c - 1 < len(cs) else None
+    w = cd['frequency'] if cd else 0  # cycles per unit in this port
+    period = (1.0 / w) if w else _NAN
+    if metric == 'period':
+        return period
+    if metric == 'amplitude':
+        return cd['amplitude'] if cd else _NAN
+    peak = wrap_to_period(-cd['phase'] / (2 * math.pi * w), period) if w else _NAN
+    if phase_ref and phase_ref.get('clock'):
+        return apply_phase_reference(peak, phase_ref, period)
+    return peak
 
 
 def _ff_min_points(model, args):

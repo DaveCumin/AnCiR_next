@@ -384,6 +384,18 @@ export const NODE_OUTPUT_LABELS = {
 			{ prefix: 'fity_', label: 'Fit', autoPrefixes: ['fit_'] },
 			{ prefix: 'resid_', label: 'Residuals' },
 			{ prefix: 'permstats_', label: 'Permutation statistics' }
+		],
+		// Curves 2..Ncurves of a free-period cosinor (`amplitude_c2`, ...), as on Cosinor.
+		special: [
+			{
+				re: /^(period|amplitude|acrophase)_c(\d+)$/,
+				label: (m, ctx) =>
+					m[1] === 'period'
+						? `C${m[2]} period (${fitUnit(ctx)})`
+						: m[1] === 'amplitude'
+							? `C${m[2]} amplitude`
+							: fitPhaseLabel(`C${m[2]} acrophase`, ctx)
+			}
 		]
 	},
 	FormulaColumn: { keys: { result: 'Formula result' } },

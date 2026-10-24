@@ -1,0 +1,760 @@
+{
+ "_comment": "A session as saved before v82.34: the Fit trend R2 stored value still has its old default name, built from the raw column name with its space and brackets (trend_r2_Activity (counts)); the RMSE one was renamed by the user (my_rmse). A Formula Column uses both (x * 0 + R2 + RMSE, so every row is their sum). On load the R2 value takes the plain name trend_r2_Activity_counts and the formula follows; my_rmse stays. Built from demo-tp-trendfit.json.",
+ "rawData": {
+  "891": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49
+  ],
+  "892": [
+   7.673945782302198,
+   -1.879285133127806,
+   10.089269516954142,
+   10.596485195471297,
+   8.161029635859103,
+   13.681226110102159,
+   26.735480623873976,
+   0.4755050282271327,
+   17.350924954782943,
+   24.84017756091917,
+   30.567006178574996,
+   27.052189113743175,
+   20.37860310297848,
+   18.769807240914062,
+   27.027468169597224,
+   33.280600736274955,
+   41.823579918545946,
+   29.35896700715772,
+   38.31398622956262,
+   45.932943288001894,
+   39.728749497898214,
+   42.63655213515867,
+   43.79654864881627,
+   50.07995543153807,
+   48.8861828183495,
+   44.88794712215628,
+   48.4064970797384,
+   59.19718600511181,
+   64.14389216232922,
+   53.64464595979867,
+   64.20266126167189,
+   63.48432800846688,
+   62.820338210278415,
+   63.494324944748556,
+   56.7495123288619,
+   63.62972343529573,
+   72.35424943306231,
+   64.1682907027743,
+   68.14174429272566,
+   83.9678528466312,
+   77.42728838665597,
+   74.76472744133697,
+   76.82877283733843,
+   78.18585478576706,
+   91.65775531494548,
+   83.89659972832575,
+   87.60652690660054,
+   89.70800702051064,
+   95.32890446343086,
+   89.84737077710555
+  ],
+  "893": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49
+  ],
+  "894": [
+   0.9579555770898015
+  ],
+  "895": [
+   5.469977223339452
+  ],
+  "896": [
+   1.809303819828578
+  ],
+  "897": [
+   4.350114419162737
+  ],
+  "898": [
+   4.350114419162737,
+   6.159418238991315,
+   7.968722058819893,
+   9.77802587864847,
+   11.587329698477049,
+   13.396633518305627,
+   15.205937338134206,
+   17.015241157962784,
+   18.824544977791362,
+   20.633848797619937,
+   22.443152617448515,
+   24.252456437277093,
+   26.06176025710567,
+   27.87106407693425,
+   29.680367896762828,
+   31.489671716591406,
+   33.29897553641999,
+   35.108279356248566,
+   36.91758317607714,
+   38.726886995905716,
+   40.536190815734294,
+   42.34549463556287,
+   44.15479845539145,
+   45.96410227522003,
+   47.77340609504861,
+   49.582709914877185,
+   51.39201373470576,
+   53.20131755453434,
+   55.01062137436292,
+   56.8199251941915,
+   58.629229014020076,
+   60.438532833848654,
+   62.24783665367723,
+   64.05714047350581,
+   65.8664442933344,
+   67.67574811316297,
+   69.48505193299154,
+   71.29435575282012,
+   73.1036595726487,
+   74.91296339247728,
+   76.72226721230585,
+   78.53157103213444,
+   80.34087485196301,
+   82.1501786717916,
+   83.95948249162016,
+   85.76878631144875,
+   87.57809013127732,
+   89.3873939511059,
+   91.19669777093448,
+   93.00600159076306
+  ],
+  "899": []
+ },
+ "data": [
+  {
+   "id": 891,
+   "name": "x",
+   "data": 891,
+   "type": "number",
+   "tableProcessGUId": "bbc11482-ffc9-4fa3-81b5-8d0b4c7591da",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 892,
+   "name": "Activity (counts)",
+   "data": 892,
+   "type": "number",
+   "tableProcessGUId": "",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 893,
+   "name": "trendx_93",
+   "data": 893,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 894,
+   "name": "r2_93",
+   "data": 894,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 895,
+   "name": "rmse_93",
+   "data": 895,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 896,
+   "name": "coef_slope_93",
+   "data": 896,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 897,
+   "name": "coef_intercept_93",
+   "data": 897,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 898,
+   "name": "trendy_892_93",
+   "data": 898,
+   "type": "number",
+   "tableProcessGUId": "d96be4be-81c5-4b53-a4b9-d83b4bf15934",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  },
+  {
+   "id": 899,
+   "name": "result_94",
+   "data": 899,
+   "type": "number",
+   "tableProcessGUId": "0f3b6c1e-5a77-4d0e-8a51-oldstoredname94",
+   "producerNodeId": null,
+   "producerPort": null,
+   "producerArtifactKind": null,
+   "processes": []
+  }
+ ],
+ "plots": [
+  {
+   "id": 149,
+   "name": "Fit trend: data + fit",
+   "x": 60,
+   "y": 255,
+   "width": 520,
+   "height": 300,
+   "type": "scatterplot",
+   "selected": false,
+   "facet": false,
+   "facetRows": 0,
+   "setRefs": {},
+   "metricOut": {},
+   "sourceNodeId": null,
+   "style": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+     "tick": 0.9375,
+     "legend": 0.75,
+     "sigBar": 0.6875
+    }
+   },
+   "plot": {
+    "xlimsIN": [
+     null,
+     null
+    ],
+    "xLogScale": false,
+    "xTickFormat": "",
+    "ylimsLeftIN": [
+     null,
+     null
+    ],
+    "ylimsRightIN": [
+     null,
+     null
+    ],
+    "yLogScaleLeft": false,
+    "yLogScaleRight": false,
+    "padding": {
+     "top": 15,
+     "right": 30,
+     "bottom": 30,
+     "left": 30
+    },
+    "xAxis": {
+     "label": "x",
+     "gridlines": true,
+     "nticks": 5,
+     "manualTicks": null
+    },
+    "yAxisLeft": {
+     "label": "y",
+     "gridlines": true,
+     "nticks": 5,
+     "manualTicks": null
+    },
+    "yAxisRight": {
+     "label": "",
+     "gridlines": false,
+     "nticks": 5,
+     "manualTicks": null
+    },
+    "data": [
+     {
+      "x": {
+       "id": 899,
+       "name": "x",
+       "refId": 891,
+       "type": "number",
+       "tableProcessGUId": "",
+       "producerNodeId": null,
+       "producerPort": null,
+       "producerArtifactKind": null,
+       "processes": []
+      },
+      "y": {
+       "id": 900,
+       "name": "y",
+       "refId": 892,
+       "type": "number",
+       "tableProcessGUId": "",
+       "producerNodeId": null,
+       "producerPort": null,
+       "producerArtifactKind": null,
+       "processes": []
+      },
+      "label": "Data",
+      "yAxis": "left",
+      "line": {
+       "colour": "#234154",
+       "strokeWidth": 2,
+       "stroke": "solid",
+       "draw": false,
+       "joinGaps": false
+      },
+      "points": {
+       "colour": "#234154",
+       "radius": 3,
+       "shape": "circle",
+       "draw": true
+      }
+     },
+     {
+      "x": {
+       "id": 901,
+       "name": "trendx_93",
+       "refId": 893,
+       "type": "number",
+       "tableProcessGUId": "",
+       "producerNodeId": null,
+       "producerPort": null,
+       "producerArtifactKind": null,
+       "processes": []
+      },
+      "y": {
+       "id": 902,
+       "name": "trendy_892_93",
+       "refId": 898,
+       "type": "number",
+       "tableProcessGUId": "",
+       "producerNodeId": null,
+       "producerPort": null,
+       "producerArtifactKind": null,
+       "processes": []
+      },
+      "label": "Fit trend",
+      "yAxis": "left",
+      "line": {
+       "colour": "#BE796B",
+       "strokeWidth": 2.5,
+       "stroke": "solid",
+       "draw": true,
+       "joinGaps": false
+      },
+      "points": {
+       "colour": "#BE796B",
+       "radius": 3,
+       "shape": "circle",
+       "draw": false
+      }
+     }
+    ],
+    "legend": {
+     "show": true,
+     "position": "topright",
+     "customX": 0.02,
+     "customY": 0.02,
+     "orientation": "vertical",
+     "backgroundColor": "rgba(255, 255, 255, 0.9)",
+     "borderColor": "var(--color-lightness-25)",
+     "borderWidth": 1,
+     "padding": 8,
+     "itemSpacing": 4,
+     "fontSize": null
+    },
+    "overlays": []
+   }
+  },
+  {
+   "id": 150,
+   "name": "Fit trend: values",
+   "x": 630,
+   "y": 255,
+   "width": 520,
+   "height": 260,
+   "type": "tableplot",
+   "selected": false,
+   "facet": false,
+   "facetRows": 0,
+   "setRefs": {},
+   "metricOut": {},
+   "sourceNodeId": null,
+   "style": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+     "tick": 0.9375,
+     "legend": 0.75,
+     "sigBar": 0.6875
+    }
+   },
+   "plot": {
+    "columnRefs": [
+     892,
+     898
+    ],
+    "showCol": [
+     true,
+     true
+    ],
+    "colWidths": {},
+    "colCurrent": 1,
+    "showColNumber": false,
+    "decimalPlaces": 2
+   }
+  }
+ ],
+ "tableProcesses": [
+  {
+   "id": 92,
+   "name": "SequenceColumn",
+   "displayName": "Sequence Column",
+   "args": {
+    "seqType": "number",
+    "start": 0,
+    "step": 1,
+    "count": 50,
+    "end": 49,
+    "out": {
+     "result": 891
+    }
+   },
+   "refTPId": null
+  },
+  {
+   "id": 93,
+   "name": "TrendFit",
+   "displayName": "Fit trend",
+   "args": {
+    "xIN": 891,
+    "yIN": [
+     892
+    ],
+    "model": "linear",
+    "polyDegree": 2,
+    "outputX": -1,
+    "preProcesses": [],
+    "out": {
+     "trendx": 893,
+     "r2": 894,
+     "rmse": 895,
+     "coef_slope": 896,
+     "coef_intercept": 897,
+     "trendy_892": 898
+    }
+   },
+   "refTPId": null
+  },
+  {
+   "id": 94,
+   "name": "FormulaColumn",
+   "displayName": "Formula Column",
+   "args": {
+    "tokens": [
+     {
+      "type": "col",
+      "id": 891
+     },
+     {
+      "type": "text",
+      "value": " * 0 + "
+     },
+     {
+      "type": "stored",
+      "key": "trend_r2_Activity (counts)"
+     },
+     {
+      "type": "text",
+      "value": " + "
+     },
+     {
+      "type": "stored",
+      "key": "my_rmse"
+     }
+    ],
+    "out": {
+     "result": 899
+    }
+   },
+   "refTPId": null
+  }
+ ],
+ "storedValues": {
+  "trend_r2_Activity (counts)": {
+   "source": "Fit trend (linear)",
+   "key": "tp:93|trend_r2_Activity (counts)",
+   "staticValue": 0.9579555770898015
+  },
+  "my_rmse": {
+   "source": "Fit trend (linear)",
+   "key": "tp:93|trend_rmse_Activity (counts)",
+   "staticValue": 5.469977223339452
+  }
+ },
+ "chainRefs": [],
+ "nodeNotes": {},
+ "notes": [
+  {
+   "id": "note_83",
+   "text": "Fits and stores a simple trend, linear, polynomial, exponential or logarithmic, to the series by least squares, reporting the fitted curve, R² and RMSE plus the coefficients, and a residual column per series (observed − fitted) with a \"Plot residuals\" button for a fit-diagnostic scatter. Use it to describe or remove a slow trend (baseline drift, growth or decay) before rhythm analysis, since detrending prevents low-frequency drift from contaminating periodograms and cosinor fits. In the demo, read the smooth fitted line through the data: how closely it hugs the points is summarised by R² (near 1 = tight fit) and RMSE (residual scatter). Detrending for rhythm analysis (Refinetti et al. 2007). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
+   "x": 40,
+   "y": 24,
+   "width": 360,
+   "height": 190
+  }
+ ],
+ "groups": [],
+ "composites": [],
+ "orphanProcesses": [],
+ "categoryColours": {},
+ "seriesAppearance": {},
+ "plotColormaps": {},
+ "figureStyle": {
+  "fontFamily": "sans",
+  "fontSize": "custom",
+  "fontSizePt": 12,
+  "widthPreset": "custom",
+  "widthMm": null,
+  "exportDpi": 300,
+  "palette": null,
+  "monochrome": false,
+  "varyMarkers": false,
+  "backgroundColour": "transparent",
+  "legendBox": true,
+  "roleScale": {
+   "tick": 0.9375,
+   "legend": 0.75,
+   "sigBar": 0.6875
+  }
+ },
+ "activeStyleName": null,
+ "nodeLayout": {
+  "data_892": {
+   "x": 60,
+   "y": 314
+  },
+  "tableprocess_92": {
+   "x": 60,
+   "y": 814
+  },
+  "tableprocess_93": {
+   "x": 440,
+   "y": 314
+  },
+  "plot_149": {
+   "x": 820,
+   "y": 314
+  },
+  "plot_150": {
+   "x": 820,
+   "y": 814
+  },
+  "note_83": {
+   "x": 40,
+   "y": 24
+  },
+  "tableprocess_94": {
+   "x": 820,
+   "y": 700
+  }
+ },
+ "appState": {
+  "currentTab": "null",
+  "currentControlTab": "properties",
+  "loadingState": {
+   "isLoading": true,
+   "loadingMsg": "Warming up..."
+  },
+  "showNavbar": true,
+  "showDisplayPanel": false,
+  "showControlPanel": false,
+  "importModalOpen": false,
+  "tidyLayoutRequest": 0,
+  "settleLayoutRequest": 0,
+  "settleLayoutHandled": 0,
+  "spawnNodeRequest": null,
+  "windowWidth": 1024,
+  "windowHeight": 768,
+  "widthNavBar": 56,
+  "widthDisplayPanel": 250,
+  "widthControlPanel": 250,
+  "gridSize": 15,
+  "canvasOffset": {
+   "x": 0,
+   "y": 0
+  },
+  "canvasScale": 1,
+  "workflowViewport": {
+   "x": 0,
+   "y": 0,
+   "z": 1
+  },
+  "viewportEpoch": 0,
+  "view": "canvas",
+  "displayTimezone": "utc",
+  "showTimesIn": "column",
+  "invisiblePlotIds": [],
+  "canvasSelectedNodeId": null,
+  "canvasMultiSelectedCount": 0,
+  "canvasMultiSelectedNodeIds": [],
+  "pendingPalette": null,
+  "appColours": [
+   "#234154",
+   "#BE796B",
+   "#3E7295",
+   "#EDADAD",
+   "#A6ACD5",
+   "#83422A",
+   "#6B9FD5",
+   "#4A1E0E",
+   "#fbe67280"
+  ],
+  "showColourPicker": false,
+  "showAYSModal": false,
+  "AYStext": "",
+  "AYScallback": null,
+  "AYSoptions": [
+   "Yes",
+   "No"
+  ]
+ },
+ "version": "β.82.33"
+}

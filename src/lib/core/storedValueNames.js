@@ -10,7 +10,9 @@
 //
 // The default name is also the value's identity (storedValueClaims.js: `<owner>|<default>`),
 // so every button passes the names older versions used as `legacyNames`; a session saved
-// before keeps its value, re-keyed, under the name it was saved with (formulas keep working).
+// before keeps its value, re-keyed, and a value still under its old default name takes the
+// plain name, with every formula using it rewritten (David, 2026-10-25). A name the user
+// chose is kept.
 import { getColumnById } from './Column.svelte';
 import { displayNameOf } from './columnLabels.js';
 

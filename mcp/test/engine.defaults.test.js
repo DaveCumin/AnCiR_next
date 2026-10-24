@@ -111,15 +111,15 @@ describe('defaults that depend on the x (as a new node in the app)', () => {
 	it('a free-period Cosinor on a time x searches 1 to 30 h', async () => {
 		const r = await session('defaults-cos-t').runTableProcess('Cosinor', {
 			xIN: 't',
-			yIN: ['v'],
-			// The app's new free-period Cosinor fits no curve until Ncurves is set (default 0).
-			Ncurves: 1
+			yIN: ['v']
 		});
+		// A new Cosinor fits one free cosine curve with no Ncurves given, as in the app.
 		expect(r.valid, r.error).toBe(true);
 		expect(tpArgs(r)).toMatchObject({
 			...NEW_NODE_TIME_PERIOD_RANGE,
 			periodRangeAuto: true,
-			useFixedPeriod: false
+			useFixedPeriod: false,
+			Ncurves: 1
 		});
 	});
 

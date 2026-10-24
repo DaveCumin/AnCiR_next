@@ -250,7 +250,6 @@
 		</div>
 	</div>
 	<ControlInput label="Function">
-		<p>{p.args.out.result}</p>
 		<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
 			{#each funcOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>

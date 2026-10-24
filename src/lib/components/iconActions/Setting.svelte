@@ -15,6 +15,7 @@
 	import { releaseLegacyAutoColours } from '$lib/plots/legacyAutoColours.js';
 	import { migrateLegacyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { migrateDataViews } from '$lib/core/dataViewMigration.js';
+	import { migrateNumericText } from '$lib/core/numericTextMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
@@ -331,6 +332,10 @@
 			jsonData = migrated.json;
 			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
 		}
+		// Numbers saved as text in a number column ("12.5") become numbers, blank text missing;
+		// other text stays and the column warns (numericTextMigration.js). A session that
+		// already stores numbers is passed through as the same object.
+		jsonData = migrateNumericText(jsonData).json;
 		// Empty the open session: every core slice and the compute memo (node ids restart from 1
 		// in the incoming session, so a cached result from the previous one would be served to an
 		// unrelated node). Must happen before the new nodes mount. Everything below then RESTORES

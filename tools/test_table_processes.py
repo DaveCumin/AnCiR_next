@@ -370,3 +370,24 @@ def _run_all():
 
 if __name__ == "__main__":
     raise SystemExit(_run_all())
+
+
+def test_cosinor_without_ncurves_fits_one_free_curve():
+    # Cosinor.svelte defaults: a node with no Ncurves fits one free cosine curve (v82.62; it
+    # was 0, which fits nothing). An explicit 0 still fits nothing, as in the app.
+    t = [float(h) for h in range(96)]
+    y = [10 + 3 * math.cos(2 * math.pi * (h - 6) / 24) for h in t]
+    base = {'xIN': 1, 'yIN': [2], 'useFixedPeriod': False, 'minPeriod': 4, 'maxPeriod': 30,
+            'out': {'cosinorx': 10, 'period': 30}}
+
+    def run(extra):
+        cols = {1: _col(1, 't', t), 2: _col(2, 'y', y)}
+        raw_data = {}
+        for cid, name in ((10, 'cosinorx'), (30, 'period')):
+            cols[cid] = rt.Column(id=cid, name=name, type='number', data=cid, raw_data=raw_data)
+        return rt.tp_cosinor({**base, **extra}, cols, raw_data, {}), raw_data
+
+    ok, raw_data = run({})
+    assert ok is True
+    assert approx(raw_data[30][0], 24, tol=1e-3)
+    assert run({'Ncurves': 0})[0] is False

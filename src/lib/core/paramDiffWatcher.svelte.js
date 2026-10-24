@@ -1,6 +1,6 @@
 // src/lib/core/paramDiffWatcher.svelte.js
 // @ts-nocheck
-import { core } from './core.svelte.js';
+import { core, renameStoredValueInArgs } from './core.svelte.js';
 import { mutationService } from './mutationService.js';
 import { addStateChangeHook } from './operations.js';
 import { history } from './opHistory.svelte.js';
@@ -128,6 +128,20 @@ export const paramDiffWatcher = {
 	 */
 	rebaseSnapshot() {
 		prev = snapshot();
+	},
+
+	/**
+	 * A stored value was renamed by the app itself, not by the user (storedValueClaims.js gives
+	 * a value saved before v82.34 its plain name when its button first claims it, which can be
+	 * after the load has finished). Apply the same rename to the baseline, so the formulas'
+	 * rewritten references are not recorded as an edit: not by themselves, and not folded into
+	 * the next real edit of that node. Only what the rename touches changes; any other pending
+	 * difference still reaches the history.
+	 */
+	followStoredValueRename(oldName, newName) {
+		for (const args of Object.values(prev[`freetp:`] ?? {})) {
+			renameStoredValueInArgs(args, oldName, newName);
+		}
 	},
 
 	/**

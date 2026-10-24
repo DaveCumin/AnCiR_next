@@ -3,7 +3,8 @@
  * Warnings about a column's own data, shown wherever the column is shown (its row in a
  * group card, a data node, the Data panel).
  *
- * A time column whose times repeat; and, for a zone-less column given a zone (per-column
+ * A number column holding text that is not a number (read as missing; see
+ * nonNumericTextWarning). A time column whose times repeat; and, for a zone-less column given a zone (per-column
  * time zone, phase 3), times that fall in the hour a daylight-saving change skipped, or in the
  * hour it repeated without stepping back through it in order (counted when the column is
  * read, utils/time/zones.js resolveWallClocks), and a zone this browser does not know.
@@ -36,6 +37,7 @@ import { core } from './core.svelte.js';
 import { columnDisplayName } from './columnLabels.js';
 import { wallClockCountsOf } from './columnTimeZone.js';
 import { normalizeZone } from '$lib/utils/time/zones.js';
+import { isMissingMarker, numberFromText } from '$lib/utils/importColumnTypes.js';
 // The daylight-saving wording lives in a pure module so the MCP Worker's check_draft says the
 // same (utils/time/dstCountWarnings.js).
 import { dstCountWarnings } from '$lib/utils/time/dstCountWarnings.js';
@@ -261,11 +263,58 @@ function unknownZoneWarning(col) {
 	return `The time zone "${z}" is not known to this browser, so these times are read as written (UTC).`;
 }
 
+/** Per data array: { count, example } of its text that is not a number. */
+const textCounts = new WeakMap();
+
+/**
+ * Text in a number column that is not a number: neither numeric text (the session load turns
+ * that into numbers, numericTextMigration.js), nor blank, nor one of the importer's missing
+ * markers ('NA', 'NaN', 'null'). Every analysis reads such a value as missing. Counted once
+ * per data array.
+ * @returns {{ count: number, example: string | undefined }}
+ */
+export function countUnreadableText(values) {
+	if (!Array.isArray(values)) return { count: 0, example: undefined };
+	const cached = textCounts.get(values);
+	if (cached) return cached;
+	let count = 0;
+	let example;
+	for (let i = 0; i < values.length; i++) {
+		const v = values[i];
+		if (typeof v !== 'string' || isBlank(v) || isMissingMarker(v)) continue;
+		if (numberFromText(v) !== null) continue;
+		if (count === 0) example = v;
+		count++;
+	}
+	const out = { count, example };
+	textCounts.set(values, out);
+	return out;
+}
+
+/** The warning for a number column holding text that is not a number, or null. */
+export function nonNumericTextWarning(values) {
+	const { count, example } = countUnreadableText(values);
+	if (!(count > 0)) return null;
+	const one = count === 1;
+	return (
+		`${count} ${one ? 'value is' : 'values are'} not a number (e.g. "${example}"), so ` +
+		`${one ? 'it is' : 'they are'} read as missing.`
+	);
+}
+
 /**
  * The warnings for a column (strings, empty when none). Never throws: a column that
  * cannot be read has nothing to warn about here (its own error shows elsewhere).
  */
 export function columnWarnings(col) {
+	if (col?.type === 'number') {
+		try {
+			const w = nonNumericTextWarning(col.getData());
+			return w ? [w] : [];
+		} catch {
+			return [];
+		}
+	}
 	if (!col || col.type !== 'time') return [];
 	try {
 		const out = [];

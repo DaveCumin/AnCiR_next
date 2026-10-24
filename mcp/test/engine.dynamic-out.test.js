@@ -109,6 +109,44 @@ describe('dynamic-output processes auto-seed their out keys', () => {
 		expect(one.outputs.some((o) => /_c\d+$/.test(o.key))).toBe(false);
 	});
 
+	it('Fit waveform model, free cosinor curves: curves 2..Ncurves get their own ports', async () => {
+		const s = new AncirSession('dyn-fit-curves');
+		s.importColumns([
+			{ name: 'x', values: seq(168, (i) => i) },
+			{
+				name: 'y',
+				values: seq(
+					168,
+					(i) =>
+						50 +
+						12 * Math.cos((2 * Math.PI * (i - 7)) / 24) +
+						5 * Math.cos((2 * Math.PI * (i - 2)) / 8.5)
+				)
+			}
+		]);
+		const free = {
+			xIN: 0,
+			yIN: [1],
+			model: 'cosinor',
+			useFixedPeriod: false,
+			minPeriod: 4,
+			maxPeriod: 30
+		};
+		const two = await s.runTableProcess('FitFunction', { ...free, Ncurves: 2 });
+		expect(two.valid).toBe(true);
+		const byKey = Object.fromEntries(two.outputs.map((o) => [o.key, o]));
+		for (const k of ['period_c2', 'amplitude_c2', 'acrophase_c2']) {
+			expect(byKey[k]?.length).toBe(1);
+		}
+		expect(byKey.bathyphase_c2).toBeUndefined();
+		const periods = [byKey.period.preview[0], byKey.period_c2.preview[0]].sort((a, b) => a - b);
+		expect(periods[0]).toBeCloseTo(8.5, 1);
+		expect(periods[1]).toBeCloseTo(24, 1);
+		// A fixed period (the default) adds none.
+		const fixed = await s.runTableProcess('FitFunction', { xIN: 0, yIN: [1], Ncurves: 3 });
+		expect(fixed.outputs.some((o) => /_c\d+$/.test(o.key))).toBe(false);
+	});
+
 	it('CollectColumns — per-input col_<id> keys', async () => {
 		const s = new AncirSession('dyn-collect');
 		s.importColumns([

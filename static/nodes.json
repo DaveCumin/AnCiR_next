@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.61",
+  "generatedFromVersion": "β.82.62",
   "count": 62,
   "nodes": [
     {
@@ -1530,7 +1530,7 @@
       "params": [
         {
           "name": "Ncurves",
-          "default": 0
+          "default": 1
         },
         {
           "name": "outputX",
@@ -2484,6 +2484,30 @@
           "cardinality": "one",
           "metric": true,
           "description": "Steepness of the fall (double logistic), per hour (per x unit for a number x). One value per wired y column."
+        },
+        {
+          "name": "period_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "period_c",
+          "description": "Fitted period of a further cosine curve of the cosinor model, in hours (x units for a number x). One value per wired y column."
+        },
+        {
+          "name": "amplitude_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "amplitude_c",
+          "description": "Amplitude of a further cosine curve of the cosinor model, in y units. One value per wired y column."
+        },
+        {
+          "name": "acrophase_c*",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicPrefix": "acrophase_c",
+          "description": "Peak time of a further cosine curve of the cosinor model, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-tp-fitfunction.json"

@@ -15,7 +15,8 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	// `legacyNames`: default names older versions gave this value (storedValueNames.js), so a
-	// session saved then keeps its value, under the name it was saved with.
+	// session saved then keeps its value (renamed to the plain default name unless the user
+	// named it; storedValueClaims.js).
 	let { label, getter, defaultName = '', legacyNames = [], source = '' } = $props();
 
 	// One registry entry per <owner>|<default name>, however many places render this

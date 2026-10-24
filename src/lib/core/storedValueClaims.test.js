@@ -138,8 +138,9 @@ describe('loading saved sessions', () => {
 	// v82.34: default names read the input's DISPLAY name (`groupcmp_ttest_p_amplitude`), where
 	// they used to embed its internal name (`groupcmp_ttest_p_joined_483_38`). A session saved
 	// before keeps its value: the button names its old default as a legacy name, the saved entry
-	// is claimed and RE-KEYED under the new identity, and its name (what formulas use) stays.
-	it('a snapshot saved under a legacy default name is claimed and re-keyed, name kept', () => {
+	// is claimed and RE-KEYED under the new identity. A value still under its old default name
+	// takes the plain name, and the formulas using it follow (David, 2026-10-25).
+	it('a snapshot saved under a legacy default name is re-keyed and takes the plain name', () => {
 		const old = 'tp:2|groupcmp_ttest_p_joined_483_38';
 		const now = 'tp:2|groupcmp_ttest_p_amplitude';
 		core.storedValues.groupcmp_ttest_p_joined_483_38 = {
@@ -159,12 +160,58 @@ describe('loading saved sessions', () => {
 			getter: () => 0.02,
 			token: {}
 		});
-		expect(n).toBe('groupcmp_ttest_p_joined_483_38');
-		expect(Object.keys(core.storedValues)).toEqual(['groupcmp_ttest_p_joined_483_38']);
+		expect(n).toBe('groupcmp_ttest_p_amplitude');
+		expect(Object.keys(core.storedValues)).toEqual(['groupcmp_ttest_p_amplitude']);
 		expect(core.storedValues[n].key).toBe(now);
 		expect(getStoredValue(n)).toBe(0.02);
 		expect(storedValueNameForKey(now)).toBe(n);
 		expect(core.tableProcesses[0].args.tokens[0].key).toBe(n);
+	});
+
+	it('the plain name never duplicates one already taken', () => {
+		core.storedValues.trend_r2_amplitude = {
+			source: 'TrendFit',
+			key: 'tp:9|trend_r2_amplitude',
+			staticValue: 1
+		};
+		core.storedValues.trend_r2_joined_4_2 = {
+			source: 'TrendFit',
+			key: 'tp:2|trend_r2_joined_4_2',
+			staticValue: 2
+		};
+		core.tableProcesses.push({
+			id: 4,
+			name: 'StoredValueGroup',
+			args: { groups: [{ keys: ['trend_r2_joined_4_2', 'trend_r2_amplitude'] }] }
+		});
+		const n = claimStoredValue({
+			key: 'tp:2|trend_r2_amplitude',
+			base: 'trend_r2_amplitude',
+			legacyBases: ['trend_r2_joined_4_2'],
+			getter: () => 3,
+			token: {}
+		});
+		expect(n).toBe('trend_r2_amplitude_2');
+		expect(core.storedValues.trend_r2_amplitude.staticValue).toBe(1);
+		expect(core.tableProcesses[0].args.groups[0].keys).toEqual([
+			'trend_r2_amplitude_2',
+			'trend_r2_amplitude'
+		]);
+	});
+
+	it('a legacy value deduplicated as <old>_N takes the plain name too', () => {
+		core.storedValues.v_old = { source: 'X', key: 'tp:9|v_old', staticValue: 1 };
+		core.storedValues.v_old_2 = { source: 'X', key: 'tp:2|v_old', staticValue: 2 };
+		const n = claimStoredValue({
+			key: 'tp:2|v_new',
+			base: 'v_new',
+			legacyBases: ['v_old'],
+			getter: () => 2,
+			token: {}
+		});
+		expect(n).toBe('v_new');
+		expect('v_old_2' in core.storedValues).toBe(false);
+		expect(core.storedValues.v_old.key).toBe('tp:9|v_old');
 	});
 
 	it('a renamed legacy snapshot keeps the name the user gave it', () => {
@@ -189,7 +236,8 @@ describe('loading saved sessions', () => {
 			getter: () => 4,
 			token: {}
 		});
-		expect(n).toBe('cosinor_rmse_A 1');
+		expect(n).toBe('cosinor_rmse_A_1');
+		expect('cosinor_rmse_A 1' in core.storedValues).toBe(false);
 		expect(core.storedValues[n].key).toBe('tp:2|cosinor_rmse_A_1');
 	});
 

@@ -22,6 +22,7 @@ import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
+import { migrateNumericText } from '$lib/core/numericTextMigration.js';
 
 const ROOT = process.cwd();
 // tools/parity/sessions: parity-only sessions that no demo covers (per-column time zones).
@@ -56,6 +57,8 @@ function safeArray(arr) {
 }
 
 async function loadAndRun(session) {
+	// As importJson does before it builds: numbers saved as text become numbers.
+	session = migrateNumericText(session).json;
 	resetCore();
 	core.storedValues = session.storedValues ?? {};
 	core.groups = session.groups ?? [];

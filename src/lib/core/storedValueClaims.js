@@ -37,6 +37,7 @@
 import { getContext, setContext } from 'svelte';
 import { core, uniqueStoredValueName, propagateStoredValueRename } from './core.svelte.js';
 import { ensureStoredValueOwnerSweep } from './storedValueOwnerSweep.svelte.js';
+import { paramDiffWatcher } from './paramDiffWatcher.svelte.js';
 
 const OWNER_CONTEXT = Symbol('storedValueOwner');
 
@@ -155,8 +156,10 @@ function absorbLegacyCopies(name, base, claimed) {
  * embed its internal name (`groupcmp_ttest_p_joined_483_38`, `cosinor_rmse_cosinory_5_7`)
  * and now embeds its display name (`groupcmp_ttest_p_amplitude`), so the identity key
  * changed. A button passes its old default names; an entry saved under
- * `<owner>|<legacy>` is claimed and RE-KEYED to the new key. Its NAME is kept, so
- * formulas that use it go on working; only a new value gets the new default name.
+ * `<owner>|<legacy>` (or, older still, a keyless one under a legacy name) is claimed and
+ * RE-KEYED to the new key. A value still under the legacy default name it was given (the
+ * user never renamed it) also takes the PLAIN name a new value gets (David, 2026-10-25),
+ * and every formula using it follows (adoptPlainName). A name the user chose is kept.
  * @returns {string} the entry's name
  */
 export function claimStoredValue({ key, base, legacyBases = [], getter, source = '', token }) {
@@ -168,7 +171,7 @@ export function claimStoredValue({ key, base, legacyBases = [], getter, source =
 	const keyed = (extra = {}) => ({ getter, source, ...(persistent ? { key } : {}), ...extra });
 
 	let existing = storedValueNameForKey(key);
-	if (existing == null && persistent) existing = rekeyLegacyEntry(key, legacyBases);
+	if (existing == null && persistent) existing = rekeyLegacyEntry(key, base, legacyBases);
 	if (existing != null) {
 		const e = core.storedValues[existing];
 		// A saved snapshot of this very key, or the entry its node held while no button
@@ -202,6 +205,9 @@ export function claimStoredValue({ key, base, legacyBases = [], getter, source =
 		const claimed = core.storedValues[name];
 		core.storedValues[name] = keyed();
 		if (persistent) absorbLegacyCopies(name, claimedBase, claimed);
+		if (claimedBase !== base && isUnrenamedDefault(name, claimedBase)) {
+			name = adoptPlainName(name, base);
+		}
 	} else {
 		name = uniqueStoredValueName(base);
 		core.storedValues[name] = keyed();
@@ -211,22 +217,52 @@ export function claimStoredValue({ key, base, legacyBases = [], getter, source =
 }
 
 /**
- * An entry saved under `<owner>|<legacy base>` for this key's owner: give it the new key
- * (its name, which formulas use, stays) and return its name; null when there is none. An
- * entry a mounted button still holds under the legacy key is left to that button.
+ * Whether `name` is still the default `base` a value was given (or the `<base>_N` a clash
+ * made of it), so the user never renamed it.
  */
-function rekeyLegacyEntry(key, legacyBases) {
+function isUnrenamedDefault(name, base) {
+	if (name === base) return true;
+	return name.startsWith(`${base}_`) && /^\d+$/.test(name.slice(base.length + 1));
+}
+
+/**
+ * Move a value saved under a pre-v82.34 default name to the plain default name `base` (made
+ * unique as every new value's name is), rewriting every formula that uses it, and return the
+ * new name. The app's own migration, not a user edit: the undo watcher's baseline follows
+ * (paramDiffWatcher.followStoredValueRename), so it is never an undo step, and it is not an
+ * operation, so it does not mark the session edited, exactly like the load's own migrations
+ * (importJson marks the loaded session saved). It can run after the load has finished: a
+ * value is claimed when its button first mounts.
+ */
+function adoptPlainName(name, base) {
+	const plain = uniqueStoredValueName(base);
+	if (plain === name) return name;
+	core.storedValues[plain] = core.storedValues[name];
+	delete core.storedValues[name];
+	propagateStoredValueRename(name, plain);
+	paramDiffWatcher.followStoredValueRename(name, plain);
+	return plain;
+}
+
+/**
+ * An entry saved under `<owner>|<legacy base>` for this key's owner: give it the new key,
+ * and the plain name `base` when it still has the legacy default name (adoptPlainName), and
+ * return its name; null when there is none. An entry a mounted button still holds under the
+ * legacy key is left to that button.
+ */
+function rekeyLegacyEntry(key, base, legacyBases) {
 	const owner = storedValueKeyOwner(key);
 	if (!owner) return null;
 	for (const lb of legacyBases) {
 		if (lb == null || lb === '') continue;
 		const oldKey = `${owner}|${lb}`;
 		if (oldKey === key || holders.get(oldKey)?.size) continue;
-		const name = storedValueNameForKey(oldKey);
+		let name = storedValueNameForKey(oldKey);
 		if (name == null) continue;
 		core.storedValues[name] = { ...core.storedValues[name], key };
 		nameCache.delete(oldKey);
 		retained.delete(oldKey);
+		if (isUnrenamedDefault(name, lb)) name = adoptPlainName(name, base);
 		nameCache.set(key, name);
 		return name;
 	}

@@ -2092,8 +2092,12 @@ tp_cosinor <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  n_curves <- as.integer(if (is.null(args$Ncurves)) 0 else args$Ncurves)
+  # A node saved without Ncurves gets the app's default, one curve (an explicit 0 fits nothing).
+  n_curves <- as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves)
   use_fixed <- isTRUE(args$useFixedPeriod)
+  # evaluateCosinor canRunBase: a free-period fit needs at least one curve (the app fits
+  # nothing with Ncurves 0).
+  if (!use_fixed && (length(n_curves) != 1 || is.na(n_curves) || n_curves < 1)) return(FALSE)
   fixed_period <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
   n_h <- as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics)
   alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
@@ -4657,13 +4661,36 @@ ff_evaluate_at_points <- function(fit_result, model, t_points) {
 
 # FitFunction.svelte getFitMetricKeys / rawFitMetricValue / fitMetricValue (see the Python
 # port).
+# FitFunction.svelte fitCurveOutKeys: `<metric>_c<c>` for curves 2..Ncurves of a free-period
+# cosinor, curve by curve; none for a fixed period (the default) or another model.
+FF_CURVE_METRICS <- c("period", "amplitude", "acrophase")
+ff_curve_out_keys <- function(args) {
+  model <- if (is.null(args$model)) "cosinor" else args$model
+  if (!identical(model, "cosinor") || !identical(args$useFixedPeriod, FALSE)) return(character(0))
+  n <- suppressWarnings(trunc(as.numeric(if (is.null(args$Ncurves)) NA else args$Ncurves)))
+  if (length(n) != 1 || is.na(n) || n < 2) return(character(0))
+  as.vector(t(outer(2:n, FF_CURVE_METRICS, function(c, m) paste0(m, "_c", c))))
+}
+# FitFunction.svelte fitCurveMetricValue: curve c's period, amplitude or time of peak (in the
+# phase reference on its own period); NaN for a fixed fit or a curve the fit does not have.
+.ff_curve_metric <- function(metric, c, fr, phase_ref) {
+  cs <- if (is.null(fr) || identical(fr$mode, "fixed")) list() else fr$parameters$cosines
+  cd <- if (c <= length(cs)) cs[[c]] else NULL
+  w <- if (is.null(cd)) 0 else cd$frequency  # cycles per unit in this port
+  period <- if (w) 1 / w else NaN
+  if (metric == "period") return(period)
+  if (metric == "amplitude") return(if (is.null(cd)) NaN else cd$amplitude)
+  peak <- if (w) wrap_to_period(-cd$phase / (2 * pi * w), period) else NaN
+  if (isTRUE(phase_ref$clock)) apply_phase_reference(peak, phase_ref, period) else peak
+}
 ff_metric_keys <- function(args) {
   shared <- c("r2", "rmse", "perm_pvalue")
   model <- if (is.null(args$model)) "cosinor" else args$model
   switch(model,
     # rmse_n (sqrt(SS/n)) beside the fixed-period fit's residual-SE rmse; fixed is the default.
     cosinor = c(shared, if (!identical(args$useFixedPeriod, FALSE)) "rmse_n",
-                "period", "mesor", "amplitude", "acrophase", "amplitude_h1", "acrophase_h1"),
+                "period", "mesor", "amplitude", "acrophase", "amplitude_h1", "acrophase_h1",
+                ff_curve_out_keys(args)),
     rectangular = c(shared, "period", "mesor", "amplitude", "acrophase", "duty_cycle", "kappa"),
     doublelogistic = c(shared, "period", "mesor", "amplitude", "onset", "offset", "k1", "k2",
                        "duty_cycle"),
@@ -4713,6 +4740,9 @@ ff_raw_metric <- function(key, model, fr) {
   NaN
 }
 ff_metric_value <- function(key, model, fr, phase_ref) {
+  curve <- if (identical(model, "cosinor"))
+    regmatches(key, regexec("^(period|amplitude|acrophase)_c([0-9]+)$", key))[[1]] else character(0)
+  if (length(curve) == 3) return(.ff_curve_metric(curve[2], as.integer(curve[3]), fr, phase_ref))
   v <- ff_raw_metric(key, model, fr)
   if (!isTRUE(phase_ref$clock) || !(key %in% c("acrophase", "acrophase_h1", "onset", "offset")))
     return(v)
@@ -7682,6 +7712,57 @@ col_is_ref <- function(col) !is.null(col$ref_id)
   raw
 }
 
+# Numbers saved as TEXT in a number column (core/numericTextMigration.js). The importer's own
+# number test (importColumnTypes.js numberFromText: PapaParse's FLOAT and its +/-2^53 bound).
+.NUMERIC_TEXT <- "^\\s*-?([0-9]+\\.?|\\.[0-9]+|[0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?\\s*$"
+.MISSING_MARKERS <- c("NaN", "NA", "null")
+
+.is_text_cell <- function(v) is.character(v) && length(v) == 1 && !is.na(v)
+
+# The number a text cell reads as under the import rule, or NULL.
+.number_from_text <- function(v) {
+  if (!.is_text_cell(v) || !grepl(.NUMERIC_TEXT, v, perl = TRUE)) return(NULL)
+  n <- as.numeric(v)
+  if (abs(n) < 2^53) n else NULL
+}
+
+# A number column's values with numeric text read as numbers and blank text as missing (NA);
+# other values unchanged. Values that are then all numbers or missing come back as a numeric
+# vector, as an export writes a number column.
+.coerce_numeric_text <- function(d) {
+  if (is.character(d)) d <- as.list(d)
+  if (!is.list(d) || !length(d)) return(d)
+  is_txt <- vapply(d, .is_text_cell, logical(1))
+  if (!any(is_txt)) return(d)
+  for (i in which(is_txt)) {
+    v <- d[[i]]
+    if (grepl("^\\s*$", v, perl = TRUE)) {
+      d[i] <- list(NA_real_)
+    } else {
+      n <- .number_from_text(v)
+      if (!is.null(n)) d[[i]] <- n
+    }
+  }
+  num_or_missing <- vapply(d, function(v) is.null(v) || (length(v) == 1 &&
+    (is.numeric(v) || (is.logical(v) && is.na(v)))), logical(1))
+  if (all(num_or_missing)) {
+    return(vapply(d, function(v) if (is.null(v)) NA_real_ else as.numeric(v), numeric(1)))
+  }
+  d
+}
+
+# columnWarnings.js nonNumericTextWarning: text in a number column that is not a number (nor
+# blank, nor a missing marker), which every analysis reads as missing; or NULL.
+.non_numeric_text_warning <- function(d) {
+  if (!is.list(d)) return(NULL)
+  bad <- Filter(function(v) .is_text_cell(v) && !grepl("^\\s*$", v, perl = TRUE) &&
+    !(v %in% .MISSING_MARKERS) && is.null(.number_from_text(v)), d)
+  if (!length(bad)) return(NULL)
+  one <- length(bad) == 1
+  sprintf('%d %s not a number (e.g. "%s"), so %s read as missing.', length(bad),
+          if (one) "value is" else "values are", bad[[1]], if (one) "it is" else "they are")
+}
+
 # Values of a column, with referencing, decompression, time parsing, bin centring and any
 # column processes applied — mirroring Column.get_data().
 col_data <- function(col, cols, raw_data) {
@@ -7693,6 +7774,21 @@ col_data <- function(col, cols, raw_data) {
   key <- as.character(col$data)
   raw <- if (!is.null(col$data) && !is.null(raw_data[[key]])) raw_data[[key]] else list()
   d <- .decompress(col, raw)
+  if (identical(col$type, "number")) {
+    # Numbers saved as text read as numbers, blank text as missing; other text stays and the
+    # column warns once, as the app does on load (numericTextMigration.js, columnWarnings.js).
+    d <- .coerce_numeric_text(d)
+    w <- .non_numeric_text_warning(d)
+    if (!is.null(w)) {
+      warned <- if (is.environment(col$dst_warned)) col$dst_warned else .dst_warned
+      node <- sprintf('Column "%s"', if (is.null(col$name)) "" else col$name)
+      key <- paste(col$id, node, "text", sep = "\r")
+      if (is.null(warned[[key]])) {
+        assign(key, TRUE, envir = warned)
+        node_warning(node, w)
+      }
+    }
+  }
   if (identical(col$type, "time") && !identical(col$compression, "awd")) {
     v <- unlist(d, use.names = FALSE)
     # Already-numeric (UNIX ms, e.g. written by SimulatedData) is left alone; only strings

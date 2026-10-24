@@ -498,7 +498,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.82.61',
+	version: 'β.82.62',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -720,25 +720,30 @@ export function removeStoredValue(name) {
  */
 export function propagateStoredValueRename(oldName, newName) {
 	if (oldName === newName) return;
-	for (const tp of core.tableProcesses ?? []) {
-		const args = tp?.args;
-		if (!args) continue;
-		if (Array.isArray(args.tokens)) {
-			for (const t of args.tokens) {
-				if (t?.type === 'stored' && t.key === oldName) t.key = newName;
-			}
+	for (const tp of core.tableProcesses ?? []) renameStoredValueInArgs(tp?.args, oldName, newName);
+}
+
+/**
+ * propagateStoredValueRename for one node's args (live args, or a saved copy of them such as
+ * the undo watcher's baseline, paramDiffWatcher.followStoredValueRename).
+ */
+export function renameStoredValueInArgs(args, oldName, newName) {
+	if (!args || oldName === newName) return;
+	if (Array.isArray(args.tokens)) {
+		for (const t of args.tokens) {
+			if (t?.type === 'stored' && t.key === oldName) t.key = newName;
 		}
-		if (args.storedValueRefs && typeof args.storedValueRefs === 'object') {
-			for (const [idx, key] of Object.entries(args.storedValueRefs)) {
-				if (key === oldName) args.storedValueRefs[idx] = newName;
-			}
+	}
+	if (args.storedValueRefs && typeof args.storedValueRefs === 'object') {
+		for (const [idx, key] of Object.entries(args.storedValueRefs)) {
+			if (key === oldName) args.storedValueRefs[idx] = newName;
 		}
-		if (Array.isArray(args.groups)) {
-			for (const g of args.groups) {
-				if (!Array.isArray(g?.keys)) continue;
-				for (let i = 0; i < g.keys.length; i++) {
-					if (g.keys[i] === oldName) g.keys[i] = newName;
-				}
+	}
+	if (Array.isArray(args.groups)) {
+		for (const g of args.groups) {
+			if (!Array.isArray(g?.keys)) continue;
+			for (let i = 0; i < g.keys.length; i++) {
+				if (g.keys[i] === oldName) g.keys[i] = newName;
 			}
 		}
 	}

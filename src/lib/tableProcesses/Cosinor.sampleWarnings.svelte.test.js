@@ -67,4 +67,83 @@ describe('Cosinor sampling warnings', () => {
 			/points per 24 h cycle, /
 		);
 	});
+
+	// A free period has no fixedPeriod: the sampling is judged on the period the fit found
+	// (the shortest one when there are several curves), not on the 24 the node keeps for its
+	// fixed mode. 4-hourly samples of an 11.3 period over 96 units: about 2.9 points a cycle.
+	const freeXs = Array.from({ length: 25 }, (_, i) => i * 4);
+	const freeYs = freeXs.map((v) => 10 + 3 * Math.cos((2 * Math.PI * (v - 2)) / 11.3));
+	const runFree = (xIN, yIN, extra = {}) =>
+		cosinor({
+			xIN,
+			yIN: [yIN],
+			Ncurves: 1,
+			outputX: -1,
+			useFixedPeriod: false,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			minPeriod: 9,
+			maxPeriod: 30,
+			alpha: 0.05,
+			out: { cosinorx: -1 },
+			preProcesses: [],
+			...extra
+		});
+	const fittedPeriod = (res) => {
+		const [yr] = Object.values(res.y_results);
+		return (2 * Math.PI) / yr.fittedData.parameters.cosines[0].frequency;
+	};
+
+	it('free period, number x: names the fitted period, not the fixed 24', async () => {
+		const [res] = await runFree(column('x', freeXs), column('y', freeYs));
+		expect(fittedPeriod(res)).toBeCloseTo(11.3, 2);
+		const sparse = res.warnings.find((w) => w.startsWith('Sparse sampling'));
+		expect(sparse).toMatch(/^Sparse sampling: about 2\.9 points per cycle of 11\.3 \(x units\), /);
+		expect(sparse).toMatch(/1 harmonic needs at least ~4\./);
+		for (const w of res.warnings) expect(w).not.toMatch(/\b24\b/);
+	});
+
+	it('free period, time x: "per 11.3 h cycle"', async () => {
+		const t0 = Date.UTC(2026, 0, 5);
+		const x = column(
+			't',
+			freeXs.map((h) => t0 + h * 3600000),
+			'time'
+		);
+		const [res] = await runFree(x, column('y', freeYs));
+		expect(res.warnings.find((w) => w.startsWith('Sparse sampling'))).toMatch(
+			/^Sparse sampling: about 2\.9 points per 11\.3 h cycle, /
+		);
+	});
+
+	it('free period, well sampled for its fitted period: no warning, whatever the fixed period says', async () => {
+		// Hourly samples of an 11.3 period: about 11 points a cycle.
+		const xs1 = Array.from({ length: 97 }, (_, i) => i);
+		const ys1 = xs1.map((v) => 10 + 3 * Math.cos((2 * Math.PI * (v - 2)) / 11.3));
+		const [res] = await runFree(column('x', xs1), column('y', ys1), { fixedPeriod: 2 });
+		expect(res.warnings.some((w) => w.startsWith('Sparse sampling'))).toBe(false);
+	});
+
+	it('free period, several series: each is judged on its own fitted period, and named', async () => {
+		const x = column('x', freeXs);
+		const ys2 = freeXs.map((v) => 4 + Math.cos((2 * Math.PI * (v - 5)) / 13.7));
+		const [res] = await cosinor({
+			xIN: x,
+			yIN: [column('a', freeYs), column('b', ys2)],
+			Ncurves: 1,
+			outputX: -1,
+			useFixedPeriod: false,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			minPeriod: 9,
+			maxPeriod: 30,
+			alpha: 0.05,
+			out: { cosinorx: -1 },
+			preProcesses: []
+		});
+		const sparse = res.warnings.filter((w) => w.startsWith('Sparse sampling'));
+		expect(sparse).toHaveLength(2);
+		expect(sparse[0]).toMatch(/^Sparse sampling for "a": about 2\.9 points per cycle of 11\.3 /);
+		expect(sparse[1]).toMatch(/^Sparse sampling for "b": about 3\.6 points per cycle of 13\.7 /);
+	});
 });

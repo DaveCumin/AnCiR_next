@@ -79,6 +79,7 @@ const FOOTER_RUN = `
 main <- function() {
   env <- new.env()
   env$raw_data <- RAW_DATA
+  env$stored_values <- STORED_VALUES
   env$cols <- list()
   for (cid in names(COLUMN_META)) {
     meta <- COLUMN_META[[cid]]
@@ -440,6 +441,10 @@ function dataSectionLines(session, dataAsCsv) {
 	}
 	lines.push(`COLUMN_META <- ${toRLiteral(colMeta)}`);
 	lines.push(`TABLE_PROCESSES <- ${toRLiteral(tpsClean)}`);
+	// Stored values by name, for the formulas that use them (Formula Column, Enter Data's
+	// stored-value rows, Stored value group), as the Python export embeds them. Missing before
+	// 2026-10-25, so every R export skipped a formula that used one.
+	lines.push(`STORED_VALUES <- ${toRLiteral(session.storedValues ?? {})}`);
 	// A legacy session's one zone (appState.displayTimezone, not 'utc' only for a session saved
 	// before per-column zones): every clock reading uses it, as in the app; otherwise each
 	// column's own zone (column_clock).

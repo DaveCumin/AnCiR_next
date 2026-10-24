@@ -58,7 +58,10 @@
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
-		['Ncurves', { val: 0 }],
+		// Cosine curves of the free-period fit. A new node starts with one, so it fits as soon
+		// as it is wired; a saved node keeps its stored count (Ncurves has been saved with every
+		// Cosinor since the node existed, so fillDefaults never fills it on load). 0 fits nothing.
+		['Ncurves', { val: 1 }],
 		['outputX', { val: -1 }],
 		// How the output x values are made when `outputX` is set: 'column' (the values of the
 		// column outputX names; every session saved before this arg) or 'sequence' (every
@@ -184,6 +187,9 @@
 		displayName,
 		// Param-dependent metric ports (seeded by the MCP engine, reconciled by the component).
 		paramOutKeys: cosinorCurveOutKeys,
+		// The args that add or remove those ports: an edit of one is recorded with the port
+		// reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		outputShapingArgs: ['useFixedPeriod', 'Ncurves'],
 		defaults,
 		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
 		newNodeArgs: newPeriodRangeArgs,
@@ -700,40 +706,88 @@
 	const COSINOR_MIN_CYCLES = 2;
 	const COSINOR_MIN_POINTS_PER_CYCLE = 4; // Nyquist-ish floor for a sinusoid + harmonics
 
-	function cosinorSampleWarnings(t, argsIN, nHarmonics, unit = 'h') {
-		const warnings = [];
-		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
-		if (finite.length < 2) return warnings;
+	// "11.3", "24", "8.47": the precision freePeriodFitWarnings names a fitted period with.
+	const fmtPeriod = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : String(Number(v.toPrecision(3))));
 
-		const period = Number(argsIN.fixedPeriod) || 24;
-		// Loop rather than Math.max(...finite): a spread of a long series overflows the stack.
+	/** The finite values of `t` as numbers, with their span (a loop: no spread on a long series). */
+	function finiteSpan(t) {
+		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
 		let lo = Infinity;
 		let hi = -Infinity;
 		for (const v of finite) {
 			if (v < lo) lo = v;
 			if (v > hi) hi = v;
 		}
-		const span = hi - lo;
+		return { finite, span: hi - lo };
+	}
+
+	/**
+	 * "Sparse sampling: ..." for `n` points over `span` at `period`, or null when there are
+	 * enough points per cycle. `label` names the series when the node fits several.
+	 */
+	function sparseSamplingWarning(n, span, period, nHarmonics, unit, label = '') {
 		const cycles = span / period;
-		// "a 24 h period" / "per 24 h cycle" on a time x; a number x has no unit to put
-		// before the noun, so "a period of 24 (x units)" / "per cycle of 24 (x units)".
-		const hours = unit === PERIOD_UNIT_HOURS;
-		const aPeriod = hours ? `a ${period} h period` : `a period of ${period} (${unit})`;
-		const perCyclePhrase = hours ? `per ${period} h cycle` : `per cycle of ${period} (${unit})`;
-		const perCycle = finite.length / Math.max(cycles, 1e-9);
-
-		if (argsIN.useFixedPeriod && cycles < COSINOR_MIN_CYCLES) {
-			warnings.push(
-				`Short record: ${cycles.toFixed(1)} cycles at ${aPeriod}. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump. The amplitude and acrophase will look precise, but no repetition supports them.`
-			);
-		}
-
+		const perCycle = n / Math.max(cycles, 1e-9);
 		// Harmonics need more points than the fundamental does.
 		const needed = COSINOR_MIN_POINTS_PER_CYCLE * Math.max(1, nHarmonics);
-		if (Number.isFinite(perCycle) && perCycle < needed) {
-			warnings.push(
-				`Sparse sampling: about ${perCycle.toFixed(1)} points ${perCyclePhrase}, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
-			);
+		if (!Number.isFinite(perCycle) || perCycle >= needed) return null;
+		// "per 24 h cycle" on a time x; a number x has no unit to put before the noun, so
+		// "per cycle of 24 (x units)".
+		const shown = fmtPeriod(period);
+		const perCyclePhrase =
+			unit === PERIOD_UNIT_HOURS ? `per ${shown} h cycle` : `per cycle of ${shown} (${unit})`;
+		return `Sparse sampling${label}: about ${perCycle.toFixed(1)} points ${perCyclePhrase}, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`;
+	}
+
+	/**
+	 * The shortest finite period among one series' fitted cosine curves (a free-period fit),
+	 * or NaN when it has none: the curve that is hardest to sample decides.
+	 */
+	function shortestFittedPeriod(yr) {
+		let best = NaN;
+		for (const c of yr?.fittedData?.parameters?.cosines ?? []) {
+			const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+			if (Number.isFinite(period) && period > 0 && !(period >= best)) best = period;
+		}
+		return best;
+	}
+
+	/**
+	 * The sampling warnings. A fixed period is judged on `fixedPeriod`, over the whole x. A
+	 * free period has no fixed number to judge: each series is judged on the period its fit
+	 * found (the shortest of its curves) over the rows it was fitted on, and a series with no
+	 * fitted period gets no sampling warning (its failure is reported by the fit warnings).
+	 * The free fit is one cosine per curve, so `nHarmonics` (a fixed-period setting) is 1 there.
+	 */
+	function cosinorSampleWarnings(t, argsIN, nHarmonics, unit = 'h', result = null) {
+		const warnings = [];
+		const { finite, span } = finiteSpan(t);
+		if (finite.length < 2) return warnings;
+
+		if (argsIN.useFixedPeriod) {
+			const period = Number(argsIN.fixedPeriod) || 24;
+			const cycles = span / period;
+			// "a 24 h period" on a time x; on a number x "a period of 24 (x units)".
+			const aPeriod =
+				unit === PERIOD_UNIT_HOURS ? `a ${period} h period` : `a period of ${period} (${unit})`;
+			if (cycles < COSINOR_MIN_CYCLES) {
+				warnings.push(
+					`Short record: ${cycles.toFixed(1)} cycles at ${aPeriod}. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump. The amplitude and acrophase will look precise, but no repetition supports them.`
+				);
+			}
+			const sparse = sparseSamplingWarning(finite.length, span, period, nHarmonics, unit);
+			if (sparse) warnings.push(sparse);
+		} else {
+			const fitted = Object.entries(result?.y_results ?? {})
+				.map(([yId, yr]) => ({ yId, yr, period: shortestFittedPeriod(yr) }))
+				.filter((e) => Number.isFinite(e.period));
+			for (const { yId, yr, period } of fitted) {
+				const own = finiteSpan(yr.t);
+				if (own.finite.length < 2) continue;
+				const label = fitted.length > 1 ? ` for "${displayNameById(Number(yId), yId)}"` : '';
+				const sparse = sparseSamplingWarning(own.finite.length, own.span, period, 1, unit, label);
+				if (sparse) warnings.push(sparse);
+			}
 		}
 
 		// The F-test needs residual degrees of freedom to mean anything.
@@ -776,7 +830,13 @@
 					]),
 			...(result?.validityWarnings ?? []),
 			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
-			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1), unit),
+			...cosinorSampleWarnings(
+				t,
+				argsIN,
+				Math.max(1, Number(argsIN.nHarmonics) || 1),
+				unit,
+				result
+			),
 			...(result?.outputXWarning ? [result.outputXWarning] : [])
 		];
 		return [result, anyValid];

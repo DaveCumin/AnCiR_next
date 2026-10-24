@@ -58,7 +58,17 @@ def _load_js_results():
     return _decode_inf(json.loads((PARITY_DIR / "js_results.json").read_text()))
 
 
+def _missing_cell(v):
+    """None or blank text: both the app's missing value (stats.js isInvalidValue)."""
+    return v is None or (isinstance(v, str) and v.strip() == '')
+
+
 def nums_match(x, y, tol):
+    # Blank text and None are one missing value. A port reads a number column's blank text as
+    # None, as the app does when it loads a session (core/numericTextMigration.js), while a JS
+    # kernel run on raw fixture input echoes the '' it was given (Interpolate's x).
+    if _missing_cell(x) and _missing_cell(y):
+        return True
     # A category output (Correlation's var_i / var_j) compares as text.
     if isinstance(x, str) or isinstance(y, str):
         return str(x) == str(y)

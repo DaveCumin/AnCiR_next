@@ -130,8 +130,42 @@
 		['permutationScheme', { val: PERMUTATION_DEFAULTS.permutationScheme }]
 	]);
 
+	// The metrics a free-period cosinor fit has per cosine curve. Curve 1's are the `period`,
+	// `amplitude` and `acrophase` ports (and `amplitude_h1` / `acrophase_h1`); curve c >= 2 has
+	// `period_c<c>`, `amplitude_c<c>` and `acrophase_c<c>`, named like the Cosinor node's. The
+	// mesor, R², RMSE and p-value belong to the whole fit.
+	const FIT_CURVE_METRICS = ['period', 'amplitude', 'acrophase'];
+	const FIT_CURVE_KEY_RE = /^(period|amplitude|acrophase)_c(\d+)$/;
+
+	/** True for a per-curve metric out-key (`amplitude_c2`, ...). */
+	export function isFitCurveKey(key) {
+		return FIT_CURVE_KEY_RE.test(key);
+	}
+
+	/**
+	 * The per-curve metric out-keys for these args: curves 2..Ncurves of a free-period cosinor,
+	 * curve by curve; none for a fixed period (this node's default), a single curve or another
+	 * model. Curve 1 keeps the original ports, so a saved session's wires never move.
+	 * @param {object} args
+	 * @returns {string[]}
+	 */
+	export function fitCurveOutKeys(args) {
+		if ((args?.model ?? 'cosinor') !== 'cosinor' || (args?.useFixedPeriod ?? true)) return [];
+		const n = Math.trunc(Number(args?.Ncurves));
+		const keys = [];
+		for (let c = 2; c <= (Number.isFinite(n) ? n : 0); c++) {
+			for (const m of FIT_CURVE_METRICS) keys.push(`${m}_c${c}`);
+		}
+		return keys;
+	}
+
 	export const definition = {
 		displayName,
+		// Param-dependent metric ports (seeded by the MCP engine, reconciled by the component).
+		paramOutKeys: fitCurveOutKeys,
+		// The args that change which metric ports exist: an edit of one is recorded with the
+		// port reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
+		outputShapingArgs: ['model', 'useFixedPeriod', 'Ncurves'],
 		defaults,
 		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
 		newNodeArgs: newPeriodRangeArgs,
@@ -168,7 +202,17 @@
 				{ name: 'onset', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'offset', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'k1', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'k2', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'k2', kind: 'column', cardinality: 'one', metric: true },
+				// Free-period cosinor with N cosine curves: curve 1 is on period / amplitude /
+				// acrophase, and each further curve c gets its own `<metric>_c<c>` ports
+				// (fitCurveOutKeys).
+				...FIT_CURVE_METRICS.map((m) => ({
+					name: `${m}_c*`,
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: `${m}_c`,
+					metric: true
+				}))
 			]
 		}
 	};
@@ -261,7 +305,8 @@
 				'amplitude',
 				'acrophase',
 				'amplitude_h1',
-				'acrophase_h1'
+				'acrophase_h1',
+				...fitCurveOutKeys(args)
 			];
 		if (model === 'rectangular')
 			return [...shared, 'period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa'];
@@ -299,12 +344,29 @@
 	 * harmonic the two pairs are the same numbers.
 	 */
 	export function fitMetricValue(key, model, fr, phaseRef) {
+		const curve = model === 'cosinor' ? FIT_CURVE_KEY_RE.exec(key) : null;
+		if (curve) return fitCurveMetricValue(curve[1], Number(curve[2]), fr, phaseRef);
 		const v = rawFitMetricValue(key, model, fr);
 		if (!phaseRef?.clock || !PHASE_KEYS.has(key)) return v;
 		return applyPhaseReference(v, phaseRef, fitPhasePeriod(model, fr));
 	}
 
 	const PHASE_KEYS = new Set(['acrophase', 'acrophase_h1', 'onset', 'offset']);
+
+	/**
+	 * Curve `c` (2..Ncurves) of a free-period cosinor fit: its period, amplitude or time of
+	 * peak (in the phase reference, wrapped to that curve's own period), as the stats table's
+	 * C<c> columns show them. NaN for a fixed-period fit or a curve the fit does not have.
+	 */
+	function fitCurveMetricValue(metric, c, fr, phaseRef) {
+		const cd = fr && fr.mode !== 'fixed' ? fr.parameters?.cosines?.[c - 1] : null;
+		const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : NaN;
+		if (metric === 'period') return period;
+		if (metric === 'amplitude') return cd?.amplitude ?? NaN;
+		// A·cos(ωt + φ) peaks at t = −φ/ω, wrapped into [0, period).
+		const peak = cd?.frequency ? wrapToPeriod(-cd.phase / cd.frequency, period) : NaN;
+		return phaseRef?.clock ? applyPhaseReference(peak, phaseRef, period) : peak;
+	}
 
 	/** The period a model's phase outputs wrap to (h). */
 	function fitPhasePeriod(model, fr) {
@@ -852,8 +914,10 @@
 	// parameters (getFitMetricKeys). The predicate spans the UNION across models
 	// so a model switch deletes the keys that no longer apply.
 	function syncFitMetricColumns() {
-		return syncMetricOutColumns(p, getFitMetricKeys(p.args), (k) =>
-			FIT_METRIC_KEYS_ALL.includes(k)
+		return syncMetricOutColumns(
+			p,
+			getFitMetricKeys(p.args),
+			(k) => FIT_METRIC_KEYS_ALL.includes(k) || isFitCurveKey(k)
 		);
 	}
 
@@ -1118,9 +1182,21 @@
 	// different parameter set). Deferred out of the effect: syncMetricOutColumns
 	// constructs Columns, which must not happen under an active reaction
 	// (derived_inert). Mirrors TrendFit's coef_* reconcile.
+	// The fixed-period switch (rmse_n) and the number of cosine curves (`<metric>_c<c>`)
+	// change the set too.
 	$effect(() => {
 		void p.args.model;
+		void p.args.useFixedPeriod;
+		void p.args.Ncurves;
 		if (!mounted) return;
+		// A half-typed count (the field cleared on the way to a new number) keeps the curve
+		// ports and their wires until the count is a number again.
+		if (
+			(p.args.model ?? 'cosinor') === 'cosinor' &&
+			!(p.args.useFixedPeriod ?? true) &&
+			!(Number(p.args.Ncurves) >= 1)
+		)
+			return;
 		queueMicrotask(() =>
 			untrack(() => {
 				if (syncFitMetricColumns()) getFit();

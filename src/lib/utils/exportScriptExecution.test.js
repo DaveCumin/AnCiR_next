@@ -654,3 +654,100 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts fold the actogram at its ch
 		expect(got[0].slice(1, 4)).toEqual([1, 0, 0.25]);
 	}, 240_000);
 });
+
+// Numbers saved as TEXT in a number column (David, 2026-10-25): the app reads them as numbers
+// when the session loads (core/numericTextMigration.js), and the ports read the SAME saved file
+// the same way (Column.get_data / col_data). The session is the parity-only
+// tools/parity/sessions/parity-numeric-text.json, exported as saved (text and all), so this is
+// the ports' own reading, not the app's. Expected numbers: what the app computes for it
+// (session_js_results.json). Exported with the CSV sidecar too, where an all-text column
+// travels as a 'str' column.
+describe('exported scripts read numbers saved as text (parity-numeric-text)', () => {
+	const session = JSON.parse(
+		readFileSync(join(ROOT, 'tools', 'parity', 'sessions', 'parity-numeric-text.json'), 'utf8')
+	);
+	/** Every cell of one CSV column, by header. */
+	const columnFromCsv = (csv, header) => {
+		const rows = csv.trim().split('\n');
+		const clean = (s) => s.replaceAll('"', '');
+		const idx = rows[0].split(',').map(clean).indexOf(header);
+		expect(idx).toBeGreaterThanOrEqual(0);
+		return rows.slice(1).map((r) => clean(r.split(',')[idx]));
+	};
+	const check = (out, stderr) => {
+		const sum = columnFromCsv(out, 'result_72')
+			.filter((v) => v !== '')
+			.map(Number);
+		// R writes 15 significant digits.
+		[10, 11.862966948437268, 16.358980000000003].forEach((v, i) =>
+			expect(sum[i]).toBeCloseTo(v, 9)
+		);
+		expect(sum).toHaveLength(50);
+		expect(columnFromCsv(out, 'n_71').slice(0, 2).map(Number)).toEqual([50, 45]);
+		const mean = columnFromCsv(out, 'mean_71').slice(0, 2).map(Number);
+		expect(mean[0]).toBeCloseTo(48.42725933896875, 9);
+		expect(mean[1]).toBeCloseTo(53, 9);
+		expect(stderr).toContain('1 value is not a number (e.g. "abc")');
+	};
+	/** The saved columns as the port read them: text as numbers, blank text as missing. */
+	const checkRead = (csv) => {
+		const a = columnFromCsv(csv, 'Describe Data input 1');
+		expect(Number(a[1])).toBeCloseTo(11.362966948437268, 9);
+		expect(a[1]).not.toMatch(/\s/);
+		const b = columnFromCsv(csv, 'Describe Data input 2');
+		expect(['', 'NA']).toContain(b[7]); // whitespace only: missing (R writes NA)
+		expect(b[11]).toBe('abc');
+	};
+
+	for (const [label, opts, entry, outDir] of [
+		['single inline', {}, 'session.py', 'session_output'],
+		[
+			'split + CSV data',
+			{ split: true, dataAsCsv: true, version: 't' },
+			'analysis.py',
+			'analysis_output'
+		]
+	]) {
+		it.runIf(HAVE_PYTHON)(
+			`Python (${label}): sums, counts and the warning match the app`,
+			() => {
+				const { dir, res } = runExport(
+					sessionToPythonFiles(session, PY_RUNTIME, opts),
+					PYTHON,
+					entry
+				);
+				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				check(
+					readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8'),
+					res.stderr + res.stdout
+				);
+				checkRead(readFileSync(join(dir, outDir, 'columns.csv'), 'utf8'));
+			},
+			240_000
+		);
+	}
+
+	for (const [label, opts, entry, outDir] of [
+		['single inline', {}, 'session.R', 'session_output'],
+		[
+			'split + CSV data',
+			{ split: true, dataAsCsv: true, version: 't' },
+			'analysis.R',
+			'analysis_output'
+		]
+	]) {
+		it.runIf(HAVE_R)(
+			`R (${label}): sums, counts and the warning match the app`,
+			() => {
+				const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME, opts), 'Rscript', entry);
+				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				check(
+					readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8'),
+					res.stderr + res.stdout
+				);
+				checkRead(readFileSync(join(dir, outDir, 'columns.csv'), 'utf8'));
+			},
+			240_000
+		);
+	}
+});

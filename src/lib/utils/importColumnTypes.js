@@ -22,6 +22,11 @@ import { medianSamplingInterval } from '$lib/utils/periodogram.js';
 // Text the importer treats as "no value" when picking the first real value.
 const MISSING_TEXT = new Set(['NaN', 'NA', 'null']);
 
+/** Whether a cell is one of the importer's missing markers ('NaN', 'NA', 'null'). */
+export function isMissingMarker(value) {
+	return MISSING_TEXT.has(value);
+}
+
 // Plausible epoch ranges (1 Jan 1990 to 1 Jan 2100), used only to SUGGEST the
 // epoch options in the preview; nothing is converted without the user choosing.
 const EPOCH_S_MIN = 631_152_000;
@@ -45,6 +50,21 @@ export function parseDecimalComma(value) {
 }
 
 /**
+ * The number a text cell stands for under the importer's own rule (PapaParse's FLOAT test and
+ * its +/-2^53 bound: "8.4", " 7 ", "1e3"), or null when the text is not such a number. The one
+ * definition of "numeric text": the cell typer below and the session load
+ * (core/numericTextMigration.js) both use it, so a number saved as text loads as the import
+ * would have read it.
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+export function numberFromText(value) {
+	if (typeof value !== 'string' || !FLOAT.test(value)) return null;
+	const n = parseFloat(value);
+	return n > -MAX_FLOAT && n < MAX_FLOAT ? n : null;
+}
+
+/**
  * A PapaParse `transform` that types each cell as dynamicTyping did (numbers,
  * true/false, '' as null) except that ISO timestamps stay text, so the time
  * guesser can read them, and, with `decimalComma`, "10,5" is the number 10.5.
@@ -58,10 +78,8 @@ export function makeCellTyper({ decimalComma = false } = {}) {
 		if (value === '') return null;
 		if (value === 'true' || value === 'TRUE') return true;
 		if (value === 'false' || value === 'FALSE') return false;
-		if (FLOAT.test(value)) {
-			const n = parseFloat(value);
-			if (n > -MAX_FLOAT && n < MAX_FLOAT) return n;
-		}
+		const n = numberFromText(value);
+		if (n !== null) return n;
 		if (decimalComma) {
 			const n = parseDecimalComma(value);
 			if (n !== null) return n;

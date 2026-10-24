@@ -372,8 +372,30 @@ export const NODE_PORT_DESCRIPTIONS = {
 			onset: perY((ctx) => `Time the activity bout rises (double logistic), ${phaseFrame(ctx)}.`),
 			offset: perY((ctx) => `Time the activity bout falls (double logistic), ${phaseFrame(ctx)}.`),
 			k1: perY((ctx) => `Steepness of the rise (double logistic), ${perXUnit(ctx)}.`),
-			k2: perY((ctx) => `Steepness of the fall (double logistic), ${perXUnit(ctx)}.`)
-		}
+			k2: perY((ctx) => `Steepness of the fall (double logistic), ${perXUnit(ctx)}.`),
+			// Curves 2..Ncurves of a free-period cosinor (curve 1 is on the ports above).
+			'period_c*': perY(
+				(ctx) => `Fitted period of a further cosine curve of the cosinor model, in ${xUnit(ctx)}.`
+			),
+			'amplitude_c*': perY('Amplitude of a further cosine curve of the cosinor model, in y units.'),
+			'acrophase_c*': perY(
+				(ctx) => `Peak time of a further cosine curve of the cosinor model, ${phaseFrame(ctx)}.`
+			)
+		},
+		special: [
+			{
+				name: 'period_c*',
+				re: /^(period|amplitude|acrophase)_c(\d+)$/,
+				text: (m, ctx) =>
+					perY(
+						{
+							period: `Fitted period of cosine curve ${m[2]}, in ${xUnit(ctx)}.`,
+							amplitude: `Amplitude of cosine curve ${m[2]}, in y units.`,
+							acrophase: `Peak time of cosine curve ${m[2]}, ${phaseFrame(ctx)}.`
+						}[m[1]]
+					)(ctx)
+			}
+		]
 	},
 	DoubleLogistic: {
 		inputs: {

@@ -172,7 +172,10 @@ describe('FitFunction — port declaration', () => {
 	it('declares the shared core + per-model parameter metrics in nodeSpec', () => {
 		const outs = definition.nodeSpec.outputs;
 		const metricNames = outs.filter((o) => o.metric === true).map((o) => o.name);
-		expect(metricNames.sort()).toEqual([...FIT_METRIC_KEYS_ALL].sort());
+		// Plus the free-period cosinor's per-curve families (`period_c<c>`, ...; fitCurveOutKeys).
+		expect(metricNames.sort()).toEqual(
+			[...FIT_METRIC_KEYS_ALL, 'period_c*', 'amplitude_c*', 'acrophase_c*'].sort()
+		);
 		// The series outputs are untouched.
 		expect(outs.map((o) => o.name)).toEqual(
 			expect.arrayContaining(['fitx', 'fity_*', 'resid_*', 'permstats_*'])

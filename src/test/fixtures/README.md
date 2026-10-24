@@ -222,3 +222,12 @@ data" Table on plot 110; plot 121 a "Node results" Table on `tableprocess_57`, r
 `src/lib/plots/Tableplot/Tableplot.permutationPorts.svelte.test.js`, and for checking in the
 running app via `?loadFromURL=/@fs/<absolute path to the file>`. Do not hand-edit or regenerate
 them.
+
+## stored-values-pre-v82.34.json (hand-built)
+
+Not captured from the browser: built from `static/sessions/demos/demo-tp-trendfit.json` to stand
+for a session saved before v82.34 (version `β.82.33`). The y column is renamed
+"Activity (counts)", the Fit trend R2 stored value keeps the old default name built from that raw
+name (`trend_r2_Activity (counts)`, keyed `tp:93|trend_r2_Activity (counts)`), the RMSE value
+carries a name the user chose (`my_rmse`), and a Formula Column adds the two. Used by
+`src/lib/core/storedValuePlainNames.svelte.test.js`.
