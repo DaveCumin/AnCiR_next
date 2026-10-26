@@ -59,7 +59,24 @@ async function settle(rounds = 6) {
 	flushSync();
 }
 
+// The first column with this name in a demo session. Demo column ids change whenever the demos
+// are regenerated, so cases that need a column id resolve it by name.
+function idByName(json, name) {
+	let found = null;
+	(function walk(o) {
+		if (found != null || o == null || typeof o !== 'object') return;
+		if (!Array.isArray(o) && Number.isInteger(o.id) && o.name === name) {
+			found = o.id;
+			return;
+		}
+		for (const v of Object.values(o)) walk(v);
+	})(json);
+	if (found == null) throw new Error(`no column named "${name}" in the demo`);
+	return found;
+}
+
 // [node, demo, args set before the gesture (unrecorded), the arg the user edits, its new value]
+// The new value may be a function (tp, json) => value, for values that name column ids.
 const CASES = [
 	['TrendFit', 'trendfit', {}, 'model', 'polynomial'],
 	['TrendFit', 'trendfit', { model: 'polynomial' }, 'polyDegree', 3],
@@ -94,14 +111,21 @@ const CASES = [
 	['Split', 'split', {}, 'splitTimes', [15, 30, 40]],
 	['JoinData', 'joindata', {}, 'sourceColumn', true],
 	// Pair B's 'hive temp' with A's 'ambient temp': one joined value port instead of two.
-	['JoinData', 'joindata', {}, 'pairing', { 906: 904 }],
+	[
+		'JoinData',
+		'joindata',
+		{},
+		'pairing',
+		(tp, json) => ({ [idByName(json, 'hive temp')]: idByName(json, 'ambient temp') })
+	],
 	['FitFunction', 'fitfunction', {}, 'model', 'rectangular'],
 	['FitFunction', 'fitfunction', {}, 'useFixedPeriod', false],
 	['Cosinor', 'cosinor', { useFixedPeriod: false }, 'Ncurves', 2],
 	// A column input picked in the panel (its ColumnSelector is bound to the arg): the
 	// per-input ports come and go with it (mutationService treats columnIdFields as shaping).
 	['TrendFit', 'trendfit', {}, 'yIN', []],
-	['TrendFit', 'trendfit', {}, 'yIN', [892, 891]],
+	// Two y inputs (the fitted y plus the x column) instead of one.
+	['TrendFit', 'trendfit', {}, 'yIN', (tp) => [...tp.args.yIN, tp.args.xIN]],
 	['MovingAnalysis', 'movinganalysis', {}, 'yIN', []],
 	['RhythmicityAnalysis', 'rhythmicityanalysis', {}, 'yIN', []],
 	['Split', 'split', {}, 'yIN', []]
@@ -111,8 +135,8 @@ const outKeys = (tp) => Object.keys(tp.args.out ?? {}).sort();
 const outMap = (tp) => Object.fromEntries(outKeys(tp).map((k) => [k, tp.args.out[k]]));
 
 describe('an edit that changes the output ports is one undo step', () => {
-	for (const [name, demo, prelude, key, next] of CASES) {
-		const label = `${name} ${key} -> ${JSON.stringify(next)}`;
+	for (const [name, demo, prelude, key, nextValue] of CASES) {
+		const label = `${name} ${key} -> ${typeof nextValue === 'function' ? 'resolved' : JSON.stringify(nextValue)}`;
 		it(
 			label,
 			async () => {
@@ -129,6 +153,7 @@ describe('an edit that changes the output ports is one undo step', () => {
 				await settle();
 				const before = outMap(tp);
 				const was = JSON.parse(JSON.stringify(tp.args[key] ?? null));
+				const next = typeof nextValue === 'function' ? nextValue(tp, json) : nextValue;
 
 				paramDiffWatcher.init();
 				history.clear();

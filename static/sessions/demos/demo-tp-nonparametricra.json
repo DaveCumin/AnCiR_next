@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "861": [
+    "864": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "862": [
+    "865": [
       0,
       0,
       0,
@@ -676,7 +676,7 @@
       0,
       0
     ],
-    "863": [
+    "866": [
       0.5,
       1.5,
       2.5,
@@ -702,7 +702,7 @@
       22.5,
       23.5
     ],
-    "864": [
+    "867": [
       0,
       0,
       0,
@@ -727,69 +727,36 @@
       0,
       0,
       0
-    ],
-    "865": [
-      1.0000000000000004
-    ],
-    "866": [
-      0.3438805970149255
-    ],
-    "867": [
-      1
     ],
     "868": [
-      100
+      1.0000000000000004
     ],
     "869": [
-      0
+      0.3438805970149255
     ],
     "870": [
-      8
+      1
     ],
     "871": [
+      100
+    ],
+    "872": [
+      0
+    ],
+    "873": [
+      8
+    ],
+    "874": [
       0
     ]
   },
   "data": [
     {
-      "id": 861,
-      "name": "Nonparametric RA input 1",
-      "data": 861,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 862,
-      "name": "Nonparametric RA input 2",
-      "data": 862,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 863,
-      "name": "npcrax_85",
-      "data": 863,
-      "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 864,
-      "name": "npcray_862_85",
+      "name": "Nonparametric RA input 1",
       "data": 864,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -797,10 +764,10 @@
     },
     {
       "id": 865,
-      "name": "IS_85",
+      "name": "Nonparametric RA input 2",
       "data": 865,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -808,10 +775,10 @@
     },
     {
       "id": 866,
-      "name": "IV_85",
+      "name": "npcrax_85",
       "data": 866,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -819,10 +786,10 @@
     },
     {
       "id": 867,
-      "name": "RA_85",
+      "name": "npcray_865_85",
       "data": 867,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -830,10 +797,10 @@
     },
     {
       "id": 868,
-      "name": "M10_85",
+      "name": "IS_85",
       "data": 868,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -841,10 +808,10 @@
     },
     {
       "id": 869,
-      "name": "L5_85",
+      "name": "IV_85",
       "data": 869,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -852,10 +819,10 @@
     },
     {
       "id": 870,
-      "name": "M10onset_85",
+      "name": "RA_85",
       "data": 870,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -863,10 +830,43 @@
     },
     {
       "id": 871,
-      "name": "L5onset_85",
+      "name": "M10_85",
       "data": 871,
       "type": "number",
-      "tableProcessGUId": "16e5d10c-7da6-49cb-8e55-871996fa0998",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 872,
+      "name": "L5_85",
+      "data": 872,
+      "type": "number",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 873,
+      "name": "M10onset_85",
+      "data": 873,
+      "type": "number",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 874,
+      "name": "L5onset_85",
+      "data": 874,
+      "type": "number",
+      "tableProcessGUId": "51910bdd-debd-4809-be95-2a61e0cee9e4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -950,9 +950,9 @@
         "data": [
           {
             "x": {
-              "id": 872,
+              "id": 875,
               "name": "npcrax_85",
-              "refId": 863,
+              "refId": 866,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -961,9 +961,9 @@
               "processes": []
             },
             "y": {
-              "id": 873,
-              "name": "npcray_862_85",
-              "refId": 864,
+              "id": 876,
+              "name": "npcray_865_85",
+              "refId": 867,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1038,11 +1038,11 @@
       },
       "plot": {
         "columnRefs": [
-          865,
-          866,
-          867,
           868,
-          869
+          869,
+          870,
+          871,
+          872
         ],
         "showCol": [
           true,
@@ -1064,9 +1064,9 @@
       "name": "NonparametricRA",
       "displayName": "Nonparametric RA",
       "args": {
-        "xIN": 861,
+        "xIN": 864,
         "yIN": [
-          862
+          865
         ],
         "epochHours": 1,
         "period": 24,
@@ -1074,15 +1074,15 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "npcrax": 863,
-          "npcray_862": 864,
-          "IS": 865,
-          "IV": 866,
-          "RA": 867,
-          "M10": 868,
-          "L5": 869,
-          "M10onset": 870,
-          "L5onset": 871
+          "npcrax": 866,
+          "npcray_865": 867,
+          "IS": 868,
+          "IV": 869,
+          "RA": 870,
+          "M10": 871,
+          "L5": 872,
+          "M10onset": 873,
+          "L5onset": 874
         }
       },
       "refTPId": null
@@ -1127,11 +1127,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_861": {
+    "data_864": {
       "x": 60,
       "y": 314
     },
-    "data_862": {
+    "data_865": {
       "x": 60,
       "y": 814
     },
@@ -1212,5 +1212,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

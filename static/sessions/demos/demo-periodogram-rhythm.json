@@ -501,7 +501,7 @@
   "notes": [
     {
       "id": "note_37",
-      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For chi-squared the reported peak is the period whose Qp rises furthest above its own threshold (the largest raw Qp drifts to long periods on a weak rhythm, because the threshold grows with the period), and its p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line; the panel says when it does not. The y axis names the statistic: normalised power for Lomb-Scargle, Qp for chi-squared and the amplitude A_p for Enright (series of different methods on one plot are not comparable numbers). Log scale under Properties draws the power axis on a log scale, for display only. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
+      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For Lomb-Scargle the panel and the peak p port give the peak's family-wise false-alarm probability (Baluev 2008): the chance that noise alone would put a peak this high anywhere in the displayed period range, a slightly conservative bound. For chi-squared the reported peak is the period whose Qp rises furthest above its own threshold (the largest raw Qp drifts to long periods on a weak rhythm, because the threshold grows with the period), and its p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line; the panel says when it does not. The y axis names the statistic: normalised power for Lomb-Scargle, Qp for chi-squared and the amplitude A_p for Enright (series of different methods on one plot are not comparable numbers). Log scale under Properties draws the power axis on a log scale, for display only. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -611,5 +611,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

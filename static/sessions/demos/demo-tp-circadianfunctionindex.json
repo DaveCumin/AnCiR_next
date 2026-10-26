@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "935": [
+    "938": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "936": [
+    "939": [
       0,
       0,
       0,
@@ -676,59 +676,26 @@
       0,
       0
     ],
-    "937": [
+    "940": [
       0.9426865671641792
     ],
-    "938": [
+    "941": [
       1.0000000000000004
     ],
-    "939": [
+    "942": [
       0.3438805970149255
     ],
-    "940": [
+    "943": [
       1
     ]
   },
   "data": [
     {
-      "id": 935,
-      "name": "Circadian Function Index input 1",
-      "data": 935,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 936,
-      "name": "Circadian Function Index input 2",
-      "data": 936,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 937,
-      "name": "CFI_99",
-      "data": 937,
-      "type": "number",
-      "tableProcessGUId": "8e17d43d-e0eb-4adf-95f7-808e379356a6",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 938,
-      "name": "IS_99",
+      "name": "Circadian Function Index input 1",
       "data": 938,
       "type": "number",
-      "tableProcessGUId": "8e17d43d-e0eb-4adf-95f7-808e379356a6",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -736,10 +703,10 @@
     },
     {
       "id": 939,
-      "name": "IV_99",
+      "name": "Circadian Function Index input 2",
       "data": 939,
       "type": "number",
-      "tableProcessGUId": "8e17d43d-e0eb-4adf-95f7-808e379356a6",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -747,10 +714,43 @@
     },
     {
       "id": 940,
-      "name": "RA_99",
+      "name": "CFI_99",
       "data": 940,
       "type": "number",
-      "tableProcessGUId": "8e17d43d-e0eb-4adf-95f7-808e379356a6",
+      "tableProcessGUId": "ec833a8f-13d0-490f-a2b2-a810926c86d2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 941,
+      "name": "IS_99",
+      "data": 941,
+      "type": "number",
+      "tableProcessGUId": "ec833a8f-13d0-490f-a2b2-a810926c86d2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 942,
+      "name": "IV_99",
+      "data": 942,
+      "type": "number",
+      "tableProcessGUId": "ec833a8f-13d0-490f-a2b2-a810926c86d2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 943,
+      "name": "RA_99",
+      "data": 943,
+      "type": "number",
+      "tableProcessGUId": "ec833a8f-13d0-490f-a2b2-a810926c86d2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -792,12 +792,12 @@
       },
       "plot": {
         "columnRefs": [
-          935,
-          936,
-          937,
           938,
           939,
-          940
+          940,
+          941,
+          942,
+          943
         ],
         "showCol": [
           true,
@@ -820,9 +820,9 @@
       "name": "CircadianFunctionIndex",
       "displayName": "Circadian Function Index",
       "args": {
-        "xIN": 935,
+        "xIN": 938,
         "yIN": [
-          936
+          939
         ],
         "epochHours": 1,
         "period": 24,
@@ -830,10 +830,10 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "CFI": 937,
-          "IS": 938,
-          "IV": 939,
-          "RA": 940
+          "CFI": 940,
+          "IS": 941,
+          "IV": 942,
+          "RA": 943
         }
       },
       "refTPId": null
@@ -878,11 +878,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_935": {
+    "data_938": {
       "x": 60,
       "y": 314
     },
-    "data_936": {
+    "data_939": {
       "x": 60,
       "y": 814
     },
@@ -959,5 +959,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

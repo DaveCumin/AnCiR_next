@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "792": [
+    "795": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "793": [
+    "796": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,65 +184,32 @@
       "non-responder",
       "non-responder"
     ],
-    "794": [
-      0
-    ],
-    "795": [
-      1
-    ],
-    "796": [
-      1
-    ],
     "797": [
       0
     ],
     "798": [
-      null
+      1
     ],
     "799": [
+      1
+    ],
+    "800": [
+      0
+    ],
+    "801": [
+      null
+    ],
+    "802": [
       null
     ]
   },
   "data": [
     {
-      "id": 792,
-      "name": "Categorical tests input 1",
-      "data": 792,
-      "type": "category",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 793,
-      "name": "Categorical tests input 2",
-      "data": 793,
-      "type": "category",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 794,
-      "name": "statistic_73",
-      "data": 794,
-      "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 795,
-      "name": "pvalue_73",
+      "name": "Categorical tests input 1",
       "data": 795,
-      "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
+      "type": "category",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -250,10 +217,10 @@
     },
     {
       "id": 796,
-      "name": "df_73",
+      "name": "Categorical tests input 2",
       "data": 796,
-      "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
+      "type": "category",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,10 +228,10 @@
     },
     {
       "id": 797,
-      "name": "effectSize_73",
+      "name": "statistic_73",
       "data": 797,
       "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -272,10 +239,10 @@
     },
     {
       "id": 798,
-      "name": "ciLow_73",
+      "name": "pvalue_73",
       "data": 798,
       "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -283,10 +250,43 @@
     },
     {
       "id": 799,
-      "name": "ciHigh_73",
+      "name": "df_73",
       "data": 799,
       "type": "number",
-      "tableProcessGUId": "50db7153-e3d3-4d12-8ae6-8eefacd2e3a0",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 800,
+      "name": "effectSize_73",
+      "data": 800,
+      "type": "number",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 801,
+      "name": "ciLow_73",
+      "data": 801,
+      "type": "number",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 802,
+      "name": "ciHigh_73",
+      "data": 802,
+      "type": "number",
+      "tableProcessGUId": "68c660a3-7805-4661-a195-a493ef8a93e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -328,14 +328,14 @@
       },
       "plot": {
         "columnRefs": [
-          792,
-          793,
-          794,
           795,
           796,
           797,
           798,
-          799
+          799,
+          800,
+          801,
+          802
         ],
         "showCol": [
           true,
@@ -362,16 +362,16 @@
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 792,
-        "yIN": 793,
+        "xIN": 795,
+        "yIN": 796,
         "correction": true,
         "out": {
-          "statistic": 794,
-          "pvalue": 795,
-          "df": 796,
-          "effectSize": 797,
-          "ciLow": 798,
-          "ciHigh": 799
+          "statistic": 797,
+          "pvalue": 798,
+          "df": 799,
+          "effectSize": 800,
+          "ciLow": 801,
+          "ciHigh": 802
         },
         "alternative": "two-sided",
         "gofInput": "auto",
@@ -419,11 +419,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_792": {
+    "data_795": {
       "x": 60,
       "y": 314
     },
-    "data_793": {
+    "data_796": {
       "x": 60,
       "y": 814
     },
@@ -500,5 +500,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

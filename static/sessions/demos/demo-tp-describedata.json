@@ -125,34 +125,46 @@
       29.154759474226502
     ],
     "766": [
+      4.109180595794107,
+      4.123105625617661
+    ],
+    "767": [
+      40.16955176876892,
+      41.71430903469049
+    ],
+    "768": [
+      56.684966909168544,
+      58.28569096530951
+    ],
+    "769": [
       10,
       1
     ],
-    "767": [
+    "770": [
       90,
       99
     ],
-    "768": [
+    "771": [
       80,
       98
     ],
-    "769": [
+    "772": [
       21.715728752538084,
       25.5
     ],
-    "770": [
+    "773": [
       78.28427124746192,
       74.5
     ],
-    "771": [
+    "774": [
       56.56854249492383,
       49
     ],
-    "772": [
+    "775": [
       0.06387191582287348,
       0
     ],
-    "773": [
+    "776": [
       -1.5514528241552457,
       -1.2
     ]
@@ -185,7 +197,7 @@
       "name": "variable_71",
       "data": 761,
       "type": "category",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -196,7 +208,7 @@
       "name": "n_71",
       "data": 762,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +219,7 @@
       "name": "mean_71",
       "data": 763,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -218,7 +230,7 @@
       "name": "median_71",
       "data": 764,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -229,7 +241,7 @@
       "name": "sd_71",
       "data": 765,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,10 +249,10 @@
     },
     {
       "id": 766,
-      "name": "min_71",
+      "name": "sem_71",
       "data": 766,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,10 +260,10 @@
     },
     {
       "id": 767,
-      "name": "max_71",
+      "name": "ciLow_71",
       "data": 767,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,10 +271,10 @@
     },
     {
       "id": 768,
-      "name": "range_71",
+      "name": "ciHigh_71",
       "data": 768,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -270,10 +282,10 @@
     },
     {
       "id": 769,
-      "name": "q1_71",
+      "name": "min_71",
       "data": 769,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -281,10 +293,10 @@
     },
     {
       "id": 770,
-      "name": "q3_71",
+      "name": "max_71",
       "data": 770,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -292,10 +304,10 @@
     },
     {
       "id": 771,
-      "name": "iqr_71",
+      "name": "range_71",
       "data": 771,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -303,10 +315,10 @@
     },
     {
       "id": 772,
-      "name": "skewness_71",
+      "name": "q1_71",
       "data": 772,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,10 +326,43 @@
     },
     {
       "id": 773,
-      "name": "kurtosis_71",
+      "name": "q3_71",
       "data": 773,
       "type": "number",
-      "tableProcessGUId": "2c44715e-76e8-445f-9f05-a002a0996079",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 774,
+      "name": "iqr_71",
+      "data": 774,
+      "type": "number",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 775,
+      "name": "skewness_71",
+      "data": 775,
+      "type": "number",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 776,
+      "name": "kurtosis_71",
+      "data": 776,
+      "type": "number",
+      "tableProcessGUId": "fc4079c6-7b86-4245-9f1e-17ec9047b244",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -373,9 +418,15 @@
           770,
           771,
           772,
-          773
+          773,
+          774,
+          775,
+          776
         ],
         "showCol": [
+          true,
+          true,
+          true,
           true,
           true,
           true,
@@ -415,14 +466,17 @@
           "mean": 763,
           "median": 764,
           "sd": 765,
-          "min": 766,
-          "max": 767,
-          "range": 768,
-          "q1": 769,
-          "q3": 770,
-          "iqr": 771,
-          "skewness": 772,
-          "kurtosis": 773
+          "sem": 766,
+          "ciLow": 767,
+          "ciHigh": 768,
+          "min": 769,
+          "max": 770,
+          "range": 771,
+          "q1": 772,
+          "q3": 773,
+          "iqr": 774,
+          "skewness": 775,
+          "kurtosis": 776
         },
         "valid": false,
         "_inputLabels": {
@@ -439,7 +493,7 @@
   "notes": [
     {
       "id": "note_66",
-      "text": "Reports summary statistics for each wired column, one row per variable: n, mean, median, standard deviation, min, max, range, first and third quartiles, IQR, skewness and (excess) kurtosis. Skewness and kurtosis use the bias-corrected sample formulae (matching scipy). Quick-plot draws a histogram of each column so you can see the distribution behind the numbers.",
+      "text": "Reports summary statistics for each wired column, one row per variable: n, mean, median, standard deviation, the standard error of the mean (SD / sqrt(n)) and the 95% confidence interval of the mean (mean ± t(0.975, n - 1) × SEM, Student 1908; it assumes the mean is roughly normal, so treat it with care for small, skewed samples), min, max, range, first and third quartiles, IQR, skewness and (excess) kurtosis. Skewness and kurtosis use the bias-corrected sample formulae (matching scipy). Quick-plot draws a histogram of each column so you can see the distribution behind the numbers.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -553,5 +607,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

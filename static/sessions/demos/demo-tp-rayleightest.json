@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "927": [
+    "930": [
       0.75,
       0.4936245900186056,
       0.10008893632086846,
@@ -22,7 +22,7 @@
       0.34356671248653514,
       0.7177368592146683
     ],
-    "928": [
+    "931": [
       2.5500000000000003,
       2.293624590018606,
       1.9000889363208686,
@@ -44,69 +44,36 @@
       2.1435667124865354,
       2.5177368592146685
     ],
-    "929": [
+    "932": [
       0.9685941696997769,
       0.9685941696997767
     ],
-    "930": [
+    "933": [
       18.763493311528006,
       18.763493311528
     ],
-    "931": [
+    "934": [
       1.9826460939624246e-8,
       1.982646093962434e-8
     ],
-    "932": [
+    "935": [
       453.7366669407144
     ],
-    "933": [
+    "936": [
       9.970569579097649e-23
     ],
-    "934": [
+    "937": [
       1.5736813608355367,
       8.449174902405415
     ]
   },
   "data": [
     {
-      "id": 927,
-      "name": "Rayleigh test input 1",
-      "data": 927,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 928,
-      "name": "Rayleigh test input 2",
-      "data": 928,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 929,
-      "name": "R_98",
-      "data": 929,
-      "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 930,
-      "name": "z_98",
+      "name": "Rayleigh test input 1",
       "data": 930,
       "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -114,10 +81,10 @@
     },
     {
       "id": 931,
-      "name": "pvalue_98",
+      "name": "Rayleigh test input 2",
       "data": 931,
       "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -125,10 +92,10 @@
     },
     {
       "id": 932,
-      "name": "F_98",
+      "name": "R_98",
       "data": 932,
       "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -136,10 +103,10 @@
     },
     {
       "id": 933,
-      "name": "ww_pvalue_98",
+      "name": "z_98",
       "data": 933,
       "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -147,10 +114,43 @@
     },
     {
       "id": 934,
-      "name": "acrophase_98",
+      "name": "pvalue_98",
       "data": 934,
       "type": "number",
-      "tableProcessGUId": "01a343c4-3bad-43d7-9814-761361e955e0",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 935,
+      "name": "F_98",
+      "data": 935,
+      "type": "number",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 936,
+      "name": "ww_pvalue_98",
+      "data": 936,
+      "type": "number",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 937,
+      "name": "acrophase_98",
+      "data": 937,
+      "type": "number",
+      "tableProcessGUId": "6f949d6a-b990-47a2-baa6-48093206296a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -192,14 +192,14 @@
       },
       "plot": {
         "columnRefs": [
-          927,
-          928,
-          929,
           930,
           931,
           932,
           933,
-          934
+          934,
+          935,
+          936,
+          937
         ],
         "showCol": [
           true,
@@ -225,19 +225,19 @@
       "displayName": "Rayleigh test",
       "args": {
         "yIN": [
-          927,
-          928
+          930,
+          931
         ],
         "unit": "radians",
         "period": 24,
         "showWatsonWilliams": true,
         "out": {
-          "R": 929,
-          "z": 930,
-          "pvalue": 931,
-          "F": 932,
-          "ww_pvalue": 933,
-          "acrophase": 934
+          "R": 932,
+          "z": 933,
+          "pvalue": 934,
+          "F": 935,
+          "ww_pvalue": 936,
+          "acrophase": 937
         }
       },
       "refTPId": null
@@ -282,11 +282,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_927": {
+    "data_930": {
       "x": 60,
       "y": 314
     },
-    "data_928": {
+    "data_931": {
       "x": 60,
       "y": 814
     },
@@ -363,5 +363,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

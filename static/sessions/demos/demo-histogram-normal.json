@@ -629,7 +629,7 @@
   "notes": [
     {
       "id": "note_31",
-      "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
+      "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution. With custom cut edges of unequal width the bars show density instead, count / (n × bin width), so a bar's AREA is the share of values in it and a wide bin is not inflated; the density curve is then drawn on the same density axis (R's hist() makes the same switch).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -735,5 +735,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

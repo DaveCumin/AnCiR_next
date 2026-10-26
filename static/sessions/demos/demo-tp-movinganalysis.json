@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "831": [
+    "834": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "832": [
+    "835": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "833": [
+    "836": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "834": [
+    "837": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "835": [
+    "838": [
       83.5,
       83.49999999999999,
       83.49999999999999,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 831,
+      "id": 834,
       "name": "x",
-      "data": 831,
+      "data": 834,
       "type": "number",
-      "tableProcessGUId": "8de8a3ef-50c6-408a-8d84-15d01a2970a4",
+      "tableProcessGUId": "1633aad0-b0ad-4749-8d80-2413165425ee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 832,
+      "id": 835,
       "name": "y",
-      "data": 832,
+      "data": 835,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 833,
+      "id": 836,
       "name": "movex_79",
-      "data": 833,
+      "data": 836,
       "type": "number",
-      "tableProcessGUId": "95dbb51d-9b1b-4cd5-bf8a-6fab7b7c0340",
+      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 834,
-      "name": "832_peak_period_79",
-      "data": 834,
+      "id": 837,
+      "name": "835_peak_period_79",
+      "data": 837,
       "type": "number",
-      "tableProcessGUId": "95dbb51d-9b1b-4cd5-bf8a-6fab7b7c0340",
+      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 835,
-      "name": "832_peak_power_79",
-      "data": 835,
+      "id": 838,
+      "name": "835_peak_power_79",
+      "data": 838,
       "type": "number",
-      "tableProcessGUId": "95dbb51d-9b1b-4cd5-bf8a-6fab7b7c0340",
+      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -838,9 +838,9 @@
         "data": [
           {
             "x": {
-              "id": 836,
+              "id": 839,
               "name": "x",
-              "refId": 831,
+              "refId": 834,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -849,9 +849,9 @@
               "processes": []
             },
             "y": {
-              "id": 837,
+              "id": 840,
               "name": "y",
-              "refId": 832,
+              "refId": 835,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -877,9 +877,9 @@
           },
           {
             "x": {
-              "id": 838,
+              "id": 841,
               "name": "movex_79",
-              "refId": 833,
+              "refId": 836,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -888,9 +888,9 @@
               "processes": []
             },
             "y": {
-              "id": 839,
-              "name": "832_peak_period_79",
-              "refId": 834,
+              "id": 842,
+              "name": "835_peak_period_79",
+              "refId": 837,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -965,9 +965,9 @@
       },
       "plot": {
         "columnRefs": [
-          833,
-          834,
-          835
+          836,
+          837,
+          838
         ],
         "showCol": [
           true,
@@ -993,7 +993,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 831
+          "result": 834
         }
       },
       "refTPId": null
@@ -1003,9 +1003,9 @@
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 831,
+        "xIN": 834,
         "yIN": [
-          832
+          835
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -1024,9 +1024,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 833,
-          "832_peak_period": 834,
-          "832_peak_power": 835
+          "movex": 836,
+          "835_peak_period": 837,
+          "835_peak_power": 838
         }
       },
       "refTPId": null
@@ -1038,7 +1038,7 @@
   "notes": [
     {
       "id": "note_73",
-      "text": "Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Phase outputs (M10 onset, acrophases, onset and offset) are put on one frame for every window: the instant the window actually contains, as hours after the record's first sample, folded onto the fixed period (or 24 h for a free period), so a stable rhythm reads the same value in every window and a free-running one drifts by its period minus 24 h per day. Set Phase reference to Clock time of day for clock time. C1_phase is the model phase angle in radians; C1_acrophase is the time of the window's peak. A chi-squared periodogram reports, per window, the period whose Qp rises furthest above its threshold and that peak's family-wise p (peak_pvalue; at or above alpha means no period in that window crossed its threshold). The fixed-period cosinor's rmse is the residual standard error, sqrt(SS/(n - p)), and is labelled Residual SE, and its rmse_n is the RMSE, sqrt(SS/n), comparable with the other analyses' rmse; the rectangular-wave fit's mesor is its midline, halfway between the high and low levels; and the double-logistic fit's mesor is its baseline (rest level), labelled Baseline. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
+      "text": "Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Phase outputs (M10 onset, acrophases, onset and offset) are put on one frame for every window: the instant the window actually contains, as hours after the record's first sample, folded onto the fixed period (or 24 h for a free period), so a stable rhythm reads the same value in every window and a free-running one drifts by its period minus 24 h per day. Set Phase reference to Clock time of day for clock time. C1_phase is the model phase angle in radians; C1_acrophase is the time of the window's peak. A chi-squared periodogram reports, per window, the period whose Qp rises furthest above its threshold and that peak's family-wise p (peak_pvalue; at or above alpha means no period in that window crossed its threshold); a Lomb-Scargle periodogram reports the highest peak and its family-wise false-alarm probability (Baluev 2008). The fixed-period cosinor's rmse is the residual standard error, sqrt(SS/(n - p)), and is labelled Residual SE, and its rmse_n is the RMSE, sqrt(SS/n), comparable with the other analyses' rmse; the rectangular-wave fit's mesor is its midline, halfway between the high and low levels; and the double-logistic fit's mesor is its baseline (rest level), labelled Baseline. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -1071,7 +1071,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_832": {
+    "data_835": {
       "x": 60,
       "y": 314
     },
@@ -1156,5 +1156,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

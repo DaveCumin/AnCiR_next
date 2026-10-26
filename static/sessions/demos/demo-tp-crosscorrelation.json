@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "800": [
+    "803": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "801": [
+    "804": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -104,7 +104,7 @@
       50.000000000000014,
       39.64723819589919
     ],
-    "802": [
+    "805": [
       -12,
       -11,
       -10,
@@ -131,7 +131,7 @@
       11,
       12
     ],
-    "803": [
+    "806": [
       -0.02397460631115133,
       -0.28574860140576386,
       -0.5241981547253294,
@@ -158,7 +158,7 @@
       0.23409193418983582,
       -0.023974606311150955
     ],
-    "804": [
+    "807": [
       0.9706407477729591,
       0.11561144801305756,
       0.0010540293263445483,
@@ -188,44 +188,11 @@
   },
   "data": [
     {
-      "id": 800,
-      "name": "Cross-correlation input 1",
-      "data": 800,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 801,
-      "name": "Cross-correlation input 2",
-      "data": 801,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 802,
-      "name": "lag_74",
-      "data": 802,
-      "type": "number",
-      "tableProcessGUId": "0a2c6140-4d26-4c14-adf5-2fc9db74e9f2",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 803,
-      "name": "correlation_74",
+      "name": "Cross-correlation input 1",
       "data": 803,
       "type": "number",
-      "tableProcessGUId": "0a2c6140-4d26-4c14-adf5-2fc9db74e9f2",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -233,10 +200,43 @@
     },
     {
       "id": 804,
-      "name": "pvalue_74",
+      "name": "Cross-correlation input 2",
       "data": 804,
       "type": "number",
-      "tableProcessGUId": "0a2c6140-4d26-4c14-adf5-2fc9db74e9f2",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 805,
+      "name": "lag_74",
+      "data": 805,
+      "type": "number",
+      "tableProcessGUId": "2cb747f5-2be7-40f8-affb-32042b95139e",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 806,
+      "name": "correlation_74",
+      "data": 806,
+      "type": "number",
+      "tableProcessGUId": "2cb747f5-2be7-40f8-affb-32042b95139e",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 807,
+      "name": "pvalue_74",
+      "data": 807,
+      "type": "number",
+      "tableProcessGUId": "2cb747f5-2be7-40f8-affb-32042b95139e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -278,11 +278,11 @@
       },
       "plot": {
         "columnRefs": [
-          800,
-          801,
-          802,
           803,
-          804
+          804,
+          805,
+          806,
+          807
         ],
         "showCol": [
           true,
@@ -304,14 +304,14 @@
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 800,
-        "yIN": 801,
+        "xIN": 803,
+        "yIN": 804,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 802,
-          "correlation": 803,
-          "pvalue": 804
+          "lag": 805,
+          "correlation": 806,
+          "pvalue": 807
         },
         "valid": false
       },
@@ -357,11 +357,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_800": {
+    "data_803": {
       "x": 60,
       "y": 314
     },
-    "data_801": {
+    "data_804": {
       "x": 60,
       "y": 814
     },
@@ -438,5 +438,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

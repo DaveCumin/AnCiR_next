@@ -167,7 +167,7 @@
       "name": "x",
       "data": 653,
       "type": "number",
-      "tableProcessGUId": "aa264b35-2a96-4012-b0bf-fc7a1ea8a2c6",
+      "tableProcessGUId": "1ced9393-1f12-43fd-8f5b-01ae139f2a30",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 655,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "f38d5dcd-0a85-440c-866b-8ba3ad42adf8",
+      "tableProcessGUId": "1b296a7c-a2c5-4ff7-b7fd-2cea5958a69e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_654_52",
       "data": 656,
       "type": "number",
-      "tableProcessGUId": "f38d5dcd-0a85-440c-866b-8ba3ad42adf8",
+      "tableProcessGUId": "1b296a7c-a2c5-4ff7-b7fd-2cea5958a69e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -593,5 +593,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

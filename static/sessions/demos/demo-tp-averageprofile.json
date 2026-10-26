@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "923": [
+    "926": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "924": [
+    "927": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "925": [
+    "928": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "926": [
+    "929": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,44 +251,44 @@
   },
   "data": [
     {
-      "id": 923,
-      "name": "Average Profile input 1",
-      "data": 923,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 924,
-      "name": "Average Profile input 2",
-      "data": 924,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 925,
-      "name": "avgprofx_97",
-      "data": 925,
-      "type": "number",
-      "tableProcessGUId": "e4a50489-1656-4e55-8f07-8de8eed827d3",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 926,
-      "name": "avgprof_924_97",
+      "name": "Average Profile input 1",
       "data": 926,
       "type": "number",
-      "tableProcessGUId": "e4a50489-1656-4e55-8f07-8de8eed827d3",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 927,
+      "name": "Average Profile input 2",
+      "data": 927,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 928,
+      "name": "avgprofx_97",
+      "data": 928,
+      "type": "number",
+      "tableProcessGUId": "bc87d3d0-6ddb-489e-ad5a-147dca9ffded",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 929,
+      "name": "avgprof_927_97",
+      "data": 929,
+      "type": "number",
+      "tableProcessGUId": "bc87d3d0-6ddb-489e-ad5a-147dca9ffded",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -330,10 +330,10 @@
       },
       "plot": {
         "columnRefs": [
-          923,
-          924,
-          925,
-          926
+          926,
+          927,
+          928,
+          929
         ],
         "showCol": [
           true,
@@ -354,16 +354,16 @@
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 923,
+        "xIN": 926,
         "yIN": [
-          924
+          927
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 925,
-          "avgprof_924": 926
+          "avgprofx": 928,
+          "avgprof_927": 929
         }
       },
       "refTPId": null
@@ -408,11 +408,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_923": {
+    "data_926": {
       "x": 60,
       "y": 314
     },
-    "data_924": {
+    "data_927": {
       "x": 60,
       "y": 814
     },
@@ -489,5 +489,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

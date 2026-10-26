@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "890": [
+    "893": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 890,
+      "id": 893,
       "name": "group_g1_91",
-      "data": 890,
+      "data": 893,
       "type": "number",
-      "tableProcessGUId": "e002a026-0e64-4e5e-9e29-b9749f57cd0a",
+      "tableProcessGUId": "bb511d62-cdd9-4885-a075-d42306137590",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -53,7 +53,7 @@
       },
       "plot": {
         "columnRefs": [
-          890
+          893
         ],
         "showCol": [
           true
@@ -82,7 +82,7 @@
           }
         ],
         "out": {
-          "group_g1": 890
+          "group_g1": 893
         }
       },
       "refTPId": null
@@ -103,7 +103,7 @@
   "notes": [
     {
       "id": "note_82",
-      "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
+      "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting one column per group holding the values in that group. Use it to assemble stored metrics for group comparison or plotting.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -209,5 +209,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

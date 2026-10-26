@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "875": [
+    "878": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "876": [
+    "879": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 875,
+      "id": 878,
       "name": "time_87",
-      "data": 875,
+      "data": 878,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "0d4fe7f0-4617-46d2-b1f9-9fbc7acfd87a",
+      "tableProcessGUId": "24407d63-4124-4527-aad2-94ed001516e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 876,
+      "id": 879,
       "name": "values_87",
-      "data": 876,
+      "data": 879,
       "type": "number",
-      "tableProcessGUId": "0d4fe7f0-4617-46d2-b1f9-9fbc7acfd87a",
+      "tableProcessGUId": "24407d63-4124-4527-aad2-94ed001516e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -161,8 +161,8 @@
       },
       "plot": {
         "columnRefs": [
-          875,
-          876
+          878,
+          879
         ],
         "showCol": [
           true,
@@ -195,8 +195,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 875,
-          "values": 876
+          "time": 878,
+          "values": 879
         }
       },
       "refTPId": null
@@ -314,5 +314,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

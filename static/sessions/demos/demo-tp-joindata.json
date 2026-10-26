@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "903": [
+    "906": [
       "2024-07-01T00:00:00.000Z",
       "2024-07-01T01:00:00.000Z",
       "2024-07-01T02:00:00.000Z",
@@ -74,7 +74,7 @@
       "2024-07-03T22:00:00.000Z",
       "2024-07-03T23:00:00.000Z"
     ],
-    "904": [
+    "907": [
       9.73,
       8.63,
       7.97,
@@ -148,7 +148,7 @@
       12.76,
       10.51
     ],
-    "905": [
+    "908": [
       "2024-07-01T00:07:00.000Z",
       "2024-07-01T00:22:00.000Z",
       "2024-07-01T00:37:00.000Z",
@@ -438,7 +438,7 @@
       "2024-07-03T23:37:00.000Z",
       "2024-07-03T23:52:00.000Z"
     ],
-    "906": [
+    "909": [
       26.3,
       25.69,
       25.73,
@@ -728,7 +728,7 @@
       26.69,
       26.18
     ],
-    "907": [
+    "910": [
       1719792000000,
       1719792420000,
       1719793320000,
@@ -1090,7 +1090,7 @@
       1720049820000,
       1720050720000
     ],
-    "908": [
+    "911": [
       9.73,
       null,
       null,
@@ -1452,7 +1452,7 @@
       null,
       null
     ],
-    "909": [
+    "912": [
       null,
       26.3,
       25.69,
@@ -1814,7 +1814,7 @@
       26.69,
       26.18
     ],
-    "910": [
+    "913": [
       1719792000000,
       1719795600000,
       1719799200000,
@@ -1889,7 +1889,7 @@
       1720047600000,
       1720051200000
     ],
-    "911": [
+    "914": [
       9.73,
       8.63,
       7.97,
@@ -1964,7 +1964,7 @@
       10.51,
       null
     ],
-    "912": [
+    "915": [
       25.8575,
       25.029999999999998,
       24.5625,
@@ -2042,45 +2042,11 @@
   },
   "data": [
     {
-      "id": 903,
-      "name": "weather time",
-      "data": 903,
-      "type": "time",
-      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 904,
-      "name": "ambient temp",
-      "data": 904,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 905,
-      "name": "hive time",
-      "data": 905,
-      "type": "time",
-      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 906,
-      "name": "hive temp",
+      "name": "weather time",
       "data": 906,
-      "type": "number",
+      "type": "time",
+      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
@@ -2089,11 +2055,10 @@
     },
     {
       "id": 907,
-      "name": "jointime_94",
+      "name": "ambient temp",
       "data": 907,
-      "type": "time",
-      "timeFormat": null,
-      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
+      "type": "number",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2101,10 +2066,11 @@
     },
     {
       "id": 908,
-      "name": "joined_904_94",
+      "name": "hive time",
       "data": 908,
-      "type": "number",
-      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
+      "type": "time",
+      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2112,10 +2078,10 @@
     },
     {
       "id": 909,
-      "name": "joined_906_94",
+      "name": "hive temp",
       "data": 909,
       "type": "number",
-      "tableProcessGUId": "bc88ab65-5eef-4ab4-acf3-b7010b212903",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2123,12 +2089,11 @@
     },
     {
       "id": 910,
-      "name": "binnedx_95",
+      "name": "jointime_94",
       "data": 910,
       "type": "time",
       "timeFormat": null,
-      "originTime_ms": 1719792000000,
-      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
+      "tableProcessGUId": "6560e981-3caa-4e5c-8a6e-83a3460a0209",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2136,10 +2101,10 @@
     },
     {
       "id": 911,
-      "name": "binnedy_908_95",
+      "name": "joined_907_94",
       "data": 911,
       "type": "number",
-      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
+      "tableProcessGUId": "6560e981-3caa-4e5c-8a6e-83a3460a0209",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2147,10 +2112,45 @@
     },
     {
       "id": 912,
-      "name": "binnedy_909_95",
+      "name": "joined_909_94",
       "data": 912,
       "type": "number",
-      "tableProcessGUId": "4fb3c784-4a7b-4afc-b9e0-d4204ccedd73",
+      "tableProcessGUId": "6560e981-3caa-4e5c-8a6e-83a3460a0209",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 913,
+      "name": "binnedx_95",
+      "data": 913,
+      "type": "time",
+      "timeFormat": null,
+      "originTime_ms": 1719792000000,
+      "tableProcessGUId": "2df1ad20-3db8-4527-a70d-048dfca29612",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 914,
+      "name": "binnedy_911_95",
+      "data": 914,
+      "type": "number",
+      "tableProcessGUId": "2df1ad20-3db8-4527-a70d-048dfca29612",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 915,
+      "name": "binnedy_912_95",
+      "data": 915,
+      "type": "number",
+      "tableProcessGUId": "2df1ad20-3db8-4527-a70d-048dfca29612",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2234,9 +2234,9 @@
         "data": [
           {
             "x": {
-              "id": 913,
+              "id": 916,
               "name": "binnedx_95",
-              "refId": 910,
+              "refId": 913,
               "type": "time",
               "timeFormat": "",
               "originTime_ms": 1719792000000,
@@ -2247,9 +2247,9 @@
               "processes": []
             },
             "y": {
-              "id": 914,
-              "name": "binnedy_908_95",
-              "refId": 911,
+              "id": 917,
+              "name": "binnedy_911_95",
+              "refId": 914,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2275,9 +2275,9 @@
           },
           {
             "x": {
-              "id": 915,
+              "id": 918,
               "name": "binnedx_95",
-              "refId": 910,
+              "refId": 913,
               "type": "time",
               "timeFormat": "",
               "originTime_ms": 1719792000000,
@@ -2288,9 +2288,9 @@
               "processes": []
             },
             "y": {
-              "id": 916,
-              "name": "binnedy_909_95",
-              "refId": 912,
+              "id": 919,
+              "name": "binnedy_912_95",
+              "refId": 915,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2338,21 +2338,21 @@
       "name": "JoinData",
       "displayName": "Join Data",
       "args": {
-        "aTimeIN": 903,
+        "aTimeIN": 906,
         "aValuesIN": [
-          904
+          907
         ],
-        "bTimeIN": 905,
+        "bTimeIN": 908,
         "bValuesIN": [
-          906
+          909
         ],
         "pairing": {},
         "shiftB": 0,
         "sourceColumn": false,
         "out": {
-          "jointime": 907,
-          "joined_904": 908,
-          "joined_906": 909
+          "jointime": 910,
+          "joined_907": 911,
+          "joined_909": 912
         },
         "_resolvedPairs": {},
         "_sourceLabels": [
@@ -2367,10 +2367,10 @@
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 907,
+        "xIN": 910,
         "yIN": [
-          908,
-          909
+          911,
+          912
         ],
         "binMode": "uniform",
         "binSize": 1,
@@ -2380,9 +2380,9 @@
         "cuts": [],
         "aggFunction": "mean",
         "out": {
-          "binnedx": 910,
-          "binnedy_908": 911,
-          "binnedy_909": 912
+          "binnedx": 913,
+          "binnedy_911": 914,
+          "binnedy_912": 915
         }
       },
       "refTPId": null
@@ -2394,7 +2394,7 @@
   "notes": [
     {
       "id": "note_84",
-      "text": "Puts every row of two datasets, A and B, onto one time column sorted by time, without matching or merging: rows that share a time stay separate rows (A's first). Use it when two recordings have different clocks or sampling rates (for example 15 min hive sensors and hourly weather), which would otherwise be paired by row position downstream. Value columns with the same name (case and spacing ignored) are the same measurement and share one column, A's values on A's rows and B's on B's; under 'Which column does each B column go into?' any B column can join another A column or get its own column, and every other column is blank on the other dataset's rows. A row with no time is left out and counted. Both time inputs must be times, or both numbers counting from the same origin in the same units; mixing them is refused. Shift B's clock (h) moves B's times before joining, for a logger on a different time zone. The joined time takes A's time zone, which the summary names, and the node warns when A and B are in different zones. An optional Source column says which dataset each row came from. The result usually has no two rows at the same time, so add Bin Data afterwards (the node offers a button when A and B rarely share a time) to average both onto a common grid; the demo joins hourly ambient temperature with a 15 min hive series that lags it by 2 h, bins both at 1 h, and plots them side by side. Leave both time inputs unwired to STACK instead: A's rows, then B's rows, each in their original order, with no time column and Source on by default; use it to concatenate results that are not on a time axis, such as two groups' Cosinor amplitudes, then compare them with Group Comparison or a boxplot using Source as the group. A time for only one dataset is refused. More than 2,000,000 rows is refused.",
+      "text": "Puts every row of two datasets, A and B, onto one time column sorted by time, without matching or merging: rows that share a time stay separate rows (A's first). Use it when two recordings have different clocks or sampling rates (for example 15 min hive sensors and hourly weather), which would otherwise be paired by row position downstream. Value columns with the same name (case and spacing ignored) are the same measurement and share one column, A's values on A's rows and B's on B's; under 'Which column does each B column go into?' any B column can join another A column or get its own column, and every other column is blank on the other dataset's rows. A row with no time is left out and counted. Both time inputs must be times, or both numbers counting from the same origin in the same units; mixing them is refused. Times in different zones line up by themselves, daylight saving included, once each time column has its zone (set at import or in the column's Properties); Shift B's clock (h) moves B's times before joining, for a logger whose clock was simply off, and the node warns when a shift is set between columns in different zones. The joined time takes A's time zone, which the summary names. An optional Source column says which dataset each row came from. The result usually has no two rows at the same time, so add Bin Data afterwards (the node offers a button when A and B rarely share a time) to average both onto a common grid; the demo joins hourly ambient temperature with a 15 min hive series that lags it by 2 h, bins both at 1 h, and plots them side by side. Leave both time inputs unwired to STACK instead: A's rows, then B's rows, each in their original order, with no time column and Source on by default; use it to concatenate results that are not on a time axis, such as two groups' Cosinor amplitudes, then compare them with Group Comparison or a boxplot using Source as the group. A time for only one dataset is refused. More than 2,000,000 rows is refused.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -2427,19 +2427,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_903": {
+    "data_906": {
       "x": 60,
       "y": 314
     },
-    "data_904": {
+    "data_907": {
       "x": 60,
       "y": 814
     },
-    "data_905": {
+    "data_908": {
       "x": 60,
       "y": 1314
     },
-    "data_906": {
+    "data_909": {
       "x": 60,
       "y": 1814
     },
@@ -2520,5 +2520,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

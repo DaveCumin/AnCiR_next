@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "917": [
+    "920": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -52,7 +52,7 @@
       "2024-01-03T00:00:00.000Z",
       "2024-01-03T01:00:00.000Z"
     ],
-    "918": [
+    "921": [
       10,
       11,
       12,
@@ -104,7 +104,7 @@
       58,
       59
     ],
-    "919": [
+    "922": [
       100,
       99,
       98,
@@ -156,7 +156,7 @@
       52,
       51
     ],
-    "920": [
+    "923": [
       1704067200000,
       1704070800000,
       1704074400000,
@@ -258,7 +258,7 @@
       1704240000000,
       1704243600000
     ],
-    "921": [
+    "924": [
       "Wide To Long input 2",
       "Wide To Long input 2",
       "Wide To Long input 2",
@@ -360,7 +360,7 @@
       "Wide To Long input 3",
       "Wide To Long input 3"
     ],
-    "922": [
+    "925": [
       10,
       11,
       12,
@@ -465,9 +465,9 @@
   },
   "data": [
     {
-      "id": 917,
+      "id": 920,
       "name": "Wide To Long input 1",
-      "data": 917,
+      "data": 920,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -477,45 +477,11 @@
       "processes": []
     },
     {
-      "id": 918,
-      "name": "Wide To Long input 2",
-      "data": 918,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 919,
-      "name": "Wide To Long input 3",
-      "data": 919,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 920,
-      "name": "time_96",
-      "data": 920,
-      "type": "time",
-      "timeFormat": null,
-      "tableProcessGUId": "acad5aa0-5341-4c45-b31f-76c81f27f33c",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 921,
-      "name": "category_96",
+      "name": "Wide To Long input 2",
       "data": 921,
-      "type": "category",
-      "tableProcessGUId": "acad5aa0-5341-4c45-b31f-76c81f27f33c",
+      "type": "number",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -523,10 +489,44 @@
     },
     {
       "id": 922,
-      "name": "value_96",
+      "name": "Wide To Long input 3",
       "data": 922,
       "type": "number",
-      "tableProcessGUId": "acad5aa0-5341-4c45-b31f-76c81f27f33c",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 923,
+      "name": "time_96",
+      "data": 923,
+      "type": "time",
+      "timeFormat": null,
+      "tableProcessGUId": "9d39fd60-4cc7-4770-928a-3c00a03321d0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 924,
+      "name": "category_96",
+      "data": 924,
+      "type": "category",
+      "tableProcessGUId": "9d39fd60-4cc7-4770-928a-3c00a03321d0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 925,
+      "name": "value_96",
+      "data": 925,
+      "type": "number",
+      "tableProcessGUId": "9d39fd60-4cc7-4770-928a-3c00a03321d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -568,12 +568,12 @@
       },
       "plot": {
         "columnRefs": [
-          917,
-          918,
-          919,
           920,
           921,
-          922
+          922,
+          923,
+          924,
+          925
         ],
         "showCol": [
           true,
@@ -596,19 +596,19 @@
       "name": "WideToLong",
       "displayName": "Wide To Long",
       "args": {
-        "timeIN": 917,
+        "timeIN": 920,
         "valueColIds": [
-          918,
-          919
+          921,
+          922
         ],
         "out": {
-          "time": 920,
-          "category": 921,
-          "value": 922
+          "time": 923,
+          "category": 924,
+          "value": 925
         },
         "_inputLabels": {
-          "918": "Wide To Long input 2",
-          "919": "Wide To Long input 3"
+          "921": "Wide To Long input 2",
+          "922": "Wide To Long input 3"
         }
       },
       "refTPId": null
@@ -653,15 +653,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_917": {
+    "data_920": {
       "x": 60,
       "y": 314
     },
-    "data_918": {
+    "data_921": {
       "x": 60,
       "y": 814
     },
-    "data_919": {
+    "data_922": {
       "x": 60,
       "y": 1314
     },
@@ -738,5 +738,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }

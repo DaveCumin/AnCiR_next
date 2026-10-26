@@ -59,9 +59,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 913,
+								"id": 916,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -72,9 +72,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 914,
-								"name": "binnedy_908_95",
-								"refId": 911,
+								"id": 917,
+								"name": "binnedy_911_95",
+								"refId": 914,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -95,9 +95,9 @@
 						},
 						{
 							"x": {
-								"id": 915,
+								"id": 918,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -108,9 +108,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 916,
-								"name": "binnedy_909_95",
-								"refId": 912,
+								"id": 919,
+								"name": "binnedy_912_95",
+								"refId": 915,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -147,12 +147,12 @@
 				}
 			},
 			"columnLabels": {
-				"907": "Time",
-				"908": "ambient temp",
-				"909": "hive temp",
-				"910": "Binned: x",
-				"911": "Binned: ambient temp",
-				"912": "Binned: hive temp"
+				"910": "Time",
+				"911": "ambient temp",
+				"912": "hive temp",
+				"913": "Binned: x",
+				"914": "Binned: ambient temp",
+				"915": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -287,9 +287,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 913,
+								"id": 916,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -300,9 +300,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 914,
-								"name": "binnedy_908_95",
-								"refId": 911,
+								"id": 917,
+								"name": "binnedy_911_95",
+								"refId": 914,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -323,9 +323,9 @@
 						},
 						{
 							"x": {
-								"id": 915,
+								"id": 918,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -336,9 +336,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 916,
-								"name": "binnedy_909_95",
-								"refId": 912,
+								"id": 919,
+								"name": "binnedy_912_95",
+								"refId": 915,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -375,12 +375,12 @@
 				}
 			},
 			"columnLabels": {
-				"907": "Time",
-				"908": "ambient temp",
-				"909": "hive temp",
-				"910": "Binned: x",
-				"911": "Binned: ambient temp",
-				"912": "Binned: hive temp"
+				"910": "Time",
+				"911": "ambient temp",
+				"912": "hive temp",
+				"913": "Binned: x",
+				"914": "Binned: ambient temp",
+				"915": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -515,9 +515,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 913,
+								"id": 916,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -528,9 +528,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 914,
-								"name": "binnedy_908_95",
-								"refId": 911,
+								"id": 917,
+								"name": "binnedy_911_95",
+								"refId": 914,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -551,9 +551,9 @@
 						},
 						{
 							"x": {
-								"id": 915,
+								"id": 918,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -564,9 +564,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 916,
-								"name": "binnedy_909_95",
-								"refId": 912,
+								"id": 919,
+								"name": "binnedy_912_95",
+								"refId": 915,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -603,12 +603,12 @@
 				}
 			},
 			"columnLabels": {
-				"907": "Time",
-				"908": "ambient temp",
-				"909": "hive temp",
-				"910": "Binned: x",
-				"911": "Binned: ambient temp",
-				"912": "Binned: hive temp"
+				"910": "Time",
+				"911": "ambient temp",
+				"912": "hive temp",
+				"913": "Binned: x",
+				"914": "Binned: ambient temp",
+				"915": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -742,9 +742,9 @@
 					"data": [
 						{
 							"x": {
-								"id": 913,
+								"id": 916,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -755,9 +755,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 914,
-								"name": "binnedy_908_95",
-								"refId": 911,
+								"id": 917,
+								"name": "binnedy_911_95",
+								"refId": 914,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -778,9 +778,9 @@
 						},
 						{
 							"x": {
-								"id": 915,
+								"id": 918,
 								"name": "binnedx_95",
-								"refId": 910,
+								"refId": 913,
 								"type": "time",
 								"timeFormat": "",
 								"originTime_ms": 1719792000000,
@@ -791,9 +791,9 @@
 								"processes": []
 							},
 							"y": {
-								"id": 916,
-								"name": "binnedy_909_95",
-								"refId": 912,
+								"id": 919,
+								"name": "binnedy_912_95",
+								"refId": 915,
 								"type": "number",
 								"tableProcessGUId": "",
 								"producerNodeId": null,
@@ -830,12 +830,12 @@
 				}
 			},
 			"columnLabels": {
-				"907": "Time",
-				"908": "ambient temp",
-				"909": "hive temp",
-				"910": "Binned: x",
-				"911": "Binned: ambient temp",
-				"912": "Binned: hive temp"
+				"910": "Time",
+				"911": "ambient temp",
+				"912": "hive temp",
+				"913": "Binned: x",
+				"914": "Binned: ambient temp",
+				"915": "Binned: hive temp"
 			},
 			"expected": {
 				"axes": {
@@ -1959,9 +1959,9 @@
 				}
 			},
 			"columnLabels": {
-				"1009": "Peak period (h)",
-				"1010": "Peak power",
-				"1011": "Peak p (family-wise)"
+				"1012": "Peak period (h)",
+				"1013": "Peak power",
+				"1014": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2116,9 +2116,9 @@
 				}
 			},
 			"columnLabels": {
-				"1016": "Peak period (h)",
-				"1017": "Peak power",
-				"1018": "Peak p (family-wise)"
+				"1019": "Peak period (h)",
+				"1020": "Peak power",
+				"1021": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2282,9 +2282,9 @@
 				}
 			},
 			"columnLabels": {
-				"1023": "Peak period (h)",
-				"1024": "Peak power",
-				"1025": "Peak p (family-wise)"
+				"1026": "Peak period (h)",
+				"1027": "Peak power",
+				"1028": "Peak p (family-wise)"
 			},
 			"expected": {
 				"axes": {
@@ -2443,9 +2443,9 @@
 				}
 			},
 			"columnLabels": {
-				"1030": "Peak period (h)",
-				"1031": "Peak frequency (1/h)",
-				"1032": "Peak magnitude"
+				"1033": "Peak period (h)",
+				"1034": "Peak frequency (1/h)",
+				"1035": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2608,9 +2608,9 @@
 				}
 			},
 			"columnLabels": {
-				"1037": "Peak period (h)",
-				"1038": "Peak frequency (1/h)",
-				"1039": "Peak magnitude"
+				"1040": "Peak period (h)",
+				"1041": "Peak frequency (1/h)",
+				"1042": "Peak magnitude"
 			},
 			"expected": {
 				"axes": {
@@ -2802,7 +2802,7 @@
 					"overlays": []
 				}
 			},
-			"columnLabels": { "1044": "Peak lag (h)", "1045": "Peak correlation (r)" },
+			"columnLabels": { "1047": "Peak lag (h)", "1048": "Peak correlation (r)" },
 			"expected": {
 				"axes": {
 					"left": {

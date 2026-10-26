@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "c72a8fdf-a547-47bc-90f3-7160c1488405",
+      "tableProcessGUId": "bb8f07a0-5af6-478e-8e42-f37e21b40d6b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "c72a8fdf-a547-47bc-90f3-7160c1488405",
+      "tableProcessGUId": "bb8f07a0-5af6-478e-8e42-f37e21b40d6b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -451,7 +451,7 @@
   "notes": [
     {
       "id": "note_5",
-      "text": "WORKFLOW: compare two groups. The most common inferential question: is group A different from group B? Compare groups on 'auto' inspects each group for normality (Jarque-Bera) and equal variance and PICKS the test for you: a Welch t-test when both groups look roughly normal, a Mann-Whitney U (rank) test when they do not; it surfaces the choice and any assumption warnings so the decision is visible, not hidden. Read the output in order: (1) which test fired and why, (2) the p-value against your α, (3) the DIRECTION and size of the difference (the boxplot shows the medians, spread and any outliers, and the significance bar marks a detected difference). A significant p tells you the groups differ; the boxplot tells you by how much and whether it matters. Student (1908); Mann & Whitney (1947); Welch (1947).",
+      "text": "WORKFLOW: compare two groups. The most common inferential question: is group A different from group B? Compare groups on 'auto' runs a Welch t-test for two groups and names the test it ran. It does not switch test for you: it checks each group for normality (Jarque-Bera) and equal variance and warns when a group looks non-normal or the variances differ a lot, so the assumptions are visible, not hidden. If it warns, set the method to Mann-Whitney U (a rank test). Read the output in order: (1) which test fired and why, (2) the p-value against your α, (3) the DIRECTION and size of the difference (the boxplot shows the medians, spread and any outliers, and the significance bar marks a detected difference). A significant p tells you the groups differ; the boxplot tells you by how much and whether it matters. Student (1908); Mann & Whitney (1947); Welch (1947).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -569,5 +569,5 @@
       "No"
     ]
   },
-  "version": "β.82.55"
+  "version": "β.82.64"
 }
