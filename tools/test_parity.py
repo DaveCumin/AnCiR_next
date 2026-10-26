@@ -283,6 +283,22 @@ def run_correlogram_download(fx, js):
     return {"headers": headers, "rows": rows}
 
 
+def run_histogram_download(fx, js):
+    """The histogram's plot-data rows through the Python EXPORT path (the builder
+    export_plot_data calls), on Columns holding the values the JS emitter recorded."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    raw_data, cols, data = {}, {}, []
+    for i, s in enumerate(js["inputs"]["series"]):
+        cid = i + 1
+        raw_data[cid] = list(s["values"])
+        cols[cid] = rt.Column(id=cid, name=f"h{i}", type="number", data=cid, raw_data=raw_data)
+        data.append({"column": {"refId": cid}, **s.get("settings", {})})
+    headers, rows = fn({"type": "histogram", "plot": {"data": data}}, cols)
+    return {"headers": headers, "rows": rows}
+
+
 def run_pure_util(fx, js):
     """Call a pure numeric util (dispatched by name via getattr) with the SAME
     input arrays the JS emitter used, plus any extra positional pyArgs. Returns
@@ -519,6 +535,11 @@ def _check_fixture(fx, js_results):
 
     elif fx["kind"] == "plotCompute" and fx.get("jsFn") == "correlogramDownloadData":
         py = run_correlogram_download(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
+
+    elif fx["kind"] == "plotCompute" and fx.get("jsFn") == "histogramDownloadData":
+        py = run_histogram_download(fx, js)
         diff = _deep_diff(py, js["outputs"], tol)
         assert diff is None, f"{fx['id']} differs at {diff}"
 

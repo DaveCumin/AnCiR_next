@@ -679,6 +679,87 @@ describe('welchTTest extra edge cases', () => {
 	});
 });
 
+// STAT-28: the exact null distribution for small samples without ties, chosen as
+// scipy.stats.mannwhitneyu(method='auto') chooses it (either n <= 8 and no ties), else the
+// tie-corrected normal approximation with continuity correction. Reference p from scipy 1.18
+// mannwhitneyu(a, b) with its defaults; U is the smaller of U1 and U2.
+describe('mannWhitneyTwoGroups exact vs asymptotic p (scipy method="auto")', () => {
+	const grp = (name, values) => ({ name, values, n: values.length });
+	const CASES = [
+		[
+			'5 v 6, separated',
+			[1.1, 2.3, 3.2, 4.8, 5.0],
+			[6.1, 7.2, 8.3, 9.4, 10.5, 11.6],
+			0,
+			0.004329004329004329,
+			'exact'
+		],
+		[
+			'3 v 20',
+			[3.1, 1.2, 7.7],
+			[
+				2.5, 4.4, 5.6, 6.3, 8.8, 9.9, 10.1, 11.4, 12.0, 13.3, 14.6, 15.2, 16.8, 17.1, 18.9, 19.5,
+				20.2, 21.7, 22.3, 23.6
+			],
+			5,
+			0.018068887634105024,
+			'exact'
+		],
+		[
+			'8 v 8, interleaved',
+			[1, 4, 6, 9, 12, 13, 15, 17],
+			[2, 3, 5, 7, 8, 10, 11, 14],
+			24,
+			0.4418026418026417,
+			'exact'
+		],
+		['1 v 2', [0.5], [1.5, 2.5], 0, 0.6666666666666666, 'exact'],
+		[
+			'4 v 12',
+			[10, 20, 30, 40],
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13],
+			3,
+			0.007692307692307693,
+			'exact'
+		],
+		['ties: asymptotic', [1, 2, 3], [1, 4, 5], 2.5, 0.5065551690490403, 'asymptotic'],
+		[
+			'9 v 9: asymptotic',
+			[1, 2, 3, 4, 5, 6, 7, 8, 9],
+			[3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5],
+			21,
+			0.09339767452879258,
+			'asymptotic'
+		]
+	];
+	it.each(CASES)('%s', (_label, a, b, u, p, method) => {
+		const res = mannWhitneyTwoGroups(grp('A', a), grp('B', b));
+		expect(res.valid).toBe(true);
+		expect(res.u).toBeCloseTo(u, 12);
+		expect(res.pValue).toBeCloseTo(p, 12);
+		expect(res.pMethod).toBe(method);
+	});
+
+	it('the exact p never exceeds 1 (U at the centre of its distribution)', () => {
+		const res = mannWhitneyTwoGroups(grp('A', [1, 4]), grp('B', [2, 3]));
+		expect(res.pMethod).toBe('exact');
+		expect(res.pValue).toBe(1);
+	});
+
+	it('the pairwise post hoc after Kruskal-Wallis uses the same rule', () => {
+		const pairs = pairwiseMannWhitney(
+			[
+				grp('A', [1.1, 2.3, 3.2, 4.8, 5.0]),
+				grp('B', [6.1, 7.2, 8.3, 9.4, 10.5, 11.6]),
+				grp('C', [20, 21, 22])
+			],
+			0.05
+		);
+		expect(pairs[0].pValue).toBeCloseTo(0.004329004329004329, 12);
+		expect(pairs[0].pMethod).toBe('exact');
+	});
+});
+
 describe('mannWhitneyTwoGroups ties', () => {
 	it('handles tied values across groups without throwing', () => {
 		const a = { name: 'A', values: [1, 1, 2, 2], n: 4, mean: 1.5 };

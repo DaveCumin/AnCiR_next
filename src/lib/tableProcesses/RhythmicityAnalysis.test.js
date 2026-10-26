@@ -125,7 +125,16 @@ describe('getOutputKeys', () => {
 
 describe('getStatKeys', () => {
 	it('returns peak stats for periodogram', () => {
-		expect(getStatKeys({ analysis: 'periodogram' })).toEqual(['peak_period', 'peak_power']);
+		// Lomb-Scargle (the default) has Baluev's family-wise peak p; Enright has none.
+		expect(getStatKeys({ analysis: 'periodogram' })).toEqual([
+			'peak_period',
+			'peak_power',
+			'peak_pvalue'
+		]);
+		expect(getStatKeys({ analysis: 'periodogram', pgMethod: 'Enright' })).toEqual([
+			'peak_period',
+			'peak_power'
+		]);
 	});
 
 	it('adds the family-wise peak_pvalue for a Chi-squared periodogram (SPEC-9)', () => {
@@ -269,7 +278,7 @@ describe('rhythmicityanalysis', () => {
 		expect(result.y_results[2]).toBeDefined();
 		expect(result.y_results[3]).toBeDefined();
 		expect(result.outputKeys).toEqual(['period', 'power']);
-		expect(result.statKeys).toEqual(['peak_period', 'peak_power']);
+		expect(result.statKeys).toEqual(['peak_period', 'peak_power', 'peak_pvalue']);
 	});
 
 	it('skips rows where x or y is NaN', async () => {

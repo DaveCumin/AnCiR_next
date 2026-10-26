@@ -201,21 +201,16 @@ export function permutationTest(x, y, fitFn, options = {}) {
 	const permute = makePermuter(scheme, blockLength, y.length);
 	if (!permute) return blockUnavailable(seed);
 
-	// Fit original data
+	// Fit original data. A fit that fails returns null (fitCurveModel) or throws: either way
+	// there is no observed statistic, so no test (the node reports the failed fit itself).
 	let originalFit;
 	try {
 		originalFit = fitFn(x, y);
 	} catch (e) {
 		console.error('Permutation test: Failed to fit original data', e);
-		return {
-			pValue: NaN,
-			observedStat: NaN,
-			permutedStats: [],
-			nPermutations: 0,
-			significant: false,
-			error: true
-		};
+		originalFit = null;
 	}
+	if (!originalFit) return observedFitFailed(seed);
 
 	const observedStat = getStatistic(originalFit, statistic);
 	const isMinimizationStat = statistic === 'rmse';
@@ -299,21 +294,16 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 	const permute = makePermuter(scheme, blockLength, y.length);
 	if (!permute) return blockUnavailable(seed);
 
-	// Fit original data
+	// Fit original data. A fit that fails returns null (fitCurveModel) or throws: either way
+	// there is no observed statistic, so no test (the node reports the failed fit itself).
 	let originalFit;
 	try {
 		originalFit = fitFn(x, y);
 	} catch (e) {
 		console.error('Permutation test: Failed to fit original data', e);
-		return {
-			pValue: NaN,
-			observedStat: NaN,
-			permutedStats: [],
-			nPermutations: 0,
-			significant: false,
-			error: true
-		};
+		originalFit = null;
 	}
+	if (!originalFit) return observedFitFailed(seed);
 
 	const observedStat = getStatistic(originalFit, statistic);
 	const isMinimizationStat = statistic === 'rmse';
@@ -382,6 +372,19 @@ function makePermuter(scheme, blockLength, n) {
 	const L = Math.round(Number(blockLength));
 	if (!(L >= 2) || 2 * L > n) return null;
 	return (arr, rng) => blockPermuteSeeded(arr, L, rng);
+}
+
+/** The result when the observed fit failed: no p (NaN), no null distribution. */
+function observedFitFailed(seed) {
+	return {
+		pValue: NaN,
+		observedStat: NaN,
+		permutedStats: [],
+		nPermutations: 0,
+		significant: false,
+		seed,
+		error: true
+	};
 }
 
 function blockUnavailable(seed) {

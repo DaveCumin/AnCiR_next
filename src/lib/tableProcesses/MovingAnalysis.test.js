@@ -70,7 +70,16 @@ beforeEach(() => {
 
 describe('getStatKeys', async () => {
 	it('returns periodogram stats', async () => {
-		expect(getStatKeys({ analysis: 'periodogram' })).toEqual(['peak_period', 'peak_power']);
+		// Lomb-Scargle (the default) has Baluev's family-wise peak p; Enright has none.
+		expect(getStatKeys({ analysis: 'periodogram' })).toEqual([
+			'peak_period',
+			'peak_power',
+			'peak_pvalue'
+		]);
+		expect(getStatKeys({ analysis: 'periodogram', pgMethod: 'Enright' })).toEqual([
+			'peak_period',
+			'peak_power'
+		]);
 	});
 
 	it('returns fixed cosinor stats with expected harmonic keys', async () => {

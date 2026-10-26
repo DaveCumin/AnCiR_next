@@ -107,12 +107,14 @@
 		const minN = Math.min(...rows.map((row) => row.n));
 		if (Number.isFinite(minN) && minN < 10) {
 			warnings.push(
-				`Small sample: at least one pair has only n = ${minN} usable points; p-values are unreliable below ~10.`
+				method === 'spearman'
+					? `Small sample: at least one pair has only n = ${minN} usable points. Without ties the Spearman p is exact there (every ranking counted), but the power to detect a correlation is low.`
+					: `Small sample: at least one pair has only n = ${minN} usable points; p-values are unreliable below ~10.`
 			);
 		}
 		if (method === 'spearman' && rows.some((row) => row.tiesX || row.tiesY)) {
 			warnings.push(
-				'Tied values are present; the Spearman p-value is approximate when there are many ties.'
+				'Tied values are present; the Spearman p-value is then the t approximation (the exact p needs untied data), which is approximate when there are many ties.'
 			);
 		}
 		if (rows.some((row) => Number.isNaN(row.r))) {

@@ -2,8 +2,8 @@
 	// @ts-nocheck
 	// Describe data — per-column summary statistics.
 	//
-	// Many-column yIN → one row per variable: n, mean, median, sd, min, max, range, Q1, Q3,
-	// IQR, skewness, excess kurtosis. Output as fixed columns (a `variable` name column plus one
+	// Many-column yIN → one row per variable: n, mean, median, sd, SEM, the 95% CI of the mean
+	// (t-based), min, max, range, Q1, Q3, IQR, skewness, excess kurtosis. Output as fixed columns (a `variable` name column plus one
 	// column per statistic), tidy long form. Quick-plot draws a histogram of each input column.
 	// Maths is the pure, unit-tested utils/describeStats.js (scipy-matched moments).
 	import { bakeInputLabels } from '$lib/core/columnLabels.js';
@@ -118,6 +118,7 @@
 <script>
 	// @ts-nocheck
 	import { onMount, untrack } from 'svelte';
+	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
@@ -134,7 +135,7 @@
 	);
 
 	// A compact set for the in-node preview; the full table has every column.
-	const PREVIEW_STATS = ['n', 'mean', 'median', 'sd', 'min', 'max'];
+	const PREVIEW_STATS = ['n', 'mean', 'median', 'sd', 'sem', 'min', 'max'];
 	const getTableData = () => ({
 		headers: OUT_KEYS,
 		rows: (result.rows ?? []).map((r) => OUT_KEYS.map((k) => r[k]))
@@ -165,6 +166,12 @@
 	}
 	onMount(() => {
 		mounted = true;
+		// A session saved before an output existed (sem, ciLow, ciHigh came in STAT-36) has no
+		// column for it: create the missing ones (never removes any), then compute so they fill.
+		if (syncMetricOutColumns(p, OUT_KEYS, (k) => OUT_KEYS.includes(k))) {
+			recompute();
+			return;
+		}
 		// Nothing changed since this node last ran? Put the previous result back
 		// rather than recomputing: result lives only in this component, so it
 		// was lost when the view switch destroyed the last instance.

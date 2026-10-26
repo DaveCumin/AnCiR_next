@@ -64,7 +64,7 @@ const CASES = [
 	['TrendFit', 'trendfit', {}, 'model', 'polynomial'],
 	['TrendFit', 'trendfit', { model: 'polynomial' }, 'polyDegree', 3],
 	['MovingAnalysis', 'movinganalysis', {}, 'analysis', 'cosinor'],
-	['MovingAnalysis', 'movinganalysis', {}, 'pgMethod', 'Chi-squared'],
+	['MovingAnalysis', 'movinganalysis', {}, 'pgMethod', 'Enright'],
 	['MovingAnalysis', 'movinganalysis', { analysis: 'cosinor' }, 'useFixedPeriod', false],
 	['MovingAnalysis', 'movinganalysis', { analysis: 'cosinor' }, 'nHarmonics', 2],
 	[

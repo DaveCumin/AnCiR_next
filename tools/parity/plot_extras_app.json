@@ -7586,7 +7586,7 @@
 				]
 			},
 			"columnLabels": {
-				"420": "Peak period (h)",
+				"420": "Peak period (x units)",
 				"421": "Peak power",
 				"422": "Power: noise 1",
 				"423": "Power: noise 2",
@@ -7848,7 +7848,7 @@
 				]
 			},
 			"columnLabels": {
-				"348": "Peak period (h)",
+				"348": "Peak period (x units)",
 				"349": "Peak power",
 				"350": "Power: intact",
 				"351": "Power: arrhythmic",
@@ -9382,7 +9382,7 @@
 				}
 			},
 			"columnLabels": {
-				"348": "Peak period (h)",
+				"348": "Peak period (x units)",
 				"349": "Peak power",
 				"350": "Power: intact",
 				"351": "Power: arrhythmic"
@@ -10812,7 +10812,7 @@
 				}
 			},
 			"columnLabels": {
-				"348": "Peak period (h)",
+				"348": "Peak period (x units)",
 				"349": "Peak power",
 				"350": "Power: intact",
 				"351": "Power: arrhythmic",

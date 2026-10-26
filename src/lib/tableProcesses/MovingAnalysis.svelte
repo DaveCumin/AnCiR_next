@@ -126,7 +126,13 @@
 				{ name: 'xIN', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
 			],
-			outputs: [{ name: 'stats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'stats_' }]
+			// The real keys: `movex`, then one `<yId>_<stat>` per wired y and statistic of the
+			// chosen analysis (getStatKeys). The second is a placeholder name: its keys start with
+			// the y column's id, so there is no fixed prefix to declare.
+			outputs: [
+				{ name: 'movex', kind: 'column', cardinality: 'one' },
+				{ name: '<colId>_<stat>', kind: 'column', cardinality: 'many' }
+			]
 		}
 	};
 
@@ -283,7 +289,7 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { useBinSizeAuto, stopFollowingSampling } from '$lib/tableProcesses/binSizeAuto.svelte.js';
-	import { periodInputProps } from '$lib/utils/periodUnits.js';
+	import { periodInputProps, periodUnitForColumn } from '$lib/utils/periodUnits.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
@@ -316,6 +322,9 @@
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	useBinSizeAuto(p, () => xIN_col);
+	// The controls are in the units of x: hours for a time column, its own numbers otherwise.
+	let xUnit = $derived(periodUnitForColumn(xIN_col));
+	let perXUnit = $derived(xUnit === 'h' ? 'cycles/h' : 'cycles per x unit');
 	let xIsTime = $derived(xIN_col?.type === 'time');
 
 	let currentStatKeys = $derived.by(() => getStatKeys(p.args));
@@ -675,10 +684,10 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Window</span></div>
 	<div class="control-input-horizontal">
-		<ControlInput label="Window size (h)">
+		<ControlInput label={`Window size (${xUnit})`}>
 			<NumberWithUnits bind:value={p.args.windowSize} min="0.1" step="0.5" />
 		</ControlInput>
-		<ControlInput label="Step size (h)">
+		<ControlInput label={`Step size (${xUnit})`}>
 			<NumberWithUnits bind:value={p.args.stepSize} min="0.1" step="0.5" />
 		</ControlInput>
 		<div class="control-input">
@@ -755,7 +764,7 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlGroup label="Period range (h)">
+			<ControlGroup label={`Period range (${xUnit})`}>
 				<ControlInput label="Min">
 					<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
 				</ControlInput>
@@ -769,7 +778,7 @@
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<ControlInput label="Bin size (h)">
+				<ControlInput label={`Bin size (${xUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.pgBinSize}
 						onInput={() => stopFollowingSampling(p.args)}
@@ -798,7 +807,7 @@
 		</div>
 		{#if p.args.useFixedPeriod}
 			<div class="control-input-horizontal">
-				<ControlInput label="Period (h)">
+				<ControlInput label={`Period (${xUnit})`}>
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 				</ControlInput>
 				<ControlInput label="N harmonics">
@@ -814,33 +823,33 @@
 		{/if}
 	{:else if p.args.analysis === 'npcra'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Epoch (h)">
+			<ControlInput label={`Epoch (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.npcraEpochHours} min="0.01" step="0.25" />
 			</ControlInput>
-			<ControlInput label="Period (h)">
+			<ControlInput label={`Period (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.npcraPeriod} min="1" step="1" />
 			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlInput label="M window (h)">
+			<ControlInput label={`M window (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.npcraMWindow} min="1" step="1" />
 			</ControlInput>
-			<ControlInput label="L window (h)">
+			<ControlInput label={`L window (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.npcraLWindow} min="1" step="1" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Frequency step (cycles/h; 0 = auto)">
+			<ControlInput label={`Frequency step (${perXUnit}; 0 = auto)`}>
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Min lag (h)">
+			<ControlInput label={`Min lag (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
 			</ControlInput>
-			<ControlInput label="Max lag (h; 0 = half window)">
+			<ControlInput label={`Max lag (${xUnit}; 0 = half window)`}>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
 			</ControlInput>
 		</div>
@@ -853,7 +862,7 @@
 				</label>
 			</div>
 			{#if p.args.useFixedPeriod}
-				<ControlInput label="Period (h)">
+				<ControlInput label={`Period (${xUnit})`}>
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 				</ControlInput>
 			{/if}
@@ -900,7 +909,7 @@
 					</label>
 				</div>
 				{#if p.args.useFixedPeriod}
-					<ControlInput label="Period (h)">
+					<ControlInput label={`Period (${xUnit})`}>
 						<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 					</ControlInput>
 				{/if}

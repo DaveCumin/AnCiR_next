@@ -902,10 +902,18 @@ def run_periodogram_calculation(params, on_progress=None):
     if method != 'Lomb-Scargle':
         periods = _fold_grid(periods, dt, p_min, p_max)
     pvals = None
+    ls_stats = {}
     if method == 'Lomb-Scargle':
         powers = _lomb_scargle(t, y, periods)
         threshold = None
         dfs = None
+        # periodogram.js: the sample count and the population variance of the sample times,
+        # for the peak's family-wise p (lomb_scargle_familywise_p).
+        tt, _yy = _pgram_pairs(t, y)
+        tt = [float(v) for v in tt]
+        mt = sum(tt) / len(tt) if tt else float('nan')
+        ls_stats = {'nObs': len(tt),
+                    'timeVar': (sum((v - mt) ** 2 for v in tt) / len(tt)) if tt else float('nan')}
     elif method == 'Chi-squared':
         alpha = float(params.get('alpha', params.get('chiSquaredAlpha', 0.05)))
         powers, dfs, threshold, pvals = _chi_squared_pgram(t, y, periods, dt, alpha)
@@ -917,7 +925,7 @@ def run_periodogram_calculation(params, on_progress=None):
     keep = [i for i, v in enumerate(powers) if v == v and periods[i] == periods[i]]
     pick = (lambda a: None if a is None else [a[i] for i in keep])
     return {'x': pick(periods), 'y': pick(powers), 'threshold': pick(threshold),
-            'df': pick(dfs), 'pvalue': pick(pvals)}
+            'df': pick(dfs), 'pvalue': pick(pvals), **ls_stats}
 
 
 def periodogram_peak_index(res, candidates=None):
@@ -941,9 +949,32 @@ def periodogram_peak_index(res, candidates=None):
     return best
 
 
-def peak_familywise_p(res, idx):
+def lomb_scargle_familywise_p(power, n, time_var, fmax):
+    """periodogramPeak.js lombScargleFamilywiseP: Baluev's (2008, MNRAS 385:1279) alias-free
+    false-alarm probability of the highest Lomb-Scargle peak in a band up to fmax, as astropy's
+    fap_baluev (normalization 'standard', z = 2 P / (N - 1) for the app's Horne-Baliunas P)."""
+    if not (n >= 5) or not (time_var > 0) or not (fmax > 0) or not _finite(power):
+        return float('nan')
+    z = min(1.0, max(0.0, 2 * power / (n - 1)))
+    nh, nk = n - 1, n - 3
+    fap_single = (1 - z) ** (nk / 2)
+    gam = math.sqrt(2 / nh) * math.exp(math.lgamma(nh / 2) - math.lgamma((nh - 1) / 2))
+    w = fmax * math.sqrt(4 * math.pi * time_var)
+    tau = gam * w * (1 - z) ** ((nk - 1) / 2) * math.sqrt(nh * z / 2)
+    return min(1.0, -math.expm1(-tau) + fap_single * math.exp(-tau))
+
+
+def peak_familywise_p(res, idx, candidates=None):
     """periodogram.js peakFamilywiseP (SPEC-6): 1 - (1 - p)^M at the peak, M the number of
-    folds with a statistic; NaN without a chi-squared p (Lomb-Scargle, Enright)."""
+    folds with a statistic; for a Lomb-Scargle result (nObs, timeVar) Baluev's false-alarm
+    probability over the band searched (lomb_scargle_familywise_p); NaN for Enright."""
+    if _finite(res.get('nObs')):
+        x = res.get('x') or []
+        idxs = range(len(x)) if candidates is None else candidates
+        pos = [x[i] for i in idxs if x[i] > 0]
+        if idx is None or idx < 0 or not pos:
+            return float('nan')
+        return lomb_scargle_familywise_p(res['y'][idx], res['nObs'], res['timeVar'], 1 / min(pos))
     pv = res.get('pvalue') or []
     M = sum(1 for v in pv if _finite(v))
     if not M or idx < 0 or not _finite(pv[idx]):
@@ -1480,32 +1511,61 @@ def _rw_eval(t, p):
     return M + A * math.tanh(k * (math.sin(w * t + phi) - math.cos(math.pi * d)))
 
 
-def _rw_normal_eqs(t, x, p, free):
-    nf = len(free)
+# The LM normal equations below are evaluated on whole arrays (they used to loop over the
+# points in Python, which made a permutation test of 999 refits take hours). They stay
+# bitwise identical to that loop, and so to its parity with the app: every element sees the
+# same IEEE operations in the same order, np.exp / np.sin / np.cos return exactly what
+# math.exp / math.sin / math.cos do (np.tanh does not, so math.tanh is mapped over the
+# array), and each sum over the points is a running sum in point order (np.cumsum, which
+# accumulates left to right; np.sum would sum pairwise).
+_MATH_TANH = np.frompyfunc(math.tanh, 1, 1)
+
+
+def _np_tanh_exact(z):
+    """math.tanh over an array, bit for bit."""
+    return _MATH_TANH(z).astype(float)
+
+
+def _np_sig_js(z):
+    """_sig_js over an array: 1 / (1 + exp(-z)), an overflowing exp giving 0, as in JS."""
+    with np.errstate(over='ignore'):
+        return 1.0 / (1.0 + np.exp(-z))
+
+
+def _seq_normal_eqs(row, r):
+    """J'J, J'r and r'r from the Jacobian columns `row` (arrays over the points) and the
+    residuals `r`, each a running sum in point order exactly as the per-point loops summed
+    them: JtJ[a][b] += row[a] * row[b], JtR[a] += row[a] * r, rss += r * r."""
+    nf = len(row)
+    pairs = [(a_, b_) for a_ in range(nf) for b_ in range(a_, nf)]
+    terms = np.empty((len(pairs) + nf + 1, r.size))
+    for i, (a_, b_) in enumerate(pairs):
+        terms[i] = row[a_] * row[b_]
+    for a_ in range(nf):
+        terms[len(pairs) + a_] = row[a_] * r
+    terms[-1] = r * r
+    tot = np.cumsum(terms, axis=1)[:, -1] if r.size else np.zeros(len(terms))
     JtJ = [[0.0] * nf for _ in range(nf)]
-    JtR = [0.0] * nf
-    rss = 0.0
+    for i, (a_, b_) in enumerate(pairs):
+        JtJ[a_][b_] = JtJ[b_][a_] = float(tot[i])
+    JtR = [float(v) for v in tot[len(pairs):len(pairs) + nf]]
+    return JtJ, JtR, float(tot[-1])
+
+
+def _rw_normal_eqs(t, x, p, free):
     _, A, k, w, phi, d = p
+    M = p[0]
     cpd, spd = math.cos(math.pi * d), math.sin(math.pi * d)
-    for ti, xi in zip(t, x):
-        r = xi - _rw_eval(ti, p)
-        rss += r * r
-        arg = w * ti + phi
-        ca, sa = math.cos(arg), math.sin(arg)
-        s_ = sa - cpd
-        th = math.tanh(k * s_)
-        sech2 = 1 - th * th
-        jf = (-1.0, -th, -A * s_ * sech2, -A * k * ti * ca * sech2, -A * k * ca * sech2,
-              -A * k * math.pi * spd * sech2)
-        row = [jf[i] for i in free]
-        for j in range(nf):
-            JtR[j] += row[j] * r
-            for m in range(j, nf):
-                JtJ[j][m] += row[j] * row[m]
-    for j in range(nf):
-        for m in range(j + 1, nf):
-            JtJ[m][j] = JtJ[j][m]
-    return JtJ, JtR, rss
+    ta = np.asarray(t, dtype=float)
+    arg = w * ta + phi
+    ca, sa = np.cos(arg), np.sin(arg)
+    s_ = sa - cpd
+    th = _np_tanh_exact(k * s_)
+    r = np.asarray(x, dtype=float) - (M + A * th)
+    sech2 = 1 - th * th
+    jf = (np.full(ta.size, -1.0), -th, -A * s_ * sech2, -A * k * ta * ca * sech2,
+          -A * k * ca * sech2, -A * k * math.pi * spd * sech2)
+    return _seq_normal_eqs([jf[i] for i in free], r)
 
 
 def _rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi):
@@ -1738,68 +1798,47 @@ def canonical_periodic_params(m):
 
 
 def _dl_ne_np(t, x, p, free):
-    nf = len(free)
-    JtJ = [[0.0] * nf for _ in range(nf)]
-    JtR = [0.0] * nf
-    rss = 0.0
-    _, A, k1, t1, k2, t2 = p[:6]
-    for ti, xi in zip(t, x):
-        r = xi - _dl_eval_np(ti, p)
-        rss += r * r
-        s1 = _sig_js(k1 * (ti - t1))
-        s2 = _sig_js(k2 * (ti - t2))
-        s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
-        jf = (-1.0, -(s1 - s2), -A * s1p * (ti - t1), A * k1 * s1p, A * s2p * (ti - t2),
-              -A * k2 * s2p)
-        row = [jf[i] for i in free]
-        for a_ in range(nf):
-            JtR[a_] += row[a_] * r
-            for b_ in range(a_, nf):
-                JtJ[a_][b_] += row[a_] * row[b_]
-    for a_ in range(nf):
-        for b_ in range(a_ + 1, nf):
-            JtJ[b_][a_] = JtJ[a_][b_]
-    return JtJ, JtR, rss
+    M, A, k1, t1, k2, t2 = p[:6]
+    ta = np.asarray(t, dtype=float)
+    s1 = _np_sig_js(k1 * (ta - t1))
+    s2 = _np_sig_js(k2 * (ta - t2))
+    r = np.asarray(x, dtype=float) - (M + A * (s1 - s2))
+    s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
+    jf = (np.full(ta.size, -1.0), -(s1 - s2), -A * s1p * (ta - t1), A * k1 * s1p,
+          A * s2p * (ta - t2), -A * k2 * s2p)
+    return _seq_normal_eqs([jf[i] for i in free], r)
 
 
 def _dl_ne_pu(t, x, q, free):
     """Periodic normal equations in the optimiser's (t1, u, T) coordinates."""
     m = _dl_to_model(q)
-    nf = len(free)
-    JtJ = [[0.0] * nf for _ in range(nf)]
-    JtR = [0.0] * nf
-    rss = 0.0
     _, A, k1, t1, k2, t2, T = m
     sg = _sig_js(q[5])
     jr = _dl_jrange(t, t1, t2, T)
-    for ti, xi in zip(t, x):
-        a1 = b1 = c1 = d1 = e1 = f1 = g1 = 0.0
-        for j in range(jr[0], jr[1] + 1):
-            s1 = _sig_js(k1 * (ti - t1 - j * T))
-            s2 = _sig_js(k2 * (ti - t2 - j * T))
-            s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
-            a1 += s1 - s2
-            b1 += s1p * (ti - t1 - j * T)
-            c1 += s1p
-            d1 += s2p * (ti - t2 - j * T)
-            e1 += s2p
-            f1 += j * k1 * s1p
-            g1 += j * k2 * s2p
-        r = xi - (m[0] + A * a1)
-        rss += r * r
-        dT1 = A * k1 * c1
-        dT2 = -A * k2 * e1
-        dT = A * (f1 - g1)
-        jf = (-1.0, -a1, -A * b1, dT1 + dT2, A * d1, dT2 * T * sg * (1 - sg), dT + dT2 * sg)
-        row = [jf[i] for i in free]
-        for a_ in range(nf):
-            JtR[a_] += row[a_] * r
-            for b_ in range(a_, nf):
-                JtJ[a_][b_] += row[a_] * row[b_]
-    for a_ in range(nf):
-        for b_ in range(a_ + 1, nf):
-            JtJ[b_][a_] = JtJ[a_][b_]
-    return JtJ, JtR, rss
+    ta = np.asarray(t, dtype=float)
+    a1, b1, c1, d1, e1, f1, g1 = (np.zeros(ta.size) for _ in range(7))
+    # The tiles j in ascending order, each over every point at once: per point the same
+    # running sums, in the same order, as the old nested loop.
+    for j in range(jr[0], jr[1] + 1):
+        u1 = ta - t1 - j * T
+        u2 = ta - t2 - j * T
+        s1 = _np_sig_js(k1 * u1)
+        s2 = _np_sig_js(k2 * u2)
+        s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
+        a1 += s1 - s2
+        b1 += s1p * u1
+        c1 += s1p
+        d1 += s2p * u2
+        e1 += s2p
+        f1 += j * k1 * s1p
+        g1 += j * k2 * s2p
+    r = np.asarray(x, dtype=float) - (m[0] + A * a1)
+    dT1 = A * k1 * c1
+    dT2 = -A * k2 * e1
+    dT = A * (f1 - g1)
+    jf = (np.full(ta.size, -1.0), -a1, -A * b1, dT1 + dT2, A * d1, dT2 * T * sg * (1 - sg),
+          dT + dT2 * sg)
+    return _seq_normal_eqs([jf[i] for i in free], r)
 
 
 def _dl_fit_lm(t, x, params, free, periodic, max_iter, tol, t_lo=0.1, t_hi=math.inf):
@@ -1871,7 +1910,13 @@ def _dl_fit_lm(t, x, params, free, periodic, max_iter, tol, t_lo=0.1, t_hi=math.
     m = canonical_periodic_params(_dl_to_model(p)) if periodic else p
     if periodic:
         jr = _dl_jrange(t, m[3], m[5], m[6])
-        fitted = [_dl_eval_p(ti, m, jr) for ti in t]
+        # _dl_eval_p over every point at once, the tiles summed in the same order.
+        ta = np.asarray(t, dtype=float)
+        acc = np.full(ta.size, float(m[0]))
+        for j in range(jr[0], jr[1] + 1):
+            acc += m[1] * (_np_sig_js(m[2] * (ta - m[3] - j * m[6]))
+                           - _np_sig_js(m[4] * (ta - m[5] - j * m[6])))
+        fitted = acc.tolist()
     else:
         fitted = [_dl_eval_np(ti, m) for ti in t]
     km = KahanSum()
@@ -3905,7 +3950,8 @@ def cosinor_metrics(fixed_res, free_res, args, phase_ref):
     bathyphase are the OVERALL waveform's (multi_component_waveform; phase_angle from its
     orthophase) and the *_h1 keys harmonic 1's; otherwise both families are harmonic 1
     (free period: curve 1), and curves 2..Ncurves add `<metric>_c<c>`
-    (_cosinor_curve_metrics). perm_pvalue is NaN (the permutation test is not ported)."""
+    (_cosinor_curve_metrics). perm_pvalue is NaN here; tp_cosinor sets it when the
+    permutation test runs (fit_permutation_pvalue)."""
     use_fixed = bool(args.get('useFixedPeriod', False))
     fixed_period = args.get('fixedPeriod', 24)
     reference_hrs = args.get('referenceHrs', 0)
@@ -4063,6 +4109,16 @@ def tp_cosinor(args, cols, raw_data, _sv):
             ys = (evaluate_cosinor_at_points(free_res['parameters'], xs)
                   if output_x_data is not None else free_res['fitted'])
         metrics_by_y[y_id] = cosinor_metrics(fixed_res, free_res, args, phase_ref)
+        # The optional permutation test (Cosinor.svelte permOptions: this node's own fit).
+        # Run only when its port is written (wired, with the x output), since the refits
+        # can be slow; the app also shows it in the panel.
+        if (args.get('permuteTest') and _out_id(args, 'perm_pvalue') != -1
+                and _out_id(args, 'cosinorx') != -1):
+            perm_opts = {'useFixedPeriod': use_fixed, 'fixedPeriod': fixed_period,
+                         'nHarmonics': n_h, 'Ncurves': n_curves or 1, 'alpha': alpha,
+                         **period_range}
+            metrics_by_y[y_id]['perm_pvalue'] = fit_permutation_pvalue(
+                tt, yy, 'cosinor', perm_opts, args, label=f'Cosinor, column {y_id}')['pValue']
         # Residuals (Cosinor.svelte writeCosinorOutputs): written only with the x output
         # wired, the model evaluated at every input x (fixed period: the full model, mesor
         # included, v82.11).
@@ -4820,6 +4876,296 @@ def seeded_sequence(_unused, n, seed):
     return {'values': [rng() for _ in range(int(n))]}
 
 
+# --- Permutation test (utils/permutationTest.js, fitFunction.js fitPermutationPValue) ----
+#
+# The fit nodes' optional permutation p: the `perm_pvalue` port of Cosinor, Rectangular
+# wave, Double logistic and Fit waveform model, and Fit waveform model's `permstats_<y>`
+# columns (the permuted statistics). The app draws every permutation from
+# createSeededRNG(permutationSeed), so the ports reproduce its permutations exactly: the
+# same Fisher-Yates swaps (shuffle scheme) or the same offset, block rotations and block
+# order (block scheme), drawn in the same order. Each permuted series is refitted with the
+# model and options of fitCurveModel, and p = (k + 1) / (m + 1): k permutations at least as
+# extreme as the observed fit (R² >= observed, or RMSE <= observed), m the refits that
+# succeeded (a failed refit is skipped, as in the app).
+#
+# Speed. The fixed-period cosinor is linear least squares on a design matrix that does not
+# change between permutations, so a whole chunk of permutations is solved at once. The
+# nonlinear fits (free-period cosinor, rectangular wave, double logistic) are refitted one
+# permutation at a time with the fit the node itself uses, at the app's permutation count;
+# that can take minutes. When the estimate passes PERMUTATION_NOTE_SECONDS a note and
+# progress lines go to stderr, and the environment variable ANCIR_SKIP_PERMUTATIONS=1 skips
+# every permutation test (perm_pvalue NaN, "not computed").
+
+PERMUTATION_NOTE_SECONDS = 30.0
+_PERM_CHUNK = 128  # permutations generated (and, for the fixed cosinor, solved) at once
+_PERM_SKIP_ENV = 'ANCIR_SKIP_PERMUTATIONS'
+_perm_skip_noted = False
+
+
+def recommend_permutations(n):
+    """permutationTest.js recommendPermutations."""
+    if n < 10:
+        return 199
+    if n < 20:
+        return 499
+    if n < 50:
+        return 999
+    return 9999
+
+
+def resolve_permutation_count(args, n):
+    """fitFunction.js resolvePermutationCount: recommendPermutations(n) with
+    autoPermutations, else max(1, trunc(Number(nPermutations ?? 999))). A non-numeric count
+    is NaN in the app, so its loop runs no permutation (p = 1); 0 here."""
+    if args.get('autoPermutations'):
+        return recommend_permutations(n)
+    v = args.get('nPermutations')
+    v = _js_number(999 if v is None else v)
+    if not math.isfinite(v):
+        return 0
+    return max(1, int(math.trunc(v)))
+
+
+def _perm_shuffle_rows(n, count, rng):
+    """`count` permutations of range(n), each permutationTest.js shuffleArraySeeded
+    (Fisher-Yates from the last index down, j = floor(rng() * (i + 1))), drawn in turn from
+    `rng`. The generator step (SeededRNG.__call__) is inlined: this loop makes n - 1 draws
+    per permutation, and a method call per draw doubled its time."""
+    m_ = _MINSTD_INT32_MAX
+    d_ = _MINSTD_MAX
+    tbl = rng.table
+    sh = rng.shuffle
+    st = rng.state
+    out = np.empty((count, n), dtype=np.intp)
+    base = list(range(n))
+    for p in range(count):
+        a = base[:]
+        for i in range(n - 1, 0, -1):
+            k = int(32 * (sh / m_))
+            s_ = tbl[k]
+            sh = s_
+            st = (16807 * st) % m_
+            tbl[k] = st
+            j = int((s_ - 1) / d_ * (i + 1))
+            a[i], a[j] = a[j], a[i]
+        out[p] = a
+    rng.shuffle = sh
+    rng.state = st
+    return out
+
+
+def _perm_block_rows(n, block_length, count, rng):
+    """`count` permutations of range(n) by permutationTest.js blockPermuteSeeded: a random
+    circular offset, blocks of L samples (the last may be shorter), each rotated by a random
+    amount, then the blocks in a random (Fisher-Yates) order."""
+    L = max(1, min(n, _js_round(block_length)))
+    idx = np.arange(n, dtype=np.intp)
+    out = np.empty((count, n), dtype=np.intp)
+    for p in range(count):
+        off = int(rng() * L)
+        rolled = np.concatenate((idx[off:], idx[:off]))
+        blocks = []
+        for b in range(0, n, L):
+            blk = rolled[b:b + L]
+            r = int(rng() * blk.size)
+            blocks.append(np.concatenate((blk[r:], blk[:r])))
+        for i in range(len(blocks) - 1, 0, -1):
+            j = int(rng() * (i + 1))
+            blocks[i], blocks[j] = blocks[j], blocks[i]
+        out[p] = np.concatenate(blocks)
+    return out
+
+
+def _perm_rows(n, count, rng, scheme, block_length):
+    if scheme == 'block':
+        return _perm_block_rows(n, block_length, count, rng)
+    return _perm_shuffle_rows(n, count, rng)
+
+
+def permutation_orders(_unused, n, count, seed, scheme='shuffle', block_length=None):
+    """Parity surface: the first `count` permutations of range(n) the app's permutation test
+    draws from createSeededRNG(seed), flattened row after row."""
+    rows = _perm_rows(int(n), int(count), SeededRNG(seed), scheme, block_length)
+    return {'orders': rows.ravel().tolist()}
+
+
+def _fit_model_period(fit, model, options):
+    """fitFunction.js fitModelPeriod: the period (h) the block scheme cuts blocks at; the
+    fixed period when the model fixes it, else the fitted one, NaN when there is none. The
+    free cosinor's frequencies are cycles per hour in this port (radians in the app)."""
+    nan = _NAN
+    if model == 'cosinor':
+        if options.get('useFixedPeriod'):
+            return _js_number(24 if options.get('fixedPeriod') is None
+                              else options.get('fixedPeriod'))
+        cs = ((fit or {}).get('parameters') or {}).get('cosines') or []
+        ws = [c.get('frequency') for c in cs
+              if isinstance(c.get('frequency'), (int, float)) and c.get('frequency') > 0]
+        return 1.0 / min(ws) if ws else nan
+    if model == 'rectangular':
+        if options.get('fixOmega'):
+            return _js_number(24 if options.get('fixedPeriod') is None
+                              else options.get('fixedPeriod'))
+        v = (fit or {}).get('period')
+        return nan if v is None else _js_number(v)
+    if model == 'doublelogistic':
+        if not (True if options.get('periodic') is None else options.get('periodic')):
+            return nan
+        if options.get('fixPeriod'):
+            return _js_number(24 if options.get('fixedPeriod') is None
+                              else options.get('fixedPeriod'))
+        v = ((fit or {}).get('parameters') or {}).get('T')
+        return nan if v is None else _js_number(v)
+    return nan
+
+
+def _perm_median_spacing(tt):
+    """fitFunction.js medianSpacing: the median positive step between consecutive times."""
+    d = sorted(b - a for a, b in zip(tt, tt[1:]) if b - a > 0)
+    if not d:
+        return _NAN
+    m = len(d) >> 1
+    return d[m] if len(d) % 2 else (d[m - 1] + d[m]) / 2
+
+
+def _perm_statistic(fit, statistic):
+    """permutationTest.js getStatistic."""
+    key = {'rmse': 'rmse', 'rSquared': 'rSquared'}.get(statistic)
+    v = fit.get(key) if key else None
+    return _NAN if v is None else float(v)
+
+
+def _fixed_cosinor_perm_stats(tt, yy, options, rows, statistic):
+    """The fixed-period cosinor's R² or RMSE (residual SE, sqrt(SSres / (n - p))) for every
+    permuted series in `rows` at once: fitCosinorFixed refitted per permutation in the app.
+    Rows identical to the observed series get the observed statistic exactly, as the app's
+    refit of an identical array does (a constant series then gives p = 1)."""
+    t = np.asarray(tt, dtype=float)
+    y = np.asarray(yy, dtype=float)
+    period = float(_js_number(24 if options.get('fixedPeriod') is None
+                              else options.get('fixedPeriod')))
+    nh = max(1, int(_js_number(1 if options.get('nHarmonics') is None
+                               else options.get('nHarmonics'))))
+    omega = 2 * math.pi / period
+    cols_ = [np.ones(t.size)]
+    for k in range(1, nh + 1):
+        cols_.append(np.cos(k * omega * t))
+        cols_.append(np.sin(k * omega * t))
+    X = np.column_stack(cols_)
+    Y = y[rows]                                   # (count, n)
+    B = np.linalg.solve(X.T @ X, X.T @ Y.T)       # (p, count)
+    ss_res = ((Y - (X @ B).T) ** 2).sum(axis=1)
+    if statistic == 'rmse':
+        stats = np.sqrt(ss_res / (t.size - X.shape[1]))
+    elif statistic == 'rSquared':
+        ss_tot = ((Y - Y.mean(axis=1, keepdims=True)) ** 2).sum(axis=1)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            stats = np.where(ss_tot > 0, 1 - ss_res / np.where(ss_tot > 0, ss_tot, 1), 0.0)
+    else:
+        stats = np.full(rows.shape[0], _NAN)
+    return stats, (Y == y).all(axis=1)
+
+
+def _perm_note(text):
+    print(f'NOTE: {text}', file=sys.stderr, flush=True)
+
+
+def fit_permutation_pvalue(tt, yy, model, options, args, label=''):
+    """fitFunction.js fitPermutationPValue + permutationTest.js permutationTest for a fit of
+    `model` with `options` (the options the node passes to fitCurveModel) on the valid pairs
+    (tt, yy). `args` carries permuteTest, nPermutations / autoPermutations,
+    permutationSeed, permutationStatistic and permutationScheme. Returns {pValue,
+    observedStat, permutedStats, statistic, scheme, blockLength, unavailable}; pValue is NaN
+    when the test is off, there are fewer than 4 points, a block test cannot run, or the
+    permutations are skipped (ANCIR_SKIP_PERMUTATIONS)."""
+    global _perm_skip_noted
+    import os
+    import time
+    stat_arg = args.get('permutationStatistic')
+    statistic = 'rSquared' if stat_arg is None else stat_arg
+    scheme = 'block' if args.get('permutationScheme') == 'block' else 'shuffle'
+    n = len(tt)
+
+    def off(**extra):
+        return {'pValue': _NAN, 'observedStat': _NAN, 'permutedStats': [],
+                'statistic': statistic, 'scheme': scheme, 'blockLength': None,
+                'unavailable': None, **extra}
+
+    if not args.get('permuteTest') or n < 4:
+        return off()
+    if os.environ.get(_PERM_SKIP_ENV, '').strip() not in ('', '0'):
+        if not _perm_skip_noted:
+            _perm_note(f'{_PERM_SKIP_ENV} is set: permutation tests skipped, perm_pvalue is '
+                       'NaN (not computed).')
+            _perm_skip_noted = True
+        return off()
+    started = time.perf_counter()
+    try:
+        observed = _ff_fit_curve_model(tt, yy, model, options)
+    except Exception:  # the app's try/catch around the observed fit
+        observed = None
+    fit_seconds = time.perf_counter() - started
+    block_length = None
+    if scheme == 'block':
+        period = _fit_model_period(observed, model, options)
+        dt = _perm_median_spacing(tt)
+        block_length = (_js_round(period / dt) if math.isfinite(period) and dt > 0
+                        else None)
+        if block_length is None or block_length < 2 or 2 * block_length > n:
+            why = (f'the record holds fewer than two {period:.2f} h blocks'
+                   if math.isfinite(period)
+                   else 'the model has no period to set the block length')
+            return off(blockLength=block_length, unavailable=why)
+    if observed is None:
+        # The app's permutationTest reads the statistic of a null fit and throws; no p.
+        return off(blockLength=block_length)
+    observed_stat = _perm_statistic(observed, statistic)
+    count = resolve_permutation_count(args, n)
+    seed = args.get('permutationSeed')
+    rng = SeededRNG(12345 if seed is None else seed)
+
+    fixed_cosinor = model == 'cosinor' and bool(
+        True if options.get('useFixedPeriod') is None else options.get('useFixedPeriod'))
+    estimate = fit_seconds * count
+    noisy = not fixed_cosinor and estimate > PERMUTATION_NOTE_SECONDS
+    who = f' {label}' if label else ''
+    if noisy:
+        _perm_note(f'permutation test{who}: {count} refits of the {model} fit, about '
+                   f'{estimate:.0f} s. Set {_PERM_SKIP_ENV}=1 to skip permutation tests.')
+    stats = []
+    y_arr = np.asarray(yy, dtype=float)
+    done = 0
+    last_note = time.perf_counter()
+    while done < count:
+        rows = _perm_rows(n, min(_PERM_CHUNK, count - done), rng, scheme, block_length)
+        if fixed_cosinor:
+            chunk, same = _fixed_cosinor_perm_stats(tt, yy, options, rows, statistic)
+            stats.extend(observed_stat if s else float(v) for v, s in zip(chunk, same))
+        else:
+            for row in rows:
+                yp = y_arr[row]
+                if np.array_equal(yp, y_arr):
+                    stats.append(observed_stat)
+                    continue
+                try:
+                    fr = _ff_fit_curve_model(tt, yp.tolist(), model, options)
+                except Exception:
+                    fr = None
+                if fr is not None:  # a null refit throws in getStatistic: skipped
+                    stats.append(_perm_statistic(fr, statistic))
+        done += rows.shape[0]
+        if noisy and (time.perf_counter() - last_note > 15 or done == count):
+            last_note = time.perf_counter()
+            _perm_note(f'permutation test{who}: {done}/{count}')
+    if statistic == 'rmse':
+        k = sum(1 for s in stats if s <= observed_stat)
+    else:
+        k = sum(1 for s in stats if s >= observed_stat)
+    return {'pValue': (k + 1) / (len(stats) + 1), 'observedStat': observed_stat,
+            'permutedStats': stats, 'statistic': statistic, 'scheme': scheme,
+            'blockLength': block_length, 'unavailable': None}
+
+
 # --- Surrogates (utils/surrogates.js) ---------------------------------------------------
 
 SURROGATE_METHODS = ('phase', 'aaft', 'block', 'ar1', 'shuffle')
@@ -5073,6 +5419,7 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     first_xs = None
     any_valid = False
     stats_by_y = {}
+    perm_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -5106,6 +5453,12 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
                                     evaluate_dl_at_points(pr, xs, True), t, y),
                      type_='number')
         stats_by_y[y_id] = res
+        # The optional permutation test, refitting with dlOpts (DoubleLogistic.svelte); run
+        # only when its port is wired, since the refits can be slow.
+        if args.get('permuteTest') and _out_id(args, 'perm_pvalue') != -1:
+            perm_by_y[y_id] = fit_permutation_pvalue(
+                tt, yy, 'doublelogistic', opts, args,
+                label=f'Double logistic, column {y_id}')['pValue']
         any_valid = True
     if any_valid:
         x_vals = ([origin_ms + h * 3600000 for h in first_xs] if origin_ms is not None
@@ -5114,16 +5467,14 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
                  type_='time' if origin_ms is not None else 'number')
     if any_valid:
         nan = float('nan')
-        # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
-        # downstream got an EMPTY column from the export. `perm_pvalue` (renamed from the
-        # bare `pvalue` in JS v72.25 — it is the optional permutation test's p, the ONLY p
-        # this node emits) belongs to a Monte Carlo test this port does not run, so it
-        # stays NaN — "not computed", not "not significant".
-        for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
-                            ('rmse', lambda r: r.get('rmse', nan)),
-                            ('perm_pvalue', lambda r: nan)):
+        # r2 and rmse had no writer until 2026-07-28. `perm_pvalue` (renamed from the bare
+        # `pvalue` in JS v72.25) is the optional permutation test's p, the ONLY p this node
+        # emits: NaN ("not computed") when the test is off, as in the app.
+        for key, getter in (('r2', lambda y: stats_by_y[y].get('rSquared', nan)),
+                            ('rmse', lambda y: stats_by_y[y].get('rmse', nan)),
+                            ('perm_pvalue', lambda y: perm_by_y.get(y, nan))):
             _set_col(raw_data, cols, _out_id(args, key),
-                     [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
+                     [getter(y) if y in stats_by_y else nan for y in y_ins],
                      type_='number')
     return any_valid
 
@@ -6006,6 +6357,10 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
     curves = {}
     any_valid = False
     stats_by_y = {}
+    perm_by_y = {}
+    # RectangularWave.svelte permOptions (fitCurveModel derives the pinned omega from
+    # fixedPeriod, as the node's fixedOmega does).
+    perm_opts = {**opts, 'fixedPeriod': fixed_period}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -6032,6 +6387,13 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
                                     evaluate_rectwave_at_points(pr, xs), t, y),
                      type_='number')
         stats_by_y[y_id] = res
+        # The optional permutation test; run only when its port is written (wired, with the
+        # x output), since the refits can be slow.
+        if (args.get('permuteTest') and _out_id(args, 'perm_pvalue') != -1
+                and _out_id(args, 'rectwavex') != -1):
+            perm_by_y[y_id] = fit_permutation_pvalue(
+                tt, yy, 'rectangular', perm_opts, args,
+                label=f'Rectangular wave, column {y_id}')['pValue']
         any_valid = True
     # RectangularWave.svelte writes the x, the curves and the metric ports only with the x
     # output wired; the x is the first y result's by Object.keys order (smallest column id).
@@ -6048,16 +6410,14 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
                 y_out = _out_id(args, 'rectwavey')
             _set_col(raw_data, cols, y_out, ys, type_='number')
         nan = float('nan')
-        # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
-        # downstream got an EMPTY column from the export. `perm_pvalue` (renamed from the
-        # bare `pvalue` in JS v72.25 — it is the optional permutation test's p, the ONLY p
-        # this node emits) belongs to a Monte Carlo test this port does not run, so it
-        # stays NaN — "not computed", not "not significant".
-        for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
-                            ('rmse', lambda r: r.get('rmse', nan)),
-                            ('perm_pvalue', lambda r: nan)):
+        # r2 and rmse had no writer until 2026-07-28. `perm_pvalue` (renamed from the bare
+        # `pvalue` in JS v72.25) is the optional permutation test's p, the ONLY p this node
+        # emits: NaN ("not computed") when the test is off, as in the app.
+        for key, getter in (('r2', lambda y: stats_by_y[y].get('rSquared', nan)),
+                            ('rmse', lambda y: stats_by_y[y].get('rmse', nan)),
+                            ('perm_pvalue', lambda y: perm_by_y.get(y, nan))):
             _set_col(raw_data, cols, _out_id(args, key),
-                     [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
+                     [getter(y) if y in stats_by_y else nan for y in y_ins],
                      type_='number')
     return any_valid
 
@@ -6126,7 +6486,7 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
             i_ = periodogram_peak_index(pg)
             if i_ >= 0:
                 st = {'peak_period': pg['x'][i_], 'peak_power': pg['y'][i_]}
-                if args.get('pgMethod') == 'Chi-squared':
+                if (args.get('pgMethod') or 'Lomb-Scargle') != 'Enright':
                     st['peak_pvalue'] = peak_familywise_p(pg, i_)
         elif analysis == 'fft':
             pk = fft_peak(fft) if fft['frequencies'] else None
@@ -6172,7 +6532,7 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
         _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'), ys, type_='number')
     if any_valid:
         keys = {'periodogram': ['peak_period', 'peak_power'] +
-                (['peak_pvalue'] if args.get('pgMethod') == 'Chi-squared' else []),
+                (['peak_pvalue'] if (args.get('pgMethod') or 'Lomb-Scargle') != 'Enright' else []),
                 'fft': ['peak_period', 'peak_frequency', 'peak_magnitude'],
                 'correlogram': ['peak_lag', 'peak_correlation']}.get(analysis, [])
         for k in keys:
@@ -7198,6 +7558,51 @@ def tukey_kramer_of(*args):
     return _gc_tukey_kramer_post_hoc(groups, an['msWithin'], an['dfWithin'], alpha)
 
 
+MW_EXACT_MAX_N = 8  # utils/mannWhitneyExact.js: scipy mannwhitneyu(method='auto') goes exact at n <= 8
+
+
+def _mw_uses_exact(n1, n2, has_ties):
+    """mannWhitneyExact.js mannWhitneyUsesExact: scipy's 'auto' rule, exact when either sample
+    has at most 8 values and the pooled sample has no ties (STAT-28)."""
+    if not (n1 >= 1 and n2 >= 1):
+        return False
+    if n1 > MW_EXACT_MAX_N and n2 > MW_EXACT_MAX_N:
+        return False
+    return not has_ties
+
+
+def _mw_exact_p(u, n1, n2):
+    """mannWhitneyExact.js mannWhitneyExactP: two-sided exact p, 2 P(U <= min(U1, U2)) capped at
+    1, from the Gaussian binomial generating function prod (1 - q^(n+i)) / (1 - q^i) (Mann and
+    Whitney 1947; Andrews 1976 ch. 3). The same float passes as the JS, so the numbers agree to
+    rounding; the tests pin it to scipy's exact distribution."""
+    if not (n1 >= 1 and n2 >= 1):
+        return float('nan')
+    mn = n1 * n2
+    if not (0 <= u <= mn):
+        return float('nan')
+    lo = min(u, mn - u)
+    k = int(round(lo))
+    if abs(lo - k) > 1e-7:
+        return float('nan')
+    m, n = min(n1, n2), max(n1, n2)
+    c = [0.0] * (k + 1)
+    c[0] = 1.0
+    for i in range(1, m + 1):
+        shift = n + i
+        for j in range(k, shift - 1, -1):
+            c[j] -= c[j - shift]
+        for j in range(i, k + 1):
+            c[j] += c[j - i]
+    cdf = 0.0
+    for v in c:
+        cdf += v
+    total = 1.0
+    for i in range(1, m + 1):
+        total = (total * (n + i)) / i
+    return min(1.0, (2 * cdf) / total)
+
+
 def _gc_mann_whitney_two_groups(group_a, group_b):       # JS mannWhitneyTwoGroups (:367-405)
     n1, n2 = group_a['n'], group_b['n']
     if n1 < 1 or n2 < 1:
@@ -7221,9 +7626,12 @@ def _gc_mann_whitney_two_groups(group_a, group_b):       # JS mannWhitneyTwoGrou
     mean_u = (n1 * n2) / 2
     cc = 0.5 if u > mean_u else -0.5
     z = (u - mean_u - cc) / sigma if sigma > 0 else 0.0
-    p_value = _gc_p_upper_from_chisq(z * z, 1)
+    # STAT-28: exact for small samples without ties, as scipy mannwhitneyu(method='auto').
+    p_method = 'exact' if _mw_uses_exact(n1, n2, len(tie_counts) > 0) else 'asymptotic'
+    p_value = (_mw_exact_p(u, n1, n2) if p_method == 'exact'
+               else _gc_p_upper_from_chisq(z * z, 1))
     r_effect = abs(z) / math.sqrt(n)
-    return {'valid': True, 'u': u, 'z': z, 'pValue': p_value,
+    return {'valid': True, 'u': u, 'z': z, 'pValue': p_value, 'pMethod': p_method,
             'rEffect': r_effect, 'n1': n1, 'n2': n2}
 
 
@@ -7278,7 +7686,7 @@ def _gc_pairwise_mann_whitney(groups, alpha=0.05):       # JS pairwiseMannWhitne
                 continue
             pairs.append({'groupA': a['name'], 'groupB': b['name'],
                           'statistic': m['u'], 'pValue': m['pValue'],
-                          'effect': m['rEffect']})
+                          'pMethod': m['pMethod'], 'effect': m['rEffect']})
     adjusted = _gc_holm_adjust(pairs)
     for p in adjusted:
         p['significant'] = p['pAdjusted'] < alpha
@@ -7488,7 +7896,36 @@ def compute_group_comparison(args, cols):
 # fit_rectangular_wave / fit_double_logistic and their evaluate_* helpers,
 # mirroring src/lib/utils/fitFunction.js fitCurveModel + evaluateCurveModelAtPoints).
 # preProcesses run on each fitted curve before it is written (apply_output_pre_processes);
-# the permutation test is not ported (perm_pvalue is NaN, "not computed").
+# the optional permutation test fills perm_pvalue and permstats_<y> (fit_permutation_pvalue).
+
+
+def _ff_model_options(args):
+    """FitFunction.svelte getModelOptions: the options its permutation test refits with."""
+    def g(key, default):
+        v = args.get(key)
+        return default if v is None else v
+    model = args.get('model')
+    if model == 'cosinor':
+        return {'useFixedPeriod': g('useFixedPeriod', True), 'fixedPeriod': g('fixedPeriod', 24),
+                'nHarmonics': g('nHarmonics', 1), 'Ncurves': g('Ncurves', 1),
+                'alpha': g('alpha', 0.05),
+                'minPeriod': g('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+                'maxPeriod': g('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])}
+    if model == 'rectangular':
+        return {'fixKappa': g('fixKappa', False), 'fixedKappa': g('fixedKappa', 5),
+                'fixOmega': g('fixOmega', False), 'fixedPeriod': g('fixedPeriod', 24),
+                'fixDutyCycle': g('fixDutyCycle', False),
+                'fixedDutyCycle': g('fixedDutyCycle', 0.5),
+                'minPeriod': g('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+                'maxPeriod': g('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])}
+    if model == 'doublelogistic':
+        return {'periodic': g('periodic', True), 'fixK1': g('fixK1', False),
+                'fixedK1': g('fixedK1', 0.5), 'fixK2': g('fixK2', False),
+                'fixedK2': g('fixedK2', 0.5), 'fixPeriod': g('fixPeriod', False),
+                'fixedPeriod': g('fixedPeriod', 24),
+                'minPeriod': g('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+                'maxPeriod': g('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])}
+    return {}
 
 def _ff_fit_curve_model(tt, yy, model, args):
     # JS fitFunction.js fitCurveModel + per-model option plumbing (:8-113)
@@ -7642,7 +8079,11 @@ def _ff_raw_metric(key, model, fr):
     if key == 'rmse_n':
         return (fr.get('fixedStats') or {}).get('RMSE_n', nan)
     if key == 'perm_pvalue':
-        return nan  # the permutation test is not ported
+        # Strictly the permutation p, gated on a null distribution existing (the fixed
+        # cosinor's analytic pF never lands here).
+        ps = fr.get('permutedStats')
+        pv = fr.get('permPValue', nan)
+        return pv if ps and math.isfinite(pv) else nan
     p_ = fr.get('parameters') or {}
     if model == 'cosinor':
         if fr.get('mode') == 'fixed':
@@ -7782,6 +8223,16 @@ def tp_fitfunction(args, cols, raw_data, _sv):
         fit_result = _ff_fit_curve_model(tt, yy, model, args)   # JS computeSingleFit
         if fit_result is None:
             continue
+        # The optional permutation test (attachFitPermutation), run only when one of its
+        # ports is written (the x output and perm_pvalue or this y's permstats wired), since
+        # the refits can be slow.
+        if (args.get('permuteTest') and x_out != -1
+                and (_out_id(args, 'perm_pvalue') != -1
+                     or _out_id(args, f'permstats_{y_id}') != -1)):
+            perm = fit_permutation_pvalue(tt, yy, model, _ff_model_options(args), args,
+                                          label=f'Fit waveform model, column {y_id}')
+            fit_result['permPValue'] = perm['pValue']
+            fit_result['permutedStats'] = perm['permutedStats']
         predicted = (_ff_evaluate_at_points(fit_result, model, output_x_data)
                      if output_x_data is not None else None)
         y_out_data = predicted if predicted is not None else fit_result['fitted']
@@ -7815,6 +8266,10 @@ def tp_fitfunction(args, cols, raw_data, _sv):
                          _fit_residuals(lambda pts, fr=yr['fitResult']:
                                         _ff_evaluate_at_points(fr, model, pts), t, yr['y']),
                          type_='number')
+            # The permuted statistics, one row per permutation (empty when the test is off).
+            _set_col(raw_data, cols, _out_id(args, f'permstats_{y_id}'),
+                     list((yr or {}).get('fitResult', {}).get('permutedStats') or []),
+                     type_='number')
     # writeFitMetricOutputs runs inside the same `anyValid && xOUT !== -1` block.
     if any_valid and x_out != -1:
         for key in ff_metric_keys(args):
@@ -8795,7 +9250,7 @@ def tp_describedata(args, cols, raw_data, _sv):
     y_ins = _id_list(args.get('yIN'))
     if not y_ins:
         return False
-    keys = ('n', 'mean', 'median', 'sd', 'min', 'max', 'range',
+    keys = ('n', 'mean', 'median', 'sd', 'sem', 'ciLow', 'ciHigh', 'min', 'max', 'range',
             'q1', 'q3', 'iqr', 'skewness', 'kurtosis')
     rows = {'variable': []}
     for k in keys:
@@ -17511,7 +17966,82 @@ def cwt_download_data(plot, columns_index):
     return headers, rows
 
 
+def _histogram_series(series, columns_index):
+    """One Histogram series as the app derives it (Histogram.svelte HistogramDataclass): the
+    bins (binData in 'count' mode), the present values, and whether its widths are unequal."""
+    col = _resolve_plot_col(series.get('column'), columns_index)
+    if col is None or col.type == 'time':
+        return None
+    values = col.get_data() or []
+    valid = _gc_present_numbers(values)
+    mode = 'cuts' if series.get('binMode') == 'cuts' else 'uniform'
+    bin_size = series.get('binSize')
+    bin_size = 1 if bin_size is None else bin_size
+    bin_start = series.get('binStart')
+    if bin_start is None:
+        bin_start = math.floor(min(valid)) if valid else 0
+    empty = {'bins': [], 'bin_ends': [], 'y_out': [], 'dropped_count': 0}
+    if not values:
+        b = empty
+    elif mode == 'cuts':
+        cuts = sorted(set(series.get('cuts') or []))
+        b = bin_data(values, values, bin_size, bin_start, None, 'count', cuts) if len(cuts) >= 2 else empty
+    else:
+        step = series.get('stepSize') if series.get('diffStep') else bin_size
+        b = bin_data(values, values, bin_size, bin_start, step, 'count', None)
+    unequal = False
+    if mode == 'cuts' and len(b['bins']) >= 2:
+        w0 = b['bin_ends'][0] - b['bins'][0]
+        unequal = any(abs(e - s0 - w0) > 1e-9 * abs(w0) for s0, e in zip(b['bins'], b['bin_ends']))
+    return {'label': series.get('label') or '', 'bins': b, 'valid': valid, 'mode': mode,
+            'bin_size': bin_size, 'bandwidth': series.get('bandwidth'), 'unequal': unequal}
+
+
+def histogram_download_data(plot, columns_index):
+    """Mirror Histogramclass.getDownloadData (Histogram.svelte): tidy rows of kind 'bin'
+    (start, end, height), 'density' (the KDE curve as drawn) and 'raw' (each present value).
+    STAT-31: when any series has UNEQUAL bin widths the plot is on a density axis, so a bin's
+    value is count / (N * width) (N = every present value), the curve is the plain density, and
+    a last 'count' column carries the bin counts; with equal widths the rows are counts and the
+    curve is scaled by N * bin width, as before."""
+    p = plot.get('plot', {})
+    series = [_histogram_series(s, columns_index) for s in p.get('data', [])]
+    dens = any(s and s['unequal'] for s in series)
+    headers = ['series', 'kind', 'x_start', 'x_end', 'value'] + (['count'] if dens else [])
+    tail = [''] if dens else []
+    rows = []
+    for s in series:
+        if s is None:
+            continue
+        b, n = s['bins'], len(s['valid'])
+        for i, start in enumerate(b['bins']):
+            c = b['y_out'][i]
+            w = b['bin_ends'][i] - start
+            h = (c / (n * w) if n > 0 and w > 0 else float('nan')) if dens else c
+            rows.append([s['label'], 'bin', start, b['bin_ends'][i], h] + ([c] if dens else []))
+        valid = s['valid']
+        bw = s['bandwidth']
+        curve_x, curve_y = [], []
+        if len(valid) >= 2 and len(set(valid)) > 1:
+            k = kde(valid, bandwidth=bw if (bw is not None and bw > 0) else None, grid_size=128)
+            if k['x']:
+                if dens:
+                    scale = 1.0
+                elif s['mode'] == 'cuts':
+                    widths = [e - s0 for s0, e in zip(b['bins'], b['bin_ends'])]
+                    scale = len(valid) * (sum(widths) / len(widths) if widths else 1)
+                else:
+                    scale = len(valid) * s['bin_size']
+                curve_x, curve_y = k['x'], [d * scale for d in k['density']]
+        for x, y in zip(curve_x, curve_y):
+            rows.append([s['label'], 'density', x, '', y] + tail)
+        for v in valid:
+            rows.append([s['label'], 'raw', v, '', v] + tail)
+    return headers, rows
+
+
 PLOT_DATA_BUILDERS = {
+    'histogram': histogram_download_data,
     'periodogram': periodogram_download_data,
     'fft': fft_download_data,
     'correlogram': correlogram_download_data,
@@ -17521,7 +18051,7 @@ PLOT_DATA_BUILDERS = {
 
 
 def export_plot_data(plots, columns_index, output_dir, zone=None):
-    """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
+    """Write `<plot>_data.csv` for every calculating plot (histogram, periodogram, FFT,
     correlogram, actogram, wavelet scalogram). Each CSV mirrors the plot's in-app "Show/Save data"
     output. Returns the list of paths written; non-calculating plots
     (scatter, boxplot, tableplot) are skipped. Only the actogram reads a zone, to place its
@@ -17617,6 +18147,34 @@ def correlation_pvalue(r, n):
     return float(sp_stats.f.sf(t2, 1, n - 2))
 
 
+SPEARMAN_EXACT_MAX_N = 9
+_SPEARMAN_S_COUNTS = {}
+
+
+def spearman_exact_p(r, n):
+    """correlation.js spearmanExactPValue: the exact two-sided p of Spearman's rho on n <= 9
+    untied pairs, from the permutation distribution of S = sum d^2 over all n! rankings, as R's
+    cor.test(exact = TRUE) (AS 89, Best and Roberts 1975): the observed side's tail, doubled,
+    at most 1."""
+    import itertools
+    if not (isinstance(r, float) or isinstance(r, int)) or r != r or not (2 <= n <= SPEARMAN_EXACT_MAX_N):
+        return float("nan")
+    counts = _SPEARMAN_S_COUNTS.get(n)
+    if counts is None:
+        counts = [0] * ((n * (n * n - 1)) // 6 + 1)
+        for perm in itertools.permutations(range(n)):
+            counts[sum((i - v) * (i - v) for i, v in enumerate(perm)) // 2] += 1
+        _SPEARMAN_S_COUNTS[n] = counts
+    n3 = n * n * n - n
+    q = _js_round(n3 * (1 - r) / 6)
+    nfac = math.factorial(n)
+    if q > n3 / 6:
+        tail = sum(counts[math.ceil(q / 2):])
+    else:
+        tail = sum(counts[:math.floor(q / 2) + 1])
+    return min(1.0, 2 * tail / nfac)
+
+
 def correlate(x, y, method="pearson"):
     """Reference implementation for parity: scipy's pearsonr / spearmanr on the
     pairwise-complete rows. The JS side (src/lib/utils/correlation.js) is bespoke and
@@ -17636,6 +18194,10 @@ def correlate(x, y, method="pearson"):
     if method == "spearman":
         res = sp_stats.spearmanr(xs, ys)
         r, p = float(res.statistic), float(res.pvalue)
+        # STAT-28: exact for n <= 9 without ties (correlation.js spearmanPValue, R cor.test's
+        # exact branch); scipy's t approximation otherwise.
+        if n <= SPEARMAN_EXACT_MAX_N and len(set(xs)) == n and len(set(ys)) == n:
+            p = spearman_exact_p(r, n)
     else:
         res = sp_stats.pearsonr(xs, ys)
         r, p = float(res.statistic), float(res.pvalue)
@@ -17665,19 +18227,31 @@ def _clean_numeric(values):
 
 def describe_stats(values):
     """scipy/numpy reference for utils/describeStats.js. Skewness/kurtosis are the
-    bias-corrected sample forms (scipy skew/kurtosis with bias=False)."""
+    bias-corrected sample forms (scipy skew/kurtosis with bias=False). sem is scipy.stats.sem
+    and ciLow/ciHigh the 95% CI of the mean, scipy.stats.t.interval(0.95, n - 1, mean, sem)
+    (Student 1908), both for n >= 2 (STAT-36)."""
     x = np.asarray(_clean_numeric(values), dtype=float)
     n = x.size
     nan = float("nan")
     if n == 0:
-        return {k: nan for k in ("n", "mean", "median", "sd", "min", "max", "range", "q1", "q3", "iqr", "skewness", "kurtosis")}
+        return {k: nan for k in ("n", "mean", "median", "sd", "sem", "ciLow", "ciHigh", "min", "max", "range", "q1", "q3", "iqr", "skewness", "kurtosis")}
     q1 = float(np.percentile(x, 25, method="linear"))
     q3 = float(np.percentile(x, 75, method="linear"))
+    sem = float(sp_stats.sem(x)) if n > 1 else nan
+    if n > 1 and sem == 0:
+        ci_lo = ci_hi = float(np.mean(x))  # scipy returns NaN for a zero scale; the app 0 width
+    elif n > 1:
+        ci_lo, ci_hi = (float(v) for v in sp_stats.t.interval(0.95, n - 1, loc=float(np.mean(x)), scale=sem))
+    else:
+        ci_lo = ci_hi = nan
     return {
         "n": int(n),
         "mean": float(np.mean(x)),
         "median": float(np.median(x)),
         "sd": float(np.std(x, ddof=1)) if n > 1 else nan,
+        "sem": sem,
+        "ciLow": ci_lo,
+        "ciHigh": ci_hi,
         "min": float(np.min(x)),
         "max": float(np.max(x)),
         "range": float(np.max(x) - np.min(x)),
@@ -18285,9 +18859,10 @@ def moving_stat_keys(args):
     """movinganalysis.js getStatKeys."""
     an = args.get('analysis')
     if an == 'periodogram':
-        # peak_pvalue: the chi-squared peak's family-wise p (SPEC-9); LS/Enright have none.
+        # peak_pvalue: the peak's family-wise p, chi-squared (SPEC-9) or Lomb-Scargle (Baluev
+        # 2008); Enright has none.
         return ['peak_period', 'peak_power'] + (
-            ['peak_pvalue'] if args.get('pgMethod') == 'Chi-squared' else [])
+            ['peak_pvalue'] if (args.get('pgMethod') or 'Lomb-Scargle') != 'Enright' else [])
     if an == 'summary':
         return ['mean', 'sd', 'percentile']
     if an == 'npcra':

@@ -128,7 +128,6 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
-	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
@@ -147,8 +146,6 @@
 	// Sessions saved before the percentile function existed have no percentile
 	// arg; `=== undefined` (not ??/||) so a saved 0 (the minimum) survives.
 	if (p.args.percentile === undefined) p.args.percentile = 50;
-
-	let separator = $derived(p.args.func === 'add' ? '+' : ',');
 
 	// for reactivity -----------
 	let xIN_cols = $derived.by(() => {
@@ -244,47 +241,46 @@
 </script>
 
 <div style="display: block;">
+	{#if !hideInputs}
+		<div class="section-row">
+			<div class="tableProcess-label">
+				<span>Input</span>
+			</div>
+			<!-- The selector lists the chosen columns and removes them; a second list of
+			     names with its own remove buttons beside it only repeated it. -->
+			<div class="control-input">
+				<p>Columns</p>
+				<ColumnSelector
+					value={p.args.xsIN}
+					onChange={(val) => {
+						p.args.xsIN = val;
+						doColumnFunction();
+					}}
+					multiple={true}
+				/>
+			</div>
+		</div>
+	{/if}
+
 	<div class="section-row">
 		<div class="tableProcess-label">
-			<span>Column function</span>
+			<span>Calculation</span>
+		</div>
+		<div class="control-input-horizontal">
+			<ControlInput label="Function">
+				<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
+					{#each funcOptions as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+			</ControlInput>
+			{#if p.args.func === 'percentile'}
+				<ControlInput label="Percentile (0–100; 50 = median)">
+					<NumberWithUnits bind:value={p.args.percentile} min="0" max="100" step="5" />
+				</ControlInput>
+			{/if}
 		</div>
 	</div>
-	<ControlInput label="Function">
-		<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
-			{#each funcOptions as opt (opt.value)}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
-	</ControlInput>
-	{#if p.args.func === 'percentile'}
-		<ControlInput label="Percentile (0–100; 50 = median)">
-			<NumberWithUnits bind:value={p.args.percentile} min="0" max="100" step="5" />
-		</ControlInput>
-	{/if}
-	{#if !hideInputs}
-		<ControlInput label="Columns"></ControlInput>
-		<ColumnSelector
-			value={p.args.xsIN}
-			onChange={(val) => {
-				p.args.xsIN = val;
-				doColumnFunction();
-			}}
-			multiple={true}
-		/>
-
-		{#each p.args.xsIN as xId, i (i)}
-			<span>{displayNameById(xId, '?')}</span>
-			<button
-				onclick={() => {
-					p.args.xsIN.splice(i, 1);
-					doColumnFunction();
-				}}>-</button
-			>
-			{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-				<span>{separator}</span>
-			{/if}
-		{/each}
-	{/if}
 
 	{#if p.args.valid && p.args.out.result == -1}
 		{@const totalRows = result.length}

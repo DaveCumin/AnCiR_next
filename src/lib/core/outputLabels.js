@@ -205,6 +205,16 @@ const fitUnit = (ctx) => {
 	const type = ctx.colType(id);
 	return type && type !== 'time' ? 'x units' : 'h';
 };
+/**
+ * A label written in hours, restated in x units when the node's x is a number column: "(h)"
+ * becomes "(x units)" and "(1/h)" becomes "(1/x unit)". Clock-time labels stay as they are.
+ * For the nodes whose spec sets `xUnits` (Rhythmicity, Moving window), which analyse a number
+ * x in its own numbers but share the hour-worded STAT_LABELS.
+ */
+const inXUnits = (label, ctx) =>
+	typeof label === 'string' && fitUnit(ctx) === 'x units'
+		? label.replace(/\(1\/h\)/g, '(1/x unit)').replace(/\(h\)/g, '(x units)')
+		: label;
 /** phaseLabel in the fit's x units; clock time (time x only) stays hours. */
 const fitPhaseLabel = (name, ctx) =>
 	isClockRef(ctx?.args) ? phaseLabel(name, ctx) : `${name} (${fitUnit(ctx)})`;
@@ -333,6 +343,9 @@ export const NODE_OUTPUT_LABELS = {
 			mean: 'Mean',
 			median: 'Median',
 			sd: 'SD',
+			sem: 'SEM',
+			ciLow: 'Mean 95% CI low',
+			ciHigh: 'Mean 95% CI high',
 			min: 'Minimum',
 			max: 'Maximum',
 			range: 'Range',
@@ -451,7 +464,8 @@ export const NODE_OUTPUT_LABELS = {
 		keys: { time: 'Time' },
 		special: [{ re: /^value_(.*)$/s, label: (m) => `Value: ${m[1] === '' ? '(blank)' : m[1]}` }]
 	},
-	MovingAnalysis: { keys: { movex: 'Window time' }, perInputStat: true },
+	// xUnits: the stats of a number x are in its own numbers (inXUnits).
+	MovingAnalysis: { keys: { movex: 'Window time' }, perInputStat: true, xUnits: true },
 	NonparametricRA: {
 		keys: { npcrax: (ctx) => phaseLabel('Average day: time', ctx) },
 		perInput: [{ prefix: 'npcray_', label: 'Average day', autoPrefixes: ['npcra_'] }]
@@ -462,7 +476,7 @@ export const NODE_OUTPUT_LABELS = {
 			statistic: 'Test statistic',
 			pvalue: 'p-value',
 			n: 'n',
-			normal: 'Normal (1 = yes)'
+			normal: 'Normality not rejected (1 = yes)'
 		}
 	},
 	Random: { keys: { result: 'Random values' } },
@@ -500,7 +514,8 @@ export const NODE_OUTPUT_LABELS = {
 			}
 		],
 		perInputStat: true,
-		statPrefix: 'stat_'
+		statPrefix: 'stat_',
+		xUnits: true
 	},
 	SequenceColumn: { keys: { result: 'Sequence' } },
 	SimulatedData: { keys: { time: 'Time', values: 'Values' } },
@@ -597,6 +612,8 @@ const inputName = (ctx, id) => ctx?.colName?.(id) ?? String(id);
 function matchOutput(nodeType, key, ctx) {
 	const spec = NODE_OUTPUT_LABELS[nodeType];
 	if (!spec || typeof key !== 'string') return null;
+	// The unit words of the node's own labels, never of an input name appended to them.
+	const unit = (label) => (spec.xUnits ? inXUnits(label, ctx) : label);
 	const ownerId = ctx?.ownerId;
 	// The shapes a constructor / sync helper gives an output column on creation.
 	const seeded = (name) =>
@@ -605,7 +622,7 @@ function matchOutput(nodeType, key, ctx) {
 		(key.startsWith('stat_') && name === `${key.slice(5)}_${ownerId}`);
 
 	if (spec.keys && Object.hasOwn(spec.keys, key)) {
-		return { label: call(spec.keys[key], ctx), auto: seeded };
+		return { label: unit(call(spec.keys[key], ctx)), auto: seeded };
 	}
 	for (const pi of spec.perInput ?? []) {
 		if (!key.startsWith(pi.prefix)) continue;
@@ -622,13 +639,13 @@ function matchOutput(nodeType, key, ctx) {
 		};
 	}
 	if (spec.statPrefix && key.startsWith(spec.statPrefix)) {
-		const label = statLabel(key.slice(spec.statPrefix.length), ctx?.args);
+		const label = unit(statLabel(key.slice(spec.statPrefix.length), ctx?.args));
 		if (label) return { label, auto: seeded };
 	}
 	if (spec.perInputStat) {
 		const m = /^(\d+)_(.+)$/.exec(key);
 		if (m) {
-			const label = statLabel(m[2], ctx?.args);
+			const label = unit(statLabel(m[2], ctx?.args));
 			if (label) {
 				return {
 					label: `${label}: ${inputName(ctx, Number(m[1]))}`,
@@ -646,7 +663,7 @@ function matchOutput(nodeType, key, ctx) {
 		};
 	}
 	// Shared statistics (r2, rmse, pvalue, period, …) on any covered node.
-	const common = statLabel(key, ctx?.args);
+	const common = unit(statLabel(key, ctx?.args));
 	if (common) return { label: common, auto: seeded };
 	return null;
 }

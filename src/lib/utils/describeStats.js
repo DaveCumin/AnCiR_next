@@ -6,15 +6,24 @@
 // all-invalid column rather than a throw. Uses pairwise-complete filtering (drop null/NaN).
 import { mean, sampleVariance, sampleStd, median, quantileType7 } from './sampleStats.js';
 import { isInvalidValue } from './stats.js';
+import tQuantile from '@stdlib/stats-base-dists-t-quantile';
+
+/** The confidence level of the mean's interval (ciLow, ciHigh). */
+export const DESCRIBE_CI_LEVEL = 0.95;
 
 /**
  * @param {number[]} values
- * @returns {{n:number, mean:number, median:number, sd:number, variance:number,
- *            min:number, max:number, range:number, skewness:number, kurtosis:number,
- *            q1:number, q3:number, iqr:number}}
+ * @returns {{n:number, mean:number, median:number, sd:number, sem:number, ciLow:number,
+ *            ciHigh:number, variance:number, min:number, max:number, range:number,
+ *            skewness:number, kurtosis:number, q1:number, q3:number, iqr:number}}
  *   skewness is the adjusted Fisher-Pearson standardised moment (g1 with the sample
  *   correction, matching scipy.stats.skew(bias=False)); kurtosis is EXCESS kurtosis
  *   (g2, bias-corrected — scipy.stats.kurtosis(bias=False)); 0 for a normal.
+ *   sem is the standard error of the mean, sd / sqrt(n) (scipy.stats.sem); ciLow/ciHigh are
+ *   the 95% confidence interval of the mean from Student's t on n - 1 df,
+ *   mean -/+ t(0.975, n - 1) * sem (Student 1908, Biometrika 6:1-25; scipy.stats.t.interval,
+ *   R t.test). All three need n >= 2. The t interval assumes roughly normal data or a large
+ *   enough n for the mean to be near normal.
  */
 export function describeStats(values) {
 	const clean = (values ?? []).filter((v) => !isInvalidValue(v)).map(Number);
@@ -25,6 +34,9 @@ export function describeStats(values) {
 		mean: nan,
 		median: nan,
 		sd: nan,
+		sem: nan,
+		ciLow: nan,
+		ciHigh: nan,
 		variance: nan,
 		min: nan,
 		max: nan,
@@ -42,6 +54,12 @@ export function describeStats(values) {
 	out.median = median(clean);
 	out.variance = sampleVariance(clean);
 	out.sd = sampleStd(clean);
+	if (n >= 2 && Number.isFinite(out.sd)) {
+		out.sem = out.sd / Math.sqrt(n);
+		const half = tQuantile(1 - (1 - DESCRIBE_CI_LEVEL) / 2, n - 1) * out.sem;
+		out.ciLow = m - half;
+		out.ciHigh = m + half;
+	}
 
 	let min = clean[0];
 	let max = clean[0];
@@ -93,6 +111,9 @@ export const DESCRIBE_KEYS = [
 	'mean',
 	'median',
 	'sd',
+	'sem',
+	'ciLow',
+	'ciHigh',
 	'min',
 	'max',
 	'range',

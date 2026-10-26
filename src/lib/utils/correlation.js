@@ -94,8 +94,8 @@ export function spearman(x, y) {
 
 /**
  * Two-sided p-value for a correlation coefficient, via the t statistic
- * t = r·sqrt((n-2)/(1-r²)), whose square is F(1, n-2). Standard for both Pearson and (as an
- * approximation, good for n≳10) Spearman.
+ * t = r·sqrt((n-2)/(1-r²)), whose square is F(1, n-2). Standard for Pearson, and Spearman's
+ * approximation above SPEARMAN_EXACT_MAX_N pairs or with ties (spearmanPValue).
  * @returns {number} p in [0,1]; 0 for |r|=1; NaN for n<3.
  */
 export function correlationPValue(r, n) {
@@ -103,6 +103,86 @@ export function correlationPValue(r, n) {
 	if (Math.abs(r) >= 1) return 0;
 	const t2 = (r * r * (n - 2)) / (1 - r * r);
 	return pUpperFromF(t2, 1, n - 2);
+}
+
+/**
+ * Spearman's p is exact for n up to this many pairs without ties (R cor.test's exact branch,
+ * AS 89 n_small = 9); above it, or with ties, the t approximation (STAT-28).
+ */
+export const SPEARMAN_EXACT_MAX_N = 9;
+
+// Exact null distribution of S = sum d^2 for each n <= SPEARMAN_EXACT_MAX_N, counted once over
+// all n! rankings and kept: counts[s / 2] is the number of permutations with S = s (S is always
+// even, since sum d = 0). n = 9 is 362880 permutations, about 10 ms the first time.
+const spearmanSCounts = new Map();
+function spearmanCounts(n) {
+	let counts = spearmanSCounts.get(n);
+	if (counts) return counts;
+	const maxS = (n * (n * n - 1)) / 3;
+	counts = new Float64Array(maxS / 2 + 1);
+	const perm = Array.from({ length: n }, (_, i) => i);
+	const used = new Array(n).fill(false);
+	// Depth-first over the permutations, accumulating sum (i - p_i)^2 as positions fill.
+	const walk = (pos, s) => {
+		if (pos === n) {
+			counts[s / 2]++;
+			return;
+		}
+		for (let v = 0; v < n; v++) {
+			if (used[v]) continue;
+			used[v] = true;
+			perm[pos] = v;
+			walk(pos + 1, s + (pos - v) * (pos - v));
+			used[v] = false;
+		}
+	};
+	walk(0, 0);
+	spearmanSCounts.set(n, counts);
+	return counts;
+}
+
+/**
+ * Exact two-sided p for Spearman's rho on n untied pairs, as R's cor.test computes it with
+ * exact = TRUE (prho.c, algorithm AS 89: Best and Roberts 1975, Appl. Statist. 24:377-379,
+ * whose exact branch R uses for n <= 9). With S = (n^3 - n)(1 - r) / 6, the lower tail is
+ * P(S <= S_obs) and the upper P(S >= S_obs), the tail on the observed side is taken, and
+ * p = min(1, 2 * tail).
+ *
+ * AS 89's Edgeworth series, which R uses for 10 <= n <= 1290, is NOT used: in the far tail it
+ * goes negative and is clamped to p = 0 (R gives p = 0 for rho = 0.88 on n = 20, where the
+ * t approximation gives 2.9e-7 and the permutation p is small but not 0), and a p of exactly 0
+ * corrupts any downstream FDR step. The t
+ * approximation (scipy.stats.spearmanr, cor.test(exact = FALSE)) is kept there.
+ * @param {number} r
+ * @param {number} n 2..SPEARMAN_EXACT_MAX_N
+ */
+export function spearmanExactPValue(r, n) {
+	if (!Number.isFinite(r) || !(n >= 2 && n <= SPEARMAN_EXACT_MAX_N)) return NaN;
+	const counts = spearmanCounts(n);
+	const n3 = n * n * n - n;
+	// R rounds S before looking it up; without ties S is an even whole number up to rounding.
+	const q = Math.round((n3 * (1 - r)) / 6);
+	let nfac = 1;
+	for (let i = 2; i <= n; i++) nfac *= i;
+	let tail = 0;
+	if (q > n3 / 6) {
+		for (let k = Math.ceil(q / 2); k < counts.length; k++) tail += counts[k];
+	} else {
+		for (let k = 0; k <= Math.floor(q / 2) && k < counts.length; k++) tail += counts[k];
+	}
+	return Math.min(1, (2 * tail) / nfac);
+}
+
+/**
+ * Two-sided p for Spearman's rho (STAT-28): exact for 3 <= n <= SPEARMAN_EXACT_MAX_N without
+ * ties (spearmanExactPValue), else the t approximation (correlationPValue).
+ * @param {number} r
+ * @param {number} n
+ * @param {boolean} ties either column has a tie
+ */
+export function spearmanPValue(r, n, ties) {
+	if (!ties && n >= 3 && n <= SPEARMAN_EXACT_MAX_N) return spearmanExactPValue(r, n);
+	return correlationPValue(r, n);
 }
 
 /**
@@ -117,7 +197,10 @@ export function correlate(x, y, method = 'pearson') {
 		method === 'spearman' ? spearman(x, y) : { ...pearson(x, y), tiesX: false, tiesY: false };
 	return {
 		r: res.r,
-		pvalue: correlationPValue(res.r, res.n),
+		pvalue:
+			method === 'spearman'
+				? spearmanPValue(res.r, res.n, res.tiesX || res.tiesY)
+				: correlationPValue(res.r, res.n),
 		n: res.n,
 		tiesX: res.tiesX,
 		tiesY: res.tiesY

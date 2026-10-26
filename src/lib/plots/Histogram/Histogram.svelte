@@ -130,9 +130,42 @@
 			);
 		});
 
-		// Derived: Gaussian KDE curve, scaled to the COUNT axis so it overlays the
-		// bars. A density f(x) predicts ≈ N·binWidth·f(x) counts in a bin of that
-		// width, so the overlay height is density × N × binWidth. Returns
+		// Bins of DIFFERENT widths (custom cut edges, unequally spaced)? Then the plot shows
+		// density, not counts (STAT-31; see Histogramclass.densityScale). Equal spacing is judged
+		// to a relative 1e-9, so edges such as 0, 0.1, 0.2 (whose float differences are not
+		// identical) still count as equal.
+		unequalWidths = $derived.by(() => {
+			if (this.binMode !== 'cuts') return false;
+			const b = this.binned;
+			if (b.bins.length < 2) return false;
+			const w0 = b.binEnds[0] - b.bins[0];
+			return b.bins.some((s, i) => Math.abs(b.binEnds[i] - s - w0) > 1e-9 * Math.abs(w0));
+		});
+
+		// N for the density: every present numeric value, including any outside the bins, so
+		// the bars estimate the same density the curve does and their areas sum to the fraction
+		// of values in range.
+		presentCount = $derived.by(() =>
+			this.column?.type === 'time' ? 0 : presentNumbers(this.column?.getData?.()).length
+		);
+
+		// What the bars draw: the counts, or on a density plot count / (N * width), the
+		// histogram density (Freedman, Pisani and Purves, Statistics, ch. 3; R's hist() switches
+		// to it whenever the breaks are not equidistant).
+		barHeights = $derived.by(() => {
+			const b = this.binned;
+			if (!this.parentPlot?.densityScale) return b.y_out;
+			const n = this.presentCount;
+			return b.y_out.map((c, i) => {
+				const w = b.binEnds[i] - b.bins[i];
+				return n > 0 && w > 0 ? c / (n * w) : NaN;
+			});
+		});
+
+		// Derived: Gaussian KDE curve on the bars' axis. On a COUNT axis (equal widths) a
+		// density f(x) predicts ≈ N·binWidth·f(x) counts in a bin of that width, so the overlay
+		// height is density × N × binWidth; on a DENSITY axis (unequal widths, STAT-31) it is the
+		// density itself, which every bar estimates whatever its width. Returns
 		// { x:number[], y:number[] } in data coords (empty when off / not enough data).
 		// Computed regardless of showDensity so the curve's data is always available
 		// for export (getDownloadData); the `density` derived below gates DISPLAY.
@@ -149,10 +182,12 @@
 				gridSize: 128
 			});
 			if (kde.x.length === 0) return { x: [], y: [] };
+			if (this.parentPlot?.densityScale) return { x: kde.x, y: kde.density.slice() };
 			const b = this.binned;
 			let binWidth;
 			if (this.binMode === 'cuts') {
-				// Custom edges: variable widths → use the mean bin width for scaling.
+				// Custom edges, all one width here (unequal widths draw density, above): the mean
+				// is that width.
 				let sum = 0;
 				let count = 0;
 				for (let i = 0; i < b.bins.length; i++) {
@@ -221,6 +256,12 @@
 		}
 	}
 
+	/** The legacy stored default y title "Count" becomes the automatic (empty) one (STAT-31). */
+	function histogramYAxis(axis) {
+		if (axis?.label === 'Count') axis.label = '';
+		return axis;
+	}
+
 	export class Histogramclass {
 		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
 		// vertical line at a cut-off value, a horizontal line at an expected count) and shaded
@@ -251,6 +292,13 @@
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state(/** @type {HistogramDataclass[]} */ ([]));
 		legend = $state();
+
+		// STAT-31: one series with unequal bin widths puts the whole plot on a DENSITY axis
+		// (one shared y axis cannot mix counts and densities); with equal widths everywhere the
+		// bars stay counts, exactly as before.
+		densityScale = $derived(this.data.some((d) => d.unequalWidths));
+		// The y title while the stored label is empty (Axis defaultLabel).
+		defaultYLabel = $derived(this.densityScale ? 'Density' : 'Count');
 
 		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
@@ -296,9 +344,10 @@
 			for (const d of this.data) {
 				const b = d.binned;
 				const rects = [];
+				const hts = d.barHeights;
 				for (let i = 0; i < b.bins.length; i++) {
-					if (!(b.y_out[i] > 0)) continue;
-					const top = ys(b.y_out[i]) - (d.showCounts ? 14 : 0);
+					if (!(hts[i] > 0)) continue;
+					const top = ys(hts[i]) - (d.showCounts ? 14 : 0);
 					rects.push([xs(b.bins[i]), top, xs(b.binEnds[i]), ys(0)]);
 				}
 				out.push({ rects });
@@ -346,9 +395,9 @@
 		ylims = $derived.by(() => {
 			let ymax = 0;
 			this.data.forEach((d) => {
-				const b = d.binned;
-				if (b.y_out.length > 0) {
-					const m = max(b.y_out);
+				const hts = d.barHeights;
+				if (hts.length > 0) {
+					const m = max(hts);
 					if (m != null && m > ymax) ymax = m;
 				}
 			});
@@ -432,22 +481,28 @@
 		//   kind='bin'     → x_start=bin start, x_end=bin end, value=count
 		//   kind='density' → x_start=grid x,    x_end='',      value=density height
 		//   kind='raw'     → x_start=value,     x_end='',      value=value
+		//   On a density plot (unequal bin widths, STAT-31) `value` is what is drawn: the bin's
+		//   density count / (N * width) and the plain curve density; a last `count` column then
+		//   carries each bin's count (blank on the other rows).
 		getDownloadData() {
-			const headers = ['series', 'kind', 'x_start', 'x_end', 'value'];
+			const dens = this.densityScale;
+			const headers = ['series', 'kind', 'x_start', 'x_end', 'value', ...(dens ? ['count'] : [])];
 			const rows = [];
+			const tail = dens ? [''] : [];
 			this.data.forEach((d) => {
 				const label = d.label;
 				const b = d.binned;
+				const hts = d.barHeights;
 				for (let i = 0; i < b.bins.length; i++) {
-					rows.push([label, 'bin', b.bins[i], b.binEnds[i], b.y_out[i]]);
+					rows.push([label, 'bin', b.bins[i], b.binEnds[i], hts[i], ...(dens ? [b.y_out[i]] : [])]);
 				}
 				const curve = d.kdeCurve();
 				for (let i = 0; i < curve.x.length; i++) {
-					rows.push([label, 'density', curve.x[i], '', curve.y[i]]);
+					rows.push([label, 'density', curve.x[i], '', curve.y[i], ...tail]);
 				}
 				const raw = presentNumbers(d.column?.getData?.());
 				for (const v of raw) {
-					rows.push([label, 'raw', v, '', v]);
+					rows.push([label, 'raw', v, '', v, ...tail]);
 				}
 			});
 			return { headers, rows };
@@ -457,7 +512,11 @@
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
 			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { gridlines: false });
-			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Count' });
+			// An empty label is the automatic title (defaultYLabel: Count, or Density on unequal
+			// bins). Sessions saved before STAT-31 stored "Count" as the default: read as empty,
+			// so a plot of unequal bins is not titled Count over density bars. With equal widths
+			// the title is the same "Count" either way.
+			this.yAxis = histogramYAxis(AxisClass.withDefaults(dataIN?.yAxis, { label: '' }));
 			if (dataIN?.data) {
 				dataIN.data.forEach((/** @type {any} */ d) => this.addData(d));
 			}
@@ -550,7 +609,7 @@
 			chart.xlimsIN = json.xlimsIN ?? chart.xlimsIN;
 			chart.ylimsIN = json.ylimsIN ?? chart.ylimsIN;
 			if (json.xAxis) chart.xAxis = AxisClass.fromJSON(json.xAxis);
-			if (json.yAxis) chart.yAxis = AxisClass.fromJSON(json.yAxis);
+			if (json.yAxis) chart.yAxis = histogramYAxis(AxisClass.fromJSON(json.yAxis));
 			chart.legend = LegendClass.fromJSON(json.legend);
 			if (json.data) {
 				chart.data = json.data.map((/** @type {any} */ d) => HistogramDataclass.fromJSON(d, chart));
@@ -645,7 +704,12 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
+		<Axis
+			axisData={theData.yAxis}
+			which="controls"
+			title="Y-axis"
+			defaultLabel={theData.defaultYLabel}
+		>
 			<div class="control-input-horizontal">
 				<ControlInput label="Y min">
 					<NumberWithUnits
@@ -752,7 +816,9 @@
 								/>
 								<p class="cuts-summary">
 									{#if datum.cuts.length >= 2}
-										{datum.cuts.length} edges → {datum.cuts.length - 1} bins
+										{datum.cuts.length} edges → {datum.cuts.length - 1} bins{datum.unequalWidths
+											? '. The widths differ, so the bars show density: count / (n × width), whose area is the share of values in the bin.'
+											: ''}
 									{:else}
 										Enter at least 2 distinct numeric edges
 									{/if}
@@ -897,6 +963,7 @@
 			position="left"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.yAxis}
+			defaultLabel={theData.plot.defaultYLabel}
 			which="plot"
 		/>
 		<Axis
@@ -924,7 +991,7 @@
 					<Hist
 						xStart={b.bins}
 						xEnd={b.binEnds}
-						y={b.y_out}
+						y={datum.barHeights}
 						xscale={xScale}
 						yscale={yScale}
 						colour={datum.fillColour}
@@ -957,7 +1024,7 @@
 						{#if count > 0}
 							<text
 								x={xScale((b.bins[i] + b.binEnds[i]) / 2) + theData.plot.padding.left}
-								y={yScale(count) + theData.plot.padding.top - 3}
+								y={yScale(datum.barHeights[i]) + theData.plot.padding.top - 3}
 								text-anchor="middle"
 								font-size="10"
 								fill="var(--color-text)"

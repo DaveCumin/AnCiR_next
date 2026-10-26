@@ -87,6 +87,8 @@
 				{ name: 'trendx', kind: 'column', cardinality: 'one' },
 				{ name: 'trendy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'trendy_' },
 				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
+				// The permutation test's per-y results (written when the test is on).
+				{ name: 'permstats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'permstats_' },
 				// Scalar-metric ports (one value per y input).
 				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true },

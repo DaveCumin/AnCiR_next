@@ -136,15 +136,8 @@ export function uncoveredValues(node, options, used) {
  * are the same failure class as the cosinor bug above and should go first.
  */
 export const PARAM_COVERAGE_GAPS = {
-	// The permutation tests are not run by the ports (they write NaN for perm_pvalue, "not
-	// computed"); every other enumerable value of these nodes is now reached (2026-10-20).
-	Cosinor: { permuteTest: [true] },
-	DoubleLogistic: { permuteTest: [true] },
-	FitFunction: {
-		permuteTest: [true],
-		autoPermutations: [true],
-		permutationStatistic: ['rmse']
-	},
-	TrendFit: { permuteTest: [true], autoPermutations: [true], permutationStatistic: ['rmse'] },
-	RectangularWave: { permuteTest: [true] }
+	// TrendFit's permutation p exists only in its panel (the headless node and its ports never
+	// run the test), so no port can be compared. The other fit nodes' permutation tests are
+	// ported exactly (2026-10-26) and reached by the *-perm-* fixtures.
+	TrendFit: { permuteTest: [true], autoPermutations: [true], permutationStatistic: ['rmse'] }
 };

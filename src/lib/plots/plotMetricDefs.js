@@ -139,8 +139,9 @@ export const PLOT_METRIC_DEFS = {
 			// peak_pvalue is the chi-squared significance of the peak, FAMILY-WISE over the
 			// folds the threshold line uses (Periodogram.svelte peakFamilywiseP), so it is below
 			// alpha exactly when the peak crosses the drawn line. Until SPEC-6 it was the
-			// uncorrected per-period p at the maximum. NaN for Lomb-Scargle/Enright (no
-			// analytic p). This supersedes the standalone Free-Running Period node, which was
+			// uncorrected per-period p at the maximum. For Lomb-Scargle it is Baluev's (2008)
+			// false-alarm probability over the visible band (periodogramPeak.js
+			// lombScargleFamilywiseP); NaN for Enright (no analytic p). This supersedes the standalone Free-Running Period node, which was
 			// a thin chi-squared periodogram wrapper.
 			return {
 				peak_period: p?.period ?? NaN,

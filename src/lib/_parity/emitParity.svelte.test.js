@@ -64,7 +64,7 @@ import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js'
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
-import { createSeededRNG } from '$lib/utils/permutationTest.js';
+import { createSeededRNG, permutationTest } from '$lib/utils/permutationTest.js';
 import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 import { oneWayAnova, tukeyKramerPostHoc } from '$lib/tableProcesses/GroupComparison.svelte';
 import { mean as sampleMean, sampleStd } from '$lib/utils/sampleStats.js';
@@ -189,6 +189,24 @@ const PURE_UTIL_FNS = {
 	seededSequence: (_unused, n, seed) => {
 		const rng = createSeededRNG(seed);
 		return { values: Array.from({ length: n }, () => rng()) };
+	},
+	// The first `count` permutations of 0..n-1 the fit nodes' permutation test draws, read off
+	// the real permutationTest (its fit function records each permuted y; the first call is
+	// the observed fit). jsArgs = [n, count, seed, scheme, blockLength].
+	permutationOrders: (_unused, n, count, seed, scheme = 'shuffle', blockLength = null) => {
+		const y = Array.from({ length: n }, (_, i) => i);
+		const orders = [];
+		let calls = 0;
+		permutationTest(
+			y,
+			y,
+			(_x, yp) => {
+				if (calls++ > 0) orders.push(...yp);
+				return { rSquared: 0 };
+			},
+			{ nPermutations: count, seed, scheme, blockLength }
+		);
+		return { orders };
 	},
 	// The refined FFT peak (fftPeak over computeFFT), flattened to scalars; no peak (flat data,
 	// a refused grid) is NaN throughout. jsArgs = [freqStep, periodMin, periodMax].
@@ -682,6 +700,7 @@ function runPlotCompute(fx) {
 	// The correlogram's rows are the plot's acfData, whose lag step comes from the x
 	// COLUMN (its binWidth, else its mean spacing), so they too are read from a real plot.
 	if (fx.jsFn === 'correlogramDownloadData') return runCorrelogramDownload(fx);
+	if (fx.jsFn === 'histogramDownloadData') return runHistogramDownload(fx);
 	const inputs = tpInputs(fx);
 	const fn = PLOT_COMPUTE_FNS[fx.jsFn];
 	if (!fn) throw new Error(`no JS plot-compute fn ${fx.jsFn}`);
@@ -1033,6 +1052,29 @@ async function runActogramDownload(fx) {
 			outputs: { headers, rows }
 		});
 	});
+}
+
+// The histogram's "Show/Save data" rows (Histogramclass.getDownloadData), which the Python
+// export writes as `<plot>_data.csv`. A `plotCompute` fixture with jsFn
+// 'histogramDownloadData' and `series`: [{ values, settings }], each settings object saved on
+// the series as the app saves it (binMode, binSize, binStart, cuts, showDensity, bandwidth...).
+// STAT-31 pins the density axis of unequal bins against the equal-width count axis.
+function runHistogramDownload(fx) {
+	const data = fx.series.map((s, i) => ({
+		column: { refId: mkCol('number', s.values, `h${i}`) },
+		...s.settings
+	}));
+	const plot = Plot.fromJSON({
+		id: 0,
+		name: fx.id,
+		type: 'histogram',
+		width: 600,
+		height: 400,
+		plot: { data }
+	});
+	core.plots.push(plot);
+	const { headers, rows } = plot.plot.getDownloadData();
+	return jsonSafe({ inputs: { series: fx.series }, outputs: { headers, rows } });
 }
 
 // The correlogram's "Show/Save data" rows (Correlogramclass.getDownloadData), which the

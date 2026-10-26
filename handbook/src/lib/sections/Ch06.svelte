@@ -173,11 +173,14 @@
 		Lomb-Scargle is not assumption-free. It fits a <strong>single sinusoid</strong>
 		at each frequency, so like <a class="gloss" href="#gloss-cosinor">cosinor</a> it underestimates the
 		amplitude of, and can miss, strongly non-sinusoidal (square-wave) rhythms; its noise model is Gaussian
-		and homoscedastic, which count data violate (consider a variance-stabilising transform); and its standard
+		and homoscedastic, which count data violate (consider a variance-stabilising transform); and the textbook
 		false-alarm probability assumes independent trial frequencies, so it understates the false-positive
-		rate on a fine period grid; a permutation-based threshold is safer. Irregular sampling also imposes
-		a spectral window whose sidelobes can create spurious peaks, so inspect the sampling pattern when
-		it is structured (e.g. daytime-only clinical sampling).
+		rate on a fine period grid. AnCiR's peak p for Lomb-Scargle is instead Baluev's (2008) false-alarm
+		probability, which allows for the correlated grid and for uneven sampling: an upper bound, slightly
+		conservative, on the chance that noise alone puts a peak that high anywhere in the period range. It
+		still assumes Gaussian white noise, so for autocorrelated noise a permutation or surrogate test is
+		safer. Irregular sampling also imposes a spectral window whose sidelobes can create spurious peaks,
+		so inspect the sampling pattern when it is structured (e.g. daytime-only clinical sampling).
 	</p>
 
 	<h3 class="section-head">Enright Periodogram</h3>
@@ -369,14 +372,17 @@
 				(one sample per bin); type a value to set your own. A bin narrower than the sampling
 				interval leaves bins empty, which both methods treat as missing. For Chi-squared, also set
 				the significance level <strong>Alpha</strong> (default 0.05); a significance threshold line is
-				then drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line,
-				so judge their peaks against a permutation threshold if you need a formal test.
+				then drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line;
+				Lomb-Scargle still reports its peak's family-wise p (Baluev's false-alarm probability), and for
+				Enright judge the peak against a permutation threshold if you need a formal test.
 			</li>
 			<li>
 				The dominant <strong>Peak period</strong> and its <strong>Peak power</strong>
 				are reported in the node. For Chi-squared the peak is the period that rises furthest above its
 				threshold line, and the node adds its family-wise p, marked
-				<em>not significant</em> when the peak does not cross the line.
+				<em>not significant</em> when the peak does not cross the line. For Lomb-Scargle the
+				family-wise p is Baluev's false-alarm probability, marked <em>not significant</em> at 0.05 or
+				above.
 			</li>
 			<li>
 				The y axis is titled after the statistic each method computes: <strong
@@ -401,7 +407,7 @@
 				Hover over the plot to read off the exact period and power at any point. The highest peak in
 				the visible range is listed in the plot's <strong>Data</strong> tab as
 				<strong>Peak period</strong> and <strong>Peak power</strong> (plus its family-wise p for the chi-squared
-				method); the node's peak output ports let you wire it into other nodes.
+				and Lomb-Scargle methods); the node's peak output ports let you wire it into other nodes.
 			</li>
 		</ol>
 		<DemoLink

@@ -81,6 +81,9 @@
 					cardinality: 'many',
 					dynamicPrefix: 'rhythmicityy_'
 				},
+				// A standalone node's arrays: one `<yId>_<key>` per wired y and output key
+				// (getOutputKeys). A placeholder name, like Moving window's: no fixed prefix.
+				{ name: '<colId>_<key>', kind: 'column', cardinality: 'many' },
 				// Scalar-metric ports (one value per y input): the current analysis's
 				// stat keys (getStatKeys) prefixed with `stat_`, e.g. stat_peak_period.
 				{
@@ -128,10 +131,11 @@
 	 */
 	export function getStatKeys(args) {
 		if (args.analysis === 'periodogram') {
-			// peak_pvalue: the chi-squared peak's family-wise p (peakFamilywiseP), the same number
-			// the Periodogram plot's port reports; at or above alpha the peak does not cross the
-			// threshold line (SPEC-9). Lomb-Scargle and Enright have no analytic p.
-			return args.pgMethod === 'Chi-squared'
+			// peak_pvalue: the peak's family-wise p (peakFamilywiseP), the same number the
+			// Periodogram plot's port reports. Chi-squared: at or above alpha the peak does not
+			// cross the threshold line (SPEC-9). Lomb-Scargle (the default method): Baluev's
+			// (2008) false-alarm probability over the period range. Enright has no analytic p.
+			return (args.pgMethod ?? 'Lomb-Scargle') !== 'Enright'
 				? ['peak_period', 'peak_power', 'peak_pvalue']
 				: ['peak_period', 'peak_power'];
 		}
@@ -338,7 +342,7 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { useBinSizeAuto, stopFollowingSampling } from '$lib/tableProcesses/binSizeAuto.svelte.js';
-	import { periodInputProps } from '$lib/utils/periodUnits.js';
+	import { periodInputProps, periodUnitForColumn } from '$lib/utils/periodUnits.js';
 	import {
 		showNodeResultTable,
 		saveStaticDataAsCSV
@@ -368,6 +372,9 @@
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	useBinSizeAuto(p, () => xIN_col);
+	// The controls are in the units of x: hours for a time column, its own numbers otherwise.
+	let xUnit = $derived(periodUnitForColumn(xIN_col));
+	let perXUnit = $derived(xUnit === 'h' ? 'cycles/h' : 'cycles per x unit');
 
 	let currentOutputKeys = $derived.by(() => getOutputKeys(p.args));
 	let currentStatKeys = $derived.by(() => getStatKeys(p.args));
@@ -775,7 +782,7 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlGroup label="Period range (h)">
+			<ControlGroup label={`Period range (${xUnit})`}>
 				<ControlInput label="Min">
 					<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
 				</ControlInput>
@@ -789,7 +796,7 @@
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<ControlInput label="Bin size (h)">
+				<ControlInput label={`Bin size (${xUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.pgBinSize}
 						onInput={() => stopFollowingSampling(p.args)}
@@ -814,18 +821,18 @@
 		{/if}
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Frequency step (cycles/h; 0 = auto)">
+			<ControlInput label={`Frequency step (${perXUnit}; 0 = auto)`}>
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Min lag (h)">
+			<ControlInput label={`Min lag (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
 			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlInput label="Max lag (h; 0 = half range)">
+			<ControlInput label={`Max lag (${xUnit}; 0 = half range)`}>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
 			</ControlInput>
 		</div>

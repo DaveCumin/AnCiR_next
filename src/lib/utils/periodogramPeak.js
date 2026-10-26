@@ -4,6 +4,7 @@
 // Kept apart from periodogram.js (the compute) so node tests that mock the compute still get
 // the real peak rule.
 import { chisqSf } from './chisqSf.js';
+import gammaln from '@stdlib/math-base-special-gammaln';
 
 /**
  * Index of the periodogram's reported PEAK in a runPeriodogramCalculation result, or -1 when
@@ -19,6 +20,7 @@ import { chisqSf } from './chisqSf.js';
  * peakFamilywiseP below (below alpha exactly when the excess is positive).
  *
  * Lomb-Scargle and Enright (no threshold): the largest power, as before (spectralPeakIndex).
+ * Lomb-Scargle's family-wise p is Baluev's false-alarm probability (lombScargleFamilywiseP).
  *
  * Either way a non-positive or non-finite power is never a peak, so flat or all-zero data
  * reports no peak (ROB-13).
@@ -50,6 +52,43 @@ export function periodogramPeakIndex(res, candidateIndices) {
 }
 
 /**
+ * The Lomb-Scargle peak's FAMILY-WISE p: the probability that pure noise puts a peak this high
+ * ANYWHERE in the band, Baluev's (2008, MNRAS 385:1279-1285, eq. 6 and Table 1) "alias-free"
+ * false-alarm probability, in the form astropy implements (LombScargle.false_alarm_probability,
+ * method 'baluev', normalization 'standard', VanderPlas 2018 ApJS 236:16 section 7.4):
+ *
+ *   z     = 2 P / (N - 1)   the app's power P (Horne and Baliunas 1986, ApJ 302:757, normalised
+ *                           by the sample variance) as the fraction of variance explained
+ *   FAP_1 = (1 - z)^((N - 3) / 2)                                     one pre-chosen frequency
+ *   tau   = gamma(N - 1) W (1 - z)^((N - 4) / 2) sqrt((N - 1) z / 2)   Davies' upcrossing term
+ *   FAP   = 1 - (1 - FAP_1) exp(-tau)
+ *
+ * with W = fmax sqrt(4 pi var(t)) (fmax the highest frequency searched, var(t) the population
+ * variance of the sample times) and gamma(m) = sqrt(2 / m) Gamma(m / 2) / Gamma((m - 1) / 2).
+ * It is an upper bound, close to the true FAP when that is small, and it treats the band as
+ * running from 0 to fmax, so it is conservative for a band that starts above 0. Unlike the
+ * Horne and Baliunas M_eff rule it needs no simulation and holds for uneven sampling.
+ *
+ * @param {number} power the peak's normalised power P
+ * @param {number} n the number of samples the spectrum used
+ * @param {number} timeVar population variance of their times
+ * @param {number} fmax highest frequency searched (1 / shortest period), per time unit
+ * @returns {number} in [0, 1]; NaN for n < 5, no time spread or a non-finite input
+ */
+export function lombScargleFamilywiseP(power, n, timeVar, fmax) {
+	if (!(n >= 5) || !(timeVar > 0) || !(fmax > 0) || !Number.isFinite(power)) return NaN;
+	const z = Math.min(1, Math.max(0, (2 * power) / (n - 1)));
+	const nh = n - 1;
+	const nk = n - 3;
+	const fapSingle = Math.pow(1 - z, nk / 2);
+	const gammaFactor = Math.sqrt(2 / nh) * Math.exp(gammaln(nh / 2) - gammaln((nh - 1) / 2));
+	const w = fmax * Math.sqrt(4 * Math.PI * timeVar);
+	const tau = gammaFactor * w * Math.pow(1 - z, (nk - 1) / 2) * Math.sqrt((nh * z) / 2);
+	// 1 - (1 - FAP_1) e^-tau, written so that a tiny FAP stays tiny (as astropy does).
+	return Math.min(1, -Math.expm1(-tau) + fapSingle * Math.exp(-tau));
+}
+
+/**
  * The chi-squared peak's FAMILY-WISE p: 1 - (1 - p)^M, with p the per-period upper-tail p at
  * the peak and M the number of folds that carry a statistic, the same M the Sidak line is
  * drawn with (runPeriodogramCalculation). The peak crosses the drawn line exactly when this p
@@ -57,11 +96,29 @@ export function periodogramPeakIndex(res, candidateIndices) {
  * period, but the peak is the maximum over all M, so on white noise it was below 0.05 in 34%
  * of records while the line was crossed in 3% (SPEC-6).
  *
- * @param {{y:number[], pvalue:number[], df?:number[]}} periodData
+ * A Lomb-Scargle result (one that carries `nObs` and `timeVar` from runPeriodogramCalculation)
+ * gets lombScargleFamilywiseP instead, over the band searched: the periods at
+ * `candidateIndices` (the visible range for the plot's visible peak), else every period.
+ *
+ * @param {{x?:number[], y:number[], pvalue:number[], df?:number[], nObs?:number,
+ *          timeVar?:number}} periodData
  * @param {number} idx the peak's index
- * @returns {number} NaN for Lomb-Scargle/Enright (no analytic p)
+ * @param {number[]} [candidateIndices] the periods the peak was searched over (Lomb-Scargle)
+ * @returns {number} NaN for Enright (no analytic p)
  */
-export function peakFamilywiseP(periodData, idx) {
+export function peakFamilywiseP(periodData, idx, candidateIndices) {
+	if (Number.isFinite(periodData?.nObs)) {
+		const x = periodData.x ?? [];
+		let pMin = Infinity;
+		for (const i of candidateIndices ?? x.keys()) if (x[i] > 0 && x[i] < pMin) pMin = x[i];
+		if (!(idx >= 0) || !Number.isFinite(pMin)) return NaN;
+		return lombScargleFamilywiseP(
+			periodData.y?.[idx],
+			periodData.nObs,
+			periodData.timeVar,
+			1 / pMin
+		);
+	}
 	const pv = periodData?.pvalue ?? [];
 	let M = 0;
 	for (const v of pv) if (Number.isFinite(v)) M++;

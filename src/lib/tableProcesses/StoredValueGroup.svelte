@@ -72,10 +72,9 @@
 		nodeSpec: {
 			id: 'tableprocess.storedvaluegroup',
 			inputs: [],
-			outputs: [
-				{ name: 'category', kind: 'column', cardinality: 'one' },
-				{ name: 'value', kind: 'column', cardinality: 'one' }
-			]
+			// One `group_<group id>` column per group. The combined `category` / `value` pair of
+			// older sessions is removed on load (cleanupLegacyCombinedOutputs), so it is not listed.
+			outputs: [{ name: 'group_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'group_' }]
 		}
 	};
 </script>

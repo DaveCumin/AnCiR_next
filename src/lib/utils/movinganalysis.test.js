@@ -439,12 +439,14 @@ describe('chi-squared moving periodogram peak (SPEC-9)', () => {
 		pgAlpha: 0.05
 	};
 
-	it('declares peak_pvalue for Chi-squared only', () => {
+	it('declares peak_pvalue for Chi-squared and Lomb-Scargle, not Enright', () => {
 		expect(getStatKeys(args)).toEqual(['peak_period', 'peak_power', 'peak_pvalue']);
 		expect(getStatKeys({ ...args, pgMethod: 'Lomb-Scargle' })).toEqual([
 			'peak_period',
-			'peak_power'
+			'peak_power',
+			'peak_pvalue'
 		]);
+		expect(getStatKeys({ ...args, pgMethod: 'Enright' })).toEqual(['peak_period', 'peak_power']);
 	});
 
 	it('a weak 24 h rhythm reports ~24 h (not ~48 h) with a significant family-wise p', () => {

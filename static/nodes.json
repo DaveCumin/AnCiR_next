@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.63",
+  "generatedFromVersion": "β.82.64",
   "count": 62,
   "nodes": [
     {
@@ -436,7 +436,7 @@
           "kind": "column",
           "cardinality": "one",
           "metric": true,
-          "description": "Family-wise p of the Chi-squared peak, corrected for every period tested. Blank for the other methods. One value per series."
+          "description": "Family-wise p of the peak, corrected for the periods tested (Chi-squared folds; Lomb-Scargle by Baluev’s false-alarm probability). Blank for Enright. One value per series."
         }
       ],
       "demo": "sessions/demos/demo-workflow-free-running.json"
@@ -1462,7 +1462,7 @@
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "description": "Per-test p of each pair, not corrected for the number of pairs."
+          "description": "Per-test p of each pair, not corrected for the number of pairs. Spearman p is exact for up to 9 untied pairs, else the t approximation."
         },
         {
           "name": "padj",
@@ -1957,6 +1957,24 @@
           "kind": "column",
           "cardinality": "one",
           "description": "Sample standard deviation (n - 1), in the column’s units."
+        },
+        {
+          "name": "sem",
+          "kind": "column",
+          "cardinality": "one",
+          "description": "Standard error of the mean, SD / sqrt(n), in the column’s units. Blank below 2 values."
+        },
+        {
+          "name": "ciLow",
+          "kind": "column",
+          "cardinality": "one",
+          "description": "Lower end of the 95% confidence interval of the mean (Student t, n - 1 df). Blank below 2 values."
+        },
+        {
+          "name": "ciHigh",
+          "kind": "column",
+          "cardinality": "one",
+          "description": "Upper end of the 95% confidence interval of the mean (Student t, n - 1 df). Blank below 2 values."
         },
         {
           "name": "min",
@@ -2607,7 +2625,7 @@
           "kind": "column",
           "cardinality": "one",
           "metric": true,
-          "description": "Omnibus p of the test, one value per wired y column; not corrected across y columns."
+          "description": "Omnibus p of the test, one value per wired y column; not corrected across y columns. Mann-Whitney p is exact for small groups (either n <= 8) without ties."
         },
         {
           "name": "effectSize",
@@ -3092,10 +3110,15 @@
       ],
       "outputs": [
         {
-          "name": "stats_*",
+          "name": "movex",
+          "kind": "column",
+          "cardinality": "one",
+          "description": "Where each window sits: its start, centre (default) or end, as chosen in the panel. A time column for a time x."
+        },
+        {
+          "name": "<colId>_<stat>",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "stats_",
           "description": "One column per wired y column and statistic of the chosen analysis, one row per window. Blank for a window without enough data."
         }
       ],
@@ -3280,7 +3303,7 @@
           "name": "normal",
           "kind": "column",
           "cardinality": "one",
-          "description": "1 when p is at least alpha (normality not rejected), 0 when rejected."
+          "description": "1 when p is at least alpha: normality not rejected, so the data are consistent with a normal distribution (not shown to be normal). 0 when rejected (non-normal). Blank when the test could not run."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-eda.json"
@@ -3655,6 +3678,12 @@
           "description": "The spectrum or correlogram values for this y column."
         },
         {
+          "name": "<colId>_<key>",
+          "kind": "column",
+          "cardinality": "many",
+          "description": "One array per wired y column and quantity of the analysis: periods and power (and the threshold), periods, frequencies, magnitudes and phases, or lags and r."
+        },
+        {
           "name": "stat_*",
           "kind": "column",
           "cardinality": "many",
@@ -3984,16 +4013,11 @@
       ],
       "outputs": [
         {
-          "name": "category",
+          "name": "group_*",
           "kind": "column",
-          "cardinality": "one",
-          "description": "Group name of each stored value (older sessions only)."
-        },
-        {
-          "name": "value",
-          "kind": "column",
-          "cardinality": "one",
-          "description": "The stored values of every group (older sessions only)."
+          "cardinality": "many",
+          "dynamicPrefix": "group_",
+          "description": "The stored values listed in this group, one row each, in key order. Feed it to a plot or test to compare groups."
         }
       ],
       "demo": "sessions/demos/demo-tp-storedvaluegroup.json"
@@ -4204,6 +4228,13 @@
           "cardinality": "many",
           "dynamicPrefix": "resid_",
           "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
+        },
+        {
+          "name": "permstats_*",
+          "kind": "column",
+          "cardinality": "many",
+          "dynamicPrefix": "permstats_",
+          "description": "The statistic (R² or RMSE) of every permuted fit, one row per permutation. Empty unless the permutation test is on."
         },
         {
           "name": "r2",

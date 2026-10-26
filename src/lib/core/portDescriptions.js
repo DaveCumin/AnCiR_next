@@ -168,7 +168,7 @@ export const STAT_DESCRIPTIONS = {
 		`Period of the highest peak, in ${xUnit(ctx)}. Blank when there is no peak.`,
 	peak_power: PEAK_POWER,
 	peak_pvalue:
-		'Family-wise p of the Chi-squared peak, corrected for every period tested. At or above alpha the peak is not significant.',
+		'Family-wise p of the peak, corrected for every period tested (Chi-squared folds; Lomb-Scargle by Baluev’s false-alarm probability). Blank for Enright.',
 	peak_frequency: (ctx) => `Frequency of the highest FFT peak, in cycles ${perXUnit(ctx)}.`,
 	peak_magnitude: 'Amplitude of the highest FFT peak, in y units.',
 	peak_lag: (ctx) =>
@@ -214,7 +214,7 @@ export function statDescription(stat, ctx = {}) {
 //   outputs  { <out key>: text | (ctx) => text }. A key ending in `*` is a per-input family:
 //            `cosinory_*` covers every `cosinory_<colId>` (the manifest's dynamicPrefix).
 //   special  [{ name, re, text(m, ctx) }] key shapes with no prefix of their own; `name` is
-//            the manifest output it stands for (MovingAnalysis `stats_*`, Split `segments`).
+//            the manifest output it stands for (MovingAnalysis `<colId>_<stat>`, Split `segments`).
 // ---------------------------------------------------------------------------------------------
 
 /** A metric output that holds one value per wired y: "<what>. One value per wired y column." */
@@ -523,6 +523,8 @@ export const NODE_PORT_DESCRIPTIONS = {
 					fft: 'FFT magnitude (an amplitude, in y units) at each period.',
 					correlogram: 'Autocorrelation r at each lag, -1 to 1.'
 				})[ctx?.args?.analysis] ?? 'The spectrum or correlogram values for this y column.',
+			'<colId>_<key>':
+				'One array per wired y column and quantity of the analysis: periods and power (and the threshold), periods, frequencies, magnitudes and phases, or lags and r.',
 			'stat_*':
 				'A peak statistic, one value per wired y column: period, power or p; frequency or magnitude; or lag and r, by analysis.'
 		},
@@ -563,12 +565,12 @@ export const NODE_PORT_DESCRIPTIONS = {
 		outputs: {
 			movex:
 				'Where each window sits: its start, centre (default) or end, as chosen in the panel. A time column for a time x.',
-			'stats_*':
+			'<colId>_<stat>':
 				'One column per wired y column and statistic of the chosen analysis, one row per window. Blank for a window without enough data.'
 		},
 		special: [
 			{
-				name: 'stats_*',
+				name: '<colId>_<stat>',
 				re: /^(\d+)_(.+)$/,
 				text: (m, ctx) => {
 					const s = statDescription(m[2], ctx);
@@ -683,7 +685,8 @@ export const NODE_PORT_DESCRIPTIONS = {
 			var_i: 'Name of the first column of each pair, one row per pair.',
 			var_j: 'Name of the second column of each pair, one row per pair.',
 			r: 'Correlation r of the pair (Pearson or Spearman), -1 to 1. Blank with fewer than 2 rows or no variance.',
-			pvalue: 'Per-test p of each pair, not corrected for the number of pairs.',
+			pvalue:
+				'Per-test p of each pair, not corrected for the number of pairs. Spearman p is exact for up to 9 untied pairs, else the t approximation.',
 			padj: 'Holm-adjusted p across all the pairs (family-wise).',
 			n: 'Number of rows where both columns have a value, per pair.',
 			ciLow: 'Lower end of the 95% interval of r, per pair. Blank with fewer than 4 rows.',
@@ -701,6 +704,11 @@ export const NODE_PORT_DESCRIPTIONS = {
 			mean: 'Mean, in the column’s units, one row per column.',
 			median: 'Median, in the column’s units, one row per column.',
 			sd: 'Sample standard deviation (n - 1), in the column’s units.',
+			sem: 'Standard error of the mean, SD / sqrt(n), in the column’s units. Blank below 2 values.',
+			ciLow:
+				'Lower end of the 95% confidence interval of the mean (Student t, n - 1 df). Blank below 2 values.',
+			ciHigh:
+				'Upper end of the 95% confidence interval of the mean (Student t, n - 1 df). Blank below 2 values.',
 			min: 'Smallest value, one row per column.',
 			max: 'Largest value, one row per column.',
 			range: 'Largest minus smallest value, one row per column.',
@@ -730,7 +738,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 			statistic: (ctx) =>
 				`The test statistic (t, F, U or H, by method), ${ctx?.args?.xIN != null && Number(ctx.args.xIN) >= 0 ? 'one value per wired y column' : 'one value per wired y column, or one when the y columns are the groups'}.`,
 			pvalue:
-				'Omnibus p of the test, one value per wired y column; not corrected across y columns.',
+				'Omnibus p of the test, one value per wired y column; not corrected across y columns. Mann-Whitney p is exact for small groups (either n <= 8) without ties.',
 			effectSize:
 				"Effect size, one value per wired y column: Cohen's d (t-test), η² (ANOVA), r (Mann-Whitney) or ε² (Kruskal-Wallis)."
 		}
@@ -764,7 +772,8 @@ export const NODE_PORT_DESCRIPTIONS = {
 			pvalue:
 				'p of the normality test, per column. Blank if n is too small (or above 5000 for Shapiro-Wilk).',
 			n: 'Number of values tested, per column.',
-			normal: '1 when p is at least alpha (normality not rejected), 0 when rejected.'
+			normal:
+				'1 when p is at least alpha: normality not rejected, so the data are consistent with a normal distribution (not shown to be normal). 0 when rejected (non-normal). Blank when the test could not run.'
 		}
 	},
 	Threshold: {
@@ -1108,7 +1117,7 @@ export const PLOT_PORT_DESCRIPTIONS = {
 			peak_period: `Period of ${VISIBLE_PEAK}, in hours. One value per series.`,
 			peak_power: `${PEAK_POWER({})} One value per series.`,
 			peak_pvalue:
-				'Family-wise p of the Chi-squared peak, corrected for every period tested. Blank for the other methods. One value per series.'
+				'Family-wise p of the peak, corrected for the periods tested (Chi-squared folds; Lomb-Scargle by Baluev’s false-alarm probability). Blank for Enright. One value per series.'
 		}
 	},
 	qqplot: {
@@ -1253,7 +1262,7 @@ export function overlayChannelDescription(kind, form, key) {
 
 /**
  * Description of a manifest port (static/nodes.json) with no session context: a fixed name, a
- * `prefix_*` family or a placeholder (`stats_*`, `segments`, `r*_tau`).
+ * `prefix_*` family or a placeholder (`<colId>_<stat>`, `segments`, `r*_tau`).
  * @param {'tableProcess' | 'process' | 'plot'} kind
  */
 export function manifestPortDescription(kind, nodeId, portName, dir) {

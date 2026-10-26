@@ -83,13 +83,17 @@ kurtosis_unbiased <- function(x) {
 describe_stats <- function(values) {
   x <- clean_numeric(values)
   n <- length(x)
-  keys <- c("n", "mean", "median", "sd", "min", "max", "range",
+  keys <- c("n", "mean", "median", "sd", "sem", "ciLow", "ciHigh", "min", "max", "range",
             "q1", "q3", "iqr", "skewness", "kurtosis")
   if (n == 0) return(setNames(as.list(rep(NA_real_, length(keys))), keys))
   q1 <- unname(quantile(x, 0.25, type = 7))
   q3 <- unname(quantile(x, 0.75, type = 7))
+  # SEM and the t-based 95% CI of the mean (Student 1908), as t.test(x)$conf.int (STAT-36).
+  sem <- if (n > 1) sd(x) / sqrt(n) else NA_real_
+  half <- if (n > 1) qt(0.975, n - 1) * sem else NA_real_
   list(n = n, mean = mean(x), median = median(x),
        sd = if (n > 1) sd(x) else NA_real_,
+       sem = sem, ciLow = mean(x) - half, ciHigh = mean(x) + half,
        min = min(x), max = max(x), range = max(x) - min(x),
        q1 = q1, q3 = q3, iqr = q3 - q1,
        skewness = skewness_unbiased(x), kurtosis = kurtosis_unbiased(x))
@@ -267,11 +271,12 @@ correlate <- function(x, y, method = "pearson") {
     return(list(r = if (length(r) == 1 && is.finite(r)) r else NA_real_,
                 pvalue = NA_real_, n = n))
   }
-  # exact = FALSE: the app (utils/correlation.js) and scipy's spearmanr give Spearman's p
-  # from the t approximation. cor.test's default for n < 1290 without ties is the EXACT
-  # AS 89 p-value, which differs (0.4350 vs 0.4367 on tp-correlation-auto-one-skewed).
-  # Pearson ignores the flag.
-  res <- suppressWarnings(cor.test(p$x, p$y, exact = FALSE,
+  # exact for n <= 9 (STAT-28): the app (utils/correlation.js spearmanPValue) takes Spearman's
+  # p from the exact permutation distribution there, as cor.test's AS 89 exact branch does
+  # (with ties cor.test drops to the t approximation itself). Above 9 the app keeps scipy's t
+  # approximation rather than AS 89's Edgeworth series, which cor.test's default would use up
+  # to n = 1290 and which clamps far-tail p to 0. Pearson ignores the flag.
+  res <- suppressWarnings(cor.test(p$x, p$y, exact = n <= 9,
                                    method = if (method == "spearman") "spearman" else "pearson"))
   list(r = unname(res$estimate), pvalue = unname(res$p.value), n = n)
 }
@@ -763,7 +768,7 @@ tp_smootheddata <- function(args, env) {
 tp_describedata <- function(args, env) {
   y_ins <- id_list(args$yIN)
   if (!length(y_ins)) return(FALSE)
-  keys <- c("n", "mean", "median", "sd", "min", "max", "range",
+  keys <- c("n", "mean", "median", "sd", "sem", "ciLow", "ciHigh", "min", "max", "range",
             "q1", "q3", "iqr", "skewness", "kurtosis")
   rows <- setNames(vector("list", length(keys) + 1), c("variable", keys))
   for (k in names(rows)) rows[[k]] <- c()
@@ -2134,6 +2139,17 @@ tp_cosinor <- function(args, env) {
     params <- if (!is.null(res$harmonics)) res else res$parameters
     xs <- if (!is.null(fr$out)) fr$out else tt
     metrics[[yk]] <- cosinor_metrics(fixed_res, free_res, args, phase_ref)
+    # The optional permutation test (Cosinor.svelte permOptions: this node's own fit), run
+    # only when its port is written (wired, with the x output), since refits can be slow.
+    if (.perm_truthy(args$permuteTest) && out_id(args, "perm_pvalue") != -1 &&
+        out_id(args, "cosinorx") != -1) {
+      perm_opts <- list(useFixedPeriod = use_fixed, fixedPeriod = fixed_period,
+                        nHarmonics = n_h, Ncurves = if (is.na(n_curves) || n_curves == 0) 1
+                                                    else n_curves,
+                        alpha = alpha, minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
+      metrics[[yk]]$perm_pvalue <- fit_permutation_pvalue(
+        tt, yy, "cosinor", perm_opts, args, label = paste("Cosinor, column", yk))$pValue
+    }
     # preProcesses on the fitted curve only (Cosinor.svelte, before writing).
     curves[[yk]] <- list(x = xs, y = apply_output_pre_processes(
       evaluate_cosinor_at_points(params, xs), args, env))
@@ -4244,7 +4260,7 @@ tp_rectangularwave <- function(args, env) {
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
-  curves <- list(); any_valid <- FALSE; stats_by_y <- list()
+  curves <- list(); any_valid <- FALSE; stats_by_y <- list(); perm_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -4268,6 +4284,15 @@ tp_rectangularwave <- function(args, env) {
               type = "number")
     }
     stats_by_y[[yk]] <- res
+    # The optional permutation test (permOptions: fitCurveModel derives the pinned omega from
+    # fixedPeriod), run only when its port is written, since refits can be slow.
+    if (.perm_truthy(args$permuteTest) && out_id(args, "perm_pvalue") != -1 &&
+        out_id(args, "rectwavex") != -1) {
+      perm_by_y[[yk]] <- fit_permutation_pvalue(
+        pr$t, pr$y, "rectangular", c(opts[setdiff(names(opts), "fixedOmega")],
+                                     list(fixedPeriod = fp)),
+        args, label = paste("Rectangular wave, column", yk))$pValue
+    }
     any_valid <- TRUE
   }
   # RectangularWave.svelte writes the x, the curves and the metric ports only with the x
@@ -4283,16 +4308,15 @@ tp_rectangularwave <- function(args, env) {
       set_col(env, env$cols, y_out, curves[[yk]]$y, type = "number")
     }
     # r2/rmse are declared ports that the Python port never wrote until 2026-07-28;
-    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25 — the permutation
-    # test's p, the only p this node emits) belongs to a Monte Carlo test not run
-    # here, so it stays NA — "not computed", not "not significant".
+    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25) is the permutation test's
+    # p, the only p this node emits: NA ("not computed") when the test is off.
     for (key in c("r2", "rmse", "perm_pvalue")) {
       arr <- vapply(y_ins, function(y) {
         r <- stats_by_y[[as.character(y)]]
         if (is.null(r)) NA_real_
         else if (key == "r2") r$rSquared
         else if (key == "rmse") r$rmse
-        else NA_real_
+        else .nz(perm_by_y[[as.character(y)]])
       }, numeric(1))
       set_col(env, env$cols, out_id(args, key), arr, type = "number")
     }
@@ -4521,7 +4545,7 @@ tp_doublelogistic <- function(args, env) {
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
-  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list(); perm_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -4549,6 +4573,13 @@ tp_doublelogistic <- function(args, env) {
               type = "number")
     }
     stats_by_y[[yk]] <- res
+    # The optional permutation test, refitting with dlOpts (DoubleLogistic.svelte); run only
+    # when its port is wired, since refits can be slow.
+    if (.perm_truthy(args$permuteTest) && out_id(args, "perm_pvalue") != -1) {
+      perm_by_y[[yk]] <- fit_permutation_pvalue(
+        pr$t, pr$y, "doublelogistic", opts, args,
+        label = paste("Double logistic, column", yk))$pValue
+    }
     any_valid <- TRUE
   }
   if (any_valid) {
@@ -4558,13 +4589,14 @@ tp_doublelogistic <- function(args, env) {
   }
   if (any_valid) {
     # r2/rmse were declared but unwritten in the Python port until 2026-07-28;
-    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25 — the permutation
-    # test's p, the only p this node emits) is Monte Carlo and not run here, so NA.
+    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25) is the permutation test's
+    # p, the only p this node emits: NA when the test is off.
     for (key in c("r2", "rmse", "perm_pvalue")) {
       arr <- vapply(y_ins, function(y) {
         r <- stats_by_y[[as.character(y)]]
         if (is.null(r)) NA_real_
-        else if (key == "r2") r$rSquared else if (key == "rmse") r$rmse else NA_real_
+        else if (key == "r2") r$rSquared else if (key == "rmse") r$rmse
+        else .nz(perm_by_y[[as.character(y)]])
       }, numeric(1))
       set_col(env, env$cols, out_id(args, key), arr, type = "number")
     }
@@ -4578,6 +4610,32 @@ tp_doublelogistic <- function(args, env) {
 
 # Dispatches to whichever curve family the user picked. Mirrors fitFunction.js
 # fitCurveModel + the per-model option plumbing.
+# FitFunction.svelte getModelOptions: the options its permutation test refits with.
+.ff_model_options <- function(args) {
+  g <- function(key, default) if (is.null(args[[key]])) default else args[[key]]
+  model <- args$model
+  if (identical(model, "cosinor"))
+    return(list(useFixedPeriod = g("useFixedPeriod", TRUE), fixedPeriod = g("fixedPeriod", 24),
+                nHarmonics = g("nHarmonics", 1), Ncurves = g("Ncurves", 1),
+                alpha = g("alpha", 0.05),
+                minPeriod = g("minPeriod", FREE_PERIOD_DEFAULTS$minPeriod),
+                maxPeriod = g("maxPeriod", FREE_PERIOD_DEFAULTS$maxPeriod)))
+  if (identical(model, "rectangular"))
+    return(list(fixKappa = g("fixKappa", FALSE), fixedKappa = g("fixedKappa", 5),
+                fixOmega = g("fixOmega", FALSE), fixedPeriod = g("fixedPeriod", 24),
+                fixDutyCycle = g("fixDutyCycle", FALSE), fixedDutyCycle = g("fixedDutyCycle", 0.5),
+                minPeriod = g("minPeriod", FREE_PERIOD_DEFAULTS$minPeriod),
+                maxPeriod = g("maxPeriod", FREE_PERIOD_DEFAULTS$maxPeriod)))
+  if (identical(model, "doublelogistic"))
+    return(list(periodic = g("periodic", TRUE), fixK1 = g("fixK1", FALSE),
+                fixedK1 = g("fixedK1", 0.5), fixK2 = g("fixK2", FALSE),
+                fixedK2 = g("fixedK2", 0.5), fixPeriod = g("fixPeriod", FALSE),
+                fixedPeriod = g("fixedPeriod", 24),
+                minPeriod = g("minPeriod", FREE_PERIOD_DEFAULTS$minPeriod),
+                maxPeriod = g("maxPeriod", FREE_PERIOD_DEFAULTS$maxPeriod)))
+  list()
+}
+
 ff_fit_curve_model <- function(tt, yy, model, args) {
   if (identical(model, "cosinor")) {
     # FitFunction.svelte getModelOptions: useFixedPeriod ?? true.
@@ -4702,7 +4760,10 @@ ff_raw_metric <- function(key, model, fr) {
   if (key == "r2") return(.nz(fr$rSquared))
   if (key == "rmse") return(.nz(fr$rmse))
   if (key == "rmse_n") return(.nz(fr$fixedStats$RMSE_n))
-  if (key == "perm_pvalue") return(NaN)
+  # Strictly the permutation p, gated on a null distribution existing.
+  if (key == "perm_pvalue")
+    return(if (length(fr$permutedStats) && is.finite(.nz(fr$permPValue))) .nz(fr$permPValue)
+           else NaN)
   p <- fr$parameters
   if (identical(model, "cosinor")) {
     if (identical(fr$mode, "fixed")) {
@@ -4779,6 +4840,15 @@ tp_fitfunction <- function(args, env) {
       useFixedPeriod = !identical(args$useFixedPeriod, FALSE))))) next
     fr <- ff_fit_curve_model(tt, yy, model, args)
     if (is.null(fr)) next
+    # The optional permutation test (attachFitPermutation), run only when one of its ports
+    # is written (the x output and perm_pvalue or this y's permstats), since refits can be slow.
+    if (.perm_truthy(args$permuteTest) && x_out != -1 &&
+        (out_id(args, "perm_pvalue") != -1 || out_id(args, paste0("permstats_", y_id)) != -1)) {
+      perm <- fit_permutation_pvalue(tt, yy, model, .ff_model_options(args), args,
+                                     label = paste("Fit waveform model, column", yk))
+      fr$permPValue <- perm$pValue
+      fr$permutedStats <- perm$permutedStats
+    }
     y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)
                   else fr$fitted
     y_results[[yk]] <- list(fr = fr, xOutData = if (!is.null(output_x)) output_x else tt,
@@ -4808,6 +4878,10 @@ tp_fitfunction <- function(args, env) {
                 .fit_residuals(function(p) ff_evaluate_at_points(fres, model, p), t, yr$y),
                 type = "number")
       }
+      # The permuted statistics, one row per permutation (empty when the test is off).
+      set_col(env, env$cols, out_id(args, paste0("permstats_", y_id)),
+              if (is.null(yr$fr$permutedStats)) numeric(0) else yr$fr$permutedStats,
+              type = "number")
     }
   }
   # writeFitMetricOutputs runs inside the same `anyValid && xOUT !== -1` block.
@@ -5028,9 +5102,29 @@ fft_peak <- function(spec, period_min = NULL, period_max = NULL, indices = NULL)
   best
 }
 
+# periodogramPeak.js lombScargleFamilywiseP: Baluev's (2008, MNRAS 385:1279) alias-free
+# false-alarm probability of the highest Lomb-Scargle peak in a band up to fmax (astropy
+# fap_baluev, normalization 'standard', z = 2 P / (N - 1)).
+.ls_familywise_p <- function(power, n, time_var, fmax) {
+  if (!(n >= 5) || !(time_var > 0) || !(fmax > 0) || !is.finite(power)) return(NaN)
+  z <- min(1, max(0, 2 * power / (n - 1)))
+  nh <- n - 1; nk <- n - 3
+  fap1 <- (1 - z)^(nk / 2)
+  gam <- sqrt(2 / nh) * exp(lgamma(nh / 2) - lgamma((nh - 1) / 2))
+  w <- fmax * sqrt(4 * pi * time_var)
+  tau <- gam * w * (1 - z)^((nk - 1) / 2) * sqrt(nh * z / 2)
+  min(1, -expm1(-tau) + fap1 * exp(-tau))
+}
+
 # periodogram.js peakFamilywiseP (SPEC-6): 1 - (1 - p)^M at the peak, M the number of folds
-# with a statistic; NaN without a chi-squared p (Lomb-Scargle, Enright).
+# with a statistic; for Lomb-Scargle (nObs, timeVar) Baluev's FAP over the whole band; NaN for
+# Enright.
 .peak_familywise_p <- function(res, i) {
+  if (!is.null(res$nObs) && is.finite(res$nObs)) {
+    pos <- res$x[res$x > 0]
+    if (i < 1 || !length(pos)) return(NaN)
+    return(.ls_familywise_p(res$y[i], res$nObs, res$timeVar, 1 / min(pos)))
+  }
   pv <- res$pvalue
   if (is.null(pv) || i < 1) return(NaN)
   M <- sum(is.finite(pv))
@@ -5117,13 +5211,10 @@ cp_filterbyothercol <- function(x, args, cols, raw_data) {
 # SurrogateTest
 # ---------------------------------------------------------------------------
 
-# PARITY SCOPE, deliberately limited and identical to the Python port's.
-#
-# `observed` — the peak FFT magnitude inside the period band — is fully deterministic and IS
-# checked across languages. `pvalue` is NOT: it is a Monte Carlo quantity whose value depends
-# on the exact sequence drawn from the JS's seeded @stdlib minstd-shuffle PRNG, which this
-# runtime does not reproduce. It is emitted as NaN rather than as a number that would look
-# comparable and could not be. Same boundary as the generator nodes.
+# PARITY SCOPE, identical to the Python port's. `observed` (the peak FFT magnitude inside the
+# period band) is deterministic. `pvalue` is a Monte Carlo quantity, and it is compared
+# exactly too: the generator below reproduces the app's seeded draws bit for bit, so the
+# surrogates (and the fit nodes' permutations, fit_permutation_pvalue) are the app's own.
 # Seeded PRNG: @stdlib minstd-shuffle as permutationTest.js createSeededRNG (see the Python
 # port). Exactly reproducible in doubles: 16807 * s < 2^46.
 .normalize_seed <- function(seed) {
@@ -5148,6 +5239,244 @@ seeded_rng <- function(seed) {
 seeded_sequence <- function(unused, n, seed) {
   rng <- seeded_rng(seed)
   list(values = vapply(seq_len(n), function(i) rng(), numeric(1)))
+}
+
+# Permutation test (utils/permutationTest.js, fitFunction.js fitPermutationPValue), as the
+# Python port fit_permutation_pvalue: the fit nodes' perm_pvalue (Cosinor, Rectangular wave,
+# Double logistic, Fit waveform model) and Fit waveform model's permstats_<y>. The app draws
+# every permutation from createSeededRNG(permutationSeed); this draws the same ones (shuffle:
+# the same Fisher-Yates swaps; block: the same offset, rotations and block order), refits
+# each with fitCurveModel's model and options, and p = (k + 1) / (m + 1) over the refits that
+# succeeded. The fixed-period cosinor solves a chunk of permutations at once (one design
+# matrix); the nonlinear fits are refitted one by one at the app's count, with a note and
+# progress on stderr past PERMUTATION_NOTE_SECONDS; ANCIR_SKIP_PERMUTATIONS=1 skips them all
+# (perm_pvalue NaN, "not computed").
+PERMUTATION_NOTE_SECONDS <- 30
+.PERM_CHUNK <- 128L
+.perm_flags <- new.env()
+
+recommend_permutations <- function(n) {
+  if (n < 10) 199 else if (n < 20) 499 else if (n < 50) 999 else 9999
+}
+
+# fitFunction.js resolvePermutationCount; a non-numeric count runs no permutation (p = 1).
+resolve_permutation_count <- function(args, n) {
+  if (.perm_truthy(args$autoPermutations)) return(recommend_permutations(n))
+  v <- .js_number(if (is.null(args$nPermutations)) 999 else args$nPermutations)
+  if (!is.finite(v)) return(0)
+  max(1, trunc(v))
+}
+
+# createSeededRNG's state in an environment, so the permutation loops can run it inline.
+.perm_rng <- function(seed) {
+  e <- new.env()
+  st <- .normalize_seed(seed)
+  for (i in 1:8) st <- (16807 * st) %% 2147483647
+  tbl <- numeric(32)
+  for (i in 32:1) { st <- (16807 * st) %% 2147483647; tbl[i] <- st }
+  e$st <- st; e$tbl <- tbl; e$sh <- tbl[1]
+  e
+}
+.perm_draw <- function(e) {
+  i <- floor(32 * (e$sh / 2147483647)) + 1
+  s <- e$tbl[i]; e$sh <- s
+  e$st <- (16807 * e$st) %% 2147483647; e$tbl[i] <- e$st
+  (s - 1) / 2147483646
+}
+
+# `count` permutations of 0..n-1 (rows), each shuffleArraySeeded: Fisher-Yates from the last
+# index down, j = floor(rng() * (i + 1)). The generator is inlined (.perm_draw).
+.perm_shuffle_rows <- function(n, count, e) {
+  st <- e$st; tbl <- e$tbl; sh <- e$sh
+  out <- matrix(0L, nrow = count, ncol = n)
+  for (p in seq_len(count)) {
+    a <- seq_len(n) - 1L
+    if (n > 1) for (i in (n - 1):1) {
+      k <- floor(32 * (sh / 2147483647)) + 1
+      s <- tbl[k]; sh <- s
+      st <- (16807 * st) %% 2147483647; tbl[k] <- st
+      j <- floor((s - 1) / 2147483646 * (i + 1))
+      tmp <- a[i + 1]; a[i + 1] <- a[j + 1]; a[j + 1] <- tmp
+    }
+    out[p, ] <- a
+  }
+  e$st <- st; e$tbl <- tbl; e$sh <- sh
+  out
+}
+
+# blockPermuteSeeded: a random circular offset, blocks of L (the last may be shorter), each
+# rotated by a random amount, the blocks in a random order.
+.perm_block_rows <- function(n, block_length, count, e) {
+  L <- max(1, min(n, js_round(block_length)))
+  idx <- seq_len(n) - 1L
+  out <- matrix(0L, nrow = count, ncol = n)
+  starts <- seq(1, n, by = L)
+  for (p in seq_len(count)) {
+    off <- floor(.perm_draw(e) * L)
+    rolled <- c(idx[seq_len(n - off) + off], idx[seq_len(off)])
+    blocks <- vector("list", length(starts))
+    for (b in seq_along(starts)) {
+      blk <- rolled[starts[b]:min(n, starts[b] + L - 1)]
+      r <- floor(.perm_draw(e) * length(blk))
+      blocks[[b]] <- c(blk[seq_len(length(blk) - r) + r], blk[seq_len(r)])
+    }
+    if (length(blocks) > 1) for (i in (length(blocks) - 1):1) {
+      j <- floor(.perm_draw(e) * (i + 1))
+      tmp <- blocks[[i + 1]]; blocks[[i + 1]] <- blocks[[j + 1]]; blocks[[j + 1]] <- tmp
+    }
+    out[p, ] <- unlist(blocks, use.names = FALSE)
+  }
+  out
+}
+
+.perm_rows <- function(n, count, e, scheme, block_length) {
+  if (identical(scheme, "block")) .perm_block_rows(n, block_length, count, e)
+  else .perm_shuffle_rows(n, count, e)
+}
+
+# Parity surface: the first `count` permutations of 0..n-1, flattened row after row.
+permutation_orders <- function(unused, n, count, seed, scheme = "shuffle", block_length = NULL) {
+  rows <- .perm_rows(as.integer(n), as.integer(count), .perm_rng(seed), scheme, block_length)
+  list(orders = as.numeric(t(rows)))
+}
+
+# fitFunction.js fitModelPeriod (frequencies are cycles per hour in this port).
+.fit_model_period <- function(fit, model, options) {
+  fixed <- function() .js_number(if (is.null(options$fixedPeriod)) 24 else options$fixedPeriod)
+  if (identical(model, "cosinor")) {
+    if (.perm_truthy(options$useFixedPeriod)) return(fixed())
+    ws <- vapply(fit$parameters$cosines %||% list(),
+                 function(c) .nz(c$frequency), numeric(1))
+    ws <- ws[is.finite(ws) & ws > 0]
+    return(if (length(ws)) 1 / min(ws) else NaN)
+  }
+  if (identical(model, "rectangular")) {
+    if (.perm_truthy(options$fixOmega)) return(fixed())
+    return(.nz(fit$period))
+  }
+  if (identical(model, "doublelogistic")) {
+    if (identical(options$periodic, FALSE)) return(NaN)
+    if (.perm_truthy(options$fixPeriod)) return(fixed())
+    return(.nz(fit$parameters$T))
+  }
+  NaN
+}
+
+.perm_median_spacing <- function(tt) {
+  d <- diff(tt)
+  d <- sort(d[d > 0])
+  if (!length(d)) return(NaN)
+  m <- length(d) %/% 2
+  if (length(d) %% 2) d[m + 1] else (d[m] + d[m + 1]) / 2
+}
+
+.perm_statistic <- function(fit, statistic) {
+  if (identical(statistic, "rmse")) .nz(fit$rmse)
+  else if (identical(statistic, "rSquared")) .nz(fit$rSquared)
+  else NaN
+}
+
+# The fixed cosinor's R squared or RMSE (sqrt(SSres / (n - p))) for every permuted row at
+# once; rows identical to the observed series get the observed statistic exactly.
+.fixed_cosinor_perm_stats <- function(tt, yy, options, rows, statistic, observed_stat) {
+  period <- .js_number(if (is.null(options$fixedPeriod)) 24 else options$fixedPeriod)
+  nh <- max(1, trunc(.js_number(if (is.null(options$nHarmonics)) 1 else options$nHarmonics)))
+  omega <- 2 * pi / period
+  X <- matrix(1, nrow = length(tt), ncol = 1)
+  for (k in seq_len(nh)) X <- cbind(X, cos(k * omega * tt), sin(k * omega * tt))
+  Y <- matrix(yy[rows + 1L], nrow = nrow(rows))
+  B <- solve(crossprod(X), crossprod(X, t(Y)))
+  ss_res <- rowSums((Y - t(X %*% B))^2)
+  stats <- if (identical(statistic, "rmse")) sqrt(ss_res / (length(tt) - ncol(X)))
+  else if (identical(statistic, "rSquared")) {
+    ss_tot <- rowSums((Y - rowMeans(Y))^2)
+    ifelse(ss_tot > 0, 1 - ss_res / ifelse(ss_tot > 0, ss_tot, 1), 0)
+  } else rep(NaN, nrow(rows))
+  same <- rowSums(Y != matrix(yy, nrow = nrow(Y), ncol = ncol(Y), byrow = TRUE)) == 0
+  stats[same] <- observed_stat
+  stats
+}
+
+.perm_note <- function(text) message("NOTE: ", text)
+# JS truthiness of a saved boolean-ish arg (true, a non-zero number, a non-empty string).
+.perm_truthy <- function(v) {
+  if (is.null(v) || length(v) != 1 || is.na(v)) return(FALSE)
+  if (is.logical(v)) return(v)
+  if (is.numeric(v)) return(v != 0)
+  if (is.character(v)) return(nzchar(v))
+  FALSE
+}
+
+fit_permutation_pvalue <- function(tt, yy, model, options, args, label = "") {
+  statistic <- if (is.null(args$permutationStatistic)) "rSquared" else args$permutationStatistic
+  scheme <- if (identical(args$permutationScheme, "block")) "block" else "shuffle"
+  n <- length(tt)
+  off <- function(block_length = NULL, unavailable = NULL)
+    list(pValue = NaN, observedStat = NaN, permutedStats = numeric(0), statistic = statistic,
+         scheme = scheme, blockLength = block_length, unavailable = unavailable)
+  if (!.perm_truthy(args$permuteTest) || n < 4) return(off())
+  if (!(Sys.getenv("ANCIR_SKIP_PERMUTATIONS") %in% c("", "0"))) {
+    if (is.null(.perm_flags$noted)) {
+      .perm_note(paste("ANCIR_SKIP_PERMUTATIONS is set: permutation tests skipped,",
+                       "perm_pvalue is NaN (not computed)."))
+      .perm_flags$noted <- TRUE
+    }
+    return(off())
+  }
+  started <- proc.time()[["elapsed"]]
+  observed <- tryCatch(ff_fit_curve_model(tt, yy, model, options), error = function(e) NULL)
+  fit_seconds <- proc.time()[["elapsed"]] - started
+  block_length <- NULL
+  if (scheme == "block") {
+    period <- .fit_model_period(observed, model, options)
+    dt <- .perm_median_spacing(tt)
+    block_length <- if (is.finite(period) && isTRUE(dt > 0)) js_round(period / dt) else NULL
+    if (is.null(block_length) || block_length < 2 || 2 * block_length > n) {
+      why <- if (is.finite(period)) sprintf("the record holds fewer than two %.2f h blocks", period)
+             else "the model has no period to set the block length"
+      return(off(block_length, why))
+    }
+  }
+  # The app's permutationTest reads the statistic of a null observed fit and throws: no p.
+  if (is.null(observed)) return(off(block_length))
+  observed_stat <- .perm_statistic(observed, statistic)
+  count <- resolve_permutation_count(args, n)
+  e <- .perm_rng(if (is.null(args$permutationSeed)) 12345 else args$permutationSeed)
+  fixed_cosinor <- identical(model, "cosinor") && !identical(options$useFixedPeriod, FALSE)
+  estimate <- fit_seconds * count
+  noisy <- !fixed_cosinor && estimate > PERMUTATION_NOTE_SECONDS
+  who <- if (nzchar(label)) paste0(" ", label) else ""
+  if (noisy) .perm_note(sprintf(
+    "permutation test%s: %d refits of the %s fit, about %.0f s. Set ANCIR_SKIP_PERMUTATIONS=1 to skip permutation tests.",
+    who, as.integer(count), model, estimate))
+  stats <- numeric(0)
+  done <- 0
+  last_note <- proc.time()[["elapsed"]]
+  while (done < count) {
+    rows <- .perm_rows(n, as.integer(min(.PERM_CHUNK, count - done)), e, scheme, block_length)
+    if (fixed_cosinor) {
+      stats <- c(stats, .fixed_cosinor_perm_stats(tt, yy, options, rows, statistic,
+                                                  observed_stat))
+    } else {
+      for (r in seq_len(nrow(rows))) {
+        yp <- yy[rows[r, ] + 1L]
+        if (identical(yp, yy)) { stats <- c(stats, observed_stat); next }
+        fr <- tryCatch(ff_fit_curve_model(tt, yp, model, options), error = function(e) NULL)
+        # A null refit throws in the app's getStatistic: skipped.
+        if (!is.null(fr)) stats <- c(stats, .perm_statistic(fr, statistic))
+      }
+    }
+    done <- done + nrow(rows)
+    if (noisy && (proc.time()[["elapsed"]] - last_note > 15 || done == count)) {
+      last_note <- proc.time()[["elapsed"]]
+      .perm_note(sprintf("permutation test%s: %d/%d", who, as.integer(done), as.integer(count)))
+    }
+  }
+  k <- if (identical(statistic, "rmse")) sum(stats <= observed_stat, na.rm = TRUE)
+       else sum(stats >= observed_stat, na.rm = TRUE)
+  list(pValue = (k + 1) / (length(stats) + 1), observedStat = observed_stat,
+       permutedStats = stats, statistic = statistic, scheme = scheme,
+       blockLength = block_length, unavailable = NULL)
 }
 
 # utils/surrogates.js, matching the Python port.
@@ -5483,7 +5812,11 @@ run_periodogram_calculation <- function(params) {
         else median_dt(t)
   if (!identical(method, "Lomb-Scargle")) periods <- fold_grid(periods, dt, p_min, p_max)
   res <- if (identical(method, "Lomb-Scargle")) {
-    list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
+    # nObs and the population variance of the sample times, for the peak's family-wise p
+    # (.ls_familywise_p), as periodogram.js returns them.
+    pr <- .pgram_pairs(t, y); tt <- as.numeric(pr$t)
+    list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL,
+         nObs = length(tt), timeVar = if (length(tt)) mean((tt - mean(tt))^2) else NaN)
   } else if (identical(method, "Chi-squared")) {
     alpha <- as.numeric(if (!is.null(params$alpha)) params$alpha
                         else if (!is.null(params$chiSquaredAlpha)) params$chiSquaredAlpha
@@ -5743,7 +6076,7 @@ tp_rhythmicityanalysis <- function(args, env) {
       i <- .periodogram_peak_index(pg)  # largest Qp - threshold for Chi-squared (SPEC-9)
       if (i > 0) {
         st <- list(peak_period = pg$x[i], peak_power = pg$y[i])
-        if (identical(args$pgMethod, "Chi-squared")) st$peak_pvalue <- .peak_familywise_p(pg, i)
+        if (!identical(args$pgMethod, "Enright")) st$peak_pvalue <- .peak_familywise_p(pg, i)
       }
     } else if (identical(analysis, "fft")) {
       pk <- if (length(f$frequencies)) fft_peak(f) else NULL
@@ -5789,7 +6122,7 @@ tp_rhythmicityanalysis <- function(args, env) {
   }
   if (any_valid) {
     keys <- switch(analysis, periodogram = c("peak_period", "peak_power",
-                                             if (identical(args$pgMethod, "Chi-squared")) "peak_pvalue"),
+                                             if (!identical(args$pgMethod, "Enright")) "peak_pvalue"),
                    fft = c("peak_period", "peak_frequency", "peak_magnitude"),
                    correlogram = c("peak_lag", "peak_correlation"), character(0))
     for (k in keys) {
@@ -5852,7 +6185,7 @@ moving_stat_keys <- function(args) {
   g <- function(k, d) if (is.null(args[[k]])) d else args[[k]]
   switch(an,
     periodogram = c("peak_period", "peak_power",
-                    if (identical(args$pgMethod, "Chi-squared")) "peak_pvalue"),
+                    if (!identical(args$pgMethod, "Enright")) "peak_pvalue"),
     summary = c("mean", "sd", "percentile"),
     npcra = c("IS", "IV", "RA", "L5", "M10", "M10onset"),
     cosinor = if (isTRUE(args$useFixedPeriod)) {
@@ -6267,11 +6600,131 @@ gc_run_selected <- function(groups, chosen, alpha, post_hoc_enabled = TRUE) {
                   nTotal = sum(vapply(groups, function(g) g$n, numeric(1))),
                   groups = list(groups)), r))
   }
-  # The rank-based tests are not ported. Refusing beats returning a parametric answer under a
-  # nonparametric label, which is what a silent fallback would do.
-  stop(sprintf(paste0("ancir: GroupComparison method '%s' is not implemented by the R ",
-                      "runtime (only Welch t-test and one-way ANOVA are). Export this ",
-                      "session as Python instead."), chosen))
+  if (identical(chosen, "mannwhitney")) {
+    r <- gc_mann_whitney_two_groups(groups[[1]], groups[[2]])
+    return(c(list(test = "Mann-Whitney U", groupCount = length(groups),
+                  nTotal = groups[[1]]$n + groups[[2]]$n, groups = list(groups)), r))
+  }
+  r <- gc_kruskal_wallis(groups)
+  r$postHoc <- if (post_hoc_enabled && isTRUE(r$valid) && length(groups) > 2)
+    gc_pairwise_mann_whitney(groups, alpha) else list()
+  c(list(test = "Kruskal-Wallis", groupCount = length(groups),
+         nTotal = sum(vapply(groups, function(g) g$n, numeric(1))), groups = list(groups)), r)
+}
+
+# ---- Rank-based tests (GroupComparison.svelte mannWhitneyTwoGroups, kruskalWallis,
+# pairwiseMannWhitney; Python _gc_*). Ported 2026-10-26 with the exact Mann-Whitney p (STAT-28).
+
+# Average ranks and the sizes of the tied runs (runs of 1 left out), as JS rankWithTies.
+gc_rank_with_ties <- function(values) {
+  v <- as.numeric(values)
+  tc <- table(v)
+  list(ranks = rank(v, ties.method = "average"), tieCounts = as.numeric(tc[tc > 1]))
+}
+
+# mannWhitneyExact.js mannWhitneyUsesExact: scipy mannwhitneyu(method = 'auto'), exact when either
+# sample has at most 8 values and there are no ties. (R's own wilcox.test switches at n < 50.)
+.mw_uses_exact <- function(n1, n2, has_ties) {
+  if (!(n1 >= 1 && n2 >= 1)) return(FALSE)
+  if (n1 > 8 && n2 > 8) return(FALSE)
+  !has_ties
+}
+
+# mannWhitneyExact.js mannWhitneyExactP: 2 P(U <= min(U1, U2)), capped at 1, from the Gaussian
+# binomial generating function prod (1 - q^(n+i)) / (1 - q^i) (Mann and Whitney 1947; Andrews
+# 1976 ch. 3), the same float passes as the JS. pwilcox() gives the same distribution.
+.mw_exact_p <- function(u, n1, n2) {
+  if (!(n1 >= 1 && n2 >= 1)) return(NaN)
+  mn <- n1 * n2
+  if (!(u >= 0 && u <= mn)) return(NaN)
+  lo <- min(u, mn - u)
+  k <- round(lo)
+  if (abs(lo - k) > 1e-7) return(NaN)
+  m <- min(n1, n2); n <- max(n1, n2)
+  cc <- numeric(k + 1); cc[1] <- 1
+  for (i in seq_len(m)) {
+    shift <- n + i
+    if (k >= shift) for (j in k:shift) cc[j + 1] <- cc[j + 1] - cc[j - shift + 1]
+    if (k >= i) for (j in i:k) cc[j + 1] <- cc[j + 1] + cc[j - i + 1]
+  }
+  total <- 1
+  for (i in seq_len(m)) total <- (total * (n + i)) / i
+  min(1, 2 * sum(cc) / total)
+}
+
+gc_mann_whitney_two_groups <- function(a, b) {
+  n1 <- a$n; n2 <- b$n
+  if (n1 < 1 || n2 < 1) return(list(valid = FALSE, reason = "Mann-Whitney needs data in both groups."))
+  rt <- gc_rank_with_ties(c(a$values, b$values))
+  u1 <- sum(rt$ranks[seq_len(n1)]) - n1 * (n1 + 1) / 2
+  u <- min(u1, n1 * n2 - u1)
+  n <- n1 + n2
+  tie_term <- sum(rt$tieCounts^3 - rt$tieCounts)
+  sigma <- sqrt(max(0, n1 * n2 * (n + 1 - tie_term / (n * (n - 1))) / 12))
+  mean_u <- n1 * n2 / 2
+  cc <- if (u > mean_u) 0.5 else -0.5
+  z <- if (sigma > 0) (u - mean_u - cc) / sigma else 0
+  p_method <- if (.mw_uses_exact(n1, n2, length(rt$tieCounts) > 0)) "exact" else "asymptotic"
+  p <- if (p_method == "exact") .mw_exact_p(u, n1, n2) else pchisq(z * z, 1, lower.tail = FALSE)
+  list(valid = TRUE, u = u, z = z, pValue = p, pMethod = p_method,
+       rEffect = abs(z) / sqrt(n), n1 = n1, n2 = n2)
+}
+
+gc_kruskal_wallis <- function(groups) {
+  usable <- Filter(function(g) g$n > 0, groups)
+  if (length(usable) < 2) {
+    return(list(valid = FALSE, reason = "Kruskal-Wallis needs at least 2 non-empty groups."))
+  }
+  vals <- unlist(lapply(usable, function(g) g$values))
+  lab <- unlist(lapply(seq_along(usable), function(i) rep(i, usable[[i]]$n)))
+  n <- length(vals)
+  if (n <= length(usable)) {
+    return(list(valid = FALSE,
+                reason = "Kruskal-Wallis needs at least one group with more than one value."))
+  }
+  rt <- gc_rank_with_ties(vals)
+  h <- 0
+  for (i in seq_along(usable)) {
+    rg <- sum(rt$ranks[lab == i])
+    h <- h + rg * rg / usable[[i]]$n
+  }
+  h <- (12 / (n * (n + 1))) * h - 3 * (n + 1)
+  tie_correction <- 1 - sum(rt$tieCounts^3 - rt$tieCounts) / (n^3 - n)
+  if (tie_correction <= 0) tie_correction <- 1
+  hc <- h / tie_correction
+  df <- length(usable) - 1
+  # Tomczak and Tomczak (2014) epsilon-squared, H / (n - 1), as rcompanion::epsilonSquared.
+  list(valid = TRUE, h = hc, df = df, pValue = pchisq(hc, df, lower.tail = FALSE),
+       epsilonSquared = hc / (n - 1), nTotal = n)
+}
+
+# JS holmAdjust: sorted by p (a missing p last, read as 1), running max of min(1, p (n - i)).
+gc_holm_adjust <- function(pairs) {
+  n <- length(pairs)
+  if (!n) return(pairs)
+  pv <- vapply(pairs, function(p) if (is.numeric(p$pValue) && is.finite(p$pValue)) p$pValue else Inf,
+               numeric(1))
+  ord <- order(pv)
+  running <- 0
+  for (i in seq_along(ord)) {
+    raw <- if (is.finite(pv[ord[i]])) pv[ord[i]] else 1
+    running <- max(running, min(1, raw * (n - i + 1)))
+    pairs[[ord[i]]]$pAdjusted <- running
+  }
+  pairs
+}
+
+gc_pairwise_mann_whitney <- function(groups, alpha = 0.05) {
+  pairs <- list()
+  k <- length(groups)
+  if (k >= 2) for (i in seq_len(k - 1)) for (j in (i + 1):k) {
+    m <- gc_mann_whitney_two_groups(groups[[i]], groups[[j]])
+    if (!isTRUE(m$valid)) next
+    pairs[[length(pairs) + 1]] <- list(groupA = groups[[i]]$name, groupB = groups[[j]]$name,
+                                       statistic = m$u, pValue = m$pValue,
+                                       pMethod = m$pMethod, effect = m$rEffect)
+  }
+  lapply(gc_holm_adjust(pairs), function(p) { p$significant <- p$pAdjusted < alpha; p })
 }
 
 compute_group_comparison <- function(args, env) {
@@ -6550,6 +7003,7 @@ PURE_UTIL_MAP <- list(
   sequence_limit = sequence_limit,
   tukey_kramer_of = tukey_kramer_of,
   seeded_sequence = seeded_sequence,
+  permutation_orders = permutation_orders,
   lomb_scargle_periodogram = lomb_scargle_periodogram,
   fft_peak_of = fft_peak_of,
   regrid_uniform_summary = regrid_uniform_summary,

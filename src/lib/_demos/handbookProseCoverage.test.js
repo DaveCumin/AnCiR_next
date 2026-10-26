@@ -46,6 +46,9 @@ const nodeRef = JSON.parse(readFileSync(join(repo, 'handbook/src/lib/nodeReferen
  */
 function isStructural(name) {
 	if (name.endsWith('_*')) return true;
+	// A placeholder family whose keys start with the y column's id (`<colId>_<stat>`): per-Y
+	// columns, like a `_*` family.
+	if (name.startsWith('<')) return true;
 	if (/^.*x$/.test(name) && name !== 'max') return true;
 	return [
 		'output',
@@ -145,6 +148,7 @@ const CONCEPT = {
 	mean: /mean/,
 	median: /median/,
 	sd: /standard deviation|\bSD\b/,
+	sem: /standard error of the mean|\bSEM\b/,
 	min: /minimum|\bmin\b/,
 	max: /maximum|\bmax\b/,
 	range: /range/,

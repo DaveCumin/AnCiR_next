@@ -13,6 +13,7 @@
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 	import { pUpperFromChiSq } from '$lib/utils/chisquare.js';
 	import { jarqueBera } from '$lib/utils/normality.js';
+	import { mannWhitneyExactP, mannWhitneyUsesExact } from '$lib/utils/mannWhitneyExact.js';
 	import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
 
@@ -436,7 +437,14 @@
 		const meanU = (n1 * n2) / 2;
 		const cc = u > meanU ? 0.5 : -0.5;
 		const z = sigma > 0 ? (u - meanU - cc) / sigma : 0;
-		const pValue = pUpperFromChiSq(z * z, 1);
+		// STAT-28: the exact null distribution for small samples without ties (Mann and Whitney
+		// 1947), switched as scipy.stats.mannwhitneyu(method='auto') does: exact when either
+		// sample has at most 8 values and there are no ties, else the tie-corrected normal
+		// approximation with continuity correction. z (and r = |z| / sqrt(n)) stay the normal
+		// approximation's in both cases, as the effect size is defined on it.
+		const pMethod = mannWhitneyUsesExact(n1, n2, tieCounts.length > 0) ? 'exact' : 'asymptotic';
+		// The chi-square tail is at most 1 already; the exact sum is capped inside.
+		const pValue = pMethod === 'exact' ? mannWhitneyExactP(u, n1, n2) : pUpperFromChiSq(z * z, 1);
 		const rEffect = Math.abs(z) / Math.sqrt(n);
 
 		return {
@@ -444,6 +452,7 @@
 			u,
 			z,
 			pValue,
+			pMethod,
 			rEffect,
 			n1,
 			n2
@@ -520,6 +529,7 @@
 					groupB: b.name,
 					statistic: m.u,
 					pValue: m.pValue,
+					pMethod: m.pMethod,
 					effect: m.rEffect
 				});
 			}
@@ -1343,7 +1353,7 @@
 					<p>
 						{res.test}: U = {res.u.toFixed(3)}, z = {res.z.toFixed(3)}, p = {res.pValue.toPrecision(
 							4
-						)}
+						)}{res.pMethod === 'exact' ? ' (exact)' : ''}
 					</p>
 					<p>Effect size r = {Number.isFinite(res.rEffect) ? res.rEffect.toFixed(4) : 'NaN'}</p>
 				{:else}

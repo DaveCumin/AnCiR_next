@@ -269,7 +269,8 @@ describe('createColumnNamer: display over a session', () => {
 const ACCEPTABLE_UNLABELLED = new Set([
 	'ColumnSet:set', // a column-set bundle wire, not a column
 	'CollectColumns:outCols', // placeholder; real keys are col_<id>
-	'MovingAnalysis:stats_*', // placeholder; real keys are <colId>_<stat>
+	'MovingAnalysis:<colId>_<stat>', // placeholder; real keys are <colId>_<stat>
+	'RhythmicityAnalysis:<colId>_<key>', // placeholder; real keys are <colId>_<key>
 	'Split:segments' // placeholder; real keys are <colId>_<segment>
 ]);
 
@@ -429,6 +430,30 @@ describe('free-period fits label periods and phases in the units of their x (v80
 		}
 		expect(outputLabel('FitFunction', 'k1', fitCtx(5))).toBe('Rise rate k1 (1/x unit)');
 		expect(outputLabel('FitFunction', 'k2', fitCtx(6))).toBe('Fall rate k2 (1/h)');
+	});
+
+	// REPORTED (2026-10, vault TODO "port metadata mismatches"): Rhythmicity read "Period (h)"
+	// on a number x, whose periods are in the x column's own numbers.
+	it('Rhythmicity and Moving window follow the x type too', () => {
+		const named = (xIN, args = {}) => ({ ...fitCtx(xIN, args), colName: () => 'Run (h)' });
+		const rh = (key, xIN, args) => outputLabel('RhythmicityAnalysis', key, named(xIN, args));
+		expect(rh('rhythmicityx', 5, { analysis: 'periodogram' })).toBe('Period (x units)');
+		expect(rh('rhythmicityx', 6, { analysis: 'periodogram' })).toBe('Period (h)');
+		expect(rh('rhythmicityx', 5, { analysis: 'correlogram' })).toBe('Lag (x units)');
+		expect(rh('stat_peak_period', 5)).toBe('Peak period (x units)');
+		expect(rh('stat_peak_period', 6)).toBe('Peak period (h)');
+		expect(rh('stat_peak_frequency', 5)).toBe('Peak frequency (1/x unit)');
+		expect(rh('stat_peak_frequency', -1)).toBe('Peak frequency (1/h)');
+		// The input's own name keeps its words: only the node's label changes unit.
+		expect(rh('12_period', 5)).toBe('Period (x units): Run (h)');
+		expect(rh('12_frequency', 5)).toBe('Frequency (1/x unit): Run (h)');
+		expect(rh('rhythmicityy_12', 5, { analysis: 'fft' })).toBe('Magnitude: Run (h)');
+		const mv = (key, xIN, args) => outputLabel('MovingAnalysis', key, named(xIN, args));
+		expect(mv('12_period', 5)).toBe('Period (x units): Run (h)');
+		expect(mv('12_acrophase', 6)).toBe('Acrophase (h): Run (h)');
+		expect(mv('12_acrophase', 6, { phaseReference: 'clock' })).toBe(
+			'Acrophase (clock time, h): Run (h)'
+		);
 	});
 
 	it('clock time (a time x only) stays hours of the clock', () => {

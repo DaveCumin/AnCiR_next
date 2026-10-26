@@ -27,10 +27,11 @@ import { isInvalidValue } from './stats.js';
 
 export function getStatKeys(args) {
 	if (args.analysis === 'periodogram') {
-		// peak_pvalue: the chi-squared peak's family-wise p (peakFamilywiseP), so a window whose
-		// best period does not cross the threshold reads as not significant (SPEC-9). Lomb-Scargle
-		// and Enright have no analytic p, so no port.
-		return args.pgMethod === 'Chi-squared'
+		// peak_pvalue: the peak's family-wise p (peakFamilywiseP), so a window whose best period
+		// does not cross the chi-squared threshold reads as not significant (SPEC-9); for
+		// Lomb-Scargle (the default) Baluev's (2008) false-alarm probability over the period
+		// range. Enright has no analytic p, so no port.
+		return (args.pgMethod ?? 'Lomb-Scargle') !== 'Enright'
 			? ['peak_period', 'peak_power', 'peak_pvalue']
 			: ['peak_period', 'peak_power'];
 	}

@@ -406,9 +406,19 @@ export function foldGrid(periods, binSize, periodMin, periodMax) {
 
 // ========== Main Calculation Function ==========
 
+/** Population (n-divisor) variance, Kahan-summed; NaN for an empty array. */
+function populationVariance(values) {
+	if (!values.length) return NaN;
+	const m = kahanMean(values);
+	const acc = new KahanSum();
+	for (const v of values) acc.add((v - m) * (v - m));
+	return acc.value / values.length;
+}
+
 export function runPeriodogramCalculation(params, onProgress) {
 	let out = { x: [], y: [], threshold: [], pvalue: [], df: [] };
 	let binnedData = { bins: [], y_out: [] };
+	let lsStats = null;
 	let chiFlat = false;
 
 	if (params.method === 'Chi-squared') {
@@ -511,6 +521,10 @@ export function runPeriodogramCalculation(params, onProgress) {
 		}
 	} else if (params.method === 'Lomb-Scargle') {
 		const powers = calculateLombScarglePower(params.xData, params.yData, frequencies, onProgress);
+		// The sample count and the population variance of the sample times, which the peak's
+		// family-wise p (Baluev 2008: periodogramPeak.js lombScargleFamilywiseP) needs.
+		const { tt } = validPairs(params.xData ?? [], params.yData ?? []);
+		lsStats = { nObs: tt.length, timeVar: populationVariance(tt.map(Number)) };
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
 			// Lomb-Scargle/Enright have no analytic significance line here. Emit NaN
@@ -549,7 +563,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 		y: power.filter((v, i) => !idxsToRemove.includes(i)),
 		threshold: threshold.filter((v, i) => !idxsToRemove.includes(i)),
 		pvalue: pvalue.filter((v, i) => !idxsToRemove.includes(i)),
-		df: dfOut.filter((v, i) => !idxsToRemove.includes(i))
+		df: dfOut.filter((v, i) => !idxsToRemove.includes(i)),
+		...(lsStats ?? {})
 	};
 
 	return out;

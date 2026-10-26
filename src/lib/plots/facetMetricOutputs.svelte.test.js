@@ -201,14 +201,17 @@ describe.each(Object.keys(VIEWS))('faceted periodogram metric outputs (%s view)'
 		expect(first).toHaveLength(2);
 		expect(first[0]).toBeCloseTo(24, 0);
 		expect(first[1]).toBeCloseTo(26, 0);
-		expect(colValues(gen, 'peak_pvalue').every((p) => Number.isNaN(p))).toBe(true);
+		// Lomb-Scargle's peak p is Baluev's family-wise false-alarm probability.
+		const lsP = colValues(gen, 'peak_pvalue');
+		expect(lsP.every((p) => p >= 0 && p <= 1)).toBe(true);
 
-		// Chi-squared gives every peak a p-value; the generator must recompute to know it.
+		// Chi-squared gives every peak its own (different) p; the generator must recompute.
 		writes.calls.length = 0;
 		for (const d of gen.plot.data) d.method = 'Chi-squared';
 		await settle(800);
 		const pv = colValues(gen, 'peak_pvalue');
 		expect(pv.every((p) => Number.isFinite(p))).toBe(true);
+		expect(pv).not.toEqual(lsP);
 		expect(colValues(gen, 'peak_period')).toEqual(expectedPeriods(gen));
 		// Each series' spectrum lands on its own (debounced, per-series), so up to one write
 		// per series; never one per panel on top of that.

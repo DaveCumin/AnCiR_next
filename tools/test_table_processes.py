@@ -141,6 +141,35 @@ def test_groupcomparison_mannwhitney_no_ties():
     assert approx(comp['u'], 0.0)
 
 
+
+def test_mann_whitney_exact_matches_scipy():
+    """STAT-28: the exact p and the 'auto' switch match scipy.stats.mannwhitneyu (the
+    reference), across exact (either n <= 8, no ties) and asymptotic (ties, or both n > 8)."""
+    from scipy.stats import mannwhitneyu
+    import numpy as np
+    rng = np.random.default_rng(28)
+    cases = [([1.1, 2.3, 3.2, 4.8, 5.0], [6.1, 7.2, 8.3, 9.4, 10.5, 11.6]),
+             ([1, 2, 3], [1, 4, 5]),
+             (list(range(1, 10)), [v + 0.5 for v in range(3, 12)]),
+             (list(rng.normal(0.8, 1, 8)), list(rng.normal(0, 1, 600))),
+             (list(rng.normal(0, 1, 3)), list(rng.normal(0, 1, 40)))]
+    for a, b in cases:
+        ga = {'name': 'A', 'values': a, 'n': len(a)}
+        gb = {'name': 'B', 'values': b, 'n': len(b)}
+        res = rt._gc_mann_whitney_two_groups(ga, gb)
+        ref = mannwhitneyu(a, b, method='auto')
+        assert math.isclose(res['pValue'], float(ref.pvalue), rel_tol=1e-10), (a, b)
+        has_ties = len(set(a + b)) < len(a + b)
+        assert res['pMethod'] == ('exact' if (min(len(a), len(b)) <= 8 and not has_ties)
+                                  else 'asymptotic')
+    # Directly against scipy's exact distribution, deep in the tail.
+    from scipy.stats._mannwhitneyu import _MWU
+    for u, n1, n2 in [(0, 8, 10000), (100, 8, 600), (7, 2, 9)]:
+        d = _MWU(n1, n2)
+        ref = min(1.0, 2 * float(d.sf(np.array(max(u, n1 * n2 - u)))))
+        assert math.isclose(rt._mw_exact_p(u, n1, n2), ref, rel_tol=1e-10)
+
+
 # ----------------------------------------------------------------------
 # FitFunction
 # ----------------------------------------------------------------------
@@ -391,3 +420,24 @@ def test_cosinor_without_ncurves_fits_one_free_curve():
     assert ok is True
     assert approx(raw_data[30][0], 24, tol=1e-3)
     assert run({'Ncurves': 0})[0] is False
+
+
+def test_lomb_scargle_familywise_p_matches_astropy_baluev():
+    """The Lomb-Scargle peak's family-wise p is Baluev's (2008) false-alarm probability as
+    astropy computes it (fap_baluev, normalization 'standard'); the app's power P is
+    z (N - 1) / 2. astropy is an optional reference: skipped when it is not installed."""
+    import pytest
+    np = pytest.importorskip("numpy")
+    stats = pytest.importorskip("astropy.timeseries.periodograms.lombscargle._statistics")
+    from astropy.timeseries import LombScargle
+    rng = np.random.default_rng(7)
+    t = np.sort(rng.uniform(0, 200, 180))
+    for amp in (0.0, 0.4, 1.0):
+        y = amp * np.cos(2 * np.pi * t / 24) + rng.normal(0, 1, t.size)
+        res = rt.run_periodogram_calculation({'t': list(t), 'y': list(y), 'method': 'Lomb-Scargle',
+                                              'minPeriod': 16, 'maxPeriod': 32, 'stepSize': 0.1})
+        i = rt.periodogram_peak_index(res)
+        z = float(LombScargle(t, y, fit_mean=False, center_data=True,
+                              normalization='standard').power(1 / res['x'][i]))
+        ref = float(stats.fap_baluev(z, 1 / 16, t, y, None, 'standard'))
+        assert math.isclose(rt.peak_familywise_p(res, i), ref, rel_tol=1e-9)

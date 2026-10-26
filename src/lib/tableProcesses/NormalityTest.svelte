@@ -2,8 +2,11 @@
 	// @ts-nocheck
 	// Normality test — is each wired column drawn from a normal distribution?
 	//
-	// Many-column yIN → one row per variable: statistic, p-value, n, and a `normal` verdict at
-	// the chosen alpha. Three tests (utils/normality.js, scipy-parity-checked):
+	// Many-column yIN → one row per variable: statistic, p-value, n, and a `normal` flag at the
+	// chosen alpha. The flag says only whether normality was REJECTED: 1 (p >= alpha) means the
+	// data are consistent with a normal distribution at this sample size, never that they are
+	// normal (failing to reject is not evidence for the null). The stored key stays `normal` so
+	// saved sessions and wires keep working; its label and description say what it means. Three tests (utils/normality.js, scipy-parity-checked):
 	//   • Shapiro-Wilk (Royston): the default and most powerful; its p-value is validated for
 	//     3 ≤ n ≤ 5000, so above that W is shown with a NaN p-value and a warning.
 	//   • D'Agostino-Pearson K² (scipy normaltest) — omnibus skew + kurtosis, needs n ≥ 8.
@@ -52,7 +55,8 @@
 		const rows = yIds.map((id, i) => {
 			const col = getColumnById(id);
 			const { statistic, pvalue, n } = normalityTest(col.getData() ?? [], method);
-			// `normal`: 1 = fail to reject normality, 0 = reject (non-normal), NaN = not evaluable.
+			// `normal`: 1 = normality not rejected (consistent with normal), 0 = rejected
+			// (non-normal), NaN = not evaluable. Not a claim that the data ARE normal.
 			const normal = Number.isNaN(pvalue) ? NaN : pvalue >= alpha ? 1 : 0;
 			return { variable: labels[i], statistic, pvalue, n, normal };
 		});
@@ -246,7 +250,12 @@
 			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 				<table class="d-table">
 					<thead>
-						<tr><th>var</th><th>stat</th><th>p</th><th>n</th><th>normal?</th></tr>
+						<tr
+							><th>var</th><th>stat</th><th>p</th><th>n</th><th
+								title="Whether normality was rejected at alpha. Not rejected means consistent with a normal distribution, not proven normal."
+								>normality</th
+							></tr
+						>
 					</thead>
 					<tbody>
 						{#each result.rows as row (row.variable)}
@@ -258,7 +267,7 @@
 								<td class="num">{fmt(row.pvalue)}</td>
 								<td class="num">{row.n}</td>
 								<td class="verdict" class:no={row.normal === 0} class:yes={row.normal === 1}>
-									{row.normal === 1 ? 'yes' : row.normal === 0 ? 'no' : '—'}
+									{row.normal === 1 ? 'not rejected' : row.normal === 0 ? 'rejected' : '—'}
 								</td>
 							</tr>
 						{/each}

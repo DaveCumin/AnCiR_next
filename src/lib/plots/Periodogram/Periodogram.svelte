@@ -111,6 +111,24 @@
 		return p < 1e-4 ? '< 0.0001' : Number(p.toPrecision(3)).toString();
 	}
 
+	/**
+	 * The level a peak's family-wise p is judged at: the chi-squared threshold line's alpha, or
+	 * 0.05 for Lomb-Scargle, which draws no line and has no alpha setting.
+	 */
+	function peakAlpha(datum) {
+		return datum.method === 'Chi-squared' ? datum.chiSquaredAlpha : 0.05;
+	}
+	function peakPTitle(method) {
+		return method === 'Chi-squared'
+			? 'Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line'
+			: "The chance that noise alone puts a peak this high anywhere in the period range: Baluev's (2008) false-alarm probability, a slightly conservative bound";
+	}
+	function peakNotSignificant(datum) {
+		return datum.method === 'Chi-squared'
+			? '(not significant: below the threshold line)'
+			: '(not significant at 0.05)';
+	}
+
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
@@ -226,9 +244,9 @@
 		// Peak detection across ALL calculated data (periodogramPeakIndex): the highest power for
 		// Lomb-Scargle/Enright, the largest Qp - threshold for Chi-squared (SPEC-9). A spectrum with no positive power (flat or all-zero data) has no peak: null, not
 		// the first trial period (ROB-13).
-		// pvalue is the chi-squared significance of that peak, FAMILY-WISE over the folds the
-		// threshold line is drawn with (peakFamilywiseP); NaN for Lomb-Scargle/Enright, which
-		// have no analytic p here.
+		// pvalue is that peak's FAMILY-WISE p (peakFamilywiseP): for chi-squared over the folds
+		// the threshold line is drawn with, for Lomb-Scargle Baluev's (2008) false-alarm
+		// probability over the band; NaN for Enright, which has no analytic p here.
 		peak = $derived.by(() => {
 			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
@@ -248,9 +266,15 @@
 				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
 			}
 			const idx = periodogramPeakIndex(this.periodData, visibleIndices);
+			// Lomb-Scargle's family-wise p is over the band searched, the visible range here
+			// (peakFamilywiseP); chi-squared's is over every fold, as its threshold line is.
 			return idx < 0
 				? null
-				: { period: x[idx], power: y[idx], pvalue: peakFamilywiseP(this.periodData, idx) };
+				: {
+						period: x[idx],
+						power: y[idx],
+						pvalue: peakFamilywiseP(this.periodData, idx, visibleIndices)
+					};
 		});
 
 		// Cache for smart recalculation
@@ -1466,12 +1490,10 @@
 								/>
 							</p>
 							{#if Number.isFinite(datum.visiblePeak.pvalue)}
-								<p
-									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
-								>
+								<p title={peakPTitle(datum.method)}>
 									<strong>Peak p (family-wise): {formatP(datum.visiblePeak.pvalue)}</strong>
-									{#if !(datum.visiblePeak.pvalue < datum.chiSquaredAlpha)}
-										<span class="peak-ns">(not significant: below the threshold line)</span>
+									{#if !(datum.visiblePeak.pvalue < peakAlpha(datum))}
+										<span class="peak-ns">{peakNotSignificant(datum)}</span>
 									{/if}
 								</p>
 							{/if}
@@ -1504,12 +1526,10 @@
 								/>
 							</p>
 							{#if Number.isFinite(datum.peak.pvalue)}
-								<p
-									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
-								>
+								<p title={peakPTitle(datum.method)}>
 									<strong>Peak p (family-wise): {formatP(datum.peak.pvalue)}</strong>
-									{#if !(datum.peak.pvalue < datum.chiSquaredAlpha)}
-										<span class="peak-ns">(not significant: below the threshold line)</span>
+									{#if !(datum.peak.pvalue < peakAlpha(datum))}
+										<span class="peak-ns">{peakNotSignificant(datum)}</span>
 									{/if}
 								</p>
 							{/if}

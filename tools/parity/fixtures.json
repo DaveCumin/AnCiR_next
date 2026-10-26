@@ -627,6 +627,164 @@
 			}
 		},
 		{
+			"id": "histogram-data-unequal-cuts",
+			"kind": "plotCompute",
+			"jsFn": "histogramDownloadData",
+			"pyFunc": "histogram_download_data",
+			"tolerance": 1e-12,
+			"note": "STAT-31: custom cut edges of unequal width, so the plot is on a DENSITY axis: each bin's value is count / (N * width), N every present value (30.0 is past the last edge: out of the bars, still in N and in the curve), the curve is the plain KDE density, and a last 'count' column carries the counts. Missing cells ('' and null) are left out; '4.25' is a number.",
+			"series": [
+				{
+					"values": [
+						5.0,
+						8.375,
+						5.033,
+						null,
+						8.082,
+						9.395,
+						5.3,
+						3.146,
+						7.977,
+						6.99,
+						3.316,
+						"",
+						9.999,
+						7.074,
+						2.085,
+						6.477,
+						8.438,
+						4.443,
+						4.415,
+						9.32,
+						"4.25",
+						2.271,
+						4.516,
+						8.757,
+						6.322,
+						3.612,
+						7.648,
+						10.221,
+						3.625,
+						2.933,
+						7.811,
+						8.149,
+						4.087,
+						5.699,
+						10.248,
+						5.567,
+						2.406,
+						6.004,
+						9.142,
+						5.638,
+						30.0
+					],
+					"settings": {
+						"label": "x",
+						"binMode": "cuts",
+						"cuts": [0, 2, 3, 4, 6, 10],
+						"showDensity": true
+					}
+				}
+			]
+		},
+		{
+			"id": "histogram-data-equal-uniform",
+			"kind": "plotCompute",
+			"jsFn": "histogramDownloadData",
+			"pyFunc": "histogram_download_data",
+			"tolerance": 1e-12,
+			"note": "Equal-width bins (uniform, width 0.5 from the automatic start): counts, and the curve scaled by N * width, as before STAT-31; no count column.",
+			"series": [
+				{
+					"values": [
+						5.0, 8.375, 5.033, 3.423, 8.082, 9.395, 5.3, 3.146, 7.977, 6.99, 3.316, 6.153, 9.999,
+						7.074, 2.085, 6.477, 8.438, 4.443, 4.415, 9.32, 8.987, 2.271, 4.516, 8.757, 6.322,
+						3.612, 7.648, 10.221, 3.625, 2.933, 7.811, 8.149, 4.087, 5.699, 10.248, 5.567, 2.406,
+						6.004, 9.142, 5.638
+					],
+					"settings": {
+						"label": "x",
+						"binSize": 0.5,
+						"showDensity": true
+					}
+				}
+			]
+		},
+		{
+			"id": "histogram-data-mixed",
+			"kind": "plotCompute",
+			"jsFn": "histogramDownloadData",
+			"pyFunc": "histogram_download_data",
+			"tolerance": 1e-12,
+			"note": "STAT-31: one equal-width series and one with unequal cuts share the y axis, so BOTH are drawn as density (the equal one as count / (N * 1)); manual bandwidth on the second.",
+			"series": [
+				{
+					"values": [
+						5.0, 8.375, 5.033, 3.423, 8.082, 9.395, 5.3, 3.146, 7.977, 6.99, 3.316, 6.153, 9.999,
+						7.074, 2.085, 6.477, 8.438, 4.443, 4.415, 9.32, 8.987, 2.271, 4.516, 8.757, 6.322,
+						3.612, 7.648, 10.221, 3.625, 2.933, 7.811, 8.149, 4.087, 5.699, 10.248, 5.567, 2.406,
+						6.004, 9.142, 5.638
+					],
+					"settings": {
+						"label": "a",
+						"binSize": 1,
+						"binStart": 0
+					}
+				},
+				{
+					"values": [
+						5.0,
+						8.375,
+						5.033,
+						null,
+						8.082,
+						9.395,
+						5.3,
+						3.146,
+						7.977,
+						6.99,
+						3.316,
+						"",
+						9.999,
+						7.074,
+						2.085,
+						6.477,
+						8.438,
+						4.443,
+						4.415,
+						9.32,
+						"4.25",
+						2.271,
+						4.516,
+						8.757,
+						6.322,
+						3.612,
+						7.648,
+						10.221,
+						3.625,
+						2.933,
+						7.811,
+						8.149,
+						4.087,
+						5.699,
+						10.248,
+						5.567,
+						2.406,
+						6.004,
+						9.142,
+						5.638,
+						30.0
+					],
+					"settings": {
+						"label": "b",
+						"binMode": "cuts",
+						"cuts": [0, 2, 3, 4, 6, 10],
+						"bandwidth": 0.8
+					}
+				}
+			]
+		},
+		{
 			"id": "plot-correlogram-upper-median",
 			"kind": "plotCompute",
 			"jsFn": "computeAutocorrelation",
@@ -1534,6 +1692,54 @@
 			"rFunc": "correlate"
 		},
 		{
+			"id": "util-correlate-spearman-exact-n9",
+			"kind": "pureUtil",
+			"jsFn": "correlate",
+			"pyFunc": "correlate",
+			"note": "STAT-28: n = 9 without ties, so Spearman's p is the EXACT permutation p (all 9! rankings), as R cor.test(exact = TRUE): 0.67774470899470896. The t approximation gave 0.668.",
+			"input": {
+				"x": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+				"y": [5, 9, 1, 7, 3, 8, 2, 6, 4]
+			},
+			"argRefs": ["x", "y"],
+			"jsArgs": ["spearman"],
+			"pyArgs": ["spearman"],
+			"compareScalars": ["r", "pvalue", "n"],
+			"rFunc": "correlate"
+		},
+		{
+			"id": "util-correlate-spearman-exact-n5-perfect",
+			"kind": "pureUtil",
+			"jsFn": "correlate",
+			"pyFunc": "correlate",
+			"note": "STAT-28: a perfect rank agreement on n = 5 has exact p = 2 / 5! = 0.016667, not the t approximation's 0.",
+			"input": {
+				"x": [1, 2, 3, 4, 5],
+				"y": [10, 20, 30, 40, 50]
+			},
+			"argRefs": ["x", "y"],
+			"jsArgs": ["spearman"],
+			"pyArgs": ["spearman"],
+			"compareScalars": ["r", "pvalue", "n"],
+			"rFunc": "correlate"
+		},
+		{
+			"id": "util-correlate-spearman-small-ties",
+			"kind": "pureUtil",
+			"jsFn": "correlate",
+			"pyFunc": "correlate",
+			"note": "STAT-28: n = 6 WITH a tie, so the t approximation (as cor.test, which refuses the exact p with ties): 0.0076658441874731574.",
+			"input": {
+				"x": [1, 2, 2, 4, 5, 6],
+				"y": [1, 3, 2, 4, 6, 5]
+			},
+			"argRefs": ["x", "y"],
+			"jsArgs": ["spearman"],
+			"pyArgs": ["spearman"],
+			"compareScalars": ["r", "pvalue", "n"],
+			"rFunc": "correlate"
+		},
+		{
 			"id": "util-describe-stats",
 			"kind": "pureUtil",
 			"jsFn": "describeStats",
@@ -1547,6 +1753,9 @@
 				"mean",
 				"median",
 				"sd",
+				"sem",
+				"ciLow",
+				"ciHigh",
 				"min",
 				"max",
 				"range",
@@ -2854,6 +3063,9 @@
 					"mean": -1,
 					"median": -1,
 					"sd": -1,
+					"sem": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
 					"min": -1,
 					"max": -1,
 					"range": -1,
@@ -2869,6 +3081,9 @@
 				"mean",
 				"median",
 				"sd",
+				"sem",
+				"ciLow",
+				"ciHigh",
 				"min",
 				"max",
 				"range",
@@ -13452,6 +13667,471 @@
 			"note": "A negative, fractional seed is truncated and folded into [1, 2^31 - 2] (normalizeSeed)."
 		},
 		{
+			"id": "util-permutation-orders-shuffle",
+			"kind": "pureUtil",
+			"jsFn": "permutationOrders",
+			"pyFunc": "permutation_orders",
+			"rFunc": "permutation_orders",
+			"input": {
+				"u": [0]
+			},
+			"argRefs": ["u"],
+			"jsArgs": [37, 6, 12345, "shuffle", null],
+			"pyArgs": [37, 6, 12345, "shuffle", null],
+			"compareArrays": ["orders"],
+			"tolerance": 0,
+			"note": "The fit nodes' permutation test (permutationTest.js, shuffle scheme): the first 6 Fisher-Yates permutations of 0..36 drawn from createSeededRNG(12345), read off the real permutationTest. The ports draw the same permutations, so their perm_pvalue can equal the app's exactly."
+		},
+		{
+			"id": "util-permutation-orders-block",
+			"kind": "pureUtil",
+			"jsFn": "permutationOrders",
+			"pyFunc": "permutation_orders",
+			"rFunc": "permutation_orders",
+			"input": {
+				"u": [0]
+			},
+			"argRefs": ["u"],
+			"jsArgs": [53, 5, -7.9, "block", 12],
+			"pyArgs": [53, 5, -7.9, "block", 12],
+			"compareArrays": ["orders"],
+			"tolerance": 0,
+			"note": "The block scheme (blockPermuteSeeded): a random circular offset, blocks of 12 (the last 5 long), each rotated, in a random order; a negative fractional seed."
+		},
+		{
+			"id": "tp-cosinor-perm-fixed-shuffle",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Permutation p of a fixed 24 h cosinor (shuffle scheme, R squared, 999 permutations) on a weak rhythm, so p sits mid-range and any change in the permutations or the refit moves it. Exact: the ports draw the app's permutations and the fixed cosinor's refit is linear least squares (solved for all permutations at once).",
+			"generate": {
+				"type": "rhythm",
+				"n": 120,
+				"period": 24,
+				"amp": 1.2,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 901,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"nPermutations": 999,
+				"permutationSeed": 12345,
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-cosinor-perm-fixed-block-rmse",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Block scheme (one-period circular blocks of round(24 h / 0.5 h) = 48 samples), RMSE statistic (extreme when at most the observed), two harmonics, seed 77, 499 permutations, on a weak rhythm at half-hour sampling.",
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"dt": 0.5,
+				"period": 24,
+				"amp": 0.8,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 902,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"nPermutations": 499,
+				"permutationSeed": 77,
+				"permutationStatistic": "rmse",
+				"permutationScheme": "block",
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-cosinor-perm-block-unavailable",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "A block test needs two whole one-period blocks: 36 hourly samples hold one 24 h block, so the test does not run and perm_pvalue is NaN in every language.",
+			"generate": {
+				"type": "rhythm",
+				"n": 36,
+				"period": 24,
+				"amp": 5,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 2,
+				"seed": 903,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"nPermutations": 99,
+				"permutationScheme": "block",
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-cosinor-perm-free-shuffle",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Permutation p of a free-period cosinor (20 to 28 h): every permuted series is refitted by the nonlinear optimiser, 49 times (the app's count is the user's; this keeps the fixture fast).",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 0.7,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 904,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": false,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"permuteTest": true,
+				"nPermutations": 49,
+				"permutationSeed": 5,
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-rectangularwave-perm",
+			"kind": "tableProcess",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "Permutation p of a rectangular-wave fit (free period 20 to 28 h, shuffle, R squared, 19 permutations), each permuted series refitted by the multi-start Levenberg-Marquardt.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 1,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 905,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"outputX": -1,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"permuteTest": true,
+				"nPermutations": 19,
+				"permutationSeed": 12345,
+				"out": { "rectwavex": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-doublelogistic-perm-block",
+			"kind": "tableProcess",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"note": "Permutation p of a periodic double-logistic fit at a fixed 24 h period, block scheme (24-sample blocks), 19 permutations.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 3,
+				"mesor": 20,
+				"phase": 16,
+				"noise": 5,
+				"seed": 906,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"periodic": true,
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"permuteTest": true,
+				"nPermutations": 19,
+				"permutationSeed": 3,
+				"permutationScheme": "block",
+				"out": { "dlogx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-fitfunction-perm-auto-permstats",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "Fit waveform model, fixed 24 h cosinor, automatic permutation count (recommendPermutations: 999 for 20 to 49 points), a numeric-string seed, and the permstats_<y> port: all 999 permuted R squared values, in order, as well as the p.",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 1.5,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 4,
+				"seed": 907,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"autoPermutations": true,
+				"permutationSeed": "77",
+				"permutationStatistic": "rSquared",
+				"out": { "fitx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue", "permstats_@y"],
+			"tolerance": 1e-9,
+			"toleranceWhy": "The permuted R squared values come from a different solve (normal equations by elimination in the app, one matrix solve for all permutations here): equal to about 1e-14. perm_pvalue is still exact."
+		},
+		{
+			"id": "tp-fitfunction-perm-rect-rmse",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "Fit waveform model, rectangular model, RMSE statistic, 19 permutations: the p and every permuted RMSE.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 1,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 908,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "rectangular",
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"permuteTest": true,
+				"autoPermutations": false,
+				"nPermutations": 19,
+				"permutationSeed": 12345,
+				"permutationStatistic": "rmse",
+				"out": { "fitx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue", "permstats_@y"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-cosinor-perm-off",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "permuteTest false (the default) runs no permutation test: perm_pvalue is NaN, never a p from another test.",
+			"generate": {
+				"type": "rhythm",
+				"n": 120,
+				"period": 24,
+				"amp": 1.2,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 901,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": false,
+				"nPermutations": 999,
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-cosinor-perm-failed-fit",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "x only on whole 24 h periods: the fixed 24 h cosinor's design is singular and the fit fails. With the permutation test on, the app used to throw (permutationTest read the statistic of a null fit); now it, like the ports, reports the failed fit and perm_pvalue is NaN.",
+			"inputs": [
+				{ "ref": "t", "type": "number", "values": [0, 24, 48, 72, 96, 120, 144, 168, 192, 216] },
+				{ "ref": "y", "type": "number", "values": [0, 1, 2, 0, 1, 2, 0, 1, 2, 0] }
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"nPermutations": 9,
+				"out": { "cosinorx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"recordValid": true,
+			"tolerance": 0
+		},
+		{
+			"id": "tp-rectangularwave-perm-off",
+			"kind": "tableProcess",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "permuteTest false: perm_pvalue is NaN.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 1,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 905,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"outputX": -1,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"permuteTest": false,
+				"out": { "rectwavex": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-doublelogistic-perm-off",
+			"kind": "tableProcess",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"note": "permuteTest false: perm_pvalue is NaN.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 3,
+				"mesor": 20,
+				"phase": 16,
+				"noise": 5,
+				"seed": 906,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"periodic": true,
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"permuteTest": false,
+				"out": { "dlogx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-fitfunction-perm-off",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "permuteTest false: perm_pvalue is NaN (the fixed cosinor's analytic F-test p never lands on it) and permstats_<y> is empty.",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 1.5,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 4,
+				"seed": 907,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": false,
+				"out": { "fitx": -1, "perm_pvalue": -1 }
+			},
+			"compareOutputs": ["perm_pvalue", "permstats_@y"],
+			"tolerance": 0
+		},
+		{
 			"id": "tp-surrogate-block-pvalue",
 			"kind": "tableProcess",
 			"jsName": "SurrogateTest",
@@ -13665,6 +14345,48 @@
 				"yIN": ["@y"],
 				"analysis": "periodogram",
 				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.25,
+				"pgAlpha": 0.05,
+				"periodMin": 16,
+				"periodMax": 48,
+				"periodStep": 0.1,
+				"hideInputs": false,
+				"out": {
+					"stat_peak_period": -1,
+					"stat_peak_power": -1,
+					"stat_peak_pvalue": -1
+				}
+			},
+			"compareOutputs": ["stat_peak_period", "stat_peak_power", "stat_peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-rhythmicity-periodogram-ls-peak-pvalue",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "Lomb-Scargle on a weak 24 h rhythm (10 days at 6 min), 16 to 48 h: peak_pvalue is the family-wise p of the peak, Baluev's (2008) false-alarm probability over the band (periodogramPeak.js lombScargleFamilywiseP, astropy fap_baluev), not available before 2026-10-26.",
+			"generate": {
+				"type": "rhythm",
+				"n": 2400,
+				"dt": 0.1,
+				"period": 24,
+				"amp": 3,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 10,
+				"seed": 924,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"pgMethod": "Lomb-Scargle",
 				"pgBinSize": 0.25,
 				"pgAlpha": 0.05,
 				"periodMin": 16,
@@ -21046,7 +21768,8 @@
 			"kind": "tableProcessResult",
 			"jsName": "GroupComparison",
 			"pyFunc": "groupcomparison",
-			"note": "STAT-11: Kruskal-Wallis effect size is Tomczak and Tomczak (2014) epsilon-squared, H / (n - 1). No rFunc: the R runtime refuses the rank-based GroupComparison methods.",
+			"rFunc": "groupcomparison",
+			"note": "STAT-11: Kruskal-Wallis effect size is Tomczak and Tomczak (2014) epsilon-squared, H / (n - 1). The R runtime ports the rank-based methods since STAT-28 (2026-10-26).",
 			"generate": {
 				"type": "groups",
 				"seed": 11,
@@ -21084,6 +21807,151 @@
 				"out": {}
 			},
 			"compareFields": ["test", "h", "df", "pValue", "epsilonSquared", "nTotal"]
+		},
+		{
+			"id": "tp-groupcomparison-mannwhitney-exact",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "STAT-28: 5 v 6 values, no ties, so the EXACT null distribution (scipy mannwhitneyu method='auto': either n <= 8, no ties). U = 0, scipy p = 0.004329004329004329 = 2 / C(11, 5); the normal approximation gave 0.0081. z and r stay the normal approximation's.",
+			"inputs": [
+				{
+					"ref": "grp",
+					"type": "category",
+					"values": ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B"]
+				},
+				{
+					"ref": "val",
+					"type": "number",
+					"values": [1.1, 2.3, 3.2, 4.8, 5.0, 6.1, 7.2, 8.3, 9.4, 10.5, 11.6]
+				}
+			],
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "mannwhitney",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": ["test", "u", "z", "pValue", "pMethod", "rEffect", "n1", "n2"]
+		},
+		{
+			"id": "tp-groupcomparison-mannwhitney-ties-asymptotic",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "STAT-28: a tie across the groups, so the tie-corrected normal approximation with continuity correction, as scipy: p = 0.5065551690490403.",
+			"inputs": [
+				{
+					"ref": "grp",
+					"type": "category",
+					"values": ["A", "A", "A", "B", "B", "B"]
+				},
+				{
+					"ref": "val",
+					"type": "number",
+					"values": [1, 2, 3, 1, 4, 5]
+				}
+			],
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "mannwhitney",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": ["test", "u", "z", "pValue", "pMethod"]
+		},
+		{
+			"id": "tp-groupcomparison-mannwhitney-exact-unbalanced",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "STAT-28: 3 v 20, no ties: exact because ONE sample has at most 8 values (scipy's rule). U = 5, scipy p = 0.018068887634105024.",
+			"inputs": [
+				{
+					"ref": "grp",
+					"type": "category",
+					"values": [
+						"S",
+						"S",
+						"S",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L",
+						"L"
+					]
+				},
+				{
+					"ref": "val",
+					"type": "number",
+					"values": [
+						3.1, 1.2, 7.7, 2.5, 4.4, 5.6, 6.3, 8.8, 9.9, 10.1, 11.4, 12.0, 13.3, 14.6, 15.2, 16.8,
+						17.1, 18.9, 19.5, 20.2, 21.7, 22.3, 23.6
+					]
+				}
+			],
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "mannwhitney",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": ["test", "u", "pValue", "pMethod"]
+		},
+		{
+			"id": "tp-groupcomparison-kruskal-posthoc-exact",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "STAT-28: Kruskal-Wallis on three small groups without ties; the pairwise Mann-Whitney post hoc uses the exact p for every pair (all n <= 8), then Holm.",
+			"inputs": [
+				{
+					"ref": "grp",
+					"type": "category",
+					"values": ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "C", "C", "C", "C"]
+				},
+				{
+					"ref": "val",
+					"type": "number",
+					"values": [
+						1.1, 2.3, 3.2, 4.8, 5.0, 6.1, 7.2, 8.3, 9.4, 10.5, 11.6, 20.5, 21.4, 22.9, 23.3
+					]
+				}
+			],
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "kruskal",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": ["test", "h", "pValue", "postHoc"]
 		},
 		{
 			"id": "tp-correlation-holm-padj",
@@ -24351,6 +25219,48 @@
 				"binLabel": "end",
 				"analysis": "periodogram",
 				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.5,
+				"pgAlpha": 0.05,
+				"periodMin": 18,
+				"periodMax": 30,
+				"periodStep": 0.5,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_period", "@{y}_peak_power", "@{y}_peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-periodogram-ls-peak-pvalue",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Lomb-Scargle periodogram per window: the peak period, power and Baluev's family-wise peak p (each window its own N and time spread).",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 8,
+				"seed": 953,
+				"dt": 0.5,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 96,
+				"stepSize": 24,
+				"binLabel": "end",
+				"analysis": "periodogram",
+				"pgMethod": "Lomb-Scargle",
 				"pgBinSize": 0.5,
 				"pgAlpha": 0.05,
 				"periodMin": 18,

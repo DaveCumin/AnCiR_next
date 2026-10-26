@@ -160,7 +160,8 @@ describe('a new node follows its x', () => {
 			`.workflow-node-wrapper[data-node-id="tableprocess_${reopened.id}"]`
 		);
 		const label = [...(wrap?.querySelectorAll('label') ?? [])].find((l) =>
-			l.textContent.trim().startsWith('Bin size (h)')
+			// The demo's x is a plain number column, so the panel states its unit as x units.
+			l.textContent.trim().startsWith('Bin size (x units)')
 		);
 		expect(label, 'the Bin size input is shown for Enright').toBeTruthy();
 		await fireEvent.input(label.querySelector('input'), { target: { value: '0.5' } });

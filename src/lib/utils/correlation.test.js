@@ -230,3 +230,45 @@ describe('numeric strings are read as the numbers they spell (STAT-U4)', () => {
 		expect(row.r).toBeCloseTo(0.9320546490018, 12);
 	});
 });
+
+// STAT-28: Spearman's p is EXACT (the permutation distribution of S = sum d^2, every one of the
+// n! rankings equally likely) for n <= 9 without ties, as R's cor.test(method = 'spearman')
+// computes it (AS 89, Best and Roberts 1975, exact branch); otherwise the t approximation, as
+// scipy.stats.spearmanr and cor.test(exact = FALSE). Reference p from R 4.5.2
+// cor.test(x, y, method = 'spearman', exact = length(x) <= 9).
+describe('spearman p-value: exact for small n without ties', () => {
+	const CASES = [
+		['n = 5', [1, 2, 3, 4, 5], [2, 1, 4, 3, 5], 0.13333333333333333],
+		['n = 9', [1, 2, 3, 4, 5, 6, 7, 8, 9], [2, 1, 4, 3, 6, 5, 9, 7, 8], 0.0020282186948853615],
+		['n = 9, weak', [1, 2, 3, 4, 5, 6, 7, 8, 9], [5, 9, 1, 7, 3, 8, 2, 6, 4], 0.67774470899470896],
+		['n = 4, perfect inverse', [1, 2, 3, 4], [4, 3, 2, 1], 0.083333333333333329],
+		['n = 8', [1, 2, 3, 4, 5, 6, 7, 8], [1, 3, 2, 4, 6, 5, 8, 7], 0.002232142857142857],
+		[
+			'n = 10: t approximation',
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[3, 1, 2, 6, 4, 5, 10, 7, 9, 8],
+			0.0022200312259168407
+		],
+		['ties: t approximation', [1, 2, 2, 4, 5, 6], [1, 3, 2, 4, 6, 5], 0.0076658441874731574]
+	];
+	it.each(CASES)('%s matches R cor.test', (_label, x, y, p) => {
+		expect(correlate(x, y, 'spearman').pvalue).toBeCloseTo(p, 13);
+	});
+
+	it('the exact p is capped at 1 (r = 0.5 on n = 3)', () => {
+		expect(correlate([1, 2, 3], [1, 3, 2], 'spearman').pvalue).toBe(1);
+	});
+
+	it('a perfect rank agreement on small n is 2 / n!, not 0', () => {
+		expect(correlate([1, 2, 3, 4, 5], [10, 20, 30, 40, 50], 'spearman').pvalue).toBeCloseTo(
+			2 / 120,
+			14
+		);
+	});
+
+	it('Pearson is unchanged (t on n - 2 df)', () => {
+		const x = [1, 2, 3, 4, 5];
+		const y = [2, 1, 4, 3, 5];
+		expect(correlate(x, y, 'pearson').pvalue).toBeCloseTo(0.10408803866182798, 12);
+	});
+});
