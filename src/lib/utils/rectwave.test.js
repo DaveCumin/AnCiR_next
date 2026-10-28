@@ -99,3 +99,35 @@ describe('evaluateRectWaveAtPoints', () => {
 		}
 	});
 });
+
+// REPORTED (2026-10-28): on a flat series (y = 5) the free-period fit reported RMSE 0.852, not
+// about 0. Every start began at the shortest period (2 samples) with the samples on the sine's
+// peaks, so omega and phi had no effect (JtJ diagonal ~1e-30 of the largest). Marquardt's
+// diagonal-scaled damping then gave those columns no damping, every step was singular, and
+// each start was given up at its seed (A = 1). Such columns now get plain damping.
+describe('fitRectangularWave on a flat series', () => {
+	for (const [n, dt] of [
+		[169, 1],
+		[50, 0.5]
+	]) {
+		it(`fits the flat line (n = ${n}, every ${dt} h, free period)`, () => {
+			const t = Array.from({ length: n }, (_, i) => i * dt);
+			const r = fitRectangularWave(
+				t,
+				t.map(() => 5)
+			);
+			expect(r.rmse).toBeLessThan(1e-6);
+			expect(Math.abs(r.parameters.A)).toBeLessThan(1e-4);
+			expect(r.parameters.M).toBeCloseTo(5, 6);
+		});
+	}
+	it('and with the period fixed (already right; pinned)', () => {
+		const t = Array.from({ length: 169 }, (_, i) => i);
+		const r = fitRectangularWave(
+			t,
+			t.map(() => 5),
+			{ fixOmega: true, fixedOmega: (2 * Math.PI) / 24 }
+		);
+		expect(r.rmse).toBeLessThan(1e-6);
+	});
+});

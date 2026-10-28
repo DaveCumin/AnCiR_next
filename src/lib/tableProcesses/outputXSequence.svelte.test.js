@@ -6,7 +6,7 @@
 // same path as an output x COLUMN: a time x comes out as a time column of epoch ms, the fitted
 // curve is evaluated on it, residuals stay at the input x. Switching back to Column gives the
 // column behaviour again, and every control gesture is one undo step.
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { readFileSync } from 'node:fs';
@@ -29,6 +29,11 @@ const DEMOS = join(process.cwd(), 'static/sessions/demos');
 const demo = (name) => JSON.parse(readFileSync(join(DEMOS, name), 'utf8'));
 const H = 3600000;
 const T0 = Date.UTC(2026, 0, 5, 6, 0, 0);
+
+// Each test renders the whole app, imports a session and refits through several gestures: 1 to
+// 2.5 s idle, and past Vitest's 5 s default when the full suite runs alongside. The waits below
+// poll for the outcome (until), so a generous ceiling costs nothing when the machine is idle.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 class ThrowOnPost {
 	postMessage() {
@@ -63,9 +68,14 @@ async function settle(rounds = 8) {
 	}
 	flushSync();
 }
-async function until(ok, ms = 8000) {
+// Polls until `ok()` holds. It used to give up silently after 8 s, so under load the check after
+// it failed on a half-finished refit (a wrong length) instead of saying it ran out of time.
+async function until(ok, ms = 30_000) {
 	const t0 = Date.now();
-	while (!ok() && Date.now() - t0 < ms) await settle(1);
+	while (!ok()) {
+		if (Date.now() - t0 >= ms) throw new Error(`until: not reached within ${ms} ms: ${ok}`);
+		await settle(1);
+	}
 	await settle(2);
 }
 

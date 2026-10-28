@@ -17,7 +17,9 @@
 	// `legacyNames`: default names older versions gave this value (storedValueNames.js), so a
 	// session saved then keeps its value (renamed to the plain default name unless the user
 	// named it; storedValueClaims.js).
-	let { label, getter, defaultName = '', legacyNames = [], source = '' } = $props();
+	// `subject`: the input column the value describes (storedValueNames.js); while its node no
+	// longer uses that column (the series was removed) the value reads missing.
+	let { label, getter, defaultName = '', legacyNames = [], source = '', subject = null } = $props();
 
 	// One registry entry per <owner>|<default name>, however many places render this
 	// button (the canvas node and the control panel both mount the node): every
@@ -54,6 +56,7 @@
 			legacyBases: legacyNames ?? [],
 			getter,
 			source,
+			subject,
 			token
 		});
 		anonName = name;

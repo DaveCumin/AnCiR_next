@@ -343,3 +343,106 @@ describe('template placement (asymmetric N and M)', () => {
 		for (const h of detect('offset', 5, 2, 1)) expect(h).toBe(6);
 	});
 });
+
+// REPORTED (2026-10-05 template-marker work): the last row has no next row to search into, so
+// a transition with fewer than N bins before it in that row could not be matched and the
+// marker landed N bins in (3 h for a 1 h onset with N = 3 h). The last row now borrows up to
+// N bins from the end of the row before it, so the template has room.
+describe('template matching in the last row', () => {
+	const opts = { periodHrs: 24, hrsBefore: 3, hrsAfter: 3, centile: 50, type: 'onset' };
+
+	it('places an onset 1 h into the last row at 1 h, not at N', () => {
+		const sim = simulate({ tau: 24, P: 24, days: 4, firstOnset: 1 });
+		const { hours, times } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			binSize: sim.binSize
+		});
+		expect(hours).toHaveLength(4);
+		expect(hours[3]).toBeCloseTo(1, 9);
+		expect(times[3]).toBeCloseTo(3 * 24 + 1, 9);
+	});
+
+	it('places an onset right at the start of the last row at 0 h', () => {
+		const sim = simulate({ tau: 24, P: 24, days: 3, firstOnset: 0 });
+		const { hours } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			binSize: sim.binSize
+		});
+		expect(hours[2]).toBeCloseTo(0, 9);
+	});
+
+	it('an offset 2 h into the last row is placed at 2 h', () => {
+		// Active from 14 h for 40% of 24 h = 9.6 h, so the offset falls at 23.6 h, and in the
+		// next day at 23.6 h: use firstOnset so the offset lands 2 h into a row instead.
+		const sim = simulate({ tau: 24, P: 24, days: 3, firstOnset: 16.4 });
+		const { hours } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			type: 'offset',
+			binSize: sim.binSize
+		});
+		expect(hours[2]).toBeCloseTo(2, 9);
+	});
+
+	it('a lone row shorter than the template gives no marker, not one at bin N - 1', () => {
+		const xByPeriod = { 0: [0, 1, 2, 3] };
+		const yByPeriod = { 0: [1, 1, 10, 10] };
+		const { hours, times } = matchTemplateMarkers(xByPeriod, yByPeriod, {
+			...opts,
+			binSize: 1
+		});
+		expect(hours).toEqual([NaN]);
+		expect(times).toEqual([NaN]);
+	});
+
+	it('interior rows are unchanged (they search into the next row)', () => {
+		const sim = simulate({ tau: 24, P: 24, days: 4, firstOnset: 1 });
+		const { times } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			binSize: sim.binSize
+		});
+		// Row i's own onset at 1 h is too early for its window, so it reports the next row's.
+		expect(times.slice(0, 3)).toEqual([25, 49, 73]);
+	});
+});
+
+// REPORTED (2026-10-28): when no bin of a window is above the threshold (two-level data, a
+// 100% centile, an all-zero row) every bin reads "inactive", the match is flat, and the first
+// position put a made-up marker N bins in. Such a window now reports no marker.
+describe('template matching with no bin above the threshold', () => {
+	const opts = { periodHrs: 24, hrsBefore: 3, hrsAfter: 3, type: 'onset' };
+
+	it('a 100% centile gives no markers (nothing is above the top value)', () => {
+		const sim = simulate({ tau: 24, P: 24, days: 4, firstOnset: 6 });
+		const { hours, times } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			centile: 100,
+			binSize: sim.binSize
+		});
+		expect(hours).toHaveLength(4);
+		expect(hours.every(Number.isNaN)).toBe(true);
+		expect(times.every(Number.isNaN)).toBe(true);
+	});
+
+	it('an all-zero row (no threshold) gives no marker; the rows around it are unchanged', () => {
+		const sim = simulate({ tau: 24, P: 24, days: 5, firstOnset: 6 });
+		const ref = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
+			...opts,
+			centile: 50,
+			binSize: sim.binSize
+		});
+		// Rows 2 and 3 all zero: row 2's window (rows 2 + 3) has no non-zero value at all.
+		const y = {
+			...sim.yByPeriod,
+			2: sim.yByPeriod[2].map(() => 0),
+			3: sim.yByPeriod[3].map(() => 0)
+		};
+		const { hours } = matchTemplateMarkers(sim.xByPeriod, y, {
+			...opts,
+			centile: 50,
+			binSize: sim.binSize
+		});
+		expect(Number.isNaN(hours[2])).toBe(true);
+		expect(hours[0]).toBe(ref.hours[0]);
+		expect(Number.isFinite(hours[0])).toBe(true);
+	});
+});

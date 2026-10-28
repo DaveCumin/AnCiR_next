@@ -182,7 +182,11 @@
 					><a href="#ref-33">[33]</a></sup
 				>. AnCiR's version is its own: the windows are yours to set (3 h each by default), and a bin
 				counts as active when it is above the percentile of the non-zero activity in its row and the
-				next, so its markers need not match ClockLab's.
+				next, so its markers need not match ClockLab's. Zeros are left out so that the percentage
+				still matters on sparse records (counted, they would pull the threshold to 0 whenever most
+				bins are empty). When no bin in a row's window is above the threshold (data with only one
+				non-zero level, such as 0/1 scores, or a 100% threshold) that row gets no marker, rather
+				than one placed N hours in.
 			</li>
 			<li>
 				<strong>Marker rules:</strong> with several animals on one actogram, click

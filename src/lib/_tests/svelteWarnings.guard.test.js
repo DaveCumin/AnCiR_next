@@ -114,7 +114,13 @@ function compileAll() {
 let cached;
 const allWarnings = () => (cached ??= compileAll());
 
-describe('Svelte compiler warnings', () => {
+// Compiling every component is about a second on an idle machine and several times that when
+// the full suite runs alongside (it competes with every other worker for CPU), which passed
+// Vitest's 5 s default. The work is a fixed scan of the repo, not a wait, so a long ceiling
+// only matters if something is genuinely wrong.
+const REPO_SCAN_TIMEOUT = 60_000;
+
+describe('Svelte compiler warnings', { timeout: REPO_SCAN_TIMEOUT }, () => {
 	it('finds Svelte sources to compile (guards against the walk matching nothing)', () => {
 		const files = svelteSources();
 		expect(files.filter((f) => f.endsWith('.svelte')).length).toBeGreaterThan(150);

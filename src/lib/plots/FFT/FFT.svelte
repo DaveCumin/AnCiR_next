@@ -31,6 +31,7 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { computeFFT, fftPeak } from '$lib/utils/fft.js';
+	import { refusalLines as buildRefusalLines } from '$lib/plots/plotRefusal.js';
 	import { minMax, minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 	import {
 		findNearestY,
@@ -271,6 +272,25 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
+		// Series the transform refused (a long gap, too much missing data), and the message the
+		// plot draws over its area for them; the full reason stays in the Data tab. Width per
+		// character is about 0.55 em of the message's type (refusalFontSize).
+		refusalFontSize = $derived(12 * this.fontScale);
+		refused = $derived(
+			this.data
+				.filter((d) => d.fftData?.reason)
+				.map((d) => ({ label: displayNameOf(d.y) || 'Series', reason: d.fftData.reason }))
+		);
+		allRefused = $derived(this.data.length > 0 && this.refused.length === this.data.length);
+		refusalLines = $derived(
+			buildRefusalLines(
+				this.refused,
+				(this.viewWidth - this.padding.left - this.padding.right - 8) /
+					(0.55 * this.refusalFontSize),
+				'No spectrum',
+				this.data.length
+			)
+		);
 		legend = $state();
 		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
@@ -1481,6 +1501,47 @@
 			<!-- Reference lines above the magnitude and phase curves, beneath the legend. -->
 			<OverlayLayers inner={theData.plot} layer="lines" />
 		{/key}
+
+		<!-- Why a series has no spectrum, on the plot itself (centred when nothing is drawn, at
+		     the top of the plot area beside the spectra that were). The Data tab has the advice. -->
+		{#if theData.plot.refusalLines.length > 0}
+			{@const fsz = theData.plot.refusalFontSize}
+			{@const lh = fsz * 1.3}
+			{@const n = theData.plot.refusalLines.length}
+			{@const y0 = theData.plot.allRefused
+				? theData.plot.padding.top + theData.plot.plotheight / 2 - ((n - 1) * lh) / 2
+				: theData.plot.padding.top + lh}
+			{@const boxW = Math.min(
+				theData.plot.plotwidth,
+				Math.max(...theData.plot.refusalLines.map((l) => l.length)) * 0.55 * fsz + 2 * fsz
+			)}
+			<!-- A card-coloured backing so gridlines do not run through the words. The width is
+			     the same 0.55 em a character estimate the lines were wrapped with. -->
+			<rect
+				x={theData.plot.padding.left + (theData.plot.plotwidth - boxW) / 2}
+				y={y0 - lh / 2 - fsz * 0.3}
+				width={boxW}
+				height={n * lh + fsz * 0.6}
+				rx={3 * theData.plot.fontScale}
+				fill="var(--surface-card)"
+				opacity="0.92"
+			/>
+			<text
+				class="plot-refusal"
+				x={theData.plot.padding.left + theData.plot.plotwidth / 2}
+				y={y0}
+				text-anchor="middle"
+				dominant-baseline="middle"
+				font-size={fsz}
+				fill="var(--color-text-muted)"
+			>
+				{#each theData.plot.refusalLines as line, li (li)}
+					<tspan x={theData.plot.padding.left + theData.plot.plotwidth / 2} dy={li === 0 ? 0 : lh}
+						>{line}</tspan
+					>
+				{/each}
+			</text>
+		{/if}
 
 		<!-- Series legend. Sits over the single plot area that BOTH the magnitude and the
 		     phase curves are drawn into, so its corner presets clear the left magnitude

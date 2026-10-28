@@ -13,6 +13,7 @@ describe('movingStatKeys port is identical to the real getStatKeys', () => {
 	const cases = {
 		periodogram: { analysis: 'periodogram' },
 		periodogramChiSquared: { analysis: 'periodogram', pgMethod: 'Chi-squared' },
+		periodogramEnright: { analysis: 'periodogram', pgMethod: 'Enright' },
 		fft: { analysis: 'fft' },
 		correlogram: { analysis: 'correlogram' },
 		rectfit: { analysis: 'rectfit' },
@@ -45,7 +46,15 @@ describe('movingStatKeys port is identical to the real getStatKeys', () => {
 describe('dynamicOutKeys mirrors synthesizeDynamicOut', () => {
 	it('MovingAnalysis: one key per (y, stat)', () => {
 		const { keys } = dynamicOutKeys('MovingAnalysis', { yIN: [3, 4], analysis: 'periodogram' });
-		expect(keys).toEqual(['3_peak_period', '3_peak_power', '4_peak_period', '4_peak_power']);
+		// Lomb-Scargle (the default method) has a peak p-value (Baluev FAP) since v82.64.
+		expect(keys).toEqual([
+			'3_peak_period',
+			'3_peak_power',
+			'3_peak_pvalue',
+			'4_peak_period',
+			'4_peak_power',
+			'4_peak_pvalue'
+		]);
 	});
 
 	it('Split: N split points → N+1 segments per y, 1-indexed', () => {

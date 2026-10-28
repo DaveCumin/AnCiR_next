@@ -26,6 +26,14 @@ export default defineConfig({
 	resolve: {
 		alias: { $lib: lib }
 	},
+	// No dependency discovery outside vitest. vite-node (the MCP server, its workers, gen-schema)
+	// runs some modules in Vite's web mode, so Vite's optimiser pre-bundles their dependencies as
+	// it finds them. From a cold cache each newly found dependency re-optimises and REWRITES
+	// node_modules/.vite/deps while the process is still importing from it, and vite-node dies
+	// after 5 s on a file that was just deleted ("ViteNodeServer: .../deps/svelte.js not found"),
+	// so the server could not start until enough failed runs had warmed the cache. Without
+	// discovery nothing is pre-bundled mid-run and dependencies load straight from node_modules.
+	optimizeDeps: process.env.VITEST ? undefined : { noDiscovery: true, include: [] },
 	server: {
 		fs: { allow: [repoRoot] },
 		// No file watcher outside vitest. vite-node (gen-schema, the MCP server and its

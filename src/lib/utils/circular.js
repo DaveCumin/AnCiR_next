@@ -94,11 +94,17 @@ export function circularMean(anglesRad) {
  *
  * z = n · R²  (Rayleigh's z).
  *
- * p-value uses the standard series approximation (Zar 1999, eq. 27.4;
- * Fisher 1993, §4.3.2; as implemented in the R `circular` package):
+ * p-value uses the second-order series approximation of the R `circular` package
+ * (rayleigh.test, which applies it for n < 50) and of astropy.stats.rayleightest
+ * (which cites Wilkie 1983, Applied Statistics):
  *   p = e^{-z} · [ 1 + (2z − z²)/(4n) − (24z − 132z² + 76z³ − 9z⁴)/(288 n²) ]
  * clamped to [0, 1]. Accurate for n ≳ 10; the leading e^{-z} term is the
- * large-sample limit.
+ * large-sample limit. Here it is applied at every n (R `circular` and astropy
+ * drop the bracket at n >= 50; at n = 60 the two differ by about 0.0016).
+ * NOT Zar (1999) eq. 27.4: that is a different approximation,
+ *   p = exp( sqrt(1 + 4n + 4(n² − Rn²)) − (1 + 2n) ),  Rn = n·R,
+ * (as quoted by CircStat for MATLAB and pingouin's circ_rayleigh, "Zar, p. 617").
+ * The two agree to within 0.001 for n >= 8 (circular.rayleighReference.test.js).
  *
  * @param {number[]} anglesRad
  * @returns {{ n: number, R: number, meanAngle: number, z: number, pValue: number }}

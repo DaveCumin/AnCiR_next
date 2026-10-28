@@ -1,29 +1,25 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { thumbnailForWorkflow, thumbnailFromSeries } from './thumbnails.js';
 
-const WORKFLOW_IDS = [
-	'workflow-rest-activity',
-	'workflow-free-running',
-	'workflow-phase-groups',
-	'workflow-stats-eda',
-	'workflow-stats-two-group',
-	'workflow-stats-anova',
-	'workflow-stats-correlation',
-	'workflow-stats-regression',
-	'workflow-stats-logistic',
-	'workflow-stats-chi-square',
-	'workflow-non24-blind',
-	'workflow-arrhythmic',
-	'workflow-circatidal',
-	'workflow-reentrainment',
-	'workflow-split-rhythm',
-	'workflow-noise-peak',
-	'workflow-aliasing',
-	'workflow-crepuscular',
-	'workflow-masking'
-];
+// Every card the start screen shows, read from the shipped manifest (StartScreen lists the
+// workflows plus any entry flagged startScreen). A hand-kept list here once missed eight cards,
+// which then drew the sine fallback (UI-U3, Anscombe and Simpson among them).
+const MANIFEST = JSON.parse(
+	readFileSync(join(process.cwd(), 'static/sessions/demos/index.json'), 'utf8')
+);
+const WORKFLOW_IDS = MANIFEST.sessions
+	.filter((s) => s.kind === 'workflow' || s.startScreen === true)
+	.map((s) => s.id);
 
 describe('thumbnailForWorkflow', () => {
+	it('covers every start-screen card, Anscombe and Simpson included', () => {
+		expect(WORKFLOW_IDS.length).toBeGreaterThanOrEqual(27);
+		expect(WORKFLOW_IDS).toContain('workflow-stats-anscombe');
+		expect(WORKFLOW_IDS).toContain('workflow-stats-simpson');
+	});
+
 	it('returns an SVG for every shipped workflow', () => {
 		for (const id of WORKFLOW_IDS) {
 			const s = thumbnailForWorkflow(id);

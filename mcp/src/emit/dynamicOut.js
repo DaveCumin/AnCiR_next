@@ -29,8 +29,9 @@ function yIdsOf(args) {
  */
 export function movingStatKeys(args) {
 	if (args.analysis === 'periodogram') {
-		// peak_pvalue only for Chi-squared (the family-wise p of the peak, SPEC-9).
-		return args.pgMethod === 'Chi-squared'
+		// peak_pvalue: Chi-squared's family-wise p of the peak (SPEC-9) or Lomb-Scargle's (the
+		// default) Baluev false-alarm probability. Enright has no analytic p, so no port.
+		return (args.pgMethod ?? 'Lomb-Scargle') !== 'Enright'
 			? ['peak_period', 'peak_power', 'peak_pvalue']
 			: ['peak_period', 'peak_power'];
 	}

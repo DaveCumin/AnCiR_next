@@ -12,10 +12,77 @@
 
 import { unzipSync } from 'fflate';
 
+// ── Limits for files a user did not make (SEC-U3) ────────────────────────────
+//
+// A workbook is a zip of XML parts, and every size in it is the file's own claim. Before
+// these limits a 1 kB crafted file froze the tab (a <dimension> or a single cell claiming
+// all 17 billion cells of a sheet), and a zip bomb was inflated in full even though the
+// reader never looks at that part. xlsxLite.hostile.test.js has one case per limit.
+
+/** Excel's own grid: 16,384 columns (XFD) by 1,048,576 rows. */
+const MAX_COLS = 16384;
+
+/** The most cells (rows x columns of the used range) a sheet may span. */
+export const MAX_SHEET_CELLS = 50_000_000;
+
+/**
+ * The most bytes one XML part may unpack to. Just under V8's longest string (2^29 - 24
+ * UTF-16 units), which TextDecoder could not exceed anyway. fflate inflates a part into a
+ * buffer of its declared size, so a part that lies about its size is cut short there and
+ * cannot grow past this.
+ */
+const MAX_PART_BYTES = 500_000_000;
+
+/** The most bytes all the parts read may unpack to together. */
+const MAX_TOTAL_BYTES = 1_000_000_000;
+
+/** An error whose message the import dialog shows as is (ImportData describeImportError). */
+function userError(message) {
+	return Object.assign(new Error(message), { userMessage: message });
+}
+
+const fmtMB = (bytes) => `${Math.round(bytes / 1e6).toLocaleString('en-US')} MB`;
+
+/**
+ * Unpack only the named parts of the zip, refusing any whose declared size is past the
+ * limits. Parts the reader never uses (images, pivot caches, padding) are never inflated.
+ */
+function unzipParts(uint8, wanted, budget) {
+	return unzipSync(uint8, {
+		filter: (f) => {
+			if (!wanted(f.name)) return false;
+			if (f.originalSize > MAX_PART_BYTES || budget.used + f.originalSize > MAX_TOTAL_BYTES) {
+				throw userError(
+					`This workbook is too large to read: its part "${f.name}" unpacks to ` +
+						`${fmtMB(f.originalSize)}, and AnCiR reads up to ${fmtMB(MAX_PART_BYTES)} per ` +
+						`sheet and ${fmtMB(MAX_TOTAL_BYTES)} per workbook. Save the sheet you need as ` +
+						`CSV and import that instead.`
+				);
+			}
+			budget.used += f.originalSize;
+			return true;
+		}
+	});
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Parse XML string into a Document (works in browser). */
+/**
+ * Parse XML string into a Document (works in browser).
+ *
+ * A part with a DOCTYPE is refused before the parser sees it. OOXML parts never carry one
+ * (ECMA-376 Part 2 forbids DTDs in package parts), and a DOCTYPE is how an XML file declares
+ * the entities of an expansion attack ("billion laughs"). Chromium refuses that expansion
+ * and returns a parse-error document, which used to make the header names vanish silently.
+ */
 function parseXML(text) {
+	if (text.includes('<!DOCTYPE')) {
+		throw userError(
+			'This workbook contains an XML document type declaration (DOCTYPE), which Excel ' +
+				'never writes, so AnCiR will not read it. Open it in Excel, save it as .xlsx or CSV, ' +
+				'and try again.'
+		);
+	}
 	return new DOMParser().parseFromString(text, 'application/xml');
 }
 
@@ -244,8 +311,9 @@ function parseSheet(bytes, sharedStrings, dateStyleIndices, date1904 = false) {
 	const colNodes = doc.getElementsByTagName('col');
 	for (let i = 0; i < colNodes.length; i++) {
 		if (colNodes[i].getAttribute('hidden') === '1') {
-			const minC = parseInt(colNodes[i].getAttribute('min'), 10);
-			const maxC = parseInt(colNodes[i].getAttribute('max'), 10);
+			// Clamped to Excel's columns: a crafted max of 2^31 used to build a Set of that size.
+			const minC = Math.max(1, parseInt(colNodes[i].getAttribute('min'), 10));
+			const maxC = Math.min(MAX_COLS, parseInt(colNodes[i].getAttribute('max'), 10));
 			for (let c = minC; c <= maxC; c++) hiddenCols.add(c - 1); // 0-based
 		}
 	}
@@ -309,6 +377,32 @@ function parseSheet(bytes, sharedStrings, dateStyleIndices, date1904 = false) {
 
 	if (!ref && cells.size > 0) {
 		ref = `A1:${indexToCol(maxCol)}${maxRow + 1}`;
+	} else if (ref) {
+		// The <dimension> is the file's claim; the cells are what it holds. Trim a claimed
+		// range that runs past the last cell (A1:XFD1048576 over six cells used to make the
+		// CSV walk visit 17 billion cells), keeping where it starts.
+		const dim = utils.decode_range(ref);
+		const e =
+			cells.size > 0 ? { r: Math.min(dim.e.r, maxRow), c: Math.min(dim.e.c, maxCol) } : dim.s;
+		ref =
+			`${indexToCol(dim.s.c)}${dim.s.r + 1}:` +
+			`${indexToCol(Math.max(e.c, dim.s.c))}${Math.max(e.r, dim.s.r) + 1}`;
+	}
+
+	if (ref) {
+		const { s, e } = utils.decode_range(ref);
+		const rows = e.r - s.r + 1;
+		const cols = e.c - s.c + 1;
+		if (rows * cols > MAX_SHEET_CELLS) {
+			throw userError(
+				`This sheet's used range is ${rows.toLocaleString('en-US')} rows by ` +
+					`${cols.toLocaleString('en-US')} columns, more than the ` +
+					`${MAX_SHEET_CELLS.toLocaleString('en-US')} cells AnCiR can read. Something far ` +
+					`from the data (a stray value or formatting) can stretch the range: delete the ` +
+					`empty rows and columns past your data in Excel, or save the sheet as CSV, and ` +
+					`try again.`
+			);
+		}
 	}
 
 	return {
@@ -328,7 +422,26 @@ function parseSheet(bytes, sharedStrings, dateStyleIndices, date1904 = false) {
 // eslint-disable-next-line no-unused-vars -- `_opts` keeps the SheetJS-compatible read(data, opts) signature that ImportData.svelte calls with { type: 'array' }; the options are not needed here
 export function read(data, _opts) {
 	const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
-	const files = unzipSync(uint8);
+	// Two passes over the zip directory: the fixed parts first, then the sheets the
+	// workbook's relationships name (so a sheet stored outside xl/worksheets/ is still found).
+	const budget = { used: 0 };
+	const FIXED = new Set([
+		'xl/workbook.xml',
+		'xl/_rels/workbook.xml.rels',
+		'xl/sharedStrings.xml',
+		'xl/styles.xml'
+	]);
+	const files = unzipParts(uint8, (name) => FIXED.has(name), budget);
+	const sheetPaths = new Set(Object.values(parseWorkbookRels(files)));
+	Object.assign(
+		files,
+		unzipParts(
+			uint8,
+			(name) =>
+				!FIXED.has(name) && (sheetPaths.has(name) || /^xl\/worksheets\/[^/]+\.xml$/.test(name)),
+			budget
+		)
+	);
 
 	const sharedStrings = parseSharedStrings(files);
 	const sheetNames = parseWorkbook(files);

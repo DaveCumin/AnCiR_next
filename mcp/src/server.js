@@ -251,7 +251,7 @@ function registerTools(server) {
 
 	server.tool(
 		'render_plot',
-		'Rasterise a plot of session columns to PNG (and SVG) using a real headless browser — the actual AnCiR plot component, with axes/gridlines/legend. Returns the written file paths. Inputs work like add_plot; columns may be raw or analysis outputs. (Standalone: does not modify the session.)',
+		'Rasterise a plot of session columns to PNG (and SVG) using a real headless browser — the actual AnCiR plot component, with axes/gridlines/legend. Returns the written file paths. Inputs work like add_plot; columns may be raw or analysis outputs. A tableplot draws HTML, so it gives a PNG only (svg null). (Standalone: does not modify the session.)',
 		{
 			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
 			inputs: z

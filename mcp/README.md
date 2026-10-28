@@ -102,8 +102,10 @@ Apply one to an existing column; it runs the column's chain and is serialised:
 Playwright) and rasterises it through the app's **own** `convertToImage()` export
 function (the same SVG→canvas→PNG / outerHTML→SVG path as the GUI's export buttons),
 so the output is byte‑for‑byte what the GUI produces. Returns `{png, svg, pngBytes,
-svgBytes, …}`. It reuses the app's Playwright/Chromium; if no browser is available
-the other tools are unaffected.
+svgBytes, …}`. A `tableplot` draws HTML, not svg, so it has nothing for that export to
+read: it returns a PNG screenshot of the rendered table and `svg: null`. Inputs take column
+ids or names (an ambiguous name is refused with its candidates). It reuses the app's
+Playwright/Chromium; if no browser is available the other tools are unaffected.
 
 ## Run
 

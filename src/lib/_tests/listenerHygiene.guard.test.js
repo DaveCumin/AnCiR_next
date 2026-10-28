@@ -30,7 +30,8 @@ const srcRoot = resolve(here, '..', '..'); // src/
 // on an older runtime is worse than no guard at all.
 function sourceFiles(dir = srcRoot, out = []) {
 	for (const entry of readdirSync(dir)) {
-		if (entry === 'node_modules' || entry.startsWith('.')) continue;
+		// pCloud's "[conflicted]" copies are not source (svelteWarnings.guard skips them too).
+		if (entry === 'node_modules' || entry.startsWith('.') || entry.includes('conflicted')) continue;
 		const full = join(dir, entry);
 		if (statSync(full).isDirectory()) {
 			sourceFiles(full, out);
@@ -78,7 +79,12 @@ const removesType = (text, type) =>
 const selfRemoving = (text, type) =>
 	new RegExp(`addEventListener\\(\\s*['"]${type}['"][^)]*once:\\s*true`).test(text);
 
-describe('listener hygiene', () => {
+// Each rule re-reads and scans every source file: under half a second idle, but several times
+// that while the full suite runs alongside, which passed Vitest's 5 s default. A fixed scan of
+// the repo, not a wait, so the long ceiling only matters if something is genuinely wrong.
+const REPO_SCAN_TIMEOUT = 60_000;
+
+describe('listener hygiene', { timeout: REPO_SCAN_TIMEOUT }, () => {
 	it('finds source files to scan (guards against the walk matching nothing)', () => {
 		expect(sourceFiles().length).toBeGreaterThan(200);
 	});

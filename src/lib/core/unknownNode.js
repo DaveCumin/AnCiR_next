@@ -56,3 +56,52 @@ export function reportUnknownNode(kind, key) {
 export function resetUnknownNodeReports() {
 	seen.clear();
 }
+
+/**
+ * What a saved analysis node the registry cannot resolve says on the canvas and in its panel
+ * (ROB-U6). The canvas used to show such a node like a working one: its stored title, its
+ * wires, its saved outputs driving plots, and nothing saying it cannot compute.
+ *
+ * @param {string} name the unresolvable tableProcessMap key
+ */
+export function unknownAnalysisText(name) {
+	return (
+		`Unknown analysis "${name}": this version of AnCiR cannot run it. Its saved outputs ` +
+		`are kept and saved with the session, but they will not update.`
+	);
+}
+
+/**
+ * True when `name` is not in a LOADED tableProcessMap. While the registry is still loading
+ * (empty), nothing is unknown yet, so a session restored early is never flagged wrongly.
+ *
+ * @param {string} name
+ * @param {Map<string, unknown> | undefined} map appConsts.tableProcessMap
+ */
+export function isUnknownAnalysis(name, map) {
+	return !!map && map.size > 0 && !map.has(name);
+}
+
+/**
+ * The load-time warning for every saved analysis the registry cannot resolve, or null.
+ *
+ * @param {Array<{ name: string }>} tableProcesses core.tableProcesses after a load
+ * @param {Map<string, unknown> | undefined} map appConsts.tableProcessMap
+ */
+export function unknownAnalysesWarning(tableProcesses, map) {
+	const names = [
+		...new Set(
+			(tableProcesses ?? []).map((tp) => tp?.name).filter((n) => isUnknownAnalysis(n, map))
+		)
+	];
+	if (names.length === 0) return null;
+	for (const n of names) reportUnknownNode('table process', n);
+	const list = names.map((n) => `"${n}"`).join(', ');
+	const one = names.length === 1;
+	return (
+		`This session uses ${one ? 'an analysis' : 'analyses'} this version of AnCiR does not ` +
+		`know: ${list}. ${one ? 'It was' : 'They were'} renamed or removed, or the session comes ` +
+		`from a newer version. The saved outputs are kept and saved with the session, but they ` +
+		`will not update; the node${one ? ' is' : 's are'} marked on the canvas.`
+	);
+}

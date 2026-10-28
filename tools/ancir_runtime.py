@@ -1568,6 +1568,11 @@ def _rw_normal_eqs(t, x, p, free):
     return _seq_normal_eqs([jf[i] for i in free], r)
 
 
+# rectwave.js RECT_DEGENERATE_DIAG: a JtJ diagonal at or below this fraction of the largest
+# counts as zero when damping.
+_RECT_DEGENERATE_DIAG = 1e-24
+
+
 def _rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi):
     """rectwave.js fitWithLM, step for step: omega clamped to [w_lo, w_hi] and frozen for a
     step when it sits on a bound and the descent points outward; converged = stopped on the
@@ -1583,13 +1588,16 @@ def _rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi):
         iterations = it + 1
         frozen = w_pos >= 0 and ((p[3] <= w_lo and JtR[w_pos] > 0)
                                  or (p[3] >= w_hi and JtR[w_pos] < 0))
+        # rectwave.js: a diagonal zero to rounding (a parameter with no effect, e.g. omega and
+        # phi on a flat series at the 2-sample start) gets plain damping, lam * 1.
+        diag_floor = _RECT_DEGENERATE_DIAG * max(JtJ[i][i] for i in range(len(JtJ)))
         JtJ_d = []
         for i, row in enumerate(JtJ):
             if frozen and i == w_pos:
                 JtJ_d.append([1.0 if k_ == i else 0.0 for k_ in range(len(row))])
                 continue
             r_ = [0.0 if (frozen and k_ == w_pos) else v for k_, v in enumerate(row)]
-            r_[i] += lam * (row[i] if row[i] > 0 else 1)
+            r_[i] += lam * (row[i] if row[i] > diag_floor else 1)
             JtJ_d.append(r_)
         rhs = [0.0 if (frozen and i == w_pos) else v for i, v in enumerate(JtR)]
         try:
@@ -5120,6 +5128,10 @@ def fit_permutation_pvalue(tt, yy, model, options, args, label=''):
         # The app's permutationTest reads the statistic of a null fit and throws; no p.
         return off(blockLength=block_length)
     observed_stat = _perm_statistic(observed, statistic)
+    if not math.isfinite(observed_stat):
+        # permutationTest.js (review STAT-U3): a non-finite observed statistic is no test
+        # (every comparison with NaN is false, so p would be the smallest possible).
+        return off(blockLength=block_length)
     count = resolve_permutation_count(args, n)
     seed = args.get('permutationSeed')
     rng = SeededRNG(12345 if seed is None else seed)
@@ -5157,6 +5169,9 @@ def fit_permutation_pvalue(tt, yy, model, options, args, label=''):
         if noisy and (time.perf_counter() - last_note > 15 or done == count):
             last_note = time.perf_counter()
             _perm_note(f'permutation test{who}: {done}/{count}')
+    # A non-finite permuted statistic is a failed refit, skipped (permutationTest.js, review
+    # STAT-U3): kept, it counted in the denominator and never as extreme, biasing p down.
+    stats = [s for s in stats if math.isfinite(s)]
     if statistic == 'rmse':
         k = sum(1 for s in stats if s <= observed_stat)
     else:
@@ -6753,25 +6768,27 @@ def tp_split(args, cols, raw_data, _sv):
 # multi-column input (`yIN`); one of those columns is the sort key (`sortOnId`,
 # default = first input). All inputs are reordered together by the key's order
 # so rows stay aligned, each writing a `sortedy_<id>` output column. Sort rules
-# mirror src/lib/utils/sortRows.js::sortPermutation: missing values (None/NaN)
-# always sort LAST regardless of direction (stable among themselves); present
-# values compare numerically, or lexicographically if either side is a
-# non-numeric string; ties keep original order (stable sort).
+# mirror src/lib/utils/sortRows.js::sortPermutation: missing values (None, NaN, blank or
+# whitespace-only strings) always sort LAST regardless of direction (stable among
+# themselves); numbers and numeric strings (JS Number() syntax) compare numerically, text
+# as strings; in a mixed column every number comes before every text value (ascending);
+# ties keep original order (stable sort). Review STAT-U5: the old pairwise rule (strings
+# when either side is text) was not transitive, and a blank string read as text here but
+# as 0 in the app. Text order is code-point order here, localeCompare in the app; they
+# agree on same-case ASCII.
 
 def _sort_permutation(key_values, direction='asc'):
-    """Mirror sortRows.js::sortPermutation — return indices that sort the key."""
+    """Mirror sortRows.js::sortPermutation: return indices that sort the key."""
     dir_ = -1 if direction == 'desc' else 1
 
     decorated = []
     for i, v in enumerate(key_values):
-        if v is None or (isinstance(v, float) and math.isnan(v)):
+        if (v is None or (isinstance(v, float) and math.isnan(v))
+                or (isinstance(v, str) and v.strip(_JS_WS) == '')):
             decorated.append((i, True, None))
             continue
-        try:
-            num = float(v)
-            key = str(v) if math.isnan(num) else num
-        except (TypeError, ValueError):
-            key = str(v)
+        num = _js_number(v)
+        key = str(v) if math.isnan(num) else num
         decorated.append((i, False, key))
 
     def _cmp(a, b):
@@ -6784,9 +6801,9 @@ def _sort_permutation(key_values, direction='asc'):
             return 1
         if bm:
             return -1
-        if isinstance(ak, str) or isinstance(bk, str):
-            sa, sb = str(ak), str(bk)
-            c = (sa > sb) - (sa < sb)
+        a_str, b_str = isinstance(ak, str), isinstance(bk, str)
+        if a_str != b_str:
+            c = 1 if a_str else -1  # numbers before text
         else:
             c = (ak > bk) - (ak < bk)
         if c != 0:
@@ -7182,22 +7199,12 @@ def _gc_rank_with_ties(values):                          # JS rankWithTies (:112
     return ranks, tie_counts
 
 
-def _gc_holm_adjust(pairs):                              # JS holmAdjust (:131-144)
-    n = len(pairs)
-    indexed = [dict(p, _idx=idx) for idx, p in enumerate(pairs)]
-    indexed.sort(key=lambda p: (p.get('pValue')
-                                if p.get('pValue') is not None
-                                and math.isfinite(p.get('pValue'))
-                                else float('inf')))
-    running = 0.0
-    for i in range(len(indexed)):
-        raw = indexed[i].get('pValue')
-        raw = raw if (raw is not None and math.isfinite(raw)) else 1.0
-        adj = min(1.0, raw * (n - i))
-        running = max(running, adj)
-        indexed[i]['pAdjusted'] = running
-    indexed.sort(key=lambda p: p['_idx'])
-    return [{k: v for k, v in p.items() if k != '_idx'} for p in indexed]
+def _gc_holm_adjust(pairs):                              # JS holmAdjust
+    """Holm across the pairs via p_adjust (statsmodels multipletests 'holm'): a non-finite
+    p is NaN adjusted and left out of n, as R p.adjust and the app's pAdjust (review
+    STAT-U6: it used to be read as 1 and counted in n)."""
+    adjusted = p_adjust([p.get('pValue') for p in pairs], 'holm')['adjusted']
+    return [dict(p, pAdjusted=a) for p, a in zip(pairs, adjusted)]
 
 
 def _gc_welch_t_test(group_a, group_b, alpha=0.05):     # JS welchTTest (:249-294)
@@ -8666,6 +8673,9 @@ def circular_mean(angles_rad):
 
 
 def rayleigh_test(angles_rad):
+    """circular.js rayleighTest. p is the second-order series of R circular::rayleigh.test
+    and astropy.stats.rayleightest (both apply it only for n < 50), applied at every n; it
+    is not Zar (1999) eq. 27.4, which is exp(sqrt(1 + 4n + 4(n^2 - (n R)^2)) - (1 + 2n))."""
     cm = circular_mean(angles_rad)
     n = cm['n']
     if n == 0:
@@ -19438,19 +19448,37 @@ def match_template_markers(x_by_period, y_by_period, period_hrs, bin_size, hrs_b
             times.append(nan)
             continue
         yn = y_by_period.get(i + 1)
+        lead = 0
         if yn:
             data = list(yi) + list(yn)
             xs = list(x_by_period[i]) + list(x_by_period[i + 1])
         else:
             data = list(yi)
             xs = list(x_by_period[i])
+        # The threshold is this window's own (the borrowed bins below do not move it).
         cv = find_centile_value(data, centile)
-        # JS: value <= undefined is false, so with no centile every non-NaN value is +1.
-        above_below = [-1 if (v != v) or (cv is not None and v <= cv) else 1 for v in data]
+        # Active = strictly above the threshold. With no bin above it (two-level data, a 100%
+        # centile, an all-zero window) the match is flat: no marker, not a made-up one
+        # (onsetUnwrap.js).
+        if cv is None or not any(not (v != v) and v > cv for v in data):
+            hours.append(nan)
+            times.append(nan)
+            continue
+        # No next row to search into (onsetUnwrap.js): borrow up to N bins from the end of the
+        # row before, so a transition fewer than N bins into this row still fits the template.
+        yp = y_by_period.get(i - 1)
+        if not yn and yp:
+            lead = min(N, len(yp))
+            if lead > 0:
+                data = list(yp)[-lead:] + data
+                xs = list(x_by_period[i - 1])[-lead:] + xs
+        above_below = [-1 if (v != v) or v <= cv else 1 for v in data]
         # The new state starts at template start + N (onsetUnwrap.js, FIT-6); the old
-        # midpoint (N + M) / 2 moved the marker by (M - N) / 2 bins when N != M.
-        best = find_best_match_index(above_below, template) + N
-        if 0 <= best < len(xs):
+        # midpoint (N + M) / 2 moved the marker by (M - N) / 2 bins when N != M. A window
+        # shorter than the template has no match (-1), and so no marker.
+        start = find_best_match_index(above_below, template)
+        best = -1 if start < 0 else start + N
+        if lead <= best < len(xs):
             t = xs[best]
             raw = t - i * period_hrs
             raw = _js_mod(_js_mod(raw, period_hrs) + period_hrs, period_hrs)

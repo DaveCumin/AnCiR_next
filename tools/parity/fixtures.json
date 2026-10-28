@@ -5503,6 +5503,40 @@
 			"rFunc": "widetolong"
 		},
 		{
+			"id": "tp-rectangularwave-flat",
+			"kind": "tableProcess",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "A flat series (y = 5, hourly, 7 days), free period. Every start began at the shortest period (2 samples) with the samples on the sine's peaks, so omega and phi had no effect; the diagonal-scaled damping left them undamped, every step was singular, and the fit reported its seed (A = 1, RMSE 0.852). Now the fit is the flat line (RMSE about 0) in all three ports.",
+			"generate": {
+				"type": "rhythm",
+				"n": 169,
+				"period": 24,
+				"amp": 0,
+				"mesor": 5,
+				"phase": 0,
+				"noise": 0,
+				"seed": 1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"outputX": -1,
+				"out": {
+					"rectwavex": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": ["rectwavex", "rectwavey", "rmse"],
+			"tolerance": 1e-6
+		},
+		{
 			"id": "tp-rectangularwave-phase14",
 			"kind": "tableProcess",
 			"jsName": "RectangularWave",
@@ -19717,6 +19751,83 @@
 			"tolerance": 1e-6
 		},
 		{
+			"id": "util-movingwindows-rectfit-negative-a",
+			"kind": "pureUtil",
+			"jsFn": "movingWindows",
+			"pyFunc": "moving_windows",
+			"rFunc": "moving_windows",
+			"note": "FIT-U2: a weak 6 h-on square wave (step 0.6, noise SD 1, onset 18 h; seed 15 of fitUnconfirmed.review.test.js) whose best Levenberg-Marquardt start ends with A < 0. Every port must report the canonical A >= 0 form: acrophase 23.75 h and duty 0.526, not 11.75 h and 0.474 (the rest phase).",
+			"input": {
+				"t": [
+					0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+					16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0,
+					31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0,
+					46.0, 47.0, 48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0,
+					61.0, 62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+					76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0, 90.0,
+					91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0, 104.0,
+					105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0, 116.0, 117.0,
+					118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0, 128.0, 129.0, 130.0,
+					131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0, 140.0, 141.0, 142.0, 143.0,
+					144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0, 152.0, 153.0, 154.0, 155.0, 156.0,
+					157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0, 164.0, 165.0, 166.0, 167.0, 168.0
+				],
+				"y": [
+					8.618922, 10.068846, 10.425572, 9.2193, 7.835484, 10.704577, 10.550468, 8.40472, 6.548132,
+					10.212778, 10.177683, 9.144757, 10.259785, 9.870684, 8.909246, 8.579145, 9.080222,
+					9.392665, 9.050706, 10.399883, 8.709098, 10.375826, 11.452257, 8.031116, 10.051142,
+					12.272119, 10.12228, 9.77598, 10.145349, 10.204713, 9.768141, 10.140836, 10.573784,
+					9.801113, 9.909228, 9.335262, 9.513288, 8.611518, 9.98128, 8.14257, 9.080351, 10.670875,
+					10.269116, 9.697915, 10.172177, 9.972743, 9.159656, 10.020285, 10.879972, 10.834064,
+					7.638312, 9.137741, 9.481801, 9.311304, 10.545635, 7.559407, 9.083158, 9.189153, 8.007294,
+					9.402966, 10.017558, 10.184526, 10.355902, 9.497313, 9.26743, 9.517098, 10.158844,
+					10.38387, 10.156002, 10.175547, 9.894327, 10.509648, 8.326408, 10.513557, 9.282379,
+					9.637261, 12.045343, 8.833005, 8.810303, 10.831432, 11.183479, 8.760233, 9.670263,
+					9.171892, 8.977287, 10.063942, 8.988636, 9.867014, 10.882916, 10.065342, 9.528524,
+					11.526592, 10.963326, 9.559779, 9.441791, 11.72067, 10.489353, 8.802171, 10.313032,
+					10.217622, 9.748081, 10.511753, 8.690754, 10.699333, 9.128936, 9.962904, 9.982435,
+					10.648942, 8.081836, 9.144739, 10.811579, 9.460622, 10.876636, 9.113782, 10.85647,
+					11.266094, 9.476487, 10.401464, 8.633618, 10.183615, 9.366753, 8.834733, 9.015685,
+					8.643157, 9.499306, 10.245296, 9.868541, 9.095391, 9.064931, 10.146981, 10.360645,
+					9.993829, 9.255806, 9.856684, 10.437943, 10.700561, 8.800023, 9.693604, 10.773704,
+					8.39263, 8.525885, 9.579688, 8.482594, 9.008392, 8.910837, 9.382526, 9.503586, 11.033159,
+					9.848753, 8.035032, 9.930738, 8.363529, 10.324317, 8.538666, 11.939479, 10.027733,
+					8.669168, 9.13729, 6.876675, 7.586772, 10.184028, 7.458588, 9.925865, 8.436195, 9.854123,
+					10.388656, 9.778758, 8.9188, 8.179529
+				]
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"windowSize": 168,
+					"stepSize": 168,
+					"analysis": "rectfit",
+					"useFixedPeriod": true,
+					"fixedPeriod": 24
+				}
+			],
+			"pyArgs": [
+				{
+					"windowSize": 168,
+					"stepSize": 168,
+					"analysis": "rectfit",
+					"useFixedPeriod": true,
+					"fixedPeriod": 24
+				}
+			],
+			"compareArrays": [
+				"starts",
+				"mesor",
+				"amplitude",
+				"period",
+				"acrophase",
+				"duty_cycle",
+				"r2",
+				"rmse"
+			],
+			"tolerance": 1e-6
+		},
+		{
 			"id": "util-movingwindows-rectfit-free-clock",
 			"kind": "pureUtil",
 			"jsFn": "movingWindows",
@@ -24978,6 +25089,112 @@
 			]
 		},
 		{
+			"id": "actogram-rule-two-level",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Onset and offset rules on 0 / 1 data (rest 0, active 1, no noise; tau 24 h, onset 06:00Z). The non-zero 50th percentile is the active level itself, so no bin is above the threshold: every row reports no marker (NaN), not a made-up one 3 h into the window, and there is no fit.",
+			"generate": {
+				"seed": 11,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:00:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24,
+						"onsetHr": 6,
+						"low": 0,
+						"high": 1,
+						"noise": 0
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Offsets",
+					"type": "offset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-centile-100",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Onset rule with a 100% centile on ordinary noisy data: the threshold is each window's top value, nothing is above it, and every row reports no marker rather than one N hours into the window.",
+			"generate": {
+				"seed": 11,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.5,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 100,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
 			"id": "tp-logisticregression-terms-ci",
 			"kind": "tableProcess",
 			"jsName": "LogisticRegression",
@@ -29878,6 +30095,103 @@
 			],
 			"tolerance": 1e-9,
 			"recordValid": true
+		},
+		{
+			"id": "tp-sort-mixed-blank-asc",
+			"kind": "tableProcess",
+			"jsName": "Sort",
+			"pyFunc": "sort",
+			"rFunc": "sort",
+			"rawInputs": true,
+			"note": "Review STAT-U5: a MIXED key column (numbers, numeric text, text, blanks, null). Blank and whitespace-only cells are missing and sort last in both directions, as null does (a blank used to read as Number('') = 0 in the app and as text in the ports). Every number sorts before every text value ascending (after it descending); the old pairwise rule was not transitive (2 < 10, '10' < '1a' < '2'). Expected ascending key order: 0, 2, '9', 10, '1a', 'a', 'b', then the blanks and null in input order.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [10, "", 2, "b", "1a", null, "9", "a", 0, " "]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b"],
+				"sortOnId": "@a",
+				"direction": "asc",
+				"out": {}
+			},
+			"compareOutputs": ["sortedy_@a", "sortedy_@b"]
+		},
+		{
+			"id": "tp-sort-mixed-blank-desc",
+			"kind": "tableProcess",
+			"jsName": "Sort",
+			"pyFunc": "sort",
+			"rFunc": "sort",
+			"rawInputs": true,
+			"note": "Review STAT-U5: a MIXED key column (numbers, numeric text, text, blanks, null). Blank and whitespace-only cells are missing and sort last in both directions, as null does (a blank used to read as Number('') = 0 in the app and as text in the ports). Every number sorts before every text value ascending (after it descending); the old pairwise rule was not transitive (2 < 10, '10' < '1a' < '2'). Expected ascending key order: 0, 2, '9', 10, '1a', 'a', 'b', then the blanks and null in input order.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [10, "", 2, "b", "1a", null, "9", "a", 0, " "]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b"],
+				"sortOnId": "@a",
+				"direction": "desc",
+				"out": {}
+			},
+			"compareOutputs": ["sortedy_@a", "sortedy_@b"]
+		},
+		{
+			"id": "tp-cosinor-perm-unknown-statistic",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Review STAT-U3: an unknown permutationStatistic makes the observed statistic NaN. Every comparison with NaN is false, so p used to be 1 / (m + 1), the smallest possible p, on any data; it is now NaN (no test). The same rule skips a non-finite permuted statistic as a failed refit.",
+			"generate": {
+				"type": "rhythm",
+				"n": 120,
+				"period": 24,
+				"amp": 1.2,
+				"mesor": 20,
+				"phase": 6,
+				"noise": 5,
+				"seed": 901,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"permuteTest": true,
+				"nPermutations": 99,
+				"permutationStatistic": "aic",
+				"out": {
+					"cosinorx": -1,
+					"perm_pvalue": -1
+				}
+			},
+			"compareOutputs": ["perm_pvalue"],
+			"tolerance": 0
 		}
 	]
 }

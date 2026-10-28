@@ -16,6 +16,7 @@ import { TableProcess, deleteTableProcessCascade } from './TableProcess.svelte';
 import { memoForget } from './computeMemo.js';
 import { captureGraph, makePatch, applyPatch } from './graphPatch.js';
 import { inReaction } from './reactionContext.svelte.js';
+import { syncFavicon } from '../utils/favicon.js';
 
 /**
  * @typedef {Object} OpAddFreeTableProcess
@@ -1080,6 +1081,8 @@ function op_setAppColours(op) {
 	const before = [...(appState.appColours ?? [])];
 	if (JSON.stringify(before) === JSON.stringify(op.colours)) return null;
 	appState.appColours = [...op.colours];
+	// The tab icon follows, on apply, undo and redo alike.
+	syncFavicon(appState.appColours, before);
 	return pair(
 		{ kind: 'setAppColours', colours: [...op.colours] },
 		{ kind: 'setAppColours', colours: before }

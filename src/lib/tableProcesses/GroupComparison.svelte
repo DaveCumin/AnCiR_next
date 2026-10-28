@@ -11,6 +11,7 @@
 	// Upper tails computed directly (fdist.js, chisqSf.js), not as 1 - cdf, so a strong
 	// effect's p is reported (e.g. 1e-34) instead of being rounded to 0.
 	import { pUpperFromF } from '$lib/utils/fdist.js';
+	import { pAdjust } from '$lib/utils/pAdjust.js';
 	import { pUpperFromChiSq } from '$lib/utils/chisquare.js';
 	import { jarqueBera } from '$lib/utils/normality.js';
 	import { mannWhitneyExactP, mannWhitneyUsesExact } from '$lib/utils/mannWhitneyExact.js';
@@ -138,21 +139,18 @@
 		return { ranks, tieCounts };
 	}
 
-	function holmAdjust(pairs) {
-		const n = pairs.length;
-		const sorted = pairs
-			.map((p, idx) => ({ ...p, _idx: idx }))
-			.sort((a, b) => (a.pValue ?? Infinity) - (b.pValue ?? Infinity));
-		let running = 0;
-		for (let i = 0; i < sorted.length; i++) {
-			const raw = Number.isFinite(sorted[i].pValue) ? sorted[i].pValue : 1;
-			const adj = Math.min(1, raw * (n - i));
-			running = Math.max(running, adj);
-			sorted[i].pAdjusted = running;
-		}
-		// The config has no ignoreRestSiblings, so the omitted key reads as unused.
-		// eslint-disable-next-line no-unused-vars -- `_idx` names the key to omit from `rest`
-		return sorted.sort((a, b) => a._idx - b._idx).map(({ _idx, ...rest }) => rest);
+	/**
+	 * Holm (1979) step-down across the post-hoc pairs, via the shared pAdjust. A pair whose p
+	 * is not finite gets a NaN adjusted p and is left out of the family size n, as R p.adjust
+	 * does for NA. This used to read it as p = 1 and count it in n, which inflated every other
+	 * pair's adjusted p (review STAT-U6). Exported for its test.
+	 */
+	export function holmAdjust(pairs) {
+		const adjusted = pAdjust(
+			pairs.map((p) => p.pValue),
+			'holm'
+		);
+		return pairs.map((p, i) => ({ ...p, pAdjusted: adjusted[i] }));
 	}
 
 	function formatPValue(pValue) {

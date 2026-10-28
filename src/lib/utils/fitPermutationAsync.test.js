@@ -35,10 +35,14 @@ const args = (over) => ({
 });
 
 describe('fitPermutationPValueAsync', () => {
-	it('reproduces the old panel bug: an async fit function gives p = 1/(n+1)', async () => {
+	it('the old panel bug (an async fit function) no longer reads as p = 1/(n+1)', async () => {
+		// The panel once passed an ASYNC fit, so every statistic was undefined and p came out
+		// 0.01, "significant" on any data. Since review STAT-U3 a non-finite observed statistic
+		// is no test at all: p is NaN.
 		const asyncFit = async (x, y) => ({ rSquared: 0, x, y });
 		const r = await permutationTestAsync(t, noise, asyncFit, { nPermutations: 99, seed: 3 });
-		expect(r.pValue).toBeCloseTo(0.01, 10); // the symptom the panel showed
+		expect(r.pValue).toBeNaN();
+		expect(r.significant).toBe(false);
 	});
 
 	it('agrees with the synchronous runner, shuffle scheme', async () => {

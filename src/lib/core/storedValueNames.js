@@ -30,7 +30,8 @@ const columnOf = (col) =>
 		: (col ?? null);
 
 /**
- * `{ defaultName, legacyNames }` for a StoreValueButton whose value describes `col`.
+ * `{ defaultName, legacyNames, subject }` for a StoreValueButton whose value describes `col`
+ * (`subject`, the described column's id, only when there is one).
  * @param {string} prefix  e.g. 'cosinor_rmse'
  * @param {object|number|string|null} col  the column (or a plot's wrapper, or an id)
  * @param {{ suffix?: string, fallback?: string, legacy?: string[] }} [opts]
@@ -53,5 +54,15 @@ export function storedValueNames(prefix, col, { suffix = '', fallback = '', lega
 		const n = `${prefix}_${p}${suffix}`;
 		if (n !== defaultName && !legacyNames.includes(n)) legacyNames.push(n);
 	}
-	return { defaultName, legacyNames };
+	// The input column the value describes (a plot's wrapper names the column it references):
+	// a value whose node stops using it reads missing (storedValueClaims.js).
+	const subjectId =
+		typeof col === 'number' || (typeof col === 'string' && /^\d+$/.test(col))
+			? Number(col)
+			: c?.refId != null && Number(c.refId) >= 0
+				? Number(c.refId)
+				: c?.id;
+	return Number(subjectId) >= 0
+		? { defaultName, legacyNames, subject: Number(subjectId) }
+		: { defaultName, legacyNames };
 }

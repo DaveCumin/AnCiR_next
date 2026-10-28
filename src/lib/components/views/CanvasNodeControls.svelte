@@ -23,6 +23,7 @@
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
+	import { unknownAnalysisText } from '$lib/core/unknownNode.js';
 
 	// The current input column ids of a free process node (inIN is a list).
 	function processInputIds(proc) {
@@ -221,7 +222,8 @@
 				</ErrorBoundary>
 			</div>
 		{:else}
-			<div class="control-component muted">No editor registered for "{node.tpName}".</div>
+			<!-- ROB-U6: an analysis this build does not have. -->
+			<p class="control-component unknown-node" role="note">{unknownAnalysisText(node.tpName)}</p>
 		{/if}
 	{:else if node.type === 'data' && node.refId != null}
 		{@const col = getColumnById(node.refId)}
@@ -320,6 +322,14 @@
 {/if}
 
 <style>
+	.unknown-node {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: 0;
+	}
 	.control-banner {
 		padding: var(--space-3) 0 var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-90);

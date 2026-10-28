@@ -16,6 +16,10 @@
 // the payload's compact ids. The session validated it per plot; a kind or form the plot
 // does not allow is refused here too rather than coerced into another.
 import { mount, flushSync } from 'svelte';
+// The app's stylesheet and design tokens, as every plot has them in the GUI. Without them a
+// plot that draws HTML (the Table) lost its borders and card surface, and `var(--...)` colours
+// in a chart resolved to nothing.
+import '../../../src/app.css';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';

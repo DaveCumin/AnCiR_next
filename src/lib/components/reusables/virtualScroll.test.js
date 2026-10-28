@@ -48,17 +48,23 @@ describe('scrollWindow', () => {
 
 		// Every row is shown at SOME scroll position: one px of scroll moves fewer rows than a
 		// viewport holds, so no row is skipped between neighbouring positions.
+		// About 100,000 positions. The checks collect the first few failures and are asserted
+		// once at the end: three expect() calls per position made this test about 1.3 s idle
+		// and past the 5 s default when the full suite ran alongside.
+		const failures = [];
+		const fail = (msg) => failures.length < 5 && failures.push(msg);
 		let prevLast = -1;
 		for (let s = 0; s <= end; s += 97) {
 			const w = scrollWindow({ scrollTop: s, viewportH: VH, total, itemHeight: H });
 			const rows = visibleRows(w, s);
-			expect(rows[0]).toBeLessThanOrEqual(prevLast + 1);
+			if (!(rows[0] <= prevLast + 1)) fail(`scrollTop ${s}: row ${prevLast + 1} skipped`);
 			// Contiguous, and the viewport never shows anything below the spacer (overscan rows
 			// past it are clipped by the spacer's overflow-y: clip, so cannot extend the scroll).
-			expect(rows.at(-1) - rows[0] + 1).toBe(rows.length);
-			expect(s + VH).toBeLessThanOrEqual(w.spacerHeight);
+			if (rows.at(-1) - rows[0] + 1 !== rows.length) fail(`scrollTop ${s}: rows not contiguous`);
+			if (!(s + VH <= w.spacerHeight)) fail(`scrollTop ${s}: viewport below the spacer`);
 			prevLast = rows.at(-1);
 		}
+		expect(failures).toEqual([]);
 		expect(prevLast).toBeGreaterThan(total - 20);
 	});
 

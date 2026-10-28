@@ -24,9 +24,12 @@
 //
 // The AWD content check mirrors the real parser (awdTocsv in
 // ImportData.svelte): a 7-line header where line 1 is a DD-MMM-YYYY (or
-// DD-MMM-YY) start date, line 2 is an HH:mm start time, line 3 is a numeric
-// interval, and lines 7+ are comma-separated numeric readings optionally
+// DD-MMM-YY) start date, line 2 is an HH:mm start time, line 3 is an
+// interval code (a positive number or a listed code such as C1, utils/awdInterval.js),
+// and lines 7+ are comma-separated numeric readings optionally
 // carrying a trailing "M" event marker.
+
+import { isAwdIntervalCode } from './awdInterval.js';
 
 /** How much of the file the async helper reads for sniffing. */
 export const SNIFF_SLICE_BYTES = 8192;
@@ -67,8 +70,7 @@ function sniffAwd(lines) {
 	if (lines.length < 8) return false;
 	if (!looksLikeAwdDate(lines[1])) return false;
 	if (!/^\s*\d{1,2}:\d{2}\s*$/.test(String(lines[2] ?? ''))) return false;
-	const interval = Number(String(lines[3] ?? '').trim());
-	if (!Number.isFinite(interval) || interval <= 0) return false;
+	if (!isAwdIntervalCode(lines[3])) return false;
 	// Sample up to 10 data rows; require every sampled non-empty row to look
 	// like a reading. (The last line of a truncated slice is dropped by the
 	// caller, so a half-line cannot spoil this.)

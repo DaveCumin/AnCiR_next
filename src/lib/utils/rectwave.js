@@ -223,6 +223,13 @@ function computeNormalEqs(t, x, params, freeIndices) {
 
 // ─── LM optimizer ─────────────────────────────────────────────────────────────
 
+/**
+ * A JtJ diagonal entry at or below this fraction of the largest one is treated as zero when
+ * damping (see fitWithLM). Far below anything a parameter with an effect produces, so normal
+ * fits are unchanged; the columns that stalled the flat-series fit sat near 1e-30.
+ */
+const RECT_DEGENERATE_DIAG = 1e-24;
+
 function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance, wLo = 0.001, wHi = 100) {
 	let p = [...params];
 	p[3] = Math.min(wHi, Math.max(wLo, p[3]));
@@ -239,10 +246,18 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance, wLo = 0.
 		// step (the cosinor's active set), so the other parameters keep improving
 		// instead of every step being clamped into a no-op.
 		const frozen = wPos >= 0 && ((p[3] <= wLo && JtR[wPos] > 0) || (p[3] >= wHi && JtR[wPos] < 0));
+		// Marquardt's damping scales with JtJ's diagonal, so a parameter the residuals do not
+		// depend on (diagonal zero to rounding) got no damping, the system stayed singular at
+		// every lambda, and the start was given up where it began. Such a column gets plain
+		// Levenberg damping (lambda * 1), as an exact zero always did. Seen on a flat series:
+		// the free-period start at the shortest period (2 samples) with the samples on the
+		// sine's peaks leaves omega and phi without effect (diagonal ~1e-30 of the largest),
+		// and the fit reported its seed (A = 1, RMSE 0.85) instead of the flat line.
+		const diagFloor = RECT_DEGENERATE_DIAG * Math.max(...JtJ.map((row, i) => row[i]));
 		const JtJ_d = JtJ.map((row, i) => {
 			if (frozen && i === wPos) return row.map((_, k) => (k === i ? 1 : 0));
 			const r = row.map((v, k) => (frozen && k === wPos ? 0 : v));
-			r[i] += lambda * (row[i] > 0 ? row[i] : 1);
+			r[i] += lambda * (row[i] > diagFloor ? row[i] : 1);
 			return r;
 		});
 		const rhs = JtR.map((v, i) => (frozen && i === wPos ? 0 : v));

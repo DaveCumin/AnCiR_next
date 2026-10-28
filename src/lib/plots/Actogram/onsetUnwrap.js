@@ -44,6 +44,19 @@ import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 // Template matching
 // ---------------------------------------------------------------------------
 
+/**
+ * The marker threshold: the value at `centile` percent of the window's NON-ZERO values
+ * (nearest rank), undefined when none is non-zero.
+ *
+ * Zeros are left out on purpose (FIT-U6, documented 2026-10-28; the handbook says "the
+ * percentile of the non-zero activity"). Activity records are mostly zeros, and with zeros
+ * counted any window that is more than centile% zeros gets a threshold of 0, so the % control
+ * would do nothing on sparse records. Without zeros it sets how intense a bin must be to
+ * count as active (a bin is active when strictly above the threshold). A side effect: on
+ * two-level data (0 and one active level) the threshold is that level and no bin is above
+ * it, so `matchTemplateMarkers` reports no marker for such a window rather than a made-up
+ * one (findCentileValue.zeros.test.js pins this).
+ */
 export function findCentileValue(data, centile) {
 	// isNaN-ok: callers pass yByPeriod slices, which Actogram builds with an explicit
 	// `tempy[i] != null` guard, so nulls never reach here.
@@ -121,6 +134,8 @@ export function matchTemplateMarkers(
 		}
 
 		let periodsData, xData;
+		// Bins borrowed from the end of the row before, ahead of this row's own (see below).
+		let lead = 0;
 		// Use double-period matching if next period has data
 		if (yByPeriod[i + 1] && yByPeriod[i + 1].length > 0) {
 			periodsData = [...yByPeriod[i], ...yByPeriod[i + 1]];
@@ -130,7 +145,31 @@ export function matchTemplateMarkers(
 			xData = [...xByPeriod[i]];
 		}
 
+		// The threshold is this window's own (the borrowed bins below do not move it).
 		const centileValue = findCentileValue(periodsData, centile);
+
+		// A bin counts as active only when it is strictly ABOVE the threshold. When no bin of
+		// the window is (the threshold is the window's top value: 0 / 1 or other two-level
+		// data, a 100% centile, or an all-zero window with no threshold at all) every bin
+		// reads the same, the template match is flat, and its first position would put a
+		// made-up marker N bins in. Report no marker instead. Any window with a bin above
+		// the threshold is matched exactly as before.
+		if (!periodsData.some((v) => !isNaN(v) && v > centileValue)) {
+			hours.push(NaN);
+			times.push(NaN);
+			continue;
+		}
+
+		// With no next row to search into (the last row, or one before a missing row), a
+		// transition fewer than N bins into this row had no room for the N "before" bins, and
+		// the best partial match put the marker N bins in. Borrow up to N bins from the end of
+		// the row before so the template fits; the detection is at template start + N, which
+		// is never inside the borrowed bins (at most N of them).
+		if (periodsData.length === yByPeriod[i].length && N > 0 && yByPeriod[i - 1]?.length > 0) {
+			lead = Math.min(N, yByPeriod[i - 1].length);
+			periodsData = [...yByPeriod[i - 1].slice(-lead), ...periodsData];
+			xData = [...xByPeriod[i - 1].slice(-lead), ...xData];
+		}
 		const aboveBelow = periodsData.map((value) => (value <= centileValue || isNaN(value) ? -1 : 1));
 
 		// The template is N "before" bins (indices 0..N-1) then M "after" bins
@@ -138,9 +177,12 @@ export function matchTemplateMarkers(
 		// and s+N, and the first bin of the new state is s+N. Using the template's
 		// midpoint, (N+M)/2, agreed only when N = M and otherwise moved the marker
 		// by (M-N)/2 bins.
-		const bestMatchIndex = findBestMatchIndex(aboveBelow, template) + N;
+		// A window shorter than the template has no match (-1); without this check -1 + N
+		// put a marker at bin N - 1.
+		const bestStart = findBestMatchIndex(aboveBelow, template);
+		const bestMatchIndex = bestStart < 0 ? -1 : bestStart + N;
 
-		if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
+		if (bestMatchIndex >= lead && bestMatchIndex < xData.length) {
 			const t = xData[bestMatchIndex];
 			let rawHour = t - i * periodHrs;
 			rawHour = ((rawHour % periodHrs) + periodHrs) % periodHrs;

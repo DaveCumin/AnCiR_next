@@ -116,3 +116,44 @@ describe('isSorted', () => {
 		expect(isSorted(['a', 'c', 'b'])).toBe(false);
 	});
 });
+
+// Review STAT-U5 (2026-10-03): blank strings read as Number('') = 0, and a mixed column was
+// compared pairwise (as text when either side was text), which is not transitive:
+// 2 < 10 numerically, but '10' < '1a' and '1a' < '2' as text. Now blanks are missing and every
+// number sorts before every text value. Mirrored in the ports (tp-sort-mixed-blank-* fixtures).
+describe('mixed and blank keys (STAT-U5)', () => {
+	it('blank and whitespace-only strings are missing (last), not zero', () => {
+		expect(sortValues([1, '', -1, ' ', 0])).toEqual([-1, 0, 1, '', ' ']);
+		expect(sortValues([1, '', -1, 0], { direction: 'desc' })).toEqual([1, 0, -1, '']);
+	});
+
+	it('numbers (and numeric text) come before text ascending, after it descending', () => {
+		expect(sortValues([10, 'b', '9', 2, 'a'])).toEqual([2, '9', 10, 'a', 'b']);
+		expect(sortValues([10, 'b', '9', 2, 'a'], { direction: 'desc' })).toEqual([
+			'b',
+			'a',
+			10,
+			'9',
+			2
+		]);
+	});
+
+	it('is a total order: every input order of a mixed cycle gives the same result', () => {
+		const vals = [2, 10, '1a'];
+		const perms = [
+			[0, 1, 2],
+			[0, 2, 1],
+			[1, 0, 2],
+			[1, 2, 0],
+			[2, 0, 1],
+			[2, 1, 0]
+		];
+		for (const p of perms) expect(sortValues(p.map((i) => vals[i]))).toEqual([2, 10, '1a']);
+	});
+
+	it('isSorted uses the same order', () => {
+		expect(isSorted([2, 10, '1a'])).toBe(true);
+		expect(isSorted([2, '1a', 10])).toBe(false);
+		expect(isSorted([1, 2, ''])).toBe(true);
+	});
+});

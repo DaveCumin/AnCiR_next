@@ -60,8 +60,11 @@
 		const range = document.createRange();
 		range.selectNodeContents(el);
 		const textW = range.getBoundingClientRect().width;
+		// A line-clamped span (a node's metric name wraps to two lines) is cut at the bottom.
 		truncated =
-			el.scrollWidth > el.clientWidth || textW > el.getBoundingClientRect().width - inset + 0.05;
+			el.scrollWidth > el.clientWidth ||
+			el.scrollHeight > el.clientHeight + 1 ||
+			textW > el.getBoundingClientRect().width - inset + 0.05;
 	}
 
 	async function startEdit(e) {

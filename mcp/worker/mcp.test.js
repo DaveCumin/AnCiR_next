@@ -184,6 +184,45 @@ test('build_session → stores a session and returns a loadFromURL link that res
 	assert.match(body.result.content[0].text, /Open it in AnCiR:\nhttps:\/\/ancir\.pages\.dev/);
 });
 
+// A fit's outputX (and Sort's sortOnId) by column NAME, the way a draft names every column.
+// Before, the name was stored as a string the node ignores: no error, a curve at the input x.
+test('build_session resolves outputX / sortOnId from a column name; check_draft refuses an unknown one', async () => {
+	const env = ENV();
+	const columns = [
+		{ name: 'time_h', values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+		{ name: 'signal', values: [1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4] },
+		{ name: 'grid', values: [0, 6, 12] }
+	];
+	const { body } = await call(
+		'build_session',
+		{
+			columns,
+			analyses: [
+				{ name: 'Cosinor', args: { xIN: 'time_h', yIN: ['signal'], outputX: 'grid' } },
+				{ name: 'Sort', args: { yIN: ['time_h', 'signal'], sortOnId: 'signal' } }
+			]
+		},
+		env
+	);
+	assert.notEqual(body.result.isError, true);
+	const got = await worker.fetch(new Request(body.result.structuredContent.sessionUrl), env);
+	const session = await got.json();
+	const id = (n) => session.data.find((c) => c.name === n).id;
+	const tp = (n) => session.tableProcesses.find((t) => t.name === n);
+	assert.equal(tp('Cosinor').args.outputX, id('grid'));
+	assert.equal(tp('Sort').args.sortOnId, id('signal'));
+
+	const bad = await call(
+		'check_draft',
+		{
+			columns,
+			analyses: [{ name: 'Cosinor', args: { xIN: 'time_h', yIN: ['signal'], outputX: 'nope' } }]
+		},
+		env
+	);
+	assert.match(JSON.stringify(bad.body.result), /Cosinor\.outputX: no column named \\"nope\\"/);
+});
+
 test('build_session reports an unusable draft instead of storing an empty session', async () => {
 	const env = ENV();
 	const { body } = await call('build_session', { analyses: [{ name: 'NoSuchAnalysis' }] }, env);

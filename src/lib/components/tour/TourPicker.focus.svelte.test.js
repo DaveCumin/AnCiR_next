@@ -1,11 +1,11 @@
 // UI-6: the tour picker is a modal, so it must act like one for the keyboard: focus moves into
 // it on open, Tab and Shift+Tab stay inside, Escape closes it, and focus goes back to where it
 // was (or to the Help button, when the menu item that opened it has gone with its menu).
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, beforeEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import TourPicker from './TourPicker.svelte';
-import { tourState, openPicker } from '$lib/core/tourRunner.svelte.js';
+import { tourState, openPicker, loadTourList } from '$lib/core/tourRunner.svelte.js';
 
 function key(k, shift = false) {
 	const ev = new KeyboardEvent('keydown', {
@@ -17,6 +17,16 @@ function key(k, shift = false) {
 	document.activeElement.dispatchEvent(ev);
 	return ev;
 }
+
+// The picker loads the tour list lazily, and the tour modules import the app's core, so the
+// FIRST load is a cold import of most of the app: about 2 s idle, and past the Tab test's 10 s
+// wait when the full suite runs alongside (it failed with "expected 0 to be greater than 0",
+// the list still "Loading tours…"). Load it once here, waiting on the load itself, so the
+// picker's own load is served from the module cache and the tests time only the picker.
+beforeAll(async () => {
+	const list = await loadTourList();
+	expect(list.length).toBeGreaterThan(0);
+}, 120_000);
 
 let help;
 beforeEach(() => {

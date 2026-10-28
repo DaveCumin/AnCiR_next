@@ -34,6 +34,9 @@ import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/over
 // The app's own rule for a new free-period fit's range (pure; periodRangeAuto.svelte.js applies
 // it in the app, the MCP engine's fillOmittedArgs headless).
 import { autoPeriodRange } from '../../../src/lib/utils/periodRangeDefaults.js';
+// Params that name a column without being an input port (outputX, sortOnId): resolved from a
+// name like xIN / yIN. The app's AI-edit planner reads the same list.
+import { columnRefParamsOf } from '../../../src/lib/core/columnRefParams.js';
 // A time column's text format and zone, read and refused as the app does (timeColumns.js).
 import { timeTextFormat, columnZoneOf } from './timeColumns.js';
 
@@ -296,6 +299,12 @@ export function normalizeSession(
 			if (ids.some((id) => id == null))
 				refError = `${name}.${f}: unresolved column ref in ${JSON.stringify(list)}`;
 			else args[f] = ids;
+		}
+		for (const f of columnRefParamsOf(Object.keys(nodeSchema.params ?? {}))) {
+			if (args[f] == null) continue;
+			const id = resolveRef(args[f]);
+			if (id == null) refError = `${name}.${f}: no column named "${args[f]}"`;
+			else args[f] = id;
 		}
 		if (refError) {
 			errors.push(`${refError}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`);

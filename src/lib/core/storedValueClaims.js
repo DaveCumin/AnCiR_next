@@ -33,6 +33,13 @@
 // name. Deleting the owner releases the value: at once when the buttons unmount
 // after the deletion, and through `sweepStoredValueOwners` (driven by
 // storedValueOwnerSweep.svelte.js) when no button was mounted at the time.
+//
+// A VALUE OF ONE SERIES (2026-10-28). A button whose value describes one input column
+// names it as its `subject` (storedValueNames). Removing that series from the node
+// unmounts the button for good, and the retained getter read the removed series' last
+// results, so formulas kept using a number for data that was gone. The retained getter
+// now reads missing (NaN) while the owner no longer uses its subject, and the number
+// again once it does (an undo); the name, and every formula using it, are kept.
 
 import { getContext, setContext } from 'svelte';
 import { core, uniqueStoredValueName, propagateStoredValueRename } from './core.svelte.js';
@@ -92,6 +99,37 @@ export function storedValueOwnerAlive(owner) {
 	if (!m) return false;
 	const list = m[1] === 'tp' ? core.tableProcesses : core.plots;
 	return (list ?? []).some((o) => o != null && String(o.id) === m[2]);
+}
+
+/**
+ * Whether the owner still uses `subject` (an input column id): false only when the owner is
+ * found and positively does not (a node's x or y inputs, a plot's series columns); true
+ * when it does, when there is no subject, or when the owner cannot tell.
+ */
+export function storedValueSubjectInUse(owner, subject) {
+	if (subject == null || !(Number(subject) >= 0)) return true;
+	const id = Number(subject);
+	const m = /^(tp|plot):(.+)$/.exec(owner ?? '');
+	if (!m) return true;
+	if (m[1] === 'tp') {
+		const tp = (core.tableProcesses ?? []).find((o) => o != null && String(o.id) === m[2]);
+		const args = tp?.args;
+		if (!args || args.yIN === undefined) return true;
+		const ys = Array.isArray(args.yIN) ? args.yIN : [args.yIN];
+		return ys.some((y) => Number(y) === id) || Number(args.xIN) === id;
+	}
+	const plot = (core.plots ?? []).find((o) => o != null && String(o.id) === m[2]);
+	const data = plot?.plot?.data;
+	if (!Array.isArray(data)) return true;
+	const ids = (c) => [c?.refId, c?.id].filter((v) => v != null).map(Number);
+	return data.some((d) => ids(d?.y).includes(id) || ids(d?.x).includes(id));
+}
+
+/** The getter a retained value reads: missing while its owner no longer uses its subject. */
+function retainedGetter(key, getter, subject) {
+	if (subject == null || typeof getter !== 'function') return getter;
+	const owner = storedValueKeyOwner(key);
+	return () => (storedValueSubjectInUse(owner, subject) ? getter() : NaN);
 }
 
 function snapshotOf(getter, fallback) {
@@ -162,10 +200,18 @@ function absorbLegacyCopies(name, base, claimed) {
  * and every formula using it follows (adoptPlainName). A name the user chose is kept.
  * @returns {string} the entry's name
  */
-export function claimStoredValue({ key, base, legacyBases = [], getter, source = '', token }) {
+export function claimStoredValue({
+	key,
+	base,
+	legacyBases = [],
+	getter,
+	source = '',
+	subject = null,
+	token
+}) {
 	let hs = holders.get(key);
 	if (!hs) holders.set(key, (hs = new Map()));
-	hs.set(token, { getter, source });
+	hs.set(token, { getter, source, subject });
 	const wasRetained = retained.delete(key);
 	const persistent = isPersistentStoredValueKey(key);
 	const keyed = (extra = {}) => ({ getter, source, ...(persistent ? { key } : {}), ...extra });
@@ -281,7 +327,7 @@ export function updateStoredValueClaim(key, token, getter, source = '') {
 	const hs = holders.get(key);
 	if (!hs || !hs.has(token)) return;
 	const prev = hs.get(token);
-	hs.set(token, { getter, source });
+	hs.set(token, { getter, source, subject: prev.subject });
 	const name = nameOf(key);
 	if (name == null) return;
 	const entry = core.storedValues[name];
@@ -316,9 +362,11 @@ export function releaseStoredValue(key, token) {
 		}
 		// The node still exists: it keeps the value (see the header).
 		if (storedValueOwnerAlive(storedValueKeyOwner(key))) {
+			const kept = retainedGetter(key, gone.getter, gone.subject);
 			core.storedValues[name] = {
 				...entry,
-				staticValue: snapshotOf(gone.getter, entry.staticValue)
+				getter: kept,
+				staticValue: snapshotOf(kept, entry.staticValue)
 			};
 			retained.add(key);
 			ensureStoredValueOwnerSweep();

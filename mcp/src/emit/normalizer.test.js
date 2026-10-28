@@ -675,8 +675,14 @@ test('MovingAnalysis pre-allocates movex + per-(y,stat) columns', () => {
 		analyses: [{ name: 'MovingAnalysis', args: { xIN: 't', yIN: ['y'], analysis: 'periodogram' } }]
 	});
 	const ma = findTP(session, 'MovingAnalysis');
-	// movex is the node's own fixed output; the stats are computed per y (column id 1)
-	assert.deepEqual(Object.keys(ma.args.out).sort(), ['1_peak_period', '1_peak_power', 'movex']);
+	// movex is the node's own fixed output; the stats are computed per y (column id 1), with a
+	// peak p-value for the default Lomb-Scargle method (its Baluev FAP, v82.64).
+	assert.deepEqual(Object.keys(ma.args.out).sort(), [
+		'1_peak_period',
+		'1_peak_power',
+		'1_peak_pvalue',
+		'movex'
+	]);
 	assert.equal(warnings.length, 0);
 });
 
@@ -1696,4 +1702,40 @@ test('a bad zone or unreadable times skip the column with a clear error', () => 
 	assert.match(errors[4], /^Column "e" has some times with an offset/);
 	assert.match(errors[5], /^Column "f" is type "time" but values\[0\]/);
 	for (const e of errors) assert.match(e, /Skipped\.$/);
+});
+
+// A column-valued PARAM (a fit's outputX, Sort's sortOnId) takes a NAME like xIN / yIN
+// (src/lib/core/columnRefParams.js). Before, the name reached the session as a string the node
+// ignores, so the curve was silently evaluated at the input x.
+test('outputX and sortOnId resolve from a column name; an unknown name is refused', () => {
+	const columns = [
+		{ name: 'time_h', values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+		{ name: 'signal', values: [1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4] },
+		{ name: 'grid', values: [0, 6, 12] }
+	];
+	const { session, errors } = normalizeSession({
+		columns,
+		analyses: [
+			{ name: 'Cosinor', args: { xIN: 'time_h', yIN: ['signal'], outputX: 'grid' } },
+			{ name: 'FitFunction', args: { xIN: 'time_h', yIN: ['signal'], outputX: 'time_h' } },
+			{ name: 'Sort', args: { yIN: ['time_h', 'signal'], sortOnId: 'signal' } },
+			{ name: 'TrendFit', args: { xIN: 'time_h', yIN: ['signal'], outputX: -1 } }
+		]
+	});
+	assert.deepEqual(errors, []);
+	const id = (n) => session.data.find((c) => c.name === n).id;
+	assert.equal(findTP(session, 'Cosinor').args.outputX, id('grid'));
+	assert.equal(findTP(session, 'FitFunction').args.outputX, id('time_h'));
+	assert.equal(findTP(session, 'Sort').args.sortOnId, id('signal'));
+	assert.equal(findTP(session, 'TrendFit').args.outputX, -1);
+
+	const bad = normalizeSession({
+		columns,
+		analyses: [{ name: 'Cosinor', args: { xIN: 'time_h', yIN: ['signal'], outputX: 'nope' } }]
+	});
+	assert.equal(findTP(bad.session, 'Cosinor'), undefined);
+	assert.match(
+		bad.errors[0],
+		/Cosinor\.outputX: no column named "nope"\. Available: time_h, signal, grid/
+	);
 });

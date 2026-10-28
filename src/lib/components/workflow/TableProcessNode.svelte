@@ -21,7 +21,8 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { columnNamer, commitColumnRename } from '$lib/core/columnLabels.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
-	import { core } from '$lib/core/core.svelte.js';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { isUnknownAnalysis, unknownAnalysisText } from '$lib/core/unknownNode.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
 	import { processNodeWarnings } from '$lib/core/processWarnings.js';
 	import { normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
@@ -59,7 +60,15 @@
 	// this component too — warnings derived at render time from the process
 	// definition's getWarnings hook (e.g. RemoveTrend's fit-domain refusals).
 	// Shown as a yellow triangle next to the label.
+	// An analysis this build does not have (ROB-U6) keeps its saved outputs but cannot run:
+	// the card says so in its body and through the badge, instead of passing for a working node.
+	const unknownText = $derived(
+		node.type === 'tableprocess' && tp && isUnknownAnalysis(tp.name, appConsts.tableProcessMap)
+			? unknownAnalysisText(tp.name)
+			: null
+	);
 	const warnings = $derived([
+		...(unknownText ? [unknownText] : []),
 		...(Array.isArray(tp?.warnings) ? tp.warnings : []),
 		...processNodeWarnings(node.processObj)
 	]);
@@ -626,6 +635,11 @@
 			</div>
 		</div>
 	</ErrorBoundary>
+
+	<!-- Below the rows, so the port rows (and the wires anchored on them) do not move. -->
+	{#if unknownText}
+		<p class="tp-unknown" role="note">{unknownText}</p>
+	{/if}
 </div>
 
 <style>
@@ -656,6 +670,18 @@
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
 		border-bottom-color: transparent;
+	}
+
+	.tp-unknown {
+		margin: 0;
+		padding: var(--space-2) var(--space-3);
+		border-top: 1px solid var(--color-warning);
+		border-radius: 0 0 var(--radius-md) var(--radius-md);
+		background: var(--color-warning-bg);
+		color: var(--color-warning-text);
+		font-size: var(--font-xs);
+		line-height: 1.35;
+		white-space: normal;
 	}
 
 	.tp-header {
@@ -898,6 +924,21 @@
 	   rows' 14px name padding would only steal width from the metric name. */
 	.metric-strip .row-name {
 		padding-right: 0;
+	}
+	/* A long metric name ("Peak period (x units)", "Acrophase CI high (x units)") wraps onto a
+	   second line inside the 24 px row instead of being cut after a dozen characters: two lines
+	   at an 11 px line height fit the row with the glyphs' descenders inside the span. Past two lines it ellipsizes, and the full
+	   name is in the hover title (Editable measures the clamp). */
+	.metric-strip .row-name :global(.editable-span) {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		line-height: 11px;
+		font-size: var(--font-2xs);
+		min-height: 0;
 	}
 	.metric-glyph {
 		display: inline-flex;

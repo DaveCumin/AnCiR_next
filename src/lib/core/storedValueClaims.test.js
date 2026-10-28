@@ -327,6 +327,62 @@ describe('the node owns its stored values', () => {
 	});
 });
 
+// REPORTED (v82.25 follow-up): a value describing one series kept its last number after the
+// series was removed from its node, because the retained getter read the removed series'
+// results. A value whose button names its SUBJECT (the input column, storedValueNames) reads
+// missing while its node no longer uses that column, and its own number again once it does
+// (undo), so formulas using it show missing instead of a number for data that is gone.
+describe('a value whose series is removed reads missing', () => {
+	it('a node input removed: missing, with the name kept; re-added (undo): the number again', () => {
+		core.tableProcesses.push({ id: 2, name: 'NonparametricRA', args: { xIN: 0, yIN: [5, 6] } });
+		const tp = core.tableProcesses[0];
+		const a = {};
+		claimStoredValue({ key: 'tp:2|IS_b', base: 'IS_b', getter: () => 0.9, subject: 6, token: a });
+		renameStoredValue('IS_b', 'my_is');
+		tp.args.yIN = [5]; // the series is removed, then its button unmounts
+		releaseStoredValue('tp:2|IS_b', a);
+		expect(Object.keys(core.storedValues)).toEqual(['my_is']);
+		expect(getStoredValue('my_is')).toBeNaN();
+		const out = JSON.parse(outputCoreAsJson());
+		expect(out.storedValues.my_is.staticValue).toBeNull();
+		tp.args.yIN = [5, 6]; // undo
+		expect(getStoredValue('my_is')).toBe(0.9);
+		const n = claimStoredValue({
+			key: 'tp:2|IS_b',
+			base: 'IS_b',
+			getter: () => 0.8,
+			subject: 6,
+			token: {}
+		});
+		expect(n).toBe('my_is');
+		expect(getStoredValue('my_is')).toBe(0.8);
+	});
+
+	it('a plot series removed reads missing too', () => {
+		core.plots.push({ id: 5, plot: { data: [{ y: { refId: 11 } }, { y: { refId: 12 } }] } });
+		const plot = core.plots[0];
+		const a = {};
+		claimStoredValue({
+			key: 'plot:5|peak_b',
+			base: 'peak_b',
+			getter: () => 24.1,
+			subject: 12,
+			token: a
+		});
+		plot.plot.data.splice(1, 1);
+		releaseStoredValue('plot:5|peak_b', a);
+		expect(getStoredValue('peak_b')).toBeNaN();
+	});
+
+	it('a button unmounting while its series is still used (a collapsed node) keeps the number', () => {
+		core.tableProcesses.push({ id: 2, name: 'Cosinor', args: { yIN: [6] } });
+		const a = {};
+		claimStoredValue({ key: KEY, base: 'x', getter: () => 1.5, subject: 6, token: a });
+		releaseStoredValue(KEY, a);
+		expect(getStoredValue('x')).toBe(1.5);
+	});
+});
+
 describe('every component that renders a StoreValueButton names its owner', () => {
 	it('calls provideStoredValueOwner (otherwise each mounted copy registers its own value)', async () => {
 		const { readFileSync, readdirSync, statSync } = await import('node:fs');

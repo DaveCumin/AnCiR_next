@@ -213,6 +213,10 @@ export function permutationTest(x, y, fitFn, options = {}) {
 	if (!originalFit) return observedFitFailed(seed);
 
 	const observedStat = getStatistic(originalFit, statistic);
+	// A non-finite observed statistic (an unknown statistic name, a degenerate fit) is no
+	// test: every comparison with NaN is false, so p would be 1 / (m + 1), the SMALLEST
+	// possible p, whatever the data (review STAT-U3).
+	if (!Number.isFinite(observedStat)) return observedFitFailed(seed);
 	const isMinimizationStat = statistic === 'rmse';
 
 	// Create seeded RNG for reproducibility
@@ -229,7 +233,11 @@ export function permutationTest(x, y, fitFn, options = {}) {
 		try {
 			const permutedFit = fitFn(x, yPermuted);
 			const permutedStat = getStatistic(permutedFit, statistic);
-			permutedStats.push(permutedStat);
+			// A non-finite permuted statistic is a failed refit, not a permutation that was
+			// less extreme: kept, it would count in the denominator and never in the
+			// numerator, biasing p downward (review STAT-U3).
+			if (Number.isFinite(permutedStat)) permutedStats.push(permutedStat);
+			else failedFits++;
 		} catch {
 			// Fit failed for this permutation — skip it (counted + warned below,
 			// since skipped permutations shrink the p-value denominator)
@@ -306,6 +314,10 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 	if (!originalFit) return observedFitFailed(seed);
 
 	const observedStat = getStatistic(originalFit, statistic);
+	// A non-finite observed statistic (an unknown statistic name, a degenerate fit) is no
+	// test: every comparison with NaN is false, so p would be 1 / (m + 1), the SMALLEST
+	// possible p, whatever the data (review STAT-U3).
+	if (!Number.isFinite(observedStat)) return observedFitFailed(seed);
 	const isMinimizationStat = statistic === 'rmse';
 
 	// Create seeded RNG for reproducibility
@@ -324,7 +336,9 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 			try {
 				const permutedFit = fitFn(x, yPermuted);
 				const permutedStat = getStatistic(permutedFit, statistic);
-				permutedStats.push(permutedStat);
+				// Non-finite = a failed refit (see permutationTest; review STAT-U3).
+				if (Number.isFinite(permutedStat)) permutedStats.push(permutedStat);
+				else failedFits++;
 			} catch {
 				// Fit failed for this permutation — skip it (counted + warned below)
 				failedFits++;

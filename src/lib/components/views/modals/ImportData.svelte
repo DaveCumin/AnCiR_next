@@ -241,6 +241,7 @@
 	}
 	import { binOnSharedGrid } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { awdEpochSeconds } from '$lib/utils/awdInterval.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 	import {
 		deriveLabelsFromNames,
@@ -3564,7 +3565,7 @@
 		// Line 0: NAME (ignored)
 		// Line 1: START DATE (dd-MMM-yyyy, e.g. "10-Nov-1996")
 		// Line 2: START TIME (HH:mm, e.g. "16:22")
-		// Line 3: INTERVAL (sample interval in minutes × 4, so 4 → 1 min)
+		// Line 3: INTERVAL (epoch-length code, 4 = 1 min; table in utils/awdInterval.js)
 		// Line 4: AGE (ignored)
 		// Line 5: ID (ignored)
 		// Line 6: SEX (ignored)
@@ -3577,10 +3578,17 @@
 		// --- Header parsing ---
 		const dateStr = String(data[1]?.[0] ?? '').trim();
 		const timeStr = String(data[2]?.[0] ?? '').trim();
-		const intervalRaw = Number(data[3]?.[0]) || 4; // usually 4 = 1 minute
-
-		// intervalRaw × 15 = seconds per epoch
-		const epochSeconds = intervalRaw * 15;
+		// Epoch-length code (usually 4 = 1 minute); see utils/awdInterval.js for the table and
+		// its source. An unlisted code is read as code x 15 s and the user is told it is a guess.
+		const interval = awdEpochSeconds(data[3]?.[0]);
+		const epochSeconds = interval.seconds;
+		if (!interval.known && !awaitingPreview) {
+			addNotification(
+				`This AWD file's epoch code "${interval.code}" is not one AnCiR knows, so the epoch ` +
+					`length was taken as ${epochSeconds} s. Check the time column against the recording.`,
+				'warning'
+			);
+		}
 
 		// Start instant from the header date + 24-hour time, anchored in UTC (the
 		// app's display zone) so "12:00" reads as midday everywhere.

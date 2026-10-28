@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
 	planEdit,
+	registryFacts,
 	summariseSession,
 	bandDuration,
 	firstBandStart,
@@ -190,6 +191,72 @@ describe('planEdit — resolving what the model wrote', () => {
 			'Add analysis: Cosinor (xIN=time; yIN=values)',
 			'Add plot: scatterplot named "fit" (1 series)'
 		]);
+	});
+});
+
+// A column-valued PARAM (a fit's outputX, Sort's sortOnId) takes a name like xIN / yIN does
+// (core/columnRefParams.js). Before, a name passed straight through as a string the node ignores.
+describe('planEdit — column-valued params', () => {
+	const COL_FACTS = {
+		...FACTS,
+		tps: {
+			...FACTS.tps,
+			Cosinor: {
+				...FACTS.tps.Cosinor,
+				params: [...FACTS.tps.Cosinor.params, 'outputX'],
+				columnParams: ['outputX']
+			}
+		}
+	};
+	const planC = (spec) => planEdit(spec, { summary: SUMMARY, facts: COL_FACTS });
+
+	it('registryFacts lists outputX and sortOnId as column params, and nothing else', () => {
+		const defaults = (keys) => ({ defaults: new Map(keys.map((k) => [k, { val: -1 }])) });
+		const f = registryFacts({
+			tableProcessMap: new Map([
+				[
+					'Cosinor',
+					{ columnIdFields: { scalar: ['xIN'] }, ...defaults(['xIN', 'outputX', 'nHarmonics']) }
+				],
+				['Sort', { columnIdFields: { array: ['yIN'] }, ...defaults(['yIN', 'sortOnId']) }]
+			]),
+			plotMap: new Map()
+		});
+		expect(f.tps.Cosinor.columnParams).toEqual(['outputX']);
+		expect(f.tps.Sort.columnParams).toEqual(['sortOnId']);
+	});
+
+	it("resolves a new analysis's outputX from a column name", () => {
+		const p = planC({
+			analyses: [{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], outputX: 'Time' } }]
+		});
+		expect(p.errors).toEqual([]);
+		expect(p.analyses[0].params).toEqual({ outputX: 0 });
+	});
+
+	it('keeps an id and the -1 default as they are', () => {
+		const a = (outputX) =>
+			planC({ analyses: [{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], outputX } }] });
+		expect(a(1).analyses[0].params).toEqual({ outputX: 1 });
+		expect(a(-1).analyses[0].params).toEqual({ outputX: -1 });
+	});
+
+	it('refuses an unknown outputX name rather than passing the string to the node', () => {
+		const p = planC({
+			analyses: [{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], outputX: 'grid' } }]
+		});
+		expect(p.analyses).toEqual([]);
+		expect(p.errors[0]).toMatch(/can't resolve outputX = "grid"/);
+	});
+
+	it('resolves outputX by name in a change to an existing analysis, and previews the name', () => {
+		const p = planC({ changes: [{ analysis: 3, set: { outputX: 'values' } }] });
+		expect(p.errors).toEqual([]);
+		expect(p.changes).toEqual([{ tpId: 3, key: 'outputX', value: 1 }]);
+		expect(p.preview).toEqual(['Change Cosinor (#3): outputX = "values"']);
+		const bad = planC({ changes: [{ analysis: 3, set: { outputX: 'grid' } }] });
+		expect(bad.changes).toEqual([]);
+		expect(bad.errors[0]).toMatch(/can't resolve outputX = "grid"/);
 	});
 });
 

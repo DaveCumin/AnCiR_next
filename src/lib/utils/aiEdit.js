@@ -29,6 +29,7 @@ import { core, appConsts } from '$lib/core/core.svelte.js';
 import { resolvePlotRef, ownerPlotOf } from '$lib/core/plotRefs.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
+import { columnRefParamsOf } from '$lib/core/columnRefParams.js';
 import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 import { getByPath } from '$lib/utils/objectPath.js';
 import { applyInnerEdits, facetOverrideOps } from '$lib/plots/pairedEdits.js';
@@ -179,6 +180,9 @@ export function registryFacts(consts = appConsts) {
 				(k) => !STRUCTURAL.has(k) && !inputFields.has(k)
 			)
 		};
+		// Params that name a column without being a port (a fit's outputX, Sort's sortOnId):
+		// resolved from a name like an input (core/columnRefParams.js).
+		tps[name].columnParams = columnRefParamsOf(tps[name].params);
 	}
 	const plots = {};
 	for (const [type, entry] of consts.plotMap ?? new Map()) {
@@ -533,6 +537,21 @@ export function planEdit(spec, { summary, facts, local = null }) {
 		}
 		if (failed) continue;
 
+		// A column-valued param by name or id, like an input: an existing column only (one this
+		// edit is about to add has no id yet). -1 / null keep their "use the default" meaning.
+		for (const field of f.columnParams ?? []) {
+			const v = raw[field];
+			if (v == null || v === -1) continue;
+			const r = resolveRef(v, { index, pending });
+			if (!r || r.analysis != null) {
+				errors.push(`${tpType}: can't resolve ${field} = "${v}"; skipped.`);
+				failed = true;
+				break;
+			}
+			raw[field] = r.colId;
+		}
+		if (failed) continue;
+
 		const params = {};
 		for (const [k, v] of Object.entries(raw)) {
 			if (!f.params.includes(k)) {
@@ -716,13 +735,23 @@ export function planEdit(spec, { summary, facts, local = null }) {
 			continue;
 		}
 		const f = facts.tps[target.name];
-		for (const [k, v] of Object.entries(ch?.set ?? {})) {
+		for (const [k, raw] of Object.entries(ch?.set ?? {})) {
 			if (!f?.params.includes(k)) {
 				errors.push(`${target.name}: can't set unknown parameter "${k}".`);
 				continue;
 			}
+			let v = raw;
+			if ((f.columnParams ?? []).includes(k) && v != null && v !== -1) {
+				const r = resolveRef(v, { index, pending: [] });
+				if (!r) {
+					errors.push(`${target.name}: can't resolve ${k} = "${raw}"; not changed.`);
+					continue;
+				}
+				v = r.colId;
+			}
 			changes.push({ tpId: target.id, key: k, value: v });
-			preview.push(`Change ${target.name} (#${target.id}): ${k} = ${JSON.stringify(v)}`);
+			const shown = v !== raw ? `"${nameOf.get(v) ?? v}"` : JSON.stringify(v);
+			preview.push(`Change ${target.name} (#${target.id}): ${k} = ${shown}`);
 		}
 	}
 

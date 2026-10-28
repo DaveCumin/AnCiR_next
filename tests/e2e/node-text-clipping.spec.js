@@ -79,6 +79,13 @@ function cutText(page) {
 							(q.bottom > b + 1.5 && !faded('below')) || (q.top < top - 1.5 && !faded('above'));
 						// A line-clamped header (Tableplot) ends in an ellipsis; fine if titled.
 						const clamped = acs.webkitLineClamp !== 'none' && titled(el, txt);
+						// A clamped metric name (two lines, TableProcessNode) titles itself on hover,
+						// like an ellipsized one: hover it and check the title below.
+						if ((cutX || cutY) && acs.webkitLineClamp !== 'none' && !clamped) {
+							el.dispatchEvent(new PointerEvent('pointerenter'));
+							pending.push({ el, txt, label });
+							break;
+						}
 						if ((cutX || cutY) && !clamped) {
 							out.push(
 								`${label}: "${txt.slice(0, 40)}" cut by .${String(a.className).split(' ')[0]}`

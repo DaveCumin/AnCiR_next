@@ -25,6 +25,7 @@ import { applyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte
 import { applyAutoBinSize } from '$lib/tableProcesses/binSizeAuto.svelte.js';
 import { joinOutKeys } from '$lib/utils/joinPairing.js';
 import { timeZoneSource, readsWallClockText } from '$lib/core/columnTimeZone.js';
+import { columnRefParamsOf } from '$lib/core/columnRefParams.js';
 // A time column's text format and zone, read and refused exactly as a draft's are (pure).
 import { timeTextFormat, columnZoneOf } from '../emit/timeColumns.js';
 import { joinNameOf } from '$lib/tableProcesses/JoinData.svelte';
@@ -58,20 +59,35 @@ const seedKeys = (keys) => Object.fromEntries(keys.map((k) => [k, -1]));
 
 // Resolve a column reference to a numeric id. Accepts a number, a numeric string,
 // or a column NAME — LLMs track names far more reliably than 0-based numeric ids,
-// so every column-id argument (xIN/yIN/colIds/plot inputs/…) accepts either.
+// so every column-id argument (xIN/yIN/colIds/outputX/plot inputs/…) accepts either.
+// A name two columns share is refused with the candidates, never resolved to the first.
 function resolveColRef(ref) {
 	if (typeof ref === 'number') return ref;
 	if (typeof ref === 'string') {
 		const t = ref.trim();
 		if (/^-?\d+$/.test(t)) return Number(t);
-		const col = core.data.find((c) => c.name === ref);
-		if (col) return col.id;
+		const matches = core.data.filter((c) => c.name === ref);
+		if (matches.length === 1) return matches[0].id;
+		if (matches.length > 1) {
+			const ids = matches.map((c) => `${c.id} (${c.type})`).join(', ');
+			throw new Error(
+				`Column name "${ref}" is ambiguous: ${matches.length} columns have it, ids ${ids}. Pass the id instead.`
+			);
+		}
 		const names = core.data.map((c) => c.name).join(', ');
 		throw new Error(
 			`No column named "${ref}". Available: ${names || '(none)'}. Call list_columns.`
 		);
 	}
 	return ref;
+}
+
+// resolveColRef, then require the column to exist: the check every plot input and overlay
+// wire gets (add_plot and render_plot alike).
+function assertColumnRef(ref) {
+	const id = resolveColRef(ref);
+	if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
+	return id;
 }
 
 /**
@@ -776,6 +792,9 @@ export class AncirSession {
 				if (a[f] == null) continue;
 				a[f] = (Array.isArray(a[f]) ? a[f] : [a[f]]).map(resolveColRef);
 			}
+			// Params that name a column without being a port (a fit's outputX, Sort's sortOnId).
+			const params = [...(entry.defaults?.keys?.() ?? [])];
+			for (const f of columnRefParamsOf(params)) if (a[f] != null) a[f] = resolveColRef(a[f]);
 		} catch (e) {
 			return { name, valid: false, error: e.message, outputs: [] };
 		}
@@ -974,11 +993,7 @@ export class AncirSession {
 		}
 
 		// Accept a column name too (LLMs track names more reliably than numeric ids).
-		const assertCol = (ref) => {
-			const id = resolveColRef(ref);
-			if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
-			return id;
-		};
+		const assertCol = assertColumnRef;
 
 		// Validate overlays BEFORE committing the plot, like the inputs below: a bad
 		// overlay must not leave a half-built plot in the session. Per plot: only the kinds
@@ -1058,8 +1073,8 @@ export class AncirSession {
 	 * add_plot to embed a plot). Input column ids may be raw or analysis outputs.
 	 *
 	 * @param {string} type   Plot type id (see list_capabilities → plots).
-	 * @param {Object<string,number>|number[]} inputs  Input field → column id (or, for
-	 *   tableplot, an array of column ids).
+	 * @param {Object<string,number|string>|Array<number|string>} inputs  Input field → column
+	 *   id or name (or, for tableplot, an array of ids/names).
 	 * @param {{outBase:string, width?:number, height?:number, overlays?:object[]}} opts
 	 *   `overlays` as for addPlot (reference lines / bands, per the plot's capabilities).
 	 * @returns {Promise<{png:string, svg:string, bytes:number, width:number, height:number}>}
@@ -1075,16 +1090,15 @@ export class AncirSession {
 
 		const overlayCaps = entry.data?.overlayCapabilities;
 		if (overlays?.length && !overlayCaps) throw unsupportedOverlaysError(type);
-		const overlayJsons = normalizeOverlaySpecs(
-			overlays,
-			(ref) => {
-				const id = resolveColRef(ref);
-				if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
-				return id;
-			},
-			overlayCaps,
-			{ plot: type }
-		);
+		const overlayJsons = normalizeOverlaySpecs(overlays, assertColumnRef, overlayCaps, {
+			plot: type
+		});
+
+		// Series inputs by id OR name, as add_plot takes them (an ambiguous or unknown
+		// name is refused here, before a browser is launched).
+		inputs = Array.isArray(inputs)
+			? inputs.map(assertColumnRef)
+			: Object.fromEntries(Object.entries(inputs ?? {}).map(([k, r]) => [k, assertColumnRef(r)]));
 
 		// Gather referenced columns (series inputs + overlay wires) and renumber to
 		// compact ids the render page rebuilds.

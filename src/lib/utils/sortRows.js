@@ -8,16 +8,42 @@
  * which keeps it free of Svelte/app/time dependencies and easy to test.
  *
  * Rules (match the legacy single-column Sort process and the import sort):
- *  - Missing values (null/undefined or NaN numbers) always sort LAST, in both
- *    asc and desc directions, preserving their original relative order.
- *  - Present numeric values compare numerically; otherwise lexicographically
- *    (localeCompare). A mix compares as strings.
+ *  - Missing values (null/undefined, NaN numbers, and blank or whitespace-only
+ *    strings, the house missing-value rule) always sort LAST, in both asc and
+ *    desc directions, preserving their original relative order. A blank cell
+ *    used to read as Number('') = 0 and sort among the zeros (review STAT-U5).
+ *  - Numbers and numeric strings compare numerically, text lexicographically
+ *    (localeCompare). In a MIXED column every number comes before every text
+ *    value (ascending; after it descending). The old rule compared a pair as
+ *    strings whenever either side was text and numerically otherwise, which is
+ *    not transitive (2 < 10 numerically, "10" < "1a" < "2" as text), so the
+ *    result depended on the engine's sort algorithm (review STAT-U5).
  *  - The sort is STABLE: equal keys keep their original relative order.
+ * Mirrored in tools/ancir_runtime.py (_sort_permutation) and .R (sort_permutation).
  */
 
 /** @param {any} v */
 function isMissing(v) {
-	return v == null || (typeof v === 'number' && Number.isNaN(v));
+	return (
+		v == null ||
+		(typeof v === 'number' && Number.isNaN(v)) ||
+		(typeof v === 'string' && v.trim() === '')
+	);
+}
+
+/** The comparable key of a present value: a number, or a string for text. */
+function keyOf(v) {
+	const num = Number(v);
+	return Number.isNaN(num) ? String(v) : num;
+}
+
+/** Total order on keys: numbers (numerically) before strings (localeCompare). */
+function compareKeys(a, b) {
+	const aStr = typeof a === 'string';
+	const bStr = typeof b === 'string';
+	if (aStr !== bStr) return aStr ? 1 : -1;
+	if (aStr) return /** @type {string} */ (a).localeCompare(/** @type {string} */ (b));
+	return /** @type {number} */ (a) - /** @type {number} */ (b);
 }
 
 /**
@@ -38,9 +64,7 @@ export function sortPermutation(keyValues, opts = {}) {
 		if (isMissing(v)) {
 			decorated[i] = { i, missing: true, key: null };
 		} else {
-			const num = Number(v);
-			const key = Number.isNaN(num) ? String(v) : num;
-			decorated[i] = { i, missing: false, key };
+			decorated[i] = { i, missing: false, key: keyOf(v) };
 		}
 	}
 
@@ -50,12 +74,7 @@ export function sortPermutation(keyValues, opts = {}) {
 		if (a.missing) return 1;
 		if (b.missing) return -1;
 
-		let cmp;
-		if (typeof a.key === 'string' || typeof b.key === 'string') {
-			cmp = String(a.key).localeCompare(String(b.key));
-		} else {
-			cmp = /** @type {number} */ (a.key) - /** @type {number} */ (b.key);
-		}
+		const cmp = compareKeys(a.key, b.key);
 		if (cmp !== 0) return dir * cmp;
 		return a.i - b.i; // stable tie-break
 	});
@@ -103,25 +122,13 @@ export function sortValues(keyValues, opts = {}) {
 export function isSorted(keyValues, opts = {}) {
 	const dir = opts.direction === 'desc' ? -1 : 1;
 	let prev = null;
-	let prevIsString = false;
 	let started = false;
 	for (let i = 0; i < keyValues.length; i++) {
 		const v = keyValues[i];
 		if (isMissing(v)) continue; // trailing/interspersed missing ignored for the order check
-		const num = Number(v);
-		const key = Number.isNaN(num) ? String(v) : num;
-		const isString = typeof key === 'string';
-		if (started) {
-			let cmp;
-			if (isString || prevIsString) {
-				cmp = String(prev).localeCompare(String(key));
-			} else {
-				cmp = /** @type {number} */ (prev) - /** @type {number} */ (key);
-			}
-			if (dir * cmp > 0) return false; // prev should not come after key
-		}
+		const key = keyOf(v);
+		if (started && dir * compareKeys(prev, key) > 0) return false; // prev should not come after key
 		prev = key;
-		prevIsString = isString;
 		started = true;
 	}
 	return true;

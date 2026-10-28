@@ -33,6 +33,7 @@
 	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
 	import { downloadBlob } from '$lib/utils/downloadBlob.js';
 	import { trackReads, loadKeepingUnknown } from '$lib/core/unknownFields.js';
+	import { unknownAnalysesWarning } from '$lib/core/unknownNode.js';
 	export function exportJson() {
 		try {
 			// outputCoreAsJson builds this with JSON.stringify, so it is valid JSON by construction.
@@ -275,6 +276,7 @@
 				0
 			);
 		}
+		if (report.unknownAnalyses) addNotification(report.unknownAnalyses, 'warning', 0);
 		if (compareAppVersions(jsonData.version, appConsts.version) > 0) {
 			addNotification(
 				`This session was saved by a newer version of AnCiR (${jsonData.version}; this is ` +
@@ -699,7 +701,11 @@
 		// hoursSinceStart is already pre-computed in pushObj; no second pass.
 		if (onProgress) onProgress('Finalising…');
 		await yieldFrame();
-		return { unrestoredPlots: [...core.unrestoredPlots] };
+		return {
+			unrestoredPlots: [...core.unrestoredPlots],
+			// Analyses this build cannot run load as nodes that keep their saved outputs (ROB-U6).
+			unknownAnalyses: unknownAnalysesWarning(core.tableProcesses, appConsts.tableProcessMap)
+		};
 	}
 </script>
 

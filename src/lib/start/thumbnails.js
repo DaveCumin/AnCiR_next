@@ -89,6 +89,8 @@ function actogram(rng, variant = 'entrained') {
 				return [[day < 3 ? 8 : 14, 10]];
 			case 'transients': // the slow diagonal crawl into the new phase
 				return [[day < 2 ? 8 : Math.min(14, 8 + (day - 1) * 1.6), 10]];
+			case 'advance': // an advance taken up through transients: the band crawls LEFT
+				return [[day < 2 ? 12 : Math.max(6, 12 - (day - 1) * 1.5), 9]];
 			case 'masking': // follows the light, then snaps back on release
 				return [[day >= 2 && day < 5 ? 14 : 8, 10]];
 			case 'split': {
@@ -250,8 +252,7 @@ function heatmap(rng, n = 5) {
 	}
 	return svg(out);
 }
-function contingency(rng) {
-	const cols = 3;
+function contingency(rng, cols = 3) {
 	const rows = 2;
 	const pad = 12;
 	const cw = (W - pad * 2) / cols;
@@ -319,6 +320,128 @@ function sparkline(values) {
 	});
 	return svg(`<path d="${d}" stroke="currentColor" stroke-width="1.4" opacity="0.85"/>`);
 }
+// Anscombe's quartet (Anscombe 1973, The American Statistician 27:17-21), the same values as
+// the example's dataset: four panels, one least-squares line (y = 3 + 0.5x) in every one.
+const ANSCOMBE_X = [10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5];
+const ANSCOMBE = [
+	[ANSCOMBE_X, [8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68]],
+	[ANSCOMBE_X, [9.14, 8.14, 8.74, 8.77, 9.26, 8.1, 6.13, 3.1, 9.13, 7.26, 4.74]],
+	[ANSCOMBE_X, [7.46, 6.77, 12.74, 7.11, 7.81, 8.84, 6.08, 5.39, 8.15, 6.42, 5.73]],
+	[
+		[8, 8, 8, 8, 8, 8, 8, 19, 8, 8, 8],
+		[6.58, 5.76, 7.71, 8.84, 8.47, 7.04, 5.25, 12.5, 5.56, 7.91, 6.89]
+	]
+];
+function quartet() {
+	const pw = 52;
+	const ph = 32;
+	const panels = [
+		[6, 4],
+		[62, 4],
+		[6, 44],
+		[62, 44]
+	];
+	// Shared axes (x 3 to 20, y 2 to 14), so the identical lines line up across the panels.
+	const sx = (px, x) => px + ((x - 3) / 17) * pw;
+	const sy = (py, y) => py + ph - ((y - 2) / 12) * ph;
+	let out = '';
+	panels.forEach(([px, py], k) => {
+		const [xs, ys] = ANSCOMBE[k];
+		out += `<line x1="${r1(sx(px, 3))}" y1="${r1(sy(py, 4.5))}" x2="${r1(sx(px, 20))}" y2="${r1(sy(py, 13))}" stroke="currentColor" stroke-width="1" opacity="0.55"/>`;
+		xs.forEach((x, i) => {
+			out += `<circle cx="${r1(sx(px, x))}" cy="${r1(sy(py, ys[i]))}" r="1.6" fill="currentColor" opacity="0.8"/>`;
+		});
+	});
+	return svg(out);
+}
+/** Simpson's paradox: three groups each rising, offset so the pooled trend falls. */
+function simpson(rng) {
+	let out = '';
+	const groups = [
+		[14, 18],
+		[46, 36],
+		[78, 54]
+	];
+	for (const [gx, gy] of groups) {
+		for (let i = 0; i < 7; i++) {
+			const t = i / 6;
+			const x = gx + t * 26;
+			const y = gy + 10 - t * 16 + (rng() - 0.5) * 9;
+			out += `<circle cx="${r1(x)}" cy="${r1(y)}" r="2" fill="currentColor" opacity="0.55"/>`;
+		}
+		out += `<line x1="${gx}" y1="${gy + 10}" x2="${gx + 26}" y2="${gy - 6}" stroke="currentColor" stroke-width="1.4" opacity="0.85"/>`;
+	}
+	// The pooled line, dashed: it runs the other way.
+	out += `<line x1="10" y1="16" x2="${W - 10}" y2="${H - 10}" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 2.5" opacity="0.55"/>`;
+	return svg(out);
+}
+/** Two groups of different sizes, each bar filled to its proportion (7 of 10, 2 of 25). */
+function proportions() {
+	let out = '';
+	const bars = [
+		[30, 10, 7],
+		[70, 25, 2]
+	];
+	const top = 10;
+	const hgt = H - 20;
+	for (const [x, n, k] of bars) {
+		const w = 8 + n * 0.6;
+		out += `<rect x="${r1(x)}" y="${top}" width="${r1(w)}" height="${hgt}" fill="currentColor" opacity="0.1" stroke="currentColor" stroke-width="0.8" stroke-opacity="0.5"/>`;
+		const fill = (hgt * k) / n;
+		out += `<rect x="${r1(x)}" y="${r1(top + hgt - fill)}" width="${r1(w)}" height="${r1(fill)}" fill="currentColor" opacity="0.6"/>`;
+	}
+	return svg(out);
+}
+/** A loop traced each day (hive lagging air temperature), shaded by the hour of day. */
+function hysteresisLoop() {
+	let out = '';
+	const n = 24;
+	for (let i = 0; i < n; i++) {
+		const a = (i / n) * Math.PI * 2;
+		// x is the air, y the hive lagging it by a quarter day: a fat, tilted loop.
+		const x = W / 2 + Math.cos(a) * 46;
+		const y = H / 2 - (Math.cos(a - 1.3) * 26 + Math.cos(a) * 6);
+		const hour = Math.abs(i - n / 2) / (n / 2); // dark at midnight, light at noon
+		out += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(2 + (i % 3) * 0.5)}" fill="currentColor" opacity="${r1(0.3 + hour * 0.65)}"/>`;
+	}
+	return svg(out);
+}
+/** Two sampling grids (hourly and every 15 min) joined into one time column below. */
+function joinRows() {
+	const x0 = 10;
+	const span = W - 20;
+	// One path per row of ticks keeps the markup small (a line per tick is ~6 kB).
+	const ticks = (n, y, h, every = 1) => {
+		let d = '';
+		for (let i = 0; i <= n; i++) if (i % every === 0) d += `M${r1(x0 + (span * i) / n)} ${y}v${h}`;
+		return d;
+	};
+	const path = (d, op) =>
+		`<path d="${d}" stroke="currentColor" stroke-width="1.2" opacity="${op}"/>`;
+	return svg(
+		path(ticks(6, 10, 12), 0.85) +
+			path(ticks(24, 30, 8), 0.45) +
+			`<line x1="${x0}" y1="47" x2="${x0 + span}" y2="47" stroke="currentColor" stroke-width="0.8" opacity="0.3"/>` +
+			path(ticks(24, 54, 12), 0.45) +
+			path(ticks(24, 54, 12, 4), 0.85)
+	);
+}
+/** A series and a threshold: the stretches that stay below it are shaded. */
+function crossing(rng) {
+	const pad = 8;
+	const thr = 46;
+	const ys = Array.from({ length: 40 }, (_, i) => 40 - Math.sin(i / 4) * 22 + (rng() - 0.5) * 6);
+	const x = (i) => pad + ((W - pad * 2) * i) / (ys.length - 1);
+	let out = '';
+	for (const [start, len] of runsOf(ys.map((y) => y > thr))) {
+		if (len < 3) continue;
+		out += `<rect x="${r1(x(start))}" y="${pad}" width="${r1(x(start + len - 1) - x(start))}" height="${H - pad * 2}" fill="currentColor" opacity="0.1"/>`;
+	}
+	out += `<line x1="${pad}" y1="${thr}" x2="${W - pad}" y2="${thr}" stroke="currentColor" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.6"/>`;
+	const d = ys.map((y, i) => `${i === 0 ? 'M' : 'L'}${r1(x(i))} ${r1(y)}`).join('');
+	out += `<path d="${d}" stroke="currentColor" stroke-width="1.4" opacity="0.85"/>`;
+	return svg(out);
+}
 const WORKFLOW_SHAPE = {
 	'workflow-rest-activity': ['actogram', 'fragmented'],
 	'workflow-free-running': ['actogram', 'freerun'],
@@ -340,7 +463,16 @@ const WORKFLOW_SHAPE = {
 	'workflow-noise-peak': ['histograms'],
 	'workflow-aliasing': ['sparkline'],
 	'workflow-crepuscular': ['circular'],
-	'workflow-masking': ['actogram', 'masking']
+	'workflow-masking': ['actogram', 'masking'],
+	// Start-screen cards that drew the sine fallback until 2026-10-28 (UI-U3).
+	'workflow-transients': ['actogram', 'advance'],
+	'workflow-colour-by-hysteresis': ['loop'],
+	'workflow-stats-fisher-exact': ['contingency', 2],
+	'workflow-stats-two-groups-counts': ['proportions'],
+	'workflow-join-data': ['join'],
+	'workflow-stats-anscombe': ['quartet'],
+	'workflow-stats-simpson': ['simpson'],
+	'tp-crossing': ['crossing']
 };
 export function thumbnailForWorkflow(id) {
 	const rng = mulberry32(hashSeed(id ?? 'unknown'));
@@ -357,7 +489,19 @@ export function thumbnailForWorkflow(id) {
 		case 'heatmap':
 			return heatmap(rng);
 		case 'contingency':
-			return contingency(rng);
+			return contingency(rng, arg);
+		case 'quartet':
+			return quartet();
+		case 'simpson':
+			return simpson(rng);
+		case 'proportions':
+			return proportions();
+		case 'loop':
+			return hysteresisLoop();
+		case 'join':
+			return joinRows();
+		case 'crossing':
+			return crossing(rng);
 		case 'histograms':
 			return miniHistograms(rng);
 		case 'circular':

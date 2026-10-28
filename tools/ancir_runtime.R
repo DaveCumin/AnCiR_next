@@ -2430,10 +2430,15 @@ tp_nonparametricra <- function(args, env) {
 # ---------------------------------------------------------------------------
 
 # Mirror of sortRows.js::sortPermutation. Three rules that all matter:
-#   - missing values sort LAST whatever the direction (so "descending" does not surface
-#     gaps at the top),
-#   - a value that is not numeric compares as a STRING,
+#   - missing values (NULL, NA, NaN, blank or whitespace-only strings) sort LAST whatever the
+#     direction (so "descending" does not surface gaps at the top),
+#   - numbers and numeric strings (JS Number() syntax, .js_number) compare numerically and
+#     text as strings, with every number before every text value in a mixed column
+#     (ascending); review STAT-U5: the old rule compared a whole mixed column as strings
+#     here, pairwise in the app, and the app's rule was not transitive,
 #   - ties keep their original order.
+# Text order is R's string comparison here, localeCompare in the app; they agree on
+# same-case ASCII.
 # R's order() cannot express the first rule directly, so the permutation is built by hand.
 sort_permutation <- function(key_values, direction = "asc") {
   dir <- if (identical(direction, "desc")) -1 else 1
@@ -2442,20 +2447,21 @@ sort_permutation <- function(key_values, direction = "asc") {
   miss <- logical(n); num <- rep(NA_real_, n); str <- rep(NA_character_, n)
   for (i in seq_len(n)) {
     v <- key_values[[i]]
-    if (is.null(v) || length(v) != 1 || (is.atomic(v) && is.na(v))) { miss[i] <- TRUE; next }
-    nv <- suppressWarnings(as.numeric(v))
+    if (is.null(v) || length(v) != 1 || (is.atomic(v) && is.na(v)) ||
+        (is.character(v) && !nzchar(.js_trim(v)))) { miss[i] <- TRUE; next }
+    nv <- .js_number(v)
     if (is.na(nv)) str[i] <- as.character(v) else num[i] <- nv
   }
-  any_str <- any(!is.na(str))
   idx <- seq_len(n)
   cmp <- function(a, b) {
     if (miss[a] && miss[b]) return(a - b)
     if (miss[a]) return(1)
     if (miss[b]) return(-1)
-    c <- if (any_str) {
-      sa <- if (is.na(str[a])) format(num[a]) else str[a]
-      sb <- if (is.na(str[b])) format(num[b]) else str[b]
-      if (sa > sb) 1 else if (sa < sb) -1 else 0
+    a_str <- !is.na(str[a]); b_str <- !is.na(str[b])
+    c <- if (a_str != b_str) {
+      if (a_str) 1 else -1  # numbers before text
+    } else if (a_str) {
+      if (str[a] > str[b]) 1 else if (str[a] < str[b]) -1 else 0
     } else {
       if (num[a] > num[b]) 1 else if (num[a] < num[b]) -1 else 0
     }
@@ -3787,7 +3793,9 @@ circular_mean <- function(angles_rad) {
   list(meanAngle = ma, R = sqrt(C * C + S * S), n = n, C = C, S = S)
 }
 
-# Rayleigh test of uniformity, with the standard second-order p-value expansion.
+# Rayleigh test of uniformity, with the second-order p-value expansion of circular::rayleigh.test
+# and astropy.stats.rayleightest (both use it only for n < 50; here at every n, as the app).
+# Not Zar (1999) eq. 27.4, which is exp(sqrt(1 + 4n + 4(n^2 - (n R)^2)) - (1 + 2n)).
 rayleigh_test <- function(angles_rad) {
   cm <- circular_mean(angles_rad)
   n <- cm$n
@@ -4126,6 +4134,10 @@ evaluate_rectwave_at_points <- function(parameters, x_points) {
   list(JtJ = crossprod(J), JtR = as.vector(crossprod(J, r)), rss = sum(r * r))
 }
 
+# rectwave.js RECT_DEGENERATE_DIAG: a JtJ diagonal at or below this fraction of the largest
+# counts as zero when damping.
+.RECT_DEGENERATE_DIAG <- 1e-24
+
 # rectwave.js fitWithLM, step for step (see the Python port).
 .rw_fit_lm <- function(t, x, params, free, max_iter, tol, w_lo, w_hi) {
   p <- params
@@ -4140,7 +4152,9 @@ evaluate_rectwave_at_points <- function(parameters, x_points) {
                                 (p[4] >= w_hi && ne$JtR[w_pos] < 0))
     JtJd <- ne$JtJ
     dg <- diag(ne$JtJ)
-    diag(JtJd) <- dg + lam * ifelse(dg > 0, dg, 1)
+    # rectwave.js: a diagonal zero to rounding (a parameter with no effect, e.g. omega and phi
+    # on a flat series at the 2-sample start) gets plain damping, lam * 1.
+    diag(JtJd) <- dg + lam * ifelse(dg > .RECT_DEGENERATE_DIAG * max(dg), dg, 1)
     rhs <- ne$JtR
     if (frozen) {
       JtJd[w_pos, ] <- 0; JtJd[, w_pos] <- 0; JtJd[w_pos, w_pos] <- 1; rhs[w_pos] <- 0
@@ -5440,6 +5454,9 @@ fit_permutation_pvalue <- function(tt, yy, model, options, args, label = "") {
   # The app's permutationTest reads the statistic of a null observed fit and throws: no p.
   if (is.null(observed)) return(off(block_length))
   observed_stat <- .perm_statistic(observed, statistic)
+  # permutationTest.js (review STAT-U3): a non-finite observed statistic is no test (every
+  # comparison with NaN is false, so p would be the smallest possible).
+  if (!isTRUE(is.finite(observed_stat))) return(off(block_length))
   count <- resolve_permutation_count(args, n)
   e <- .perm_rng(if (is.null(args$permutationSeed)) 12345 else args$permutationSeed)
   fixed_cosinor <- identical(model, "cosinor") && !identical(options$useFixedPeriod, FALSE)
@@ -5472,8 +5489,11 @@ fit_permutation_pvalue <- function(tt, yy, model, options, args, label = "") {
       .perm_note(sprintf("permutation test%s: %d/%d", who, as.integer(done), as.integer(count)))
     }
   }
-  k <- if (identical(statistic, "rmse")) sum(stats <= observed_stat, na.rm = TRUE)
-       else sum(stats >= observed_stat, na.rm = TRUE)
+  # A non-finite permuted statistic is a failed refit, skipped (permutationTest.js, review
+  # STAT-U3): kept, it counted in the denominator and never as extreme, biasing p down.
+  stats <- stats[is.finite(stats)]
+  k <- if (identical(statistic, "rmse")) sum(stats <= observed_stat)
+       else sum(stats >= observed_stat)
   list(pValue = (k + 1) / (length(stats) + 1), observedStat = observed_stat,
        permutedStats = stats, statistic = statistic, scheme = scheme,
        blockLength = block_length, unavailable = NULL)
@@ -6698,19 +6718,12 @@ gc_kruskal_wallis <- function(groups) {
        epsilonSquared = hc / (n - 1), nTotal = n)
 }
 
-# JS holmAdjust: sorted by p (a missing p last, read as 1), running max of min(1, p (n - i)).
+# JS holmAdjust: Holm via p_adjust (R p.adjust "holm"); a non-finite p is NA adjusted and left
+# out of n (review STAT-U6: it used to be read as 1 and counted in n).
 gc_holm_adjust <- function(pairs) {
-  n <- length(pairs)
-  if (!n) return(pairs)
-  pv <- vapply(pairs, function(p) if (is.numeric(p$pValue) && is.finite(p$pValue)) p$pValue else Inf,
-               numeric(1))
-  ord <- order(pv)
-  running <- 0
-  for (i in seq_along(ord)) {
-    raw <- if (is.finite(pv[ord[i]])) pv[ord[i]] else 1
-    running <- max(running, min(1, raw * (n - i + 1)))
-    pairs[[ord[i]]]$pAdjusted <- running
-  }
+  if (!length(pairs)) return(pairs)
+  adj <- p_adjust(lapply(pairs, function(p) p$pValue), "holm")$adjusted
+  for (i in seq_along(pairs)) pairs[[i]]$pAdjusted <- adj[i]
   pairs
 }
 
@@ -6724,7 +6737,7 @@ gc_pairwise_mann_whitney <- function(groups, alpha = 0.05) {
                                        statistic = m$u, pValue = m$pValue,
                                        pMethod = m$pMethod, effect = m$rEffect)
   }
-  lapply(gc_holm_adjust(pairs), function(p) { p$significant <- p$pAdjusted < alpha; p })
+  lapply(gc_holm_adjust(pairs), function(p) { p$significant <- isTRUE(p$pAdjusted < alpha); p })
 }
 
 compute_group_comparison <- function(args, env) {
@@ -8711,20 +8724,40 @@ match_template_markers <- function(x_by_period, y_by_period, period_hrs, bin_siz
     yi <- y_by_period[[as.character(i)]]
     if (is.null(yi) || !length(yi)) { hours <- c(hours, NaN); times <- c(times, NaN); next }
     yn <- y_by_period[[as.character(i + 1)]]
-    if (!is.null(yn) && length(yn)) {
+    has_next <- !is.null(yn) && length(yn)
+    lead <- 0
+    if (has_next) {
       data <- c(yi, yn)
       xs <- c(x_by_period[[as.character(i)]], x_by_period[[as.character(i + 1)]])
     } else {
       data <- yi
       xs <- x_by_period[[as.character(i)]]
     }
+    # The threshold is this window's own (the borrowed bins below do not move it).
     cv <- find_centile_value(data, centile)
+    # Active = strictly above the threshold. With no bin above it (two-level data, a 100%
+    # centile, an all-zero window) the match is flat: no marker, not a made-up one
+    # (onsetUnwrap.js).
+    if (is.null(cv) || !any(!is.na(data) & data > cv)) {
+      hours <- c(hours, NaN); times <- c(times, NaN); next
+    }
+    # No next row to search into (onsetUnwrap.js): borrow up to N bins from the end of the
+    # row before, so a transition fewer than N bins into this row still fits the template.
+    yp <- y_by_period[[as.character(i - 1)]]
+    if (!has_next && N > 0 && !is.null(yp) && length(yp)) {
+      lead <- min(N, length(yp))
+      xp <- x_by_period[[as.character(i - 1)]]
+      data <- c(tail(yp, lead), data)
+      xs <- c(tail(xp, lead), xs)
+    }
     above_below <- vapply(data, function(v) {
-      if (is.na(v) || (!is.null(cv) && v <= cv)) -1 else 1
+      if (is.na(v) || v <= cv) -1 else 1
     }, numeric(1))
-    # The new state starts at template start + N (onsetUnwrap.js, FIT-6).
-    best <- find_best_match_index(above_below, template) + N
-    if (best >= 0 && best < length(xs)) {
+    # The new state starts at template start + N (onsetUnwrap.js, FIT-6). A window shorter
+    # than the template has no match (-1), and so no marker.
+    start <- find_best_match_index(above_below, template)
+    best <- if (start < 0) -1 else start + N
+    if (best >= lead && best < length(xs)) {
       t <- xs[best + 1]
       raw <- t - i * period_hrs
       raw <- .js_mod(.js_mod(raw, period_hrs) + period_hrs, period_hrs)
