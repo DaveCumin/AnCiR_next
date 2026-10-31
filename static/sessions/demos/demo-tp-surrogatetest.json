@@ -139,7 +139,7 @@
       "name": "pvalue_62",
       "data": 694,
       "type": "number",
-      "tableProcessGUId": "1f65ce5b-3734-4ed2-8458-b2700581d647",
+      "tableProcessGUId": "bcd5b770-34c4-4b28-a445-48a9f68e52d2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,7 +150,7 @@
       "name": "observed_62",
       "data": 695,
       "type": "number",
-      "tableProcessGUId": "707e0a7b-7505-4e33-ab46-c7f0b703a1a1",
+      "tableProcessGUId": "db9568bc-c5bb-46f6-91f6-b43a2fb2ec57",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -221,7 +221,7 @@
         "method": "block",
         "nSurrogates": 19,
         "seed": 12345,
-        "blockLengthHours": 24,
+        "blockLengthHours": 6,
         "periodMin": 20,
         "periodMax": 28,
         "out": {
@@ -238,7 +238,7 @@
   "notes": [
     {
       "id": "note_60",
-      "text": "Asks whether a rhythm is stronger than you would expect from a series with the same character but no real rhythm. The catch it exists to solve: shuffling the values destroys the smooth run-to-run structure that every biological recording has, so a shuffled null is far too easy to beat and almost anything looks rhythmic. The block bootstrap instead resamples whole chunks (a day at a time by default) and the AR(1) option simulates matched \"red noise\", so both keep that structure. Phase-randomised and AAFT surrogates are not offered here: they preserve the spectrum, and therefore the rhythm itself, so they cannot test for rhythmicity (a saved session that names one is refused with that reason). The band statistic is an FFT, so gaps follow the FFT rule: a few missing samples are interpolated, a long gap is refused. Results are reproducible from the seed, and the smallest p it can report is 1/(surrogates + 1).",
+      "text": "Asks whether a rhythm is stronger than you would expect from a series with the same character but no real rhythm. The catch it exists to solve: shuffling the values destroys the smooth run-to-run structure that every biological recording has, so a shuffled null is far too easy to beat and almost anything looks rhythmic. The block bootstrap instead resamples whole chunks (6 h at a time for a new node, about a quarter of a daily cycle; a block of a whole day keeps every cycle intact and makes the test very conservative) and the AR(1) option simulates matched \"red noise\", so both keep that structure. Phase-randomised and AAFT surrogates are not offered here: they preserve the spectrum, and therefore the rhythm itself, so they cannot test for rhythmicity (a saved session that names one is refused with that reason). The band statistic is an FFT, so gaps follow the FFT rule: a few missing samples are interpolated, a long gap is refused. Results are reproducible from the seed, and the smallest p it can report is 1/(surrogates + 1).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -352,5 +352,5 @@
       "No"
     ]
   },
-  "version": "β.82.64"
+  "version": "β.82.66"
 }

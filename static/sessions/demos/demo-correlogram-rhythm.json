@@ -485,7 +485,8 @@
             "maxLag": null,
             "minLag": 0,
             "showConfidenceBounds": true,
-            "confidenceLevel": 0.95
+            "confidenceLevel": 0.95,
+            "bandMethod": "bartlett"
           }
         ],
         "overlays": []
@@ -609,5 +610,5 @@
       "No"
     ]
   },
-  "version": "β.82.64"
+  "version": "β.82.66"
 }

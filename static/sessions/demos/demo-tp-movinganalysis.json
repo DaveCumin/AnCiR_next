@@ -710,7 +710,7 @@
       "name": "x",
       "data": 834,
       "type": "number",
-      "tableProcessGUId": "1633aad0-b0ad-4749-8d80-2413165425ee",
+      "tableProcessGUId": "16c276e2-d1bf-462b-a3cb-904bf30fae11",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -732,7 +732,7 @@
       "name": "movex_79",
       "data": 836,
       "type": "number",
-      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
+      "tableProcessGUId": "d160f10d-c58b-46e1-a042-36b4213e0303",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -743,7 +743,7 @@
       "name": "835_peak_period_79",
       "data": 837,
       "type": "number",
-      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
+      "tableProcessGUId": "d160f10d-c58b-46e1-a042-36b4213e0303",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -754,7 +754,7 @@
       "name": "835_peak_power_79",
       "data": 838,
       "type": "number",
-      "tableProcessGUId": "6bf40732-10c3-436b-adb3-4679f88a1dd9",
+      "tableProcessGUId": "d160f10d-c58b-46e1-a042-36b4213e0303",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1038,7 +1038,7 @@
   "notes": [
     {
       "id": "note_73",
-      "text": "Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Phase outputs (M10 onset, acrophases, onset and offset) are put on one frame for every window: the instant the window actually contains, as hours after the record's first sample, folded onto the fixed period (or 24 h for a free period), so a stable rhythm reads the same value in every window and a free-running one drifts by its period minus 24 h per day. Set Phase reference to Clock time of day for clock time. C1_phase is the model phase angle in radians; C1_acrophase is the time of the window's peak. A chi-squared periodogram reports, per window, the period whose Qp rises furthest above its threshold and that peak's family-wise p (peak_pvalue; at or above alpha means no period in that window crossed its threshold); a Lomb-Scargle periodogram reports the highest peak and its family-wise false-alarm probability (Baluev 2008). The fixed-period cosinor's rmse is the residual standard error, sqrt(SS/(n - p)), and is labelled Residual SE, and its rmse_n is the RMSE, sqrt(SS/n), comparable with the other analyses' rmse; the rectangular-wave fit's mesor is its midline, halfway between the high and low levels; and the double-logistic fit's mesor is its baseline (rest level), labelled Baseline. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
+      "text": "Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Phase outputs (M10 onset, acrophases, onset and offset) are put on one frame for every window: the instant the window actually contains, as hours after the record's first sample, folded onto the fixed period (or 24 h for a free period), so a stable rhythm reads the same value in every window and a free-running one drifts by its period minus 24 h per day. Set Phase reference to Clock time of day for clock time. C1_phase is the model phase angle in radians; C1_acrophase is the time of the window's peak. A chi-squared periodogram reports, per window, the period whose Qp rises furthest above its threshold and that peak's family-wise p (peak_pvalue; at or above alpha means no period in that window crossed its threshold); a Lomb-Scargle periodogram reports the highest peak and its family-wise false-alarm probability (Baluev 2008). The fixed-period cosinor's rmse is the residual standard error, sqrt(SS/(n - p)), and is labelled Residual SE, and its rmse_n is the RMSE, sqrt(SS/n), comparable with the other analyses' rmse; the rectangular-wave fit's mesor is its midline, halfway between the high and low levels; and the double-logistic fit's mesor is its baseline (rest level), labelled Baseline. Double-logistic windows whose rise and fall together take longer than one period, or whose R² is below 0.3, are counted in a warning: their onset and offset are unreliable. The rolling NPCRA has a Full days only option (on for a new node), which cuts each window to whole periods from its first sample, as nparACT does. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -1156,5 +1156,5 @@
       "No"
     ]
   },
-  "version": "β.82.64"
+  "version": "β.82.66"
 }

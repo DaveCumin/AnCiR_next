@@ -224,7 +224,7 @@
       "name": "x",
       "data": 720,
       "type": "number",
-      "tableProcessGUId": "1e643b91-a709-4e16-98e1-ee065b88d5bf",
+      "tableProcessGUId": "dcfa4af4-699f-4fe8-a36a-60d6b234a87c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -246,7 +246,7 @@
       "name": "dlogx_66",
       "data": 722,
       "type": "number",
-      "tableProcessGUId": "66d9db7d-fe5d-46da-bcd3-efad69e85706",
+      "tableProcessGUId": "ee5ef2d5-2ab7-4bc3-b465-89eab76c14f6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
       "name": "perm_pvalue_66",
       "data": 723,
       "type": "number",
-      "tableProcessGUId": "c9edbe08-0f36-433c-bd3c-47e285f4c0b2",
+      "tableProcessGUId": "241420ba-5464-4bfc-aa61-b5bff2ac17c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -268,7 +268,7 @@
       "name": "r2_66",
       "data": 724,
       "type": "number",
-      "tableProcessGUId": "c9edbe08-0f36-433c-bd3c-47e285f4c0b2",
+      "tableProcessGUId": "241420ba-5464-4bfc-aa61-b5bff2ac17c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -279,7 +279,7 @@
       "name": "rmse_66",
       "data": 725,
       "type": "number",
-      "tableProcessGUId": "c9edbe08-0f36-433c-bd3c-47e285f4c0b2",
+      "tableProcessGUId": "241420ba-5464-4bfc-aa61-b5bff2ac17c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "dlogy_721_66",
       "data": 726,
       "type": "number",
-      "tableProcessGUId": "66d9db7d-fe5d-46da-bcd3-efad69e85706",
+      "tableProcessGUId": "ee5ef2d5-2ab7-4bc3-b465-89eab76c14f6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -565,7 +565,7 @@
   "notes": [
     {
       "id": "note_62",
-      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In periodic mode the active phase is kept shorter than one period and M is the rest (baseline) level, and a fitted period stays inside a period range (1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor), with a warning when it stops on a bound. In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Onset and offset phases are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report them as clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Double-logistic phenology model (Zhang et al. 2003). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
+      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In periodic mode the active phase is kept shorter than one period and M is the rest (baseline) level, and a fitted period stays inside a period range (1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor), with a warning when it stops on a bound. In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Onset and offset phases are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report them as clock time. On a weak or gradual rhythm the duty cycle, onset and offset are poorly determined, so the node warns (and leaves the fit as it is) when the rise and fall together (each its 10% to 90% time, 2 ln 9 / k) take longer than one period, or when R² is below 0.3 or the permutation p is 0.05 or more. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Double-logistic phenology model (Zhang et al. 2003). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -683,5 +683,5 @@
       "No"
     ]
   },
-  "version": "β.82.64"
+  "version": "β.82.66"
 }
