@@ -700,6 +700,10 @@ function runPlotCompute(fx) {
 	// The correlogram's rows are the plot's acfData, whose lag step comes from the x
 	// COLUMN (its binWidth, else its mean spacing), so they too are read from a real plot.
 	if (fx.jsFn === 'correlogramDownloadData') return runCorrelogramDownload(fx);
+	// The significance band each series draws (CorrelogramDataclass.confidenceBounds), from
+	// the same real plot; a series may carry the saved band fields (bandMethod,
+	// showConfidenceBounds, confidenceLevel) to pin which band a saved series draws.
+	if (fx.jsFn === 'correlogramBands') return runCorrelogramDownload(fx);
 	if (fx.jsFn === 'histogramDownloadData') return runHistogramDownload(fx);
 	const inputs = tpInputs(fx);
 	const fn = PLOT_COMPUTE_FNS[fx.jsFn];
@@ -1086,10 +1090,13 @@ function runHistogramDownload(fx) {
 // the binned column's own binWidth.
 async function runCorrelogramDownload(fx) {
 	const series = generateActogramSeries(fx.generate);
-	const lagsOf = (i) => ({
-		maxLag: fx.generate.series[i].maxLag ?? null,
-		minLag: fx.generate.series[i].minLag ?? 0
-	});
+	const BAND_FIELDS = ['bandMethod', 'showConfidenceBounds', 'confidenceLevel'];
+	const lagsOf = (i) => {
+		const g = fx.generate.series[i];
+		const out = { maxLag: g.maxLag ?? null, minLag: g.minLag ?? 0 };
+		for (const k of BAND_FIELDS) if (g[k] !== undefined) out[k] = g[k];
+		return out;
+	};
 	const plotted = [];
 	for (const [i, s] of series.entries()) {
 		const xId = mkCol(s.xType, s.x, `x${i}`);
@@ -1122,14 +1129,20 @@ async function runCorrelogramDownload(fx) {
 		}
 	});
 	core.plots.push(plot);
+	const inputs = {
+		binned: fx.binned ?? null,
+		series: series.map((s, i) => ({ ...s, ...lagsOf(i) }))
+	};
+	if (fx.jsFn === 'correlogramBands') {
+		const bands = plot.plot.data.map((d) => ({
+			method: d.bandMethod,
+			lags: d.acfData.lags,
+			upper: d.confidenceBounds.upper
+		}));
+		return jsonSafe({ inputs, outputs: { bands } });
+	}
 	const { headers, rows } = plot.plot.getDownloadData();
-	return jsonSafe({
-		inputs: {
-			binned: fx.binned ?? null,
-			series: series.map((s, i) => ({ ...s, ...lagsOf(i) }))
-		},
-		outputs: { headers, rows }
-	});
+	return jsonSafe({ inputs, outputs: { headers, rows } });
 }
 
 // The legacy Enright bin-size migration (core/enrightBinMigration.js) and what it does to the

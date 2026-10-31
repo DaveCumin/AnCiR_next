@@ -1364,7 +1364,7 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     boundary counts once (in the upper lag); distinct pairs closer than half a step are not
     used at any lag; the default lag window is half the recording span in hours."""
     def empty(dt):
-        return {'lags': [], 'correlations': [], 'dt': dt,
+        return {'lags': [], 'correlations': [], 'counts': [], 'n': 0, 'dt': dt,
                 'peakLag': float('nan'), 'peakCorrelation': float('nan')}
 
     times = list(times) if times is not None else None
@@ -1404,7 +1404,9 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
         return empty(dt)
     median = _js_upper_median(diffs)
     is_uniform = max(abs(d - median) for d in diffs) < median * 0.1
-    lags, corrs = [], []
+    # `counts`: the pairs behind each lag (n at lag 0), from which correlogram_band builds
+    # the (N - k) and Bartlett bands, as the app's computeAutocorrelation returns them.
+    lags, corrs, counts = [], [], []
     if is_uniform:
         # A shift of n samples or more has no pairs.
         n_lags = min(n_lags, n - 1)
@@ -1414,6 +1416,7 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                 # Lag 0 is 1 by definition, not sum / (n * var) with its rounding.
                 corrs.append(1.0)
                 lags.append(0.0)
+                counts.append(n)
                 continue
             a = ydem[:n - lag]
             b = ydem[lag:]
@@ -1421,12 +1424,14 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
             # A lag with no pairs is missing (NaN), not r = 0 (correlogram.js rule 4).
             corrs.append(float((a * b).sum() / (count * yvar)) if count > 0 else float('nan'))
             lags.append(lag * dt)
+            counts.append(int(count))
     else:
         for li in range(start_idx, n_lags + 1):
             target = li * dt
             if li == 0:
                 corrs.append(1.0)
                 lags.append(target)
+                counts.append(n)
                 continue
             # The half-open slot [(k - 1/2) dt, (k + 1/2) dt).
             lo = (li - 0.5) * dt
@@ -1444,9 +1449,100 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
             # the slot's pairs (Rehfeld et al. 2011, NPG 18:389, Eq. 10), undefined with none.
             corrs.append(sum_ / (count * yvar) if count > 0 else float('nan'))
             lags.append(target)
+            counts.append(count)
     peak_lag, peak_r = find_autocorrelation_peak(lags, corrs)
-    return {'lags': lags, 'correlations': corrs, 'dt': dt,
+    return {'lags': lags, 'correlations': corrs, 'counts': counts, 'n': int(n), 'dt': dt,
             'peakLag': peak_lag, 'peakCorrelation': peak_r}
+
+
+# The Correlogram plot's significance bands (utils/correlogram.js CORRELOGRAM_BAND_METHODS):
+# 'bartlett' (Bartlett 1946, J. R. Statist. Soc. Suppl. 8:27-41; the band statsmodels
+# plot_acf draws, and the default for a new plot), 'white' (+/- z / sqrt(N), what every plot
+# saved before the band was a choice draws) and 'nk' (+/- z / sqrt(N - k)).
+CORRELOGRAM_BAND_METHODS = ('bartlett', 'white', 'nk')
+
+
+def correlogram_band_method(series):
+    """utils/correlogram.js correlogramBandMethodOf: the series' own `bandMethod`; else a
+    series saved before the choice existed (it carries `showConfidenceBounds`, which every
+    saved series has written since the plot was added) draws the old +/- z / sqrt(N); else (a
+    series that names only its columns) Bartlett."""
+    m = series.get('bandMethod')
+    if m in CORRELOGRAM_BAND_METHODS:
+        return m
+    if series.get('showConfidenceBounds') is not None:
+        return 'white'
+    return 'bartlett'
+
+
+def correlogram_band_z(level):
+    """The z the plot has always used: 1.96 at 95%, else (99%) 2.576."""
+    return 1.96 if level == 0.95 else 2.576
+
+
+def correlogram_band(acf, method='bartlett', level=0.95, full=None, n_white=None):
+    """utils/correlogram.js correlogramBand: the band's upper half-width at each lag of
+    `acf` (a compute_autocorrelation result); the lower band is its negative. NaN where the
+    band is missing (Bartlett at lag 0; any band with fewer than two samples, except 'white',
+    which is 0 there). Bartlett's SE_k = sqrt((1 + 2 sum_{j=1}^{k-1} r_j^2) / N) with r_j the
+    N-normalised correlation (the plotted r_j times its pairs over N); `full`, the correlogram
+    from lag 0, supplies r_1 .. when the window starts later (a min lag). `n_white` is the N
+    of the 'white' band (the plot counts the y values present)."""
+    lags = acf.get('lags') or []
+    n = acf.get('n') or 0
+    z = correlogram_band_z(level)
+    nan = float('nan')
+    if method == 'white':
+        nw = n if n_white is None else n_white
+        return [z / math.sqrt(nw) if nw >= 2 else 0.0] * len(lags)
+    if n < 2:
+        return [nan] * len(lags)
+    if method == 'nk':
+        counts = acf.get('counts') or []
+        return [z / math.sqrt(c) if (i < len(counts) and (c := counts[i]) > 0) else nan
+                for i in range(len(lags))]
+    src = full if full is not None else acf
+    dt = src['dt']
+    r2 = {}
+    for lag, r, c in zip(src.get('lags') or [], src.get('correlations') or [],
+                         src.get('counts') or []):
+        k = _js_round(lag / dt)
+        if k >= 1 and math.isfinite(r) and c > 0:
+            r2[k] = ((r * c) / n) ** 2
+    k_of = [_js_round(lag / acf['dt']) for lag in lags]
+    k_max = max([0] + k_of)
+    cum = [0.0] * (k_max + 1)
+    for k in range(2, k_max + 1):
+        cum[k] = cum[k - 1] + r2.get(k - 1, 0.0)
+    return [z * math.sqrt((1 + 2 * cum[k]) / n) if k >= 1 else nan for k in k_of]
+
+
+def correlogram_series_band(series, columns_index, acf=None):
+    """One correlogram series' upper band as the app draws it (CorrelogramDataclass.
+    confidenceBounds), or None when a column is missing."""
+    ac = acf if acf is not None else correlogram_series_acf(series, columns_index)
+    if ac is None:
+        return None
+    method = correlogram_band_method(series)
+    level = series.get('confidenceLevel') or 0.95
+    y_col = _resolve_plot_col(series.get('y'), columns_index)
+    n_white = len(_finite_values(y_col.get_data() if y_col is not None else []))
+    full = None
+    if method == 'bartlett' and (series.get('minLag') or 0) > 0:
+        full = correlogram_series_acf({**series, 'minLag': 0}, columns_index)
+    return correlogram_band(ac, method, level, full, n_white)
+
+
+def correlogram_bands(plot, columns_index):
+    """Each series' band method and upper band, for the parity fixtures (correlogramBands)."""
+    out = []
+    for series in (plot.get('plot') or {}).get('data', []):
+        ac = correlogram_series_acf(series, columns_index)
+        band = correlogram_series_band(series, columns_index, ac)
+        out.append({'method': correlogram_band_method(series),
+                    'lags': [] if ac is None else ac['lags'],
+                    'upper': [] if band is None else band})
+    return out
 
 
 def correlogram_series_acf(series, columns_index):
@@ -4286,9 +4382,14 @@ def _js_round(v):
     return int(math.floor(v + 0.5))
 
 
-def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.0):
+def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.0,
+                  full_days=False):
     """Port of src/lib/utils/npcra.js — IS, IV, RA, M10/L5 + onsets on the
-    average 24 h profile. Van Someren et al. 1999, Chronobiol Int 16(4):505-518."""
+    average 24 h profile. Van Someren et al. 1999, Chronobiol Int 16(4):505-518.
+
+    full_days: keep floor(epochs / p) whole periods of epochs from the first sample, as
+    nparACT's fulldays = TRUE (Blume, Santhi & Schabus 2016, MethodsX 3:430-435; nparACT_base.R
+    0.9.1). A record shorter than one period is used whole (fullDaysKept 0)."""
     if not (epoch_hours > 0) or not (period > 0):
         return None
     pairs = []
@@ -4311,19 +4412,23 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     t0 = pairs[0][0]
     t_end = pairs[-1][0]
     e = epoch_hours
-    n_epochs = max(1, math.ceil((t_end - t0) / e + 1e-9))
-    ssum = [0.0] * n_epochs
-    cnt = [0] * n_epochs
+    n_grid = max(1, math.ceil((t_end - t0) / e + 1e-9))
+    ssum = [0.0] * n_grid
+    cnt = [0] * n_grid
     for (ti, yi) in pairs:
         if math.isnan(yi):
             continue
         k = int(math.floor((ti - t0) / e + 1e-9))  # snap to the epoch grid (non-integer e)
         if k < 0:
             k = 0
-        elif k >= n_epochs:
-            k = n_epochs - 1
+        elif k >= n_grid:
+            k = n_grid - 1
         ssum[k] += yi
         cnt[k] += 1
+    p = max(1, _js_round(period / e))
+    # Full days: whole periods of epochs from the first sample (npcra.js, FULL DAYS).
+    full_days_kept = (n_grid // p) if full_days else None
+    n_epochs = full_days_kept * p if (full_days_kept or 0) >= 1 else n_grid
     x = [(ssum[k] / cnt[k]) if cnt[k] > 0 else float('nan') for k in range(n_epochs)]
 
     valid = [v for v in x if not math.isnan(v)]
@@ -4333,7 +4438,6 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     xbar = sum(valid) / nn
     overall_ss = sum((v - xbar) ** 2 for v in valid)
 
-    p = max(1, _js_round(period / e))
     p_sum = [0.0] * p
     p_cnt = [0] * p
     for k in range(n_epochs):
@@ -4395,6 +4499,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
         'profile': profile, 'bin_centres': bin_centres, 'n': nn, 'p': p, 'n_epochs': n_epochs,
         'missingEpochFraction': (n_epochs - nn) / n_epochs,
         't0': t0,
+        'fullDaysKept': full_days_kept, 'droppedEpochs': n_grid - n_epochs,
     }
 
 
@@ -4407,6 +4512,8 @@ def tp_npcra(args, cols, raw_data, _sv):
     period = float(args.get('period', 24))
     m_window = float(args.get('mWindow', 10))
     l_window = float(args.get('lWindow', 5))
+    # Absent (a session saved before the option) = off, as NonparametricRA.svelte.
+    full_days = args.get('fullDays') is True
     x_data = _t_for_col(cols[x_in])
     phase_ref = node_phase_reference(args, cols[x_in], node='Nonparametric RA')
 
@@ -4417,7 +4524,8 @@ def tp_npcra(args, cols, raw_data, _sv):
     for y_id in y_ins:
         if y_id not in cols:
             continue
-        res = compute_npcra(x_data, cols[y_id].get_data(), epoch, period, m_window, l_window)
+        res = compute_npcra(x_data, cols[y_id].get_data(), epoch, period, m_window, l_window,
+                            full_days=full_days)
         if res is None:
             continue
         if phase_ref['clock']:
@@ -6284,6 +6392,10 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
     per_y = compute_moving_windows(t_all, [e[1] for e in entries], starts, win, keys, args,
                                    phase)
     results = {e[0]: per_y[i] for i, e in enumerate(entries)}
+    # Every window is windowSize long: one short-record warning for the node (Chi-squared).
+    if args.get('analysis') == 'periodogram' and args.get('pgMethod') == 'Chi-squared':
+        node_warning('Moving Analysis', chi_squared_short_record_warning(
+            win, args.get('periodMax'), hours=is_time, per_window=True))
     for pp in args.get('preProcesses') or []:
         name = (pp or {}).get('processName')
         if not name:
@@ -6470,6 +6582,11 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
             per_key = {'period': xs, 'power': ys}
             if pg.get('threshold') is not None:
                 per_key['threshold'] = list(pg['threshold'])
+            # The app's notice under the series when the record is short (Chi-squared).
+            if args.get('pgMethod') == 'Chi-squared':
+                node_warning('Rhythmicity Analysis', chi_squared_short_record_warning(
+                    chi_squared_record_length([t[i] for i in _js_valid_pairs(t, y)]),
+                    args.get('periodMax'), hours=x_col.type == 'time'))
         elif analysis == 'fft':
             # RhythmicityAnalysis pairs t and y row by row (over t's length) before the
             # transform; computeFFT then grids them (a long gap is refused, not joined).
@@ -15225,6 +15342,12 @@ def plot_periodogram(plot, columns_index, ax):
         t = (x_col.hours_since_start if x_col.type == 'time'
              else x_col.get_data())
         params = _periodogram_series_params(p, series, t)
+        if method == 'Chi-squared':
+            # The series' short-record warning (PeriodogramDataclass dataWarnings): the record
+            # is the series' whole x, the longest period the plot's displayed maximum.
+            node_warning(f'Periodogram "{plot.get("name", "")}"', chi_squared_short_record_warning(
+                chi_squared_record_length(t), (p.get('periodlimsIN') or [1, 30])[1],
+                hours=x_col.type == 'time'))
         y = y_col.get_data()
         t, y = _paired_finite(t, y)
         if not t:
@@ -15313,9 +15436,10 @@ def plot_periodogram(plot, columns_index, ax):
 
 def plot_correlogram(plot, columns_index, ax):
     """The Correlogram as the app draws it: per series its autocorrelation line and points,
-    then its confidence bounds (+/- z / sqrt(n), n the y values present, z 1.96 or 2.576 at
-    99%, each a line over the lags in the series' confidence line: '5, 5' dashes, 1 px, the
-    series' colour); the zero line; the overlays; the legend (each series' entry then its
+    then its confidence bounds (correlogram_series_band: Bartlett, +/- z / sqrt(n) or
+    +/- z / sqrt(n - k) by the series' band method, z 1.96 or 2.576 at 99%, each a line over
+    the lags in the series' confidence line: '5, 5' dashes, 1 px, the series' colour; a
+    missing band value is a gap); the zero line; the overlays; the legend (each series' entry then its
     bounds', "<series> <pct>% bounds" once the plot has more than one series) where the app
     puts it (legend_layout)."""
     p = plot.get('plot', {})
@@ -15349,17 +15473,15 @@ def plot_correlogram(plot, columns_index, ax):
                            resolved=resolved)
         level = None
         if bounds_on:
-            # CorrelogramDataclass.confidenceBounds: under two values present both bounds are 0.
-            n = len(_finite_values(y_col.get_data() if y_col is not None else []))
-            z = 1.96 if series.get('confidenceLevel', 0.95) == 0.95 else 2.576
-            level = z / math.sqrt(n) if n >= 2 else 0.0
+            # CorrelogramDataclass.confidenceBounds: the band at each lag (NaN is a gap).
+            level = correlogram_series_band(series, columns_index, ac)
             width = conf.get('strokeWidth')
             width = width if _style_valid(width, 'number') else 1
             stroke = conf.get('stroke') or '5, 5'
             colour = _mpl_colour(conf.get('colour') or (series.get('line') or {}).get('colour')
                                  or resolved.get('line'), f'C{index}')
-            for k, b in enumerate((level, -level)):
-                ax.plot(ac['lags'], [b] * len(ac['lags']), color=colour,
+            for k, b in enumerate((level, [-v for v in level])):
+                ax.plot(ac['lags'], b, color=colour,
                         linewidth=width * _PX_TO_PT, linestyle=_overlay_dashes(stroke, width),
                         dash_capstyle='butt', zorder=2.1, gid=f'confidence-{index}',
                         label=bounds_label if k == 0 else '_nolegend_')
@@ -15397,8 +15519,8 @@ def plot_correlogram(plot, columns_index, ax):
             if o:
                 out.append(o)
             if level is not None:
-                for v in (level, -level):
-                    o = line_series_obstacle(ac['lags'], [v] * len(ac['lags']), xs, ys,
+                for v in (level, [-u for u in level]):
+                    o = line_series_obstacle(ac['lags'], v, xs, ys,
                                              series.get('confidenceLine') or {})
                     if o:
                         out.append(o)
@@ -17695,6 +17817,48 @@ def median_sampling_interval(times):
     return gaps[mid] if len(gaps) % 2 else (gaps[mid - 1] + gaps[mid]) / 2
 
 
+# The chi-squared periodogram's short-record warning (utils/chiSquaredShortRecord.js; decision
+# 2026-11-01: the test is kept, the user is told). Below 7 cycles of the longest period
+# tested the test is very conservative (exact pointwise size of the nominal 5% cut-off about
+# 0.022 at 3 cycles, 0.04 at 7; periodogram.shortRecordSize.test.js). Printed as the app
+# shows it: under the Periodogram plot's series, under a Rhythmicity Analysis series, once on
+# a Moving Analysis node.
+CHI_SQUARED_MIN_CYCLES = 7
+
+
+def chi_squared_record_length(times):
+    """chiSquaredShortRecord.js recordLength: the span of the valid times plus one median
+    sampling interval (72 hourly samples are 3 days); NaN with fewer than two distinct times."""
+    xs = [_js_number(v) for v in times or [] if not _js_invalid(v)]
+    xs = [v for v in xs if math.isfinite(v)]
+    dt = median_sampling_interval(times)
+    if len(xs) < 2 or not max(xs) > min(xs) or not math.isfinite(dt):
+        return math.nan
+    return max(xs) - min(xs) + dt
+
+
+def chi_squared_short_record_warning(length, period_max, hours=True, per_window=False):
+    """chiSquaredShortRecord.js chiSquaredShortRecordWarning: the warning text, or ''."""
+    L, P = _js_number(length), _js_number(period_max)
+    if not (math.isfinite(L) and math.isfinite(P) and L > 0 and P > 0):
+        return ''
+    cycles = L / P
+    if cycles >= CHI_SQUARED_MIN_CYCLES:
+        return ''
+    c = _num_text(cycles, 1)
+    n_cycles = f"{c} {'cycle' if c == '1' else 'cycles'}"
+    tested = f"the longest period tested, {_num_text(P, 1)}{' h' if hours else ''}"
+    who = 'With each window holding only' if per_window else 'With only'
+    if hours:
+        days = _num_text(L / 24, 1)
+        lead = f"{who} {days} {'day' if days == '1' else 'days'} of data ({n_cycles} of {tested})"
+    else:
+        lead = f"{who} {n_cycles} of {tested}"
+    return (f"{lead}, the chi-squared test is very conservative and can miss a rhythm that is "
+            f"there; consider Lomb-Scargle or a longer {'window' if per_window else 'record'} "
+            f"(at least {CHI_SQUARED_MIN_CYCLES} cycles).")
+
+
 # Legacy Enright bin sizes (core/enrightBinMigration.js, v81.0). Before v81 the app's
 # Periodogram plot HID the Bin Size control for Enright, so a saved Enright series sat at a
 # 0.25 h nobody chose. The app migrates such a series on load to follow its x (binSizeAuto),
@@ -18952,7 +19116,8 @@ def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
         P = _a(args, 'npcraPeriod', 24)
         r = compute_npcra(tt, yy, epoch_hours=_a(args, 'npcraEpochHours', 1), period=P,
                           m_window=_a(args, 'npcraMWindow', 10),
-                          l_window=_a(args, 'npcraLWindow', 5))
+                          l_window=_a(args, 'npcraLWindow', 5),
+                          full_days=args.get('npcraFullDays') is True)
         if not r:
             return st
         for k in ('IS', 'IV', 'RA', 'L5', 'M10'):

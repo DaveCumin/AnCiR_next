@@ -11,6 +11,7 @@
 		"test:watch": "vitest",
 		"smoke": "node test/smoke-client.mjs",
 		"smoke:http": "node test/smoke-http.mjs",
+		"smoke:warmup": "node test/smoke-warmup.mjs",
 		"smoke:render": "node test/smoke-render.mjs",
 		"smoke:render:all": "node test/smoke-render-all.mjs",
 		"agnostic": "node --env-file-if-exists=app/.env test/agnostic-client.mjs",

@@ -21,6 +21,8 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/movinganalysis.worker-task.js';
+	import { rollingDoubleLogisticWarning } from '$lib/utils/doublelogisticReliability.js';
+	import { chiSquaredShortRecordWarning } from '$lib/utils/chiSquaredShortRecord.js';
 	import { PHASE_REFERENCE_START, timeOriginMs } from '$lib/utils/phaseReference.js';
 	import {
 		resolveNodePhaseReference,
@@ -51,6 +53,10 @@
 		['npcraPeriod', { val: 24 }],
 		['npcraMWindow', { val: 10 }],
 		['npcraLWindow', { val: 5 }],
+		// Full days only: each window's record is cut to whole NPCRA periods from its first
+		// sample, as nparACT's fulldays = TRUE (utils/npcra.js, FULL DAYS). OFF for a saved
+		// session; a NEW node starts with it ON (newNodeArgs below). Decision 2026-11-01.
+		['npcraFullDays', { val: false }],
 		// trend-fit params (used when analysis === 'trend')
 		// 'linear' | 'polynomial' | 'logarithmic' | 'exponential'
 		['trendModel', { val: 'linear' }],
@@ -118,7 +124,8 @@
 		func: movinganalysis,
 		// A NEW node's periodogram bin size follows its x (binSizeAuto.svelte.js). Not in
 		// `defaults`, so a loaded node keeps its stored pgBinSize (or 0.25 h).
-		newNodeArgs: newBinSizeArgs,
+		// A new node's rolling NPCRA also uses whole days only, as nparACT does by default.
+		newNodeArgs: (explicit) => ({ ...newBinSizeArgs(explicit), npcraFullDays: true }),
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.movinganalysis',
@@ -239,6 +246,28 @@
 					polyDegree: argsIN.trendPolyDegree
 				})
 			);
+			// Double-logistic windows with shallow edges or a weak rhythm (decision
+			// 2026-11-01). Words only; the window fits are unchanged.
+			if (argsIN.analysis === 'doublelogistic') {
+				const w = rollingDoubleLogisticWarning(perY[i], {
+					periodic: !!argsIN.dlPeriodic,
+					fixedPeriod: argsIN.fixedPeriod ?? 24,
+					label
+				});
+				if (w) warnings.push(w);
+			}
+		}
+
+		// Every window is as long as windowSize, so a window too short for the chi-squared test
+		// (decision 2026-11-01: the test is kept, the user is told) is one warning for the node.
+		if (argsIN.analysis === 'periodogram' && argsIN.pgMethod === 'Chi-squared') {
+			const short = chiSquaredShortRecordWarning({
+				length: windowSize,
+				periodMax: argsIN.periodMax,
+				hours: isTimeX,
+				perWindow: true
+			});
+			if (short) warnings.push(short);
 		}
 
 		// Apply pre-processes to each stat array before writing
@@ -406,6 +435,8 @@
 			p.args.npcraMWindow +
 			'|' +
 			p.args.npcraPeriod +
+			'|' +
+			(p.args.npcraFullDays === true) +
 			'|' +
 			p.args.pgAlpha +
 			'|' +
@@ -837,6 +868,15 @@
 			<ControlInput label={`L window (${xUnit})`}>
 				<NumberWithUnits bind:value={p.args.npcraLWindow} min="1" step="1" />
 			</ControlInput>
+		</div>
+		<div class="control-input-horizontal">
+			<label
+				class="control-input-checkbox"
+				title="Cut each window to whole periods from its first sample, as nparACT does"
+			>
+				<input type="checkbox" bind:checked={p.args.npcraFullDays} />
+				<span class="ci-label">Full days only</span>
+			</label>
 		</div>
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">

@@ -326,7 +326,7 @@ export const TP_SPECS = [
 			// surrogate costs an FFT.
 			nSurrogates: 19,
 			seed: 12345,
-			blockLengthHours: 24,
+			blockLengthHours: 6, // a new node's default (SurrogateTest NEW_NODE_BLOCK_HOURS)
 			periodMin: 20,
 			periodMax: 28,
 			out: { pvalue: -1, observed: -1 }

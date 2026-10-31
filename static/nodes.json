@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.65",
+  "generatedFromVersion": "β.82.66",
   "count": 62,
   "nodes": [
     {
@@ -3004,6 +3004,10 @@
           "default": 5
         },
         {
+          "name": "npcraFullDays",
+          "default": false
+        },
+        {
           "name": "trendModel",
           "default": "linear"
         },
@@ -3170,6 +3174,10 @@
         {
           "name": "lWindow",
           "default": 5
+        },
+        {
+          "name": "fullDays",
+          "default": false
         },
         {
           "name": "phaseReference",
@@ -4066,7 +4074,7 @@
         },
         {
           "name": "blockLengthHours",
-          "default": 24
+          "default": 6
         },
         {
           "name": "periodMin",

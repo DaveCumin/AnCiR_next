@@ -8434,7 +8434,8 @@
 							"maxLag": null,
 							"minLag": 0,
 							"showConfidenceBounds": true,
-							"confidenceLevel": 0.95
+							"confidenceLevel": 0.95,
+							"bandMethod": "white"
 						}
 					],
 					"overlays": []

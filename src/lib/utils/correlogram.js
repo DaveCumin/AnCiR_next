@@ -60,7 +60,9 @@ import { validPairs } from './validPairs.js';
  *
  * `peakLag` / `peakCorrelation` are the dominant period, via findAutocorrelationPeak
  * below (one implementation, reachable either from here or directly).
- * @returns {{ lags: number[], correlations: number[], dt: number, peakLag: number, peakCorrelation: number }}
+ * `counts` holds the pairs behind each lag (n at lag 0) and `n` the valid samples; the
+ * significance band is built from them (correlogramBand).
+ * @returns {{ lags: number[], correlations: number[], counts: number[], n: number, dt: number, peakLag: number, peakCorrelation: number }}
  */
 export function computeAutocorrelation(times, values, binSize = null, maxLag = null, minLag = 0) {
 	if (
@@ -132,6 +134,9 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 
 	const lags = [];
 	const correlations = [];
+	// The pairs behind each lag's estimate (n at lag 0): the (N - k) band and the Bartlett
+	// band's N-normalised correlations (correlogramBand below) are built from them.
+	const counts = [];
 
 	const isUniform = (diffs) => {
 		if (!diffs || diffs.length === 0) return false;
@@ -153,6 +158,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			if (lag === 0) {
 				lags.push(0);
 				correlations.push(1);
+				counts.push(n);
 				continue;
 			}
 			let sum = 0;
@@ -168,6 +174,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
 			lags.push(lag * dt);
 			correlations.push(correlation);
+			counts.push(count);
 		}
 	} else {
 		for (let lagIdx = startLagIdx; lagIdx <= nLags; lagIdx++) {
@@ -176,6 +183,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			if (lagIdx === 0) {
 				lags.push(0);
 				correlations.push(1);
+				counts.push(n);
 				continue;
 			}
 			// Rule 2: the half-open slot [(k - 1/2) dt, (k + 1/2) dt).
@@ -201,6 +209,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
 			lags.push(targetLag);
 			correlations.push(correlation);
+			counts.push(count);
 		}
 	}
 
@@ -208,6 +217,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 	return {
 		lags,
 		correlations,
+		counts,
+		n,
 		dt,
 		peakLag: peak?.lag ?? NaN,
 		peakCorrelation: peak?.correlation ?? NaN
@@ -298,4 +309,111 @@ export function findAutocorrelationPeak(lags, correlations) {
 		if (correlations[i] > correlations[best] + TIE) best = i;
 	}
 	return { lag: lags[best], correlation: correlations[best], index: best };
+}
+
+/**
+ * The significance bands the Correlogram plot offers, in its select's order.
+ *  - 'bartlett': Bartlett's large-lag standard error (Bartlett 1946, "On the theoretical
+ *    specification and sampling properties of autocorrelated time-series", J. R. Statist.
+ *    Soc. Suppl. 8:27-41), SE_k = sqrt((1 + 2 sum_{j=1}^{k-1} r_j^2) / N): the band under
+ *    the null that the series is a moving average of order k - 1, so it widens past the lags
+ *    that are already correlated. It is the band statsmodels plot_acf draws
+ *    (bartlett_confint=True, its default); r_j there is the N-normalised ACF, which is what
+ *    is used here (the plotted (N - k)-normalised r_j times its pairs over N). The default
+ *    for a new plot (decision 2026-11-01).
+ *  - 'white': +/- z / sqrt(N) at every lag, the white-noise band at short lags. Every
+ *    Correlogram saved before the band became a choice draws this one.
+ *  - 'nk': +/- z / sqrt(N - k), the white-noise standard error of THIS estimator, which
+ *    averages the N - k products at lag k (on uneven sampling, the pairs in the lag slot).
+ */
+export const CORRELOGRAM_BAND_METHODS = ['bartlett', 'white', 'nk'];
+export const CORRELOGRAM_BAND_LABELS = {
+	bartlett: 'Bartlett (default)',
+	white: '±z/√N',
+	nk: '±z/√(N−k)'
+};
+/** The band of a new series, and of a saved series that predates the choice. */
+export const NEW_CORRELOGRAM_BAND = 'bartlett';
+export const LEGACY_CORRELOGRAM_BAND = 'white';
+
+/**
+ * The band a saved correlogram series draws: its own `bandMethod`, else, for a series a
+ * session saved before the choice existed (it carries `showConfidenceBounds`, which every
+ * saved series has written since the plot was added), the old +/- z / sqrt(N), else (a new
+ * series from a quick plot, the MCP or an AI edit, which name only their columns) Bartlett.
+ * tools/ancir_runtime.py correlogram_band_method applies the same rule.
+ * @param {object|null|undefined} json  a series' saved JSON
+ */
+export function correlogramBandMethodOf(json) {
+	const m = json?.bandMethod;
+	if (CORRELOGRAM_BAND_METHODS.includes(m)) return m;
+	if (json?.showConfidenceBounds !== undefined && json?.showConfidenceBounds !== null)
+		return LEGACY_CORRELOGRAM_BAND;
+	return NEW_CORRELOGRAM_BAND;
+}
+
+/** The z the plot has always used: 1.96 at 95%, else (99%) 2.576. */
+export function correlogramBandZ(level) {
+	return level === 0.95 ? 1.96 : 2.576;
+}
+
+/**
+ * The upper and lower significance band at each lag of `acf` (a computeAutocorrelation
+ * result), for `method` (CORRELOGRAM_BAND_METHODS) at `level` (0.95 or 0.99).
+ *
+ * The Bartlett band at lag k needs r_1 .. r_{k-1}; when the plotted window starts above lag 1
+ * (a min lag), pass `full`, the same correlogram computed from lag 0, to supply them. A lag
+ * whose correlation is missing (an empty slot) adds nothing to the sum. At lag 0 the Bartlett
+ * band is missing (statsmodels gives it zero width: r_0 = 1 is not estimated). With fewer
+ * than two samples every band is missing, except the legacy 'white' band, which is 0 there.
+ *
+ * `nWhite` is the N of the 'white' band. The plot has always counted the y values present
+ * (whatever their times), so it passes that count and a saved session draws exactly the band
+ * it drew before; without it the band uses the valid pairs, `acf.n`.
+ * @param {{lags:number[], correlations:number[], counts?:number[], n?:number, dt:number}} acf
+ * @param {{method?: string, level?: number, full?: object|null, nWhite?: number}} [opts]
+ * @returns {{upper:number[], lower:number[]}}
+ */
+export function correlogramBand(
+	acf,
+	{ method = NEW_CORRELOGRAM_BAND, level = 0.95, full = null, nWhite = null } = {}
+) {
+	const lags = acf?.lags ?? [];
+	const n = acf?.n ?? 0;
+	const z = correlogramBandZ(level);
+	const half = new Array(lags.length).fill(NaN);
+	if (method === 'white') {
+		const nw = nWhite ?? n;
+		half.fill(nw >= 2 ? z / Math.sqrt(nw) : 0);
+	} else if (n >= 2) {
+		if (method === 'nk') {
+			const counts = acf.counts ?? [];
+			for (let i = 0; i < lags.length; i++) {
+				const c = counts[i];
+				half[i] = c > 0 ? z / Math.sqrt(c) : NaN;
+			}
+		} else {
+			// Bartlett: the cumulative sum of the N-normalised r_j^2 over j = 1 .. k - 1,
+			// indexed by whole lag steps (lags are multiples of dt).
+			const src = full ?? acf;
+			const dt = src.dt;
+			const r2 = new Map();
+			for (let i = 0; i < (src.lags?.length ?? 0); i++) {
+				const k = Math.round(src.lags[i] / dt);
+				const r = src.correlations[i];
+				const c = src.counts?.[i] ?? 0;
+				if (k >= 1 && Number.isFinite(r) && c > 0) r2.set(k, ((r * c) / n) ** 2);
+			}
+			const kOf = lags.map((l) => Math.round(l / acf.dt));
+			let kMax = 0;
+			for (const k of kOf) if (k > kMax) kMax = k;
+			const cum = new Array(kMax + 1).fill(0); // cum[k] = sum_{j=1}^{k-1} r_j^2
+			for (let k = 2; k <= kMax; k++) cum[k] = cum[k - 1] + (r2.get(k - 1) ?? 0);
+			for (let i = 0; i < lags.length; i++) {
+				const k = kOf[i];
+				half[i] = k >= 1 ? z * Math.sqrt((1 + 2 * cum[k]) / n) : NaN;
+			}
+		}
+	}
+	return { upper: half, lower: half.map((h) => -h) };
 }

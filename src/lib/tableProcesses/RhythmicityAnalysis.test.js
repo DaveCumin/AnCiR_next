@@ -43,7 +43,10 @@ vi.mock('$lib/components/plotbits/helpers/save.svelte.js', () => ({
 	saveStaticDataAsCSV: vi.fn()
 }));
 
-vi.mock('$lib/utils/periodogram.js', () => ({
+// Partial: the short-record warning (utils/chiSquaredShortRecord.js) reads the real
+// medianSamplingInterval.
+vi.mock('$lib/utils/periodogram.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	runPeriodogramCalculation: vi.fn((params) => {
 		const xs = [];
 		const ys = [];

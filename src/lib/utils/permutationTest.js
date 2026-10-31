@@ -22,7 +22,10 @@
  * somewhat lower than the shuffle test's on independent data (amplitude 0.3 SD, phi 0:
  * 0.75 against 0.80; amplitude 0.5 SD, phi 0.5: 0.78, where the shuffle test's 0.98 is
  * not a valid comparison). permutationScheme.calibration.test.js re-runs a reduced version
- * of this simulation. residualAutocorrelationWarning flags records where the shuffle scheme
+ * of this simulation. A re-run on 2026-11-01 with that file's generator (1,000 records,
+ * 199 permutations) gave lower rates than quoted above: 0.030 (phi 0), 0.031 (phi 0.5),
+ * 0.008 (phi 0.9), power 0.69 and 0.61; the numbers and why the blocks stay one period long
+ * (shorter ones over-reject at phi 0.5) are in that file. residualAutocorrelationWarning flags records where the shuffle scheme
  * is not valid.
  */
 

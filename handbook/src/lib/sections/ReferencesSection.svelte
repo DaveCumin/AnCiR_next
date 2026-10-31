@@ -201,6 +201,18 @@
 				>https://doi.org/10.1016/j.sleep.2016.12.026</a
 			>
 		</li>
+		<li id="ref-34">
+			Künsch HR. The jackknife and the bootstrap for general stationary observations. <em
+				>Ann Stat.</em
+			>
+			1989;17(3):1217–1241.
+			<a href="https://doi.org/10.1214/aos/1176347265">https://doi.org/10.1214/aos/1176347265</a>
+		</li>
+		<li id="ref-35">
+			Bartlett MS. On the theoretical specification and sampling properties of autocorrelated
+			time-series. <em>J R Stat Soc Suppl.</em> 1946;8(1):27–41.
+			<a href="https://doi.org/10.2307/2983611">https://doi.org/10.2307/2983611</a>
+		</li>
 	</ol>
 </ChapterSection>
 

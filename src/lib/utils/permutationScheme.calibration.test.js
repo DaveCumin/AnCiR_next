@@ -78,6 +78,55 @@ describe('permutation schemes under AR(1) noise (FIT-5)', () => {
 	}, 60000);
 });
 
+// Decision 2026-11-01 moved the Surrogate Test's block bootstrap from one-cycle to quarter-cycle
+// blocks (surrogates.blockPower.test.js). The block PERMUTATION here is a different construction
+// (blocks taken without replacement from a random circular offset, each rotated circularly by a
+// random amount), and the same rule does not carry over: shorter blocks over-reject. Full run,
+// 1,000 records x 199 permutations, 240 hourly AR(1) samples, fixed 24 h cosinor R^2 (the design
+// of rejectionRate above; PERM_BLOCK_FULL=1 pnpm vitest run <this file>):
+//   one-period (24 samples): size phi 0 0.030, phi 0.5 0.031, phi 0.9 0.008;
+//                            power amp 0.3 phi 0 0.690, amp 0.5 phi 0.5 0.606
+//   half-period (12):        size 0.034, 0.077, 0.016; power 0.789, 0.786
+//   quarter-period (6):      size 0.040, 0.074, 0.019; power 0.787, 0.781
+// At phi 0.5 the shorter blocks reject 7.4 to 7.7% (binomial SE 0.008), so the one-period block
+// stays: conservative, but valid.
+describe.runIf(!!process.env.PERM_BLOCK_FULL)('block permutation length (full run)', () => {
+	function rateAt({ phi, amp, L, nsim = 1000, seed = 777 }) {
+		const { gauss } = lcg(seed);
+		const n = 240;
+		const t = Array.from({ length: n }, (_, i) => i);
+		let rej = 0;
+		for (let k = 0; k < nsim; k++) {
+			let e = 0;
+			const y = t.map((i) => {
+				e = phi * e + gauss();
+				return e + amp * Math.cos((2 * Math.PI * (i - 5)) / 24);
+			});
+			const r = permutationTest(t, y, (x, yy) => ({ rSquared: fitCosinorFixed(x, yy, 24, 1).R2 }), {
+				nPermutations: 199,
+				seed: 1000 + k,
+				scheme: 'block',
+				blockLength: L
+			});
+			if (r.pValue < 0.05) rej++;
+		}
+		return rej / nsim;
+	}
+	it('prints size and power for 24, 12 and 6 sample blocks', () => {
+		for (const L of [24, 12, 6])
+			for (const [phi, amp] of [
+				[0, 0],
+				[0.5, 0],
+				[0.9, 0],
+				[0, 0.3],
+				[0.5, 0.5]
+			])
+				process.stderr.write(
+					`PERM-BLOCK L${L} phi${phi} amp${amp}: ${rateAt({ phi, amp, L }).toFixed(3)}\n`
+				);
+	}, 3600000);
+});
+
 describe('block permutation mechanics', () => {
 	it('is a permutation of the input (same multiset), reproducible from the seed', () => {
 		const y = Array.from({ length: 50 }, (_, i) => i);

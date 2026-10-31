@@ -30,7 +30,14 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
-	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
+	import {
+		computeAutocorrelation,
+		findAutocorrelationPeak,
+		correlogramBand,
+		correlogramBandMethodOf,
+		CORRELOGRAM_BAND_METHODS,
+		CORRELOGRAM_BAND_LABELS
+	} from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 	import {
@@ -48,7 +55,13 @@
 			maxLag: { label: 'Max lag (h)' },
 			minLag: { label: 'Min lag (h)' },
 			showConfidenceBounds: { label: 'Show confidence bounds' },
-			confidenceLevel: { label: 'Confidence level', input: 'select', options: [0.95, 0.99] }
+			confidenceLevel: { label: 'Confidence level', input: 'select', options: [0.95, 0.99] },
+			bandMethod: {
+				label: 'Band',
+				input: 'select',
+				options: CORRELOGRAM_BAND_METHODS,
+				optionLabels: CORRELOGRAM_BAND_METHODS.map((m) => CORRELOGRAM_BAND_LABELS[m])
+			}
 		};
 
 		parentPlot = $state();
@@ -63,6 +76,9 @@
 
 		showConfidenceBounds = $state(true);
 		confidenceLevel = $state(0.95); // 95% confidence interval
+		// Which significance band (utils/correlogram.js CORRELOGRAM_BAND_METHODS): Bartlett for a
+		// new series, the old +/- z / sqrt(N) for one saved before the choice existed.
+		bandMethod = $state('bartlett');
 
 		acfData = $derived.by(() => {
 			const times = this.x?.hoursSinceStart ?? [];
@@ -78,16 +94,27 @@
 			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag);
 		});
 
+		// The significance band at each lag of acfData (utils/correlogram.js correlogramBand):
+		// { upper: number[], lower: number[] }, aligned with acfData.lags.
 		confidenceBounds = $derived.by(() => {
-			// Calculate confidence bounds based on sample size
-			const n = this.y?.getData()?.filter((v) => !isNaN(v) && v != null).length ?? 0;
-
-			if (n < 2) return { upper: 0, lower: 0 };
-
-			// For large samples, approximate 95% CI is ±1.96/sqrt(n)
-			const z = this.confidenceLevel === 0.95 ? 1.96 : 2.576; // 95% or 99%
-			const bound = z / Math.sqrt(n);
-			return { upper: bound, lower: -bound };
+			// The +/- z / sqrt(N) band has always counted the y values present (whatever their
+			// times); kept, so a saved session draws exactly the band it drew before.
+			const nWhite = this.y?.getData()?.filter((v) => !isNaN(v) && v != null).length ?? 0;
+			// Bartlett's sum runs over every lag from 1, so a window narrowed by a min lag needs
+			// the correlogram from lag 0 as well.
+			let full = null;
+			if (this.bandMethod === 'bartlett' && this.minLag > 0) {
+				const times = this.x?.hoursSinceStart ?? [];
+				const values = this.y?.getData() ?? [];
+				const binSize = this.x?.binWidth ? this.x.binWidth : null;
+				full = computeAutocorrelation(times, values, binSize, this.maxLag, 0);
+			}
+			return correlogramBand(this.acfData, {
+				method: this.bandMethod,
+				level: this.confidenceLevel,
+				full,
+				nWhite
+			});
 		});
 
 		// The dominant period of the series: the first substantial positive peak
@@ -190,6 +217,7 @@
 			this.minLag = dataIN?.minLag ?? 0;
 			this.showConfidenceBounds = dataIN?.showConfidenceBounds ?? true;
 			this.confidenceLevel = dataIN?.confidenceLevel ?? 0.95;
+			this.bandMethod = correlogramBandMethodOf(dataIN);
 		}
 
 		get displayLabel() {
@@ -267,7 +295,8 @@
 				maxLag: this.maxLag,
 				minLag: this.minLag,
 				showConfidenceBounds: this.showConfidenceBounds,
-				confidenceLevel: this.confidenceLevel
+				confidenceLevel: this.confidenceLevel,
+				bandMethod: this.bandMethod
 			};
 		}
 
@@ -283,7 +312,11 @@
 				maxLag: json.maxLag,
 				minLag: json.minLag,
 				showConfidenceBounds: json.showConfidenceBounds,
-				confidenceLevel: json.confidenceLevel
+				confidenceLevel: json.confidenceLevel,
+				// Absent on a series saved before the band was a choice: the constructor's
+				// correlogramBandMethodOf then keeps +/- z / sqrt(N) for it (it carries
+				// showConfidenceBounds), while a new series that names only its columns gets Bartlett.
+				bandMethod: json.bandMethod
 			});
 		}
 	}
@@ -370,13 +403,7 @@
 				if (series) out.push(series);
 				if (d.showConfidenceBounds && d.confidenceBounds) {
 					for (const level of [d.confidenceBounds.upper, d.confidenceBounds.lower]) {
-						const bound = lineSeriesObstacle(
-							lags,
-							new Array(lags.length).fill(level),
-							xs,
-							ys,
-							d.confidenceLine
-						);
+						const bound = lineSeriesObstacle(lags, level, xs, ys, d.confidenceLine);
 						if (bound) out.push(bound);
 					}
 				}
@@ -1020,6 +1047,13 @@
 									<option value={0.99}>99%</option>
 								</select>
 							</ControlInput>
+							<ControlInput label="Band">
+								<select bind:value={datum.bandMethod}>
+									{#each CORRELOGRAM_BAND_METHODS as m (m)}
+										<option value={m}>{CORRELOGRAM_BAND_LABELS[m]}</option>
+									{/each}
+								</select>
+							</ControlInput>
 						{/if}
 
 						<div class="div-line"></div>
@@ -1138,12 +1172,8 @@
 
 			<!-- Confidence bounds -->
 			{#if datum.showConfidenceBounds && datum.confidenceBounds}
-				{@const upperBound = new Array(datum.acfData.lags.length).fill(
-					datum.confidenceBounds.upper
-				)}
-				{@const lowerBound = new Array(datum.acfData.lags.length).fill(
-					datum.confidenceBounds.lower
-				)}
+				{@const upperBound = datum.confidenceBounds.upper}
+				{@const lowerBound = datum.confidenceBounds.lower}
 
 				<!-- Upper confidence bound -->
 				<Line

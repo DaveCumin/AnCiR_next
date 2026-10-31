@@ -115,6 +115,7 @@ npm install            # installs into mcp/node_modules (git‑ignored)
 npm test               # vitest: headless engine + registry (15 tests)
 npm run smoke          # end‑to‑end over stdio (spawns the server, drives it via MCP)
 npm run smoke:http     # end‑to‑end over Streamable HTTP
+npm run smoke:warmup   # tool calls during the engine warm-up get the warming message
 npm run smoke:render   # end‑to‑end render_plot → PNG/SVG (needs Chromium)
 node test/smoke-multisession.mjs   # two isolated sessions (process-per-session)
 npm run agnostic       # drive the tools from any OpenAI-compatible LLM (dry-run w/o key)
@@ -138,8 +139,19 @@ npm run start:http     # launch on Streamable HTTP (127.0.0.1:3017/mcp)
 
 > Tip: `npm start` runs `vite-node src/server.js`. If a client invokes the server
 > from a different working directory, set `cwd` to this `mcp/` folder (above) or
-> use an absolute command. The whole node registry loads at startup so the first
-> `list_capabilities` is immediate.
+> use an absolute command.
+
+**Warm-up.** The server answers `initialize` and `tools/list` at once (the tool text comes
+from the generated catalogue, `src/emit/session-schema.generated.json`) and loads the node
+registry in the background: a few seconds warm, a minute or two on the first start after an
+update. A tool call made meanwhile waits up to 25 s (`ANCIR_MCP_WARMUP_WAIT_MS`), with
+progress notifications if the client sent a `progressToken`, then runs, or returns the error
+result "Just warming up the bots (first start after an update takes a minute or two). Try
+again shortly." The same line goes to stderr and, over stdio, to the client as a logging
+notification: up front when the version has no warm stamp
+(`node_modules/.vite/ancir-mcp-warm.json`), otherwise if the load passes 8 s
+(`ANCIR_MCP_WARMUP_ANNOUNCE_MS`). `ANCIR_MCP_WARMUP_DELAY_MS` stretches the load for testing
+(`src/warmup.js`).
 
 ### Connect over HTTP (remote / web / hosted clients)
 

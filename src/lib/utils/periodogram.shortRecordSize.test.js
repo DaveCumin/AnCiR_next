@@ -4,8 +4,10 @@
  * very conservative on short records (family-wise false-positive rate about 0.002 on 3 days of
  * white noise against a nominal 0.05).
  *
- * Verdict: CONFIRMED (this file documents CURRENT behaviour; the null distribution is a method
- * choice, so nothing is changed). Two causes, measured separately:
+ * Verdict: CONFIRMED. Decision (David, 2026-11-01): the test is not changed; the Periodogram
+ * plot, Rhythmicity Analysis and Moving Analysis warn when the record (or window) holds fewer
+ * than 7 cycles of the longest period tested (utils/chiSquaredShortRecord.js, where the
+ * threshold is justified). Two causes, measured separately:
  *
  *  1. The statistic is Qp = N x SS_between / SS_total of a one-way layout (the fold columns are
  *     the groups; Sokolove and Bushell 1978, J. Theor. Biol. 72:131-160). For i.i.d. normal
@@ -78,7 +80,7 @@ function rates(days, nrec, seed) {
 	return { fw: fw / nrec, point: point / nrec };
 }
 
-describe('SPEC-U3: chi-squared periodogram size on short records (documents current behaviour)', () => {
+describe('SPEC-U3: chi-squared periodogram size on short records', () => {
 	it('Qp is N x SS_between / SS_total, the one-way ANOVA R^2 (scipy f_oneway reference)', () => {
 		const t = Y72.map((_, i) => i);
 		const res = runPeriodogramCalculation({ ...GRID, xData: t, yData: Y72 });

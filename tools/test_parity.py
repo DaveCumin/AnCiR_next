@@ -277,9 +277,17 @@ def run_correlogram_download(fx, js):
                     "out": {"binnedx": bx, f"binnedy_{y_id}": by}}
             assert rt.tp_binneddata(args, cols, raw_data, {}), f"{fx['id']}: BinnedData failed"
             x_id, y_id = bx, by
-        data.append({"x": {"refId": x_id}, "y": {"refId": y_id},
-                     "maxLag": s.get("maxLag"), "minLag": s.get("minLag", 0)})
-    headers, rows = fn({"type": "correlogram", "plot": {"data": data}}, cols)
+        series = {"x": {"refId": x_id}, "y": {"refId": y_id},
+                  "maxLag": s.get("maxLag"), "minLag": s.get("minLag", 0)}
+        # The saved band fields, when the fixture gives them (correlogramBands).
+        for k in ("bandMethod", "showConfidenceBounds", "confidenceLevel"):
+            if k in s:
+                series[k] = s[k]
+        data.append(series)
+    out = fn({"type": "correlogram", "plot": {"data": data}}, cols)
+    if fx.get("jsFn") == "correlogramBands":
+        return {"bands": out}
+    headers, rows = out
     return {"headers": headers, "rows": rows}
 
 
@@ -533,7 +541,8 @@ def _check_fixture(fx, js_results):
         diff = _deep_diff(py, js["outputs"], tol)
         assert diff is None, f"{fx['id']} differs at {diff}"
 
-    elif fx["kind"] == "plotCompute" and fx.get("jsFn") == "correlogramDownloadData":
+    elif fx["kind"] == "plotCompute" and fx.get("jsFn") in ("correlogramDownloadData",
+                                                             "correlogramBands"):
         py = run_correlogram_download(fx, js)
         diff = _deep_diff(py, js["outputs"], tol)
         assert diff is None, f"{fx['id']} differs at {diff}"

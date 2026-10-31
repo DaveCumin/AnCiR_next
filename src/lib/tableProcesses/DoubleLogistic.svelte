@@ -34,6 +34,7 @@
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { clockCacheKey } from '$lib/core/columnTimeZone.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
+	import { doubleLogisticReliabilityWarnings } from '$lib/utils/doublelogisticReliability.js';
 
 	const displayName = 'Double Logistic';
 	const defaults = new Map([
@@ -318,6 +319,18 @@
 									unit: periodUnitForColumn(tCol)
 								})
 							]),
+					// Shallow edges or a weak rhythm: the duty cycle, onset and offset are not
+					// pinned down (decision 2026-11-01). Words only; the fit is unchanged.
+					...doubleLogisticReliabilityWarnings(
+						yINs
+							.filter((yId) => y_results[yId])
+							.map((yId) => ({
+								label: `"${displayNameOf(getColumnById(yId))}"`,
+								result: y_results[yId].fitResult,
+								pValue: y_results[yId].pValue
+							})),
+						{ unit: periodUnitForColumn(tCol) }
+					),
 					...permWarnings,
 					...(phaseRef.warning ? [phaseRef.warning] : []),
 					...fitSampleWarnings(argsIN),

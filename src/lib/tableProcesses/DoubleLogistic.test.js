@@ -436,3 +436,37 @@ describe('STAT-19: output time origin is the minimum valid input time', () => {
 		expect(result.originTime_ms).toBe(T0);
 	});
 });
+
+describe('shallow-edge warning (decision 2026-11-01)', () => {
+	const t = [0, 6, 12, 18, 24, 30, 36, 42];
+	const y = [25, 50, 75, 75, 75, 50, 25, 25];
+	const run = (k) => {
+		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
+		mockColumns[2] = { type: 'number', getData: () => y, name: 'activity' };
+		return doublelogistic({
+			xIN: 1,
+			yIN: [2],
+			outputX: -1,
+			fixK1: true,
+			fixedK1: k,
+			fixK2: true,
+			fixedK2: k,
+			fixPeriod: true,
+			fixedPeriod: 24,
+			out: { dlogx: -1, dlogy_2: -1 }
+		});
+	};
+	it('warns, in the node warnings, when the rise and fall take longer than the period', async () => {
+		// The mocked fit returns the fixed rates: 2 * 2 ln 9 / 0.3 = 29.3 h > 24 h.
+		const [result] = await run(0.3);
+		const w = result.warnings.filter((s) => s.includes('too gradual'));
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('treat the duty cycle and the onset and offset as unreliable');
+		// The fitted numbers are what the fit returned.
+		expect(result.y_results[2].fitResult.parameters.k1).toBe(0.3);
+	});
+	it('does not warn on steep edges with a high R squared', async () => {
+		const [result] = await run(2);
+		expect(result.warnings.some((s) => s.includes('pin down the active period'))).toBe(false);
+	});
+});

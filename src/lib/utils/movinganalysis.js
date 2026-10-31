@@ -174,7 +174,8 @@ function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
 			epochHours: args.npcraEpochHours ?? 1,
 			period: args.npcraPeriod ?? 24,
 			mWindow: args.npcraMWindow ?? 10,
-			lWindow: args.npcraLWindow ?? 5
+			lWindow: args.npcraLWindow ?? 5,
+			fullDays: args.npcraFullDays === true
 		});
 		if (!r) return stats;
 		stats.IS = r.IS;

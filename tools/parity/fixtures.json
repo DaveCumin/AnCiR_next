@@ -157,6 +157,132 @@
 			"rFunc": "nonparametricra"
 		},
 		{
+			"id": "tp-npcra-full-days",
+			"_comment": "Full days only (2026-11-01): 7.5 days hourly cut to the first 7 whole days from the first sample, as nparACT fulldays = TRUE (nparACT_base.R 0.9.1).",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"rFunc": "nonparametricra",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+		},
+		{
+			"id": "tp-npcra-full-days-off",
+			"_comment": "Full days only OFF on the same 7.5 days: the partial last day is folded in (the behaviour of every session saved before the option).",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"rFunc": "nonparametricra",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": false,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+		},
+		{
+			"id": "tp-npcra-full-days-short",
+			"_comment": "Full days only on 20 h of data (less than one period): nothing to cut, every epoch is used.",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"rFunc": "nonparametricra",
+			"generate": {
+				"type": "rhythm",
+				"n": 20,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 37,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+		},
+		{
 			"id": "tp-npcra-iv-missing-epochs",
 			"_comment": "FIT-8. Every third hourly epoch missing: IV divides the squared successive differences by the valid successive pairs (Witting et al. 1990), not by n - 1. The old divisor reported about a third of the IV here.",
 			"kind": "tableProcess",
@@ -600,6 +726,118 @@
 						"tau": 24,
 						"onsetHr": 20,
 						"missingX": [0]
+					}
+				]
+			}
+		},
+		{
+			"id": "plot-correlogram-band-bartlett",
+			"kind": "plotCompute",
+			"jsFn": "correlogramBands",
+			"pyFunc": "correlogram_bands",
+			"tolerance": 1e-12,
+			"note": "Decision 2026-11-01: a NEW correlogram series (it names only its columns) draws Bartlett's band, z sqrt((1 + 2 sum_{j<k} r_j^2) / N) with r_j the N-normalised ACF (the band statsmodels plot_acf draws; tools/test_correlogram_band.py pins it to statsmodels), missing at lag 0. Hourly 7 days, then a 30-minute series with a missing time.",
+			"generate": {
+				"seed": 131,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 1,
+						"days": 7,
+						"tau": 24,
+						"onsetHr": 8
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:00:00Z",
+						"dtHrs": 0.5,
+						"days": 5,
+						"tau": 24,
+						"onsetHr": 20,
+						"missingX": [3]
+					}
+				]
+			}
+		},
+		{
+			"id": "plot-correlogram-band-legacy-white",
+			"kind": "plotCompute",
+			"jsFn": "correlogramBands",
+			"pyFunc": "correlogram_bands",
+			"tolerance": 1e-12,
+			"note": "A series saved before the band was a choice (it carries showConfidenceBounds, no bandMethod) keeps +/- z / sqrt(N) at every lag, N the y values present (a missing TIME still counts), z 1.96 at 95% and 2.576 at 99%.",
+			"generate": {
+				"seed": 137,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 1,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 8,
+						"missingX": [5],
+						"showConfidenceBounds": true,
+						"confidenceLevel": 0.95
+					},
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 1,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 14,
+						"showConfidenceBounds": true,
+						"confidenceLevel": 0.99
+					}
+				]
+			}
+		},
+		{
+			"id": "plot-correlogram-band-nk-uneven",
+			"kind": "plotCompute",
+			"jsFn": "correlogramBands",
+			"pyFunc": "correlogram_bands",
+			"tolerance": 1e-12,
+			"note": "The +/- z / sqrt(N - k) band uses the pairs behind each lag: on 0.25 / 0.75 h spacing (the slotted estimator) those are the pairs in each slot, and an empty slot has no band. 99%.",
+			"generate": {
+				"seed": 139,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:10:00Z",
+						"stepPattern": [0.25, 0.75],
+						"days": 4,
+						"tau": 24,
+						"onsetHr": 20,
+						"maxLag": 30,
+						"bandMethod": "nk",
+						"confidenceLevel": 0.99
+					}
+				]
+			}
+		},
+		{
+			"id": "plot-correlogram-band-bartlett-minlag",
+			"kind": "plotCompute",
+			"jsFn": "correlogramBands",
+			"pyFunc": "correlogram_bands",
+			"tolerance": 1e-12,
+			"note": "Bartlett's sum runs over every lag from 1, so a window narrowed by a min lag (6 h here, max 48 h) is banded from the correlogram computed from lag 0.",
+			"generate": {
+				"seed": 149,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 1,
+						"days": 8,
+						"tau": 24,
+						"onsetHr": 8,
+						"minLag": 6,
+						"maxLag": 48,
+						"bandMethod": "bartlett"
 					}
 				]
 			}
@@ -14203,6 +14441,79 @@
 			"compareOutputs": ["observed", "pvalue"]
 		},
 		{
+			"id": "tp-surrogate-block6-pvalue",
+			"kind": "tableProcess",
+			"jsName": "SurrogateTest",
+			"pyFunc": "surrogatetest",
+			"rFunc": "surrogatetest",
+			"note": "Decision 2026-11-01: a new Surrogate Test node's block is 6 h (a quarter of a daily cycle), so round(6 h / 1 h) = 6-sample blocks; same series as tp-surrogate-block-pvalue.",
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"period": 24,
+				"amp": 0.4,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 8,
+				"seed": 77,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": "@y",
+				"method": "block",
+				"nSurrogates": 99,
+				"seed": 12345,
+				"blockLengthHours": 6,
+				"periodMin": 20,
+				"periodMax": 28,
+				"out": {
+					"pvalue": -1,
+					"observed": -1
+				}
+			},
+			"compareOutputs": ["observed", "pvalue"]
+		},
+		{
+			"id": "tp-surrogate-block-absent-legacy",
+			"kind": "tableProcess",
+			"jsName": "SurrogateTest",
+			"pyFunc": "surrogatetest",
+			"rFunc": "surrogatetest",
+			"note": "A saved node with NO blockLengthHours computes with one 24 h cycle (the compute fallback stays the legacy length; only a new node gets 6 h). Must equal tp-surrogate-block-pvalue.",
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"period": 24,
+				"amp": 0.4,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 8,
+				"seed": 77,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": "@y",
+				"method": "block",
+				"nSurrogates": 99,
+				"seed": 12345,
+				"periodMin": 20,
+				"periodMax": 28,
+				"out": {
+					"pvalue": -1,
+					"observed": -1
+				}
+			},
+			"compareOutputs": ["observed", "pvalue"]
+		},
+		{
 			"id": "tp-surrogate-ar1-pvalue",
 			"kind": "tableProcess",
 			"jsName": "SurrogateTest",
@@ -25630,6 +25941,53 @@
 			"toleranceWhy": "The ports fit the free cosinor with scipy least_squares / R optim, not the JS Levenberg-Marquardt (README: Remaining divergences); the kernel fixture util-movingwindows-cosinor-free uses the same 1e-4."
 		},
 		{
+			"id": "tp-movinganalysis-npcra-full-days",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Rolling NPCRA, full days only (2026-11-01): each 60 h window is cut to its first 2 whole 24 h periods before IS, IV, RA, L5, M10 and the M10 onset.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 963,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 60,
+				"stepSize": 24,
+				"analysis": "npcra",
+				"npcraEpochHours": 1,
+				"npcraPeriod": 24,
+				"npcraMWindow": 10,
+				"npcraLWindow": 5,
+				"npcraFullDays": true,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_IS",
+				"@{y}_IV",
+				"@{y}_RA",
+				"@{y}_L5",
+				"@{y}_M10",
+				"@{y}_M10onset"
+			],
+			"tolerance": 1e-6
+		},
+		{
 			"id": "tp-movinganalysis-npcra",
 			"kind": "tableProcess",
 			"jsName": "MovingAnalysis",
@@ -25660,6 +26018,7 @@
 				"npcraPeriod": 24,
 				"npcraMWindow": 10,
 				"npcraLWindow": 5,
+				"npcraFullDays": false,
 				"out": {
 					"movex": -1
 				}

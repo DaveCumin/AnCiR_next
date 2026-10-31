@@ -16,17 +16,30 @@
 //
 // The DOM must be bootstrapped *before* the engine is imported, so the engine is
 // loaded dynamically after ensureDom().
+//
+// Startup order (warm-up gate, src/warmup.js): the transport connects FIRST, so `initialize`
+// and `tools/list` answer in about a second, with the tool text taken from the generated
+// catalogue (src/toolFacts.js). The engine (DOM, session module, node registry) then loads in
+// the background; tool calls made meanwhile wait for it, with progress notifications, and
+// past a limit return "Just warming up the bots ...". The load must still run inside this
+// module's top-level evaluation (it is awaited at the bottom of the file): vite-node closes
+// its transform server once the entry module finishes, and a registry load after that fails
+// with ERR_CLOSED_SERVER.
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import { z } from 'zod';
 import { ensureDom } from './engine/bootstrapDom.js';
+import { createWarmup, isColdStart, WARMING_MESSAGE } from './warmup.js';
+import { staticToolFacts } from './toolFacts.js';
 
 // AnCiR's TableProcess constructor also runs the process fire-and-forget, so a
 // bad-args failure can surface as an unhandled rejection. Keep the server alive
@@ -36,23 +49,34 @@ process.on('unhandledRejection', (reason) => {
 	console.error('unhandledRejection:', reason?.message || reason);
 });
 
-await ensureDom();
-const { AncirSession, ensureRegistry, describeCapabilities, filterCapabilities } =
-	await import('./engine/session.js');
+const here = dirname(fileURLToPath(import.meta.url));
+const readText = (path) => {
+	try {
+		return readFileSync(path, 'utf8');
+	} catch {
+		return null;
+	}
+};
 
-// Load the node registry up-front. This must happen during the initial top-level
-// run so vite-node's transform server is still alive to compile the Svelte modules
-// (a lazy load inside a later tool handler hits ERR_CLOSED_SERVER once vite-node has
-// finished the initial execution). Mirrors the GUI's startup in routes/+page.svelte.
-await ensureRegistry();
-// Which plots carry overlays, and in which forms: read from the registry for the tool text.
-const { overlayHostTypes, overlayFormsSummary } = await import('./engine/overlays.js');
-const OVERLAY_HOSTS = overlayHostTypes().join(', ');
-const OVERLAY_FORMS = overlayFormsSummary();
-// Which plots can colour / size their marks by a column, the modes and the maps (live facts,
-// the same ones a draft and the app's AI edit are checked against).
-const { encodingHostsSummary } = await import('./engine/encodings.js');
-const ENC = encodingHostsSummary();
+// The registry facts the tool text quotes, from the generated catalogue until the engine is
+// warm (then from the live registry if they differ; see switchToLiveFacts).
+let facts = staticToolFacts(JSON.parse(readText(join(here, 'emit/session-schema.generated.json'))));
+
+// Version key for the cold-start stamp: the app version plus this package's.
+const VERSION_KEY = [join(here, '../../package.json'), join(here, '../package.json')]
+	.map((p) => JSON.parse(readText(p) ?? '{}').version ?? '?')
+	.join('+');
+// Kept in the vite cache dir, so clearing that cache also reads as a cold start.
+const STAMP_PATH = join(here, '../node_modules/.vite/ancir-mcp-warm.json');
+const COLD = isColdStart(readText(STAMP_PATH), VERSION_KEY);
+// A warm start that is still loading after this long is announced too.
+const ANNOUNCE_AFTER_MS = Number(process.env.ANCIR_MCP_WARMUP_ANNOUNCE_MS) || 8000;
+
+const warmup = createWarmup({
+	waitMs: Number(process.env.ANCIR_MCP_WARMUP_WAIT_MS) || undefined
+});
+// Filled by loadEngine(): the session module's exports.
+let engine = null;
 
 // One process = one active session (AnCiR's core is a singleton). Created lazily and
 // shared across transports/requests.
@@ -70,109 +94,12 @@ const ok = (data) => ({
 	content: [{ type: 'text', text: VERBOSE ? JSON.stringify(data, null, 2) : JSON.stringify(data) }]
 });
 
-/** Register every AnCiR tool on a fresh McpServer (one per stdio process / HTTP request). */
-function registerTools(server) {
-	server.tool(
-		'list_capabilities',
-		'Discover AnCiR analyses (table processes), column transforms, and plot types, live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, and what each input and output port expects or produces (`ports`), pass detail:"full" or name:"Cosinor"; narrow with family.',
-		{
-			detail: z
-				.enum(['names', 'summary', 'full'])
-				.optional()
-				.describe('names | summary (default) | full'),
-			family: z
-				.string()
-				.optional()
-				.describe('Filter analyses/transforms to one family, e.g. "Fitting", "Analysis"'),
-			name: z
-				.string()
-				.optional()
-				.describe('Return just the ONE named capability, at full detail, e.g. "Cosinor"')
-		},
-		async ({ detail, family, name }) => {
-			await ensureRegistry();
-			return ok(filterCapabilities(describeCapabilities(), { detail, family, name }));
-		}
-	);
-
-	server.tool(
-		'create_session',
-		'Create (or reset) the active AnCiR session. Returns the session id.',
-		{ id: z.string().optional().describe('Optional session id/name') },
-		async ({ id }) => {
-			session = new AncirSession(id ?? 'default');
-			return ok({ created: true, id: session.id });
-		}
-	);
-
-	server.tool(
-		'import_data',
-		'Import one or more columns into the active session.',
-		{
-			columns: z
-				.array(
-					z.object({
-						name: z.string(),
-						type: z.enum(['number', 'time', 'bin', 'category']).optional(),
-						values: z
-							.array(z.union([z.number(), z.string(), z.null()]))
-							.describe('time: ISO 8601 text or epoch ms; null = missing'),
-						time_zone: z
-							.string()
-							.optional()
-							.describe(
-								'time only: where the clock was. IANA ("Pacific/Auckland"), fixed offset ("+12:00") or "utc" (default)'
-							)
-					})
-				)
-				.describe('Columns to add')
-		},
-		async ({ columns }) => ok({ added: requireSession().importColumns(columns) })
-	);
-
-	server.tool(
-		'list_columns',
-		'List the columns in the active session (id, name, type, length; a time column also time_zone and times: as written | wall clock | instants).',
-		{},
-		async () => ok({ columns: requireSession().listColumns() })
-	);
-
-	server.tool(
-		'run_table_process',
-		'Run any AnCiR analysis/table-process by name against columns already imported into the session. Returns the created output columns (and a preview); the analysis node is added to the session so export_session opens in the GUI with it present. Use list_capabilities to discover names, input fields, and parameters.',
-		{
-			name: z
-				.string()
-				.describe("Table-process id, e.g. 'Cosinor', 'TrendFit', 'RhythmicityAnalysis'"),
-			args: z
-				.record(z.any())
-				.describe(
-					'Full args object: input column ids (e.g. {xIN, yIN:[...]}) plus parameters. `out` is optional for fixed-output processes (auto-seeded) and required for dynamic-output ones (see capabilities.dynamicOutputs).'
-				)
-		},
-		async ({ name, args }) => {
-			await ensureRegistry();
-			return ok(await requireSession().runTableProcess(name, args ?? {}));
-		}
-	);
-
-	server.tool(
-		'add_column_process',
-		'Apply a column transform (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to an existing column and run its chain. The transform is embedded in the session. See list_capabilities → transforms.',
-		{
-			columnId: z
-				.union([z.number().int(), z.string()])
-				.describe('Column to transform — its id or its name'),
-			name: z.string().describe("Transform id, e.g. 'Add', 'normalize', 'OutlierRemoval'"),
-			args: z
-				.record(z.any())
-				.optional()
-				.describe('Parameter overrides merged onto defaults, e.g. {value: 5} for Add')
-		},
-		async ({ columnId, name, args }) =>
-			ok(requireSession().addColumnProcess(columnId, name, args ?? {}))
-	);
-
+/**
+ * add_plot / render_plot: their description and params quote registry facts (overlay hosts and
+ * forms, Colour by / Size by hosts, modes and maps), so they are built from `facts`, the
+ * catalogue's until warm, the live registry's after (see switchToLiveFacts).
+ */
+function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS, enc: ENC }) {
 	// Plot overlays: reference lines and shaded bands, mirroring the GUI's Overlays tab, on
 	// every plot whose class declares `overlayCapabilities` and only in the forms it allows
 	// (validated per plot in the engine). Channel values: a NUMBER is a typed value, a STRING
@@ -226,54 +153,174 @@ function registerTools(server) {
 			`Reference lines and shaded bands, on ${OVERLAY_HOSTS} (list_capabilities → plots[].overlays lists each plot's kinds and forms; detail:"full" adds the channels). E.g. scatterplot [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]; periodogram [{ kind:"line", form:"vertical", channels:{ at: 24 } }, { kind:"band", form:"vertical", channels:{ start: 20, end: 28 } }]. Overlays widen only the axes in plots[].overlayAxes (a periodogram never widens its period range, so a mark outside it is not drawn). plots[].overlayNote says how a plot reads a position: an fft takes vertical positions as PERIODS in hours even when its x axis shows frequency (drawn at 1/period there); a cwt takes horizontal periods (hours) only.`
 		);
 
-	server.tool(
-		'add_plot',
-		`Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
-		{
-			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
-			inputs: z
-				.union([
-					z.record(z.union([z.number().int(), z.string()])),
-					z.array(z.union([z.number().int(), z.string()]))
-				])
-				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
-			overlays: overlaysSchema,
-			colourBy: encodingSchema.describe(
-				`Colour by (${ENC.colourHosts.join(', ')}): colour the series' marks by a column. A column name, or { column, mode, colormap, range: [min, max], colourLine }. mode: auto (default), ${ENC.modes.join(', ')}. colormap: ${ENC.sequentialMaps}; for ${ENC.cyclicModes.join(', ')}: ${ENC.cyclicMaps}. colourLine: colour the line too.`
-			),
-			sizeBy: encodingSchema.describe(
-				`Size by (${ENC.sizeHosts.join(', ')}): size the points by a column. A column name, or { column, mode, minRadius, maxRadius, range: [min, max] } (radii in px). mode: auto, ${ENC.sizeModes.join(', ')}.`
-			)
+	return {
+		add_plot: {
+			description: `Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
+			params: {
+				type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
+				inputs: z
+					.union([
+						z.record(z.union([z.number().int(), z.string()])),
+						z.array(z.union([z.number().int(), z.string()]))
+					])
+					.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+				overlays: overlaysSchema,
+				colourBy: encodingSchema.describe(
+					`Colour by (${ENC.colourHosts.join(', ')}): colour the series' marks by a column. A column name, or { column, mode, colormap, range: [min, max], colourLine }. mode: auto (default), ${ENC.modes.join(', ')}. colormap: ${ENC.sequentialMaps}; for ${ENC.cyclicModes.join(', ')}: ${ENC.cyclicMaps}. colourLine: colour the line too.`
+				),
+				sizeBy: encodingSchema.describe(
+					`Size by (${ENC.sizeHosts.join(', ')}): size the points by a column. A column name, or { column, mode, minRadius, maxRadius, range: [min, max] } (radii in px). mode: auto, ${ENC.sizeModes.join(', ')}.`
+				)
+			}
 		},
-		async ({ type, inputs, overlays, colourBy, sizeBy }) =>
-			ok(requireSession().addPlot(type, inputs, overlays, { colourBy, sizeBy }))
+		render_plot: {
+			description:
+				'Rasterise a plot of session columns to PNG (and SVG) using a real headless browser — the actual AnCiR plot component, with axes/gridlines/legend. Returns the written file paths. Inputs work like add_plot; columns may be raw or analysis outputs. A tableplot draws HTML, so it gives a PNG only (svg null). (Standalone: does not modify the session.)',
+			params: {
+				type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
+				inputs: z
+					.union([
+						z.record(z.union([z.number().int(), z.string()])),
+						z.array(z.union([z.number().int(), z.string()]))
+					])
+					.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+				overlays: overlaysSchema,
+				path: z
+					.string()
+					.describe('Output path prefix or .png path; .png and .svg are written alongside'),
+				width: z.number().int().optional().describe('Plot width px (default 700)'),
+				height: z.number().int().optional().describe('Plot height px (default 420)')
+			}
+		}
+	};
+}
+
+/** Register every AnCiR tool on a fresh McpServer (one per stdio process / HTTP request). */
+function registerTools(server) {
+	const gate = warmup.gate;
+	server.tool(
+		'list_capabilities',
+		'Discover AnCiR analyses (table processes), column transforms, and plot types, live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, and what each input and output port expects or produces (`ports`), pass detail:"full" or name:"Cosinor"; narrow with family.',
+		{
+			detail: z
+				.enum(['names', 'summary', 'full'])
+				.optional()
+				.describe('names | summary (default) | full'),
+			family: z
+				.string()
+				.optional()
+				.describe('Filter analyses/transforms to one family, e.g. "Fitting", "Analysis"'),
+			name: z
+				.string()
+				.optional()
+				.describe('Return just the ONE named capability, at full detail, e.g. "Cosinor"')
+		},
+		gate(async ({ detail, family, name }) => {
+			await engine.ensureRegistry();
+			return ok(engine.filterCapabilities(engine.describeCapabilities(), { detail, family, name }));
+		})
 	);
 
 	server.tool(
-		'render_plot',
-		'Rasterise a plot of session columns to PNG (and SVG) using a real headless browser — the actual AnCiR plot component, with axes/gridlines/legend. Returns the written file paths. Inputs work like add_plot; columns may be raw or analysis outputs. A tableplot draws HTML, so it gives a PNG only (svg null). (Standalone: does not modify the session.)',
+		'create_session',
+		'Create (or reset) the active AnCiR session. Returns the session id.',
+		{ id: z.string().optional().describe('Optional session id/name') },
+		gate(async ({ id }) => {
+			session = new engine.AncirSession(id ?? 'default');
+			return ok({ created: true, id: session.id });
+		})
+	);
+
+	server.tool(
+		'import_data',
+		'Import one or more columns into the active session.',
 		{
-			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
-			inputs: z
-				.union([
-					z.record(z.union([z.number().int(), z.string()])),
-					z.array(z.union([z.number().int(), z.string()]))
-				])
-				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
-			overlays: overlaysSchema,
-			path: z
-				.string()
-				.describe('Output path prefix or .png path; .png and .svg are written alongside'),
-			width: z.number().int().optional().describe('Plot width px (default 700)'),
-			height: z.number().int().optional().describe('Plot height px (default 420)')
+			columns: z
+				.array(
+					z.object({
+						name: z.string(),
+						type: z.enum(['number', 'time', 'bin', 'category']).optional(),
+						values: z
+							.array(z.union([z.number(), z.string(), z.null()]))
+							.describe('time: ISO 8601 text or epoch ms; null = missing'),
+						time_zone: z
+							.string()
+							.optional()
+							.describe(
+								'time only: where the clock was. IANA ("Pacific/Auckland"), fixed offset ("+12:00") or "utc" (default)'
+							)
+					})
+				)
+				.describe('Columns to add')
 		},
-		async ({ type, inputs, overlays, path, width, height }) => {
-			await ensureRegistry();
+		gate(async ({ columns }) => ok({ added: requireSession().importColumns(columns) }))
+	);
+
+	server.tool(
+		'list_columns',
+		'List the columns in the active session (id, name, type, length; a time column also time_zone and times: as written | wall clock | instants).',
+		{},
+		gate(async () => ok({ columns: requireSession().listColumns() }))
+	);
+
+	server.tool(
+		'run_table_process',
+		'Run any AnCiR analysis/table-process by name against columns already imported into the session. Returns the created output columns (and a preview); the analysis node is added to the session so export_session opens in the GUI with it present. Use list_capabilities to discover names, input fields, and parameters.',
+		{
+			name: z
+				.string()
+				.describe("Table-process id, e.g. 'Cosinor', 'TrendFit', 'RhythmicityAnalysis'"),
+			args: z
+				.record(z.any())
+				.describe(
+					'Full args object: input column ids (e.g. {xIN, yIN:[...]}) plus parameters. `out` is optional for fixed-output processes (auto-seeded) and required for dynamic-output ones (see capabilities.dynamicOutputs).'
+				)
+		},
+		gate(async ({ name, args }) => {
+			await engine.ensureRegistry();
+			return ok(await requireSession().runTableProcess(name, args ?? {}));
+		})
+	);
+
+	server.tool(
+		'add_column_process',
+		'Apply a column transform (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to an existing column and run its chain. The transform is embedded in the session. See list_capabilities → transforms.',
+		{
+			columnId: z
+				.union([z.number().int(), z.string()])
+				.describe('Column to transform — its id or its name'),
+			name: z.string().describe("Transform id, e.g. 'Add', 'normalize', 'OutlierRemoval'"),
+			args: z
+				.record(z.any())
+				.optional()
+				.describe('Parameter overrides merged onto defaults, e.g. {value: 5} for Add')
+		},
+		gate(async ({ columnId, name, args }) =>
+			ok(requireSession().addColumnProcess(columnId, name, args ?? {}))
+		)
+	);
+
+	const plotDefs = plotToolDefs(facts);
+	const addPlot = server.tool(
+		'add_plot',
+		plotDefs.add_plot.description,
+		plotDefs.add_plot.params,
+		gate(async ({ type, inputs, overlays, colourBy, sizeBy }) =>
+			ok(requireSession().addPlot(type, inputs, overlays, { colourBy, sizeBy }))
+		)
+	);
+
+	const renderPlot = server.tool(
+		'render_plot',
+		plotDefs.render_plot.description,
+		plotDefs.render_plot.params,
+		gate(async ({ type, inputs, overlays, path, width, height }) => {
+			await engine.ensureRegistry();
 			const outBase = resolve(process.cwd(), path).replace(/\.png$/i, '');
 			return ok(
 				await requireSession().renderPlotToFiles(type, inputs, { outBase, width, height, overlays })
 			);
-		}
+		})
 	);
 
 	// NOTE: no `run_cosinor` tool. It computed a fit but did NOT add a node to the
@@ -294,7 +341,7 @@ function registerTools(server) {
 				.optional()
 				.describe('Return the full session JSON as text instead of writing a file (large).')
 		},
-		async ({ path, inline }) => {
+		gate(async ({ path, inline }) => {
 			const s = requireSession();
 			const json = s.exportSession();
 			if (inline) return { content: [{ type: 'text', text: json }] };
@@ -313,14 +360,84 @@ function registerTools(server) {
 				/* summary is best-effort */
 			}
 			return ok({ written: abs, bytes: json.length, summary });
-		}
+		})
 	);
 
-	return server;
+	return { server, tools: { add_plot: addPlot, render_plot: renderPlot } };
 }
 
+const MCP_VERSION = JSON.parse(readText(join(here, '../package.json')) ?? '{}').version ?? '0.0.0';
+
+/** A fresh McpServer with every tool. `logging` lets it tell the client about the warm-up. */
 function buildServer() {
-	return registerTools(new McpServer({ name: 'ancir', version: '0.0.2' }));
+	return registerTools(
+		new McpServer({ name: 'ancir', version: MCP_VERSION }, { capabilities: { logging: {} } })
+	);
+}
+
+// --- warm-up -----------------------------------------------------------------
+
+// The stdio server, once connected (HTTP is stateless, one server per request, so it has no
+// standing connection to send notifications on; its callers see the gate's message instead).
+let stdio = null;
+
+/** Tell the terminal (stderr) and, over stdio once initialized, the client. */
+function announce(level, text) {
+	console.error(text);
+	if (!stdio) return;
+	const send = () =>
+		stdio.server.sendLoggingMessage({ level, logger: 'ancir', data: text }).catch(() => {});
+	if (stdio.initialized) send();
+	else stdio.pending.push(send);
+}
+
+let announced = false;
+function announceWarming() {
+	if (announced || warmup.state !== 'loading') return;
+	announced = true;
+	announce('info', WARMING_MESSAGE);
+}
+
+/** The registry facts the plot tools quote, read live (engine loaded). */
+async function liveToolFacts() {
+	const { overlayHostTypes, overlayFormsSummary } = await import('./engine/overlays.js');
+	const { encodingHostsSummary } = await import('./engine/encodings.js');
+	return {
+		overlayHosts: overlayHostTypes().join(', '),
+		overlayForms: overlayFormsSummary(),
+		enc: encodingHostsSummary()
+	};
+}
+
+/**
+ * Once warm: if the catalogue's facts differ from the registry's (a catalogue not regenerated
+ * since a registry change, during development), use the live ones from now on and re-describe
+ * the stdio server's plot tools, which sends tools/list_changed.
+ */
+async function switchToLiveFacts() {
+	const live = await liveToolFacts();
+	if (JSON.stringify(live) === JSON.stringify(facts)) return;
+	console.error(
+		'AnCiR MCP: src/emit/session-schema.generated.json is behind the registry (overlay or Colour by facts differ); the tool text now uses the live registry. Regenerate it with `npm run mcp:schema` (repo root).'
+	);
+	facts = live;
+	if (!stdio) return;
+	const defs = plotToolDefs(facts);
+	for (const [name, tool] of Object.entries(stdio.tools)) {
+		tool.update({ description: defs[name].description, paramsSchema: defs[name].params });
+	}
+}
+
+/** DOM, then the session module, then the node registry (the slow part on a cold cache). */
+async function loadEngine() {
+	// Testing only: stretch the load to exercise the warm-up path on a warm machine.
+	const delay = Number(process.env.ANCIR_MCP_WARMUP_DELAY_MS) || 0;
+	if (delay) await new Promise((ok) => setTimeout(ok, delay));
+	await ensureDom();
+	const mod = await import('./engine/session.js');
+	await mod.ensureRegistry();
+	engine = mod;
+	await switchToLiveFacts();
 }
 
 // --- transport selection -----------------------------------------------------
@@ -336,7 +453,13 @@ function parseHttpOption() {
 }
 
 async function startStdio() {
-	const server = buildServer();
+	const { server, tools } = buildServer();
+	stdio = { server, tools, initialized: false, pending: [] };
+	// Logging notifications may only follow the client's `initialized`; queue until then.
+	server.server.oninitialized = () => {
+		stdio.initialized = true;
+		for (const send of stdio.pending.splice(0)) send();
+	};
 	await server.connect(new StdioServerTransport());
 	// stdio transport keeps the process alive; log to stderr so stdout stays clean.
 	console.error('AnCiR MCP server running on stdio.');
@@ -348,7 +471,7 @@ async function startHttp({ port, host }) {
 	// module-level engine session. JSON responses (no SSE) keep simple clients happy.
 	app.post('/mcp', async (req, res) => {
 		try {
-			const server = buildServer();
+			const { server } = buildServer();
 			const transport = new StreamableHTTPServerTransport({
 				sessionIdGenerator: undefined,
 				enableJsonResponse: true
@@ -384,5 +507,25 @@ async function startHttp({ port, host }) {
 const http = parseHttpOption();
 if (http) await startHttp(http);
 else await startStdio();
+
+// Answering already; now load the engine. Awaited HERE, at top level, so vite-node keeps its
+// transform server open for the Svelte modules (see the note at the top of the file).
+const announceTimer = setTimeout(announceWarming, COLD ? 0 : ANNOUNCE_AFTER_MS);
+try {
+	await warmup.start(loadEngine);
+	console.error(`AnCiR engine ready (${(warmup.readyMs / 1000).toFixed(1)} s).`);
+	if (announced) announce('info', 'AnCiR is warmed up; the tools are ready.');
+	try {
+		mkdirSync(dirname(STAMP_PATH), { recursive: true });
+		writeFileSync(STAMP_PATH, JSON.stringify({ version: VERSION_KEY, readyMs: warmup.readyMs }));
+	} catch {
+		/* the stamp only decides whether to announce up front */
+	}
+} catch (err) {
+	// Keep serving: every tool call now returns this failure instead of the process dying.
+	announce('error', `AnCiR engine failed to load: ${err?.stack || err}`);
+} finally {
+	clearTimeout(announceTimer);
+}
 
 void randomUUID; // reserved for a future stateful (per-session-id) HTTP mode

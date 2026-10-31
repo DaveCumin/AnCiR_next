@@ -1721,6 +1721,39 @@ node_warning <- function(node, text) {
   invisible(NULL)
 }
 
+# The chi-squared periodogram's short-record warning (utils/chiSquaredShortRecord.js; decision
+# 2026-11-01: the test is kept, the user is told): below 7 cycles of the longest period tested
+# the test is very conservative. Same text as the app and the Python port.
+CHI_SQUARED_MIN_CYCLES <- 7
+chi_squared_record_length <- function(times) {
+  xs <- vapply(Filter(function(v) !.js_invalid(v), as.list(times)), .js_number, numeric(1))
+  xs <- sort(xs[is.finite(xs)])
+  gaps <- diff(xs); gaps <- sort(gaps[gaps > 0])
+  if (length(xs) < 2 || !length(gaps)) return(NaN)
+  m <- length(gaps) %/% 2
+  dt <- if (length(gaps) %% 2) gaps[m + 1] else (gaps[m] + gaps[m + 1]) / 2
+  max(xs) - min(xs) + dt
+}
+chi_squared_short_record_warning <- function(length, period_max, hours = TRUE, per_window = FALSE) {
+  L <- if (is.null(length)) NaN else .js_number(length)
+  P <- if (is.null(period_max)) NaN else .js_number(period_max)
+  if (!(is.finite(L) && is.finite(P) && L > 0 && P > 0)) return("")
+  cycles <- L / P
+  if (cycles >= CHI_SQUARED_MIN_CYCLES) return("")
+  c1 <- .num_text(cycles, 1)
+  n_cycles <- paste(c1, if (c1 == "1") "cycle" else "cycles")
+  tested <- paste0("the longest period tested, ", .num_text(P, 1), if (hours) " h" else "")
+  who <- if (per_window) "With each window holding only" else "With only"
+  lead <- if (hours) {
+    days <- .num_text(L / 24, 1)
+    paste0(who, " ", days, if (days == "1") " day" else " days", " of data (", n_cycles, " of ",
+           tested, ")")
+  } else paste0(who, " ", n_cycles, " of ", tested)
+  paste0(lead, ", the chi-squared test is very conservative and can miss a rhythm that is ",
+         "there; consider Lomb-Scargle or a longer ", if (per_window) "window" else "record",
+         " (at least ", CHI_SQUARED_MIN_CYCLES, " cycles).")
+}
+
 # utils/time/dstCountWarnings.js: what a zoned column's repeated and skipped hours
 # say (a clean in-order repeat says nothing: that is what a DST-following logger writes).
 .FIXED_OFFSET_ADVICE <- "This logger may not follow daylight saving: try a fixed offset."
@@ -2248,9 +2281,12 @@ compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
 }
 
 # IS, IV, RA, M10/L5 and their onsets. Port of src/lib/utils/npcra.js
-# (van Someren et al. 1999, Chronobiol Int 16(4):505-518).
+# (van Someren et al. 1999, Chronobiol Int 16(4):505-518). full_days keeps floor(epochs / p)
+# whole periods of epochs from the first sample, as nparACT's fulldays = TRUE (Blume, Santhi &
+# Schabus 2016, MethodsX 3:430-435; nparACT_base.R 0.9.1); a record shorter than one period
+# is used whole (fullDaysKept 0).
 compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
-                          m_window = 10, l_window = 5) {
+                          m_window = 10, l_window = 5, full_days = FALSE) {
   if (!(epoch_hours > 0) || !(period > 0)) return(NULL)
   len <- min(length(t), length(y))
   tf <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE))[seq_len(len)])
@@ -2264,18 +2300,22 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   e <- epoch_hours
   # The 1e-9 slack matches the Python: without it a span that is an exact multiple of the
   # epoch gains a spurious final epoch through floating-point drift.
-  n_epochs <- max(1, ceiling((t_end - t0) / e + 1e-9))
-  ssum <- numeric(n_epochs); cnt <- integer(n_epochs)
+  n_grid <- max(1, ceiling((t_end - t0) / e + 1e-9))
+  ssum <- numeric(n_grid); cnt <- integer(n_grid)
   # Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
   # day-unit axis) makes (tf - t0) / e land at 11.999999... for an exact bin edge.
-  k <- pmin(pmax(floor((tf - t0) / e + 1e-9), 0), n_epochs - 1) + 1
+  k <- pmin(pmax(floor((tf - t0) / e + 1e-9), 0), n_grid - 1) + 1
   for (i in seq_along(tf)) {
     # Only a MISSING value is skipped; +-Inf is a value to the JS (isInvalidValue keeps it).
     if (is.na(yf[i])) next
     ssum[k[i]] <- ssum[k[i]] + yf[i]
     cnt[k[i]] <- cnt[k[i]] + 1
   }
-  x <- ifelse(cnt > 0, ssum / cnt, NA_real_)
+  p <- max(1, js_round(period / e))
+  # Full days: whole periods of epochs from the first sample (npcra.js, FULL DAYS).
+  full_days_kept <- if (isTRUE(full_days)) floor(n_grid / p) else NULL
+  n_epochs <- if (!is.null(full_days_kept) && full_days_kept >= 1) full_days_kept * p else n_grid
+  x <- ifelse(cnt > 0, ssum / cnt, NA_real_)[seq_len(n_epochs)]
 
   valid <- x[is.finite(x)]
   nn <- length(valid)
@@ -2283,7 +2323,6 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   xbar <- mean(valid)
   overall_ss <- sum((valid - xbar)^2)
 
-  p <- max(1, js_round(period / e))
   p_sum <- numeric(p); p_cnt <- integer(p)
   for (kk in seq_len(n_epochs)) {
     if (!is.finite(x[kk])) next
@@ -2330,7 +2369,8 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
        M10onset = m10$onset, L5onset = l5$onset,
        profile = profile, bin_centres = (seq_len(p) - 1) * e + e / 2,
        n = nn, p = p, n_epochs = n_epochs,
-       missingEpochFraction = (n_epochs - nn) / n_epochs, t0 = t0)
+       missingEpochFraction = (n_epochs - nn) / n_epochs, t0 = t0,
+       fullDaysKept = full_days_kept, droppedEpochs = n_grid - n_epochs)
 }
 
 tp_averageprofile <- function(args, env) {
@@ -2380,6 +2420,8 @@ tp_nonparametricra <- function(args, env) {
   period <- as.numeric(if (is.null(args$period)) 24 else args$period)
   m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
   l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
+  # Absent (a session saved before the option) = off, as NonparametricRA.svelte.
+  full_days <- isTRUE(args$fullDays)
   x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
   phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data,
                                     node = "Nonparametric RA")
@@ -2390,7 +2432,7 @@ tp_nonparametricra <- function(args, env) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     res <- compute_npcra(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
-                         epoch, period, m_window, l_window)
+                         epoch, period, m_window, l_window, full_days = full_days)
     if (is.null(res)) next
     if (isTRUE(phase_ref$clock)) {
       # Clock time (FIT-9): onsets and bin times are hours after the series' first sample.
@@ -6071,6 +6113,14 @@ tp_rhythmicityanalysis <- function(args, env) {
       per_key <- list(period = pg$x, power = pg$y)
       if (!is.null(pg$threshold)) per_key$threshold <- pg$threshold
       px <- pg$x; py <- pg$y
+      # The app's notice under the series when the record is short (Chi-squared).
+      if (identical(args$pgMethod, "Chi-squared")) {
+        ok <- !vapply(as.list(t), .js_invalid, logical(1)) &
+              !vapply(as.list(y), .js_invalid, logical(1))
+        node_warning("Rhythmicity Analysis", chi_squared_short_record_warning(
+          chi_squared_record_length(t[ok]), args$periodMax,
+          hours = identical(env$cols[[as.character(x_in)]]$type, "time")))
+      }
     } else if (identical(analysis, "fft")) {
       fs <- args$fftFreqStep
       f <- compute_fft(t, y, if (is.numeric(fs) && length(fs) == 1 && is.finite(fs) && fs > 0)
@@ -6261,7 +6311,7 @@ moving_stat_keys <- function(args) {
   } else if (an == "npcra") {
     P <- g("npcraPeriod", 24)
     r <- compute_npcra(tt, yy, g("npcraEpochHours", 1), P, g("npcraMWindow", 10),
-                       g("npcraLWindow", 5))
+                       g("npcraLWindow", 5), full_days = isTRUE(args$npcraFullDays))
     if (!is.null(r)) {
       for (k in c("IS", "IV", "RA", "L5", "M10")) st[[k]] <- r[[k]]
       st$M10onset <- apply_phase_reference(wrap_to_period(r$M10onset + r$t0 - rs, P), ref, P)
@@ -6435,6 +6485,10 @@ tp_movinganalysis <- function(args, env) {
   per_y <- compute_moving_windows(t_all, lapply(ids, function(y)
     col_data(env$cols[[as.character(y)]], env$cols, env$raw_data)), starts, win, keys, args, phase)
   names(per_y) <- as.character(ids)
+  # Every window is windowSize long: one short-record warning for the node (Chi-squared).
+  if (identical(args$analysis, "periodogram") && identical(args$pgMethod, "Chi-squared"))
+    node_warning("Moving Analysis", chi_squared_short_record_warning(
+      win, args$periodMax, hours = is_time, per_window = TRUE))
   for (pp in args$preProcesses) {
     nm <- pp$processName
     if (is.null(nm) || !nzchar(nm)) next  # the app skips an empty slot too

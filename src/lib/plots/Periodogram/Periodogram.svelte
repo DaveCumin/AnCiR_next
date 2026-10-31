@@ -1,4 +1,5 @@
 <script module>
+	import { chiSquaredShortRecordWarning, recordLength } from '$lib/utils/chiSquaredShortRecord.js';
 	// @ts-nocheck
 	import {
 		LegendAutoLayout,
@@ -409,6 +410,17 @@
 							`Bin size ${binSize} h is smaller than the typical sampling interval (${medianGap.toFixed(2)} h), so most bins are empty. ${subMsg}. Set the bin size to the sampling interval (${medianGap.toFixed(2)} h) or larger.`
 						);
 					}
+				}
+
+				// A short record makes the chi-squared test very conservative (decision 2026-11-01:
+				// the test is kept, the user is told; utils/chiSquaredShortRecord.js).
+				if (method === 'Chi-squared') {
+					const short = chiSquaredShortRecordWarning({
+						length: recordLength(xData),
+						periodMax: displayMax,
+						hours: this.x?.type === 'time'
+					});
+					if (short) warnings.push(short);
 				}
 
 				this.dataWarnings = warnings;

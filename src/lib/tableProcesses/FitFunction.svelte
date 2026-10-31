@@ -13,6 +13,7 @@
 	import { freePeriodFitWarnings, FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
 	import { rectWaveFitWarnings } from '$lib/utils/rectwave.js';
 	import { doubleLogisticFitWarnings } from '$lib/utils/doublelogistic.js';
+	import { doubleLogisticReliabilityWarnings } from '$lib/utils/doublelogisticReliability.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
 	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
 	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
@@ -702,6 +703,16 @@
 				...fitDiag
 			];
 		}
+		// Double logistic with shallow edges or a weak rhythm: the duty cycle, onset and offset
+		// are not pinned down (decision 2026-11-01). Words only; the fit is unchanged.
+		let reliability = [];
+		if (model === 'doublelogistic') {
+			const xCol = argsIN.xIN != null && argsIN.xIN !== -1 ? getColumnById(argsIN.xIN) : null;
+			reliability = doubleLogisticReliabilityWarnings(
+				fitEntries.map((e) => ({ ...e, pValue: e.result?.pValue })),
+				{ periodic: argsIN.periodic ?? true, unit: periodUnitForColumn(xCol) }
+			);
+		}
 		// Test validity (review FIT-5): the shuffle permutation test and the fixed-period
 		// cosinor F-test (reported in the stats table) assume independent observations.
 		const validity = [];
@@ -722,6 +733,7 @@
 			...(result?.tooFewWarnings ?? []),
 			...checkFitResultsFinite(fitEntries, `The ${model} fit`),
 			...freeWarnings,
+			...reliability,
 			...validity,
 			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
 			...fitSampleWarnings(argsIN),

@@ -12,6 +12,7 @@
 	import { computeFFT, fftPeak } from '$lib/utils/fft.js';
 	import { periodogramPeakIndex, peakFamilywiseP } from '$lib/utils/periodogramPeak.js';
 	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
+	import { chiSquaredShortRecordWarning, recordLength } from '$lib/utils/chiSquaredShortRecord.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	// Side-effect: registers 'periodogram.compute' on the main thread so sync fallback works.
@@ -144,7 +145,7 @@
 		return [];
 	}
 
-	async function runAnalysis(tt, yy, args) {
+	async function runAnalysis(tt, yy, args, { hours = true } = {}) {
 		const outputs = {};
 		const stats = {};
 		for (const k of getOutputKeys(args)) outputs[k] = [];
@@ -168,17 +169,27 @@
 				: periodogramCompute(params);
 			outputs.period = res.x ?? [];
 			outputs.power = res.y ?? [];
+			// A short record makes the chi-squared test very conservative (decision 2026-11-01:
+			// the test is kept, the user is told; utils/chiSquaredShortRecord.js).
+			const notice =
+				args.pgMethod === 'Chi-squared'
+					? chiSquaredShortRecordWarning({
+							length: recordLength(tt),
+							periodMax: args.periodMax,
+							hours
+						})
+					: '';
 			if (args.pgMethod === 'Chi-squared') outputs.threshold = res.threshold ?? [];
-			if (!res.y?.length) return { outputs, stats };
+			if (!res.y?.length) return { outputs, stats, notice };
 			// The largest Qp - threshold for Chi-squared, the largest power otherwise (SPEC-9). No
 			// positive power anywhere (flat or all-zero data) is no rhythm: NaN, not the first
 			// trial period (ROB-13; MovingAnalysis used to report 18 h on off-wrist windows).
 			const bestIdx = periodogramPeakIndex(res);
-			if (bestIdx < 0) return { outputs, stats };
+			if (bestIdx < 0) return { outputs, stats, notice };
 			stats.peak_period = res.x[bestIdx];
 			stats.peak_power = res.y[bestIdx];
 			if ('peak_pvalue' in stats) stats.peak_pvalue = peakFamilywiseP(res, bestIdx);
-			return { outputs, stats };
+			return { outputs, stats, notice };
 		}
 
 		if (args.analysis === 'fft') {
@@ -255,7 +266,9 @@
 			}
 			if (tt.length < 3) continue;
 
-			const { outputs, stats, notice } = await runAnalysis(tt, yy, argsIN);
+			const { outputs, stats, notice } = await runAnalysis(tt, yy, argsIN, {
+				hours: tCol.type === 'time'
+			});
 			y_results[yId] = { outputs, stats, notice: notice ?? '' };
 			if (outputKeys.some((k) => (outputs[k]?.length ?? 0) > 0)) anyValid = true;
 		}

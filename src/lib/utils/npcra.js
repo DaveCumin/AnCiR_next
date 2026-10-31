@@ -22,10 +22,23 @@ import { isInvalidValue } from './stats.js';
  * @param {number} [opts.period=24]     folding period (h)
  * @param {number} [opts.mWindow=10]    M-window length (h) for M10
  * @param {number} [opts.lWindow=5]     L-window length (h) for L5
+ * @param {boolean} [opts.fullDays=false] keep only whole periods of epochs from the first
+ *   sample, as nparACT's fulldays = TRUE (see FULL DAYS below)
  * @returns {{IS:number,IV:number,RA:number,M10:number,L5:number,M10onset:number,
  *   L5onset:number,profile:number[],binCentres:number[],n:number,p:number,
- *   nEpochs:number,missingEpochFraction:number,t0:number}|null}  null when there is no
- *   usable data. `missingEpochFraction` is (nEpochs - n) / nEpochs, the empty epochs.
+ *   nEpochs:number,missingEpochFraction:number,t0:number,fullDaysKept:number|null,
+ *   droppedEpochs:number}|null}  null when there is no usable data. `missingEpochFraction`
+ *   is (nEpochs - n) / nEpochs, the empty epochs. `nEpochs` counts the epochs used (after
+ *   the full-days cut); `fullDaysKept` is the number of whole periods kept (null with
+ *   fullDays off) and `droppedEpochs` the epochs the cut left out.
+ *
+ * FULL DAYS. nparACT (Blume, Santhi & Schabus 2016, MethodsX 3:430-435,
+ * doi:10.1016/j.mex.2016.05.006) defaults to fulldays = TRUE and cuts the record to whole
+ * days from the first sample before computing IS, IV, RA and L5/M10 (nparACT_base.R, CRAN
+ * 0.9.1: `data <- data[1:(e*bin_hr*24*full_days),]`). Van Someren et al. (1999) do not say
+ * what to do with a partial day. With `fullDays` the epoch grid is cut to floor(nEpochs / p)
+ * whole periods, so every statistic rests on the same whole days. A record shorter than
+ * one period has no whole day to keep and is used whole (`fullDaysKept` 0).
  *
  * PHASE FRAME: M10onset, L5onset and binCentres are hours after `t0`, the earliest
  * valid time (the first sample), folded into [0, period). They are NOT clock time:
@@ -38,6 +51,7 @@ export function computeNPCRA(t, y, opts = {}) {
 	const period = opts.period ?? 24;
 	const mWindow = opts.mWindow ?? 10;
 	const lWindow = opts.lWindow ?? 5;
+	const fullDays = opts.fullDays === true;
 	if (!(epochHours > 0) || !(period > 0)) return null;
 
 	// 1. Pair, keep finite times, sort ascending by time.
@@ -61,24 +75,30 @@ export function computeNPCRA(t, y, opts = {}) {
 	// 2. Resample into equal epochs (epoch value = mean of samples in the bin;
 	//    an empty bin is missing → NaN).
 	const e = epochHours;
-	const nEpochs = Math.max(1, Math.ceil((tEnd - t0) / e + 1e-9));
+	const nGrid = Math.max(1, Math.ceil((tEnd - t0) / e + 1e-9));
 	// A non-time X axis with a very large value range yields a huge span/epoch ratio
 	// (epochHours>0 is already guaranteed above), so nEpochs can be enormous and
 	// `new Float64Array(nEpochs)` throws / OOMs. Cap at a sane window count; beyond
 	// this the input isn't a real time series.
-	if (!Number.isFinite(nEpochs) || nEpochs > 1e7) return null;
-	const sum = new Float64Array(nEpochs);
-	const cnt = new Float64Array(nEpochs);
+	if (!Number.isFinite(nGrid) || nGrid > 1e7) return null;
+	const sum = new Float64Array(nGrid);
+	const cnt = new Float64Array(nGrid);
 	for (const [ti, yi] of pairs) {
 		if (!Number.isFinite(yi)) continue;
 		// Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
 		// day-unit axis) makes (ti - t0) / e land at 11.999999… for an exact bin edge.
 		let k = Math.floor((ti - t0) / e + 1e-9);
 		if (k < 0) k = 0;
-		else if (k >= nEpochs) k = nEpochs - 1;
+		else if (k >= nGrid) k = nGrid - 1;
 		sum[k] += yi;
 		cnt[k] += 1;
 	}
+	// Epochs per period (the folded profile's bins).
+	const p = Math.max(1, Math.round(period / e));
+	// Full days: keep whole periods from the first sample (see FULL DAYS above).
+	const fullDaysKept = fullDays ? Math.floor(nGrid / p) : null;
+	const nEpochs = fullDaysKept >= 1 ? fullDaysKept * p : nGrid;
+	const droppedEpochs = nGrid - nEpochs;
 	const x = new Array(nEpochs);
 	for (let k = 0; k < nEpochs; k++) x[k] = cnt[k] > 0 ? sum[k] / cnt[k] : NaN;
 
@@ -93,7 +113,6 @@ export function computeNPCRA(t, y, opts = {}) {
 	for (let k = 0; k < nEpochs; k++) if (Number.isFinite(x[k])) overallSS += (x[k] - Xbar) ** 2;
 
 	// 4. Average 24 h profile: fold epochs onto p bins-of-day.
-	const p = Math.max(1, Math.round(period / e));
 	const pSum = new Float64Array(p);
 	const pCnt = new Float64Array(p);
 	for (let k = 0; k < nEpochs; k++) {
@@ -172,7 +191,9 @@ export function computeNPCRA(t, y, opts = {}) {
 		p,
 		nEpochs,
 		missingEpochFraction,
-		t0
+		t0,
+		fullDaysKept,
+		droppedEpochs
 	};
 }
 

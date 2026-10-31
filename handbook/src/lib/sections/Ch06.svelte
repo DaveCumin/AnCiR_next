@@ -114,6 +114,23 @@
 		</p>
 	</WarnBox>
 
+	<WarnBox title="Short records make the test very conservative">
+		<p>
+			Q<sub>p</sub> is compared with a chi-squared distribution, but on a short record it cannot reach
+			that distribution's tail, so the test calls fewer records rhythmic than its alpha promises. On white
+			noise the nominal 5% test at a 24&nbsp;h period fires in about 2% of 3-day records, 4% of 10-day
+			records and 4.5% of 14-day ones, and the correction across the tested periods lowers the overall
+			rate further (about 0.2% at 3 days). The same shortfall costs power: it can miss a rhythm that is
+			there.
+		</p>
+		<p>
+			So AnCiR warns when a record (or a Moving Analysis window) holds fewer than 7 cycles of the
+			longest period tested, the point below which the test runs at under about four fifths of its
+			nominal level. The test itself is unchanged. With a short record, use Lomb-Scargle, or record
+			for longer.
+		</p>
+	</WarnBox>
+
 	<WarnBox title="A test for rhythm, not the best estimate of τ">
 		<p>
 			Use the chi-squared periodogram to ask <em>whether</em> a record is rhythmic. To measure the
@@ -509,7 +526,7 @@
 
 	<AnCiRBox
 		title="Surrogate Test node"
-		tip="Start with Block bootstrap and a block length near one cycle. If the result is borderline, try AR(1) red noise as well; a rhythm that survives both is a rhythm worth reporting."
+		tip="Start with Block bootstrap and a block length of about a quarter of the period (6 h for a daily rhythm, the default for a new node). If the result is borderline, try AR(1) red noise as well; a rhythm that survives both is a rhythm worth reporting."
 	>
 		<p>
 			The <strong>Surrogate Test</strong> node (Analysis family) takes time in <code>xIN</code> and
@@ -518,9 +535,15 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Block bootstrap</strong> (default): resample contiguous blocks of the record.
-				Preserves short-range autocorrelation up to the block length while destroying rhythm across
-				blocks. Set <strong>Block length (h)</strong> near one cycle (default 24).
+				<strong>Block bootstrap</strong> (default): resample contiguous blocks of the record (the
+				moving-block bootstrap<sup class="cite"><a href="#ref-34">[34]</a></sup>). Preserves
+				short-range autocorrelation up to the block length while destroying rhythm across blocks.
+				Set <strong>Block length (h)</strong> to about a quarter of the period: 6 h for a daily rhythm
+				(the default for a new node), 3 h for a 12.4 h tidal one. A block of one whole cycle keeps every
+				cycle intact, so each surrogate still carries part of the rhythm: on simulated 10-day hourly records
+				with autocorrelated noise, 24 h blocks called 0.5% of rhythmless records significant (5% is nominal)
+				and found a weak rhythm 49% of the time, against 4.3% and 78% with 6 h blocks. A session saved
+				with a 24 h block keeps it until you change it.
 			</li>
 			<li>
 				<strong>AR(1) red noise</strong>: fit a first-order autoregressive model and simulate from

@@ -5,8 +5,10 @@
  * computeAutocorrelation normalises each lag by its own pair count (N - k), and the band
  * ignores Bartlett's formula.
  *
- * Verdict: CONFIRMED (this file documents CURRENT behaviour; the band formula is a method
- * choice, so nothing is changed).
+ * Verdict: CONFIRMED. Decision (David, 2026-11-01): the plot draws Bartlett's band by default
+ * (utils/correlogram.js correlogramBand), with +/-z/sqrt(N) and +/-z/sqrt(N - k) as options; a
+ * plot saved before the choice keeps +/-z/sqrt(N) (correlogramBandMethodOf). The tests at the
+ * end pin the app's band to statsmodels.
  *
  *  1. The estimator IS the "adjusted" (N - k) ACF: it matches statsmodels 0.14.6
  *     `acf(y, adjusted=True)` to 1e-10 below. For i.i.d. noise its lag-k value is a mean of
@@ -19,7 +21,12 @@
  *     significance at the lags a user reads (the 24 h peak).
  */
 import { describe, it, expect } from 'vitest';
-import { computeAutocorrelation } from './correlogram.js';
+import {
+	computeAutocorrelation,
+	correlogramBand,
+	correlogramBandMethodOf,
+	CORRELOGRAM_BAND_METHODS
+} from './correlogram.js';
 
 // AR(1) phi 0.6 series, n = 60, rounded to 4 dp (numpy default_rng(20261028)).
 const Y = [
@@ -65,7 +72,7 @@ function bartlettHalfWidth(rUnadj, n) {
 	return out;
 }
 
-describe('SPEC-U2: the correlogram band (documents current behaviour)', () => {
+describe('SPEC-U2: the correlogram band', () => {
 	it('the estimator is the (N - k)-normalised ACF of statsmodels acf(adjusted=True)', () => {
 		const t = Y.map((_, i) => i);
 		const r = computeAutocorrelation(t, Y, null, 29);
@@ -120,5 +127,68 @@ describe('SPEC-U2: the correlogram band (documents current behaviour)', () => {
 		expect(short).toBeGreaterThan(0.03);
 		expect(short).toBeLessThan(0.08);
 		expect(long).toBeGreaterThan(0.1);
+	});
+});
+
+describe('the app band (correlogramBand), pinned to statsmodels 0.14.6', () => {
+	const t = Y.map((_, i) => i);
+	const n = Y.length;
+	// statsmodels' z is norm.ppf(0.975); the app's is the 1.96 the plot has always used, so the
+	// STANDARD ERRORS are compared (half-width / z), which pins the formula itself.
+	const smSE = (hw) => hw / Z;
+
+	it('Bartlett: the SE at lags 1..5 and 29 equals statsmodels acf(bartlett_confint=True)', () => {
+		const acf = computeAutocorrelation(t, Y, null, 29);
+		const { upper, lower } = correlogramBand(acf, { method: 'bartlett', level: 0.95 });
+		for (let k = 1; k <= 5; k++) expect(upper[k] / 1.96).toBeCloseTo(smSE(SM_BARTLETT[k - 1]), 12);
+		expect(upper[29] / 1.96).toBeCloseTo(smSE(SM_BARTLETT_LAG29), 12);
+		expect(lower[29]).toBe(-upper[29]);
+		// Lag 0 has no band (statsmodels gives it zero width: r_0 = 1 is not estimated).
+		expect(upper[0]).toBeNaN();
+	});
+
+	it('Bartlett with a min lag sums r_j from lag 1 (the full correlogram), not from the window', () => {
+		const full = computeAutocorrelation(t, Y, null, 29);
+		const win = computeAutocorrelation(t, Y, null, 29, 10);
+		const band = correlogramBand(win, { method: 'bartlett', full });
+		expect(win.lags[0]).toBe(10);
+		expect(band.upper[win.lags.length - 1] / 1.96).toBeCloseTo(smSE(SM_BARTLETT_LAG29), 12);
+		// Without the full correlogram the sum would start at the window: narrower.
+		const short = correlogramBand(win, { method: 'bartlett' });
+		expect(short.upper.at(-1)).toBeLessThan(band.upper.at(-1));
+	});
+
+	it('+/-z/sqrt(N - k) uses the pairs at each lag; +/-z/sqrt(N) is flat at every lag', () => {
+		const acf = computeAutocorrelation(t, Y, null, 29);
+		const nk = correlogramBand(acf, { method: 'nk' });
+		expect(nk.upper[0]).toBeCloseTo(1.96 / Math.sqrt(n), 15);
+		expect(nk.upper[29]).toBeCloseTo(1.96 / Math.sqrt(n - 29), 15);
+		const white = correlogramBand(acf, { method: 'white', level: 0.99 });
+		expect(new Set(white.upper).size).toBe(1);
+		expect(white.upper[7]).toBeCloseTo(2.576 / Math.sqrt(n), 15);
+		// The plot's N for this band has always been the y values present.
+		expect(correlogramBand(acf, { method: 'white', nWhite: 50 }).upper[3]).toBeCloseTo(
+			1.96 / Math.sqrt(50),
+			15
+		);
+		// Under two values the old band was 0 at every lag.
+		expect(correlogramBand(acf, { method: 'white', nWhite: 1 }).upper[3]).toBe(0);
+	});
+
+	it('the band a series draws: its own choice, else +/-z/sqrt(N) when saved before the choice, else Bartlett', () => {
+		expect(CORRELOGRAM_BAND_METHODS).toEqual(['bartlett', 'white', 'nk']);
+		for (const m of CORRELOGRAM_BAND_METHODS)
+			expect(correlogramBandMethodOf({ bandMethod: m, showConfidenceBounds: true })).toBe(m);
+		// A saved series (every one has carried showConfidenceBounds since the plot was added).
+		expect(correlogramBandMethodOf({ showConfidenceBounds: true, confidenceLevel: 0.95 })).toBe(
+			'white'
+		);
+		expect(correlogramBandMethodOf({ showConfidenceBounds: false })).toBe('white');
+		// A new series from a quick plot, the MCP or an AI edit names only its columns.
+		expect(correlogramBandMethodOf({ x: { refId: 1 }, y: { refId: 2 } })).toBe('bartlett');
+		expect(correlogramBandMethodOf(undefined)).toBe('bartlett');
+		expect(correlogramBandMethodOf({ bandMethod: 'bogus', showConfidenceBounds: true })).toBe(
+			'white'
+		);
 	});
 });

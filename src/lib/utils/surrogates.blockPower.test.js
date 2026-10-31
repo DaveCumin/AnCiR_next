@@ -4,8 +4,11 @@
  * default null, a moving-block bootstrap with ONE-CYCLE (24 h) blocks, may lose power against
  * the AR(1) red-noise null on rhythmic records while holding its size.
  *
- * Verdict: CONFIRMED (this file documents CURRENT behaviour; the block length is a method
- * choice, so nothing is changed). Why it happens: a 24 h block always holds one whole cycle of
+ * Verdict: CONFIRMED. Decision (David, 2026-11-01): new Surrogate Test nodes use 6 h blocks
+ * (SurrogateTest.svelte NEW_NODE_BLOCK_HOURS); a saved node keeps the block it stored
+ * (SurrogateTest.blockDefault.svelte.test.js). The block-PERMUTATION scheme of the fit nodes is a
+ * different construction and keeps one-period blocks (permutationScheme.calibration.test.js).
+ * Why it happens: a 24 h block always holds one whole cycle of
  * the rhythm, so every bootstrap series is a chain of complete cycles with random phases. Its
  * band power keeps part of the rhythm (incoherent sum) and the null distribution is pushed up
  * towards the observed statistic.
@@ -75,7 +78,7 @@ function report(label, v) {
 	process.stderr.write(`SPEC-U1 ${label}: ${v.toFixed(3)}\n`);
 }
 
-describe('SPEC-U1: one-cycle block bootstrap against the AR(1) null (documents current behaviour)', () => {
+describe('SPEC-U1: one-cycle block bootstrap against the AR(1) null', () => {
 	it('size: both nulls hold (or undershoot) 5% on AR(1) noise with no rhythm', () => {
 		const block = rejectionRate({ method: 'block', amp: 0 });
 		const ar1 = rejectionRate({ method: 'ar1', amp: 0 });

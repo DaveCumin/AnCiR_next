@@ -32,6 +32,11 @@
 		['period', { val: 24 }],
 		['mWindow', { val: 10 }],
 		['lWindow', { val: 5 }],
+		// Full days only: cut the record to whole periods from the first sample before IS,
+		// IV, RA, M10 and L5, as nparACT's fulldays = TRUE (utils/npcra.js, FULL DAYS). OFF
+		// here, so a saved session that never stored it keeps the partial last day it was
+		// computed with; a NEW node starts with it ON (newNodeArgs below). Decision 2026-11-01.
+		['fullDays', { val: false }],
 		// What hour 0 means for M10onset / L5onset and the average-day time axis:
 		// 'start' = hours after the first sample (the default, and what saved sessions
 		// report), 'clock' = hours after local midnight in the x column's clock zone, wrapped
@@ -60,6 +65,9 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// A new node uses whole days only, as nparACT does by default; a loaded one keeps
+		// what it stored (or OFF, the behaviour before the option existed).
+		newNodeArgs: { fullDays: true },
 		func: nonparametricRA,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'npcrax',
@@ -98,7 +106,8 @@
 			epochHours: argsIN.epochHours ?? 1,
 			period: argsIN.period ?? 24,
 			mWindow: argsIN.mWindow ?? 10,
-			lWindow: argsIN.lWindow ?? 5
+			lWindow: argsIN.lWindow ?? 5,
+			fullDays: argsIN.fullDays === true
 		};
 		const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
 
@@ -172,6 +181,13 @@
 		if (epochsPerCycle < NPCRA_MIN_EPOCHS_PER_CYCLE) {
 			warnings.push(
 				`Coarse epochs: only ${epochsPerCycle.toFixed(1)} bins per ${period} h cycle at a ${opts.epochHours} h epoch. Intradaily variability measures hour-to-hour fragmentation, so with this few bins it mostly reflects the binning rather than the behaviour, so shorten the epoch if the data allow.`
+			);
+		}
+
+		// Full days only on a record shorter than one period: there is no whole day to keep.
+		if (opts.fullDays && Object.values(perY).some((r) => r.fullDaysKept === 0)) {
+			warnings.push(
+				`Full days only: the recording is shorter than one ${period} h cycle, so there is no whole day to keep and every epoch is used.`
 			);
 		}
 
@@ -253,6 +269,8 @@
 	if (p.args.period === undefined) p.args.period = 24;
 	if (p.args.mWindow === undefined) p.args.mWindow = 10;
 	if (p.args.lWindow === undefined) p.args.lWindow = 5;
+	// Stored explicitly: a session saved before the option keeps the partial last day.
+	if (p.args.fullDays === undefined) p.args.fullDays = false;
 
 	let npcraData = $state();
 	let mounted = $state(false);
@@ -274,6 +292,7 @@
 		out += p.args.period;
 		out += p.args.mWindow;
 		out += p.args.lWindow;
+		out += '|' + (p.args.fullDays === true);
 		// Clock-time phases move with the x column's clock zone, so it is an input then.
 		out +=
 			'|' +
@@ -400,6 +419,16 @@
 				...npcraData.perY[yId]
 			}));
 	});
+	// What the full-days cut left out, from the first series (all share the x column).
+	let fullDaysNote = $derived.by(() => {
+		if (!p.args.fullDays || !rows.length) return '';
+		const r = rows[0];
+		if (!(r.fullDaysKept >= 1)) return '';
+		const cycles = `${r.fullDaysKept} whole ${r.fullDaysKept === 1 ? 'cycle' : 'cycles'}`;
+		if (!r.droppedEpochs) return `Full days only: ${cycles} used, nothing left out.`;
+		const h = Number((r.droppedEpochs * (p.args.epochHours ?? 1)).toFixed(2));
+		return `Full days only: ${cycles} used; the last ${h} h are left out.`;
+	});
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 	// Onsets are hours after the first sample unless the node reports clock time (FIT-9).
 	let onsetUnit = $derived(npcraData?.phaseRef?.clock ? 'clock time, h' : 'h after start');
@@ -432,6 +461,15 @@
 		<ControlInput label="L window (h)">
 			<NumberWithUnits bind:value={p.args.lWindow} min="0.1" step="1" />
 		</ControlInput>
+	</div>
+	<div class="control-input-horizontal">
+		<label
+			class="control-input-checkbox"
+			title="Cut the record to whole days from the first sample, as nparACT does"
+		>
+			<input type="checkbox" bind:checked={p.args.fullDays} />
+			<span class="ci-label">Full days only</span>
+		</label>
 	</div>
 	<div class="control-input-horizontal">
 		<PhaseReferenceSelect
@@ -501,6 +539,9 @@
 				{/each}
 			</tbody>
 		</table>
+		{#if fullDaysNote}
+			<p class="npcra-hint">{fullDaysNote}</p>
+		{/if}
 		{#each npcraData?.warnings ?? [] as w (w)}
 			<p class="warn">{w}</p>
 		{/each}

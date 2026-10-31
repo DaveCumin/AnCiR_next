@@ -510,3 +510,38 @@ describe('rolling fixed-period cosinor rmse_n', () => {
 		expect(out.rmse_n[0]).toBeCloseTo(out.rmse[0] * Math.sqrt((n - p) / n), 12);
 	});
 });
+
+describe('rolling NPCRA: full days only (decision 2026-11-01)', () => {
+	// 6 days hourly with a drifting active block, so a partial day changes IS.
+	const t = Array.from({ length: 144 }, (_, i) => i);
+	const y = t.map((h) => (h % 24 >= 8 + Math.floor(h / 24) && h % 24 < 18 ? 100 : 10));
+	const starts = [0, 12, 24, 36, 48];
+	const windowSize = 60; // 2.5 days
+	const run = (npcraFullDays) =>
+		computeMovingWindows({
+			tAll: t,
+			ys: [y],
+			starts,
+			windowSize,
+			statKeys: getStatKeys({ analysis: 'npcra' }),
+			args: { analysis: 'npcra', npcraFullDays }
+		})[0];
+	it('each window is cut to whole periods from its first sample', () => {
+		const on = run(true);
+		const off = run(false);
+		starts.forEach((s, w) => {
+			const keep = t.filter((h) => h >= s && h < s + 48);
+			const ref = computeNPCRA(
+				keep,
+				keep.map((h) => y[h]),
+				{}
+			);
+			expect(on.IS[w]).toBe(ref.IS);
+			expect(on.IV[w]).toBe(ref.IV);
+			expect(on.RA[w]).toBe(ref.RA);
+		});
+		expect(on.IS.some((v, w) => Math.abs(v - off.IS[w]) > 1e-6)).toBe(true);
+		// Absent = off (a saved session).
+		expect(run(undefined).IS).toEqual(off.IS);
+	});
+});

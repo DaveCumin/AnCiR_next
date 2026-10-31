@@ -70,6 +70,19 @@
 		as significant.
 	</p>
 	<p>
+		That band is only right for white noise. Once the early lags are correlated, as they are in any
+		rhythmic or autocorrelated record, the later r(k) vary more, and Bartlett's formula<sup
+			class="cite"><a href="#ref-35">[35]</a></sup
+		>
+		gives their standard error as √((1 + 2 Σ<sub>j&lt;k</sub> r(j)²) / N), which widens with lag.
+		AnCiR's Correlogram plot draws this <strong>Bartlett</strong> band by default (the band
+		statsmodels'
+		<code>plot_acf</code> draws), so a 24 h peak is judged against the noise it really has. The
+		<strong>Band</strong> setting also offers the white-noise ±z/√N and ±z/√(N−k); the latter matches
+		AnCiR's estimator, which averages the N − k products at lag k. A plot saved before the setting existed
+		keeps ±z/√N until you change it.
+	</p>
+	<p>
 		The ACF assumes a <strong>stationary, evenly spaced</strong> series and requires the data to be
 		<a class="gloss" href="#gloss-detrending">detrended</a> first; an undetrended drift produces a slowly
 		decaying, uniformly positive ACF that buries the rhythmic peaks. It is also unreliable if the period

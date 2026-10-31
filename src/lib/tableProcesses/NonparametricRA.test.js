@@ -148,3 +148,47 @@ describe('NonparametricRA: missing-epoch warning (FIT-8)', () => {
 		expect(evaluateNPCRA(args).warnings.some((m) => /epochs have no data/.test(m))).toBe(false);
 	});
 });
+
+describe('NonparametricRA — full days only (decision 2026-11-01)', () => {
+	// 7.5 days whose extra half day is unlike the rest, so the partial day moves IS.
+	function withPartialDay() {
+		const { t, y } = restActivity(7);
+		for (let h = 168; h < 180; h++) {
+			t.push(h);
+			y.push(55);
+		}
+		return { t, y };
+	}
+	it('defaults OFF (saved sessions), ON for a new node (newNodeArgs)', async () => {
+		expect(definition.defaults.get('fullDays')?.val).toBe(false);
+		expect(definition.newNodeArgs).toEqual({ fullDays: true });
+		const { buildTableProcessDefaults } = await import('$lib/core/tpDefaults.js');
+		expect(buildTableProcessDefaults({ defaults: definition.defaults, definition }).fullDays).toBe(
+			true
+		);
+	});
+	it('ON cuts to whole days; OFF (or absent) keeps the partial day', () => {
+		const { t, y } = withPartialDay();
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => y };
+		const on = evaluateNPCRA({ xIN: 1, yIN: [2], fullDays: true }).perY[2];
+		const off = evaluateNPCRA({ xIN: 1, yIN: [2], fullDays: false }).perY[2];
+		const absent = evaluateNPCRA({ xIN: 1, yIN: [2] }).perY[2];
+		expect(on.nEpochs).toBe(168);
+		expect(on.IS).toBeCloseTo(1, 12); // the 7 clean days alone
+		expect(off.nEpochs).toBe(180);
+		expect(off.IS).toBeLessThan(0.99);
+		expect(absent.IS).toBe(off.IS);
+	});
+	it('a record shorter than one period warns that nothing could be cut', () => {
+		const t = Array.from({ length: 20 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => t.map((h) => (h < 10 ? 100 : 10)) };
+		const r = evaluateNPCRA({ xIN: 1, yIN: [2], fullDays: true });
+		expect(r.warnings.some((w) => w.startsWith('Full days only: the recording is shorter'))).toBe(
+			true
+		);
+		const off = evaluateNPCRA({ xIN: 1, yIN: [2], fullDays: false });
+		expect(off.warnings.some((w) => w.startsWith('Full days only'))).toBe(false);
+	});
+});

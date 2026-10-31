@@ -198,7 +198,8 @@ describe('FIT-U2: sign canonicalisation of A', { timeout: 120000 }, () => {
  *    0.013 vs 0.009 and 0.006 vs 0.005 at SNR 4, 0.021 vs 0.024 (fixed) and 0.367 vs 0.271
  *    (free) at SNR 1, 0.389 vs 0.389 (fixed) and 0.443 vs 0.499 (free) at SNR 0.5. The
  *    surface is flat along shallow-slope fits, so on weak rhythms the duty cycle is not
- *    identified whatever the tolerance (a separate finding: see the review notes). On clean
+ *    identified whatever the tolerance (a separate finding: since 2026-11-01 the double-logistic
+ *    nodes warn about it, utils/doublelogisticReliability.js). On clean
  *    data the median free period error is 1.8e-3 to 3.3e-3 h at the default and 1.3e-3 to
  *    2.3e-3 h tight.
  *  - Cost: tight fits take 12x to 15x as long (rectangular wave, 15 min data: 20 to 33 ms
@@ -303,7 +304,9 @@ describe('FIT-U3: stopping tolerance', { timeout: 120000 }, () => {
  * -0.002 to +0.006 (no consistent bias) and largest |difference| 0.061 (5 d + 18 h), 0.040
  * (7 d + 18 h), 0.021 (14 d + 18 h), against a between-seed IS SD of 0.016 to 0.020. IV
  * moves by at most 0.0017 on average, RA by at most 0.0016. Truncating is a method choice, so
- * the behaviour is NOT changed here.
+ * the behaviour is NOT changed here. Since 2026-11-01 (David's decision) it is an option,
+ * fullDays (Full days only; on for new nodes, off for saved sessions), tested in
+ * npcra.fullDays.test.js; these tests call computeNPCRA without it.
  */
 function actigraphy(seed, days, extraH, startHour) {
 	const r = rng(seed);

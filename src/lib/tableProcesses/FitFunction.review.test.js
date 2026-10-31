@@ -181,3 +181,29 @@ describe('Fit waveform model: exchangeability (FIT-5)', () => {
 		expect(res.y_results[2].fitResult.permutedStats).toHaveLength(recommendPermutations(40));
 	});
 });
+
+describe('Fit waveform model: double logistic on shallow or weak rhythms (2026-11-01)', () => {
+	const fixed = { ...base, model: 'doublelogistic', fixPeriod: true, fixedPeriod: 24 };
+	it('a cosine (no plateaus) warns that the rise and fall are too gradual', async () => {
+		const t = Array.from({ length: 168 }, (_, i) => i);
+		setColumns(
+			t,
+			t.map((i) => 10 + 4 * Math.cos((2 * Math.PI * i) / 24))
+		);
+		const [res, valid] = await fitFunction(fixed);
+		expect(valid).toBe(true);
+		const w = res.warnings.filter((s) => s.includes('pin down the active period'));
+		expect(w).toHaveLength(1);
+		expect(w[0]).toMatch(/^"y": The rise and fall are too gradual/);
+		expect(w[0]).toContain('x units');
+	});
+	it('a clean square wave does not warn', async () => {
+		const t = Array.from({ length: 168 }, (_, i) => i);
+		setColumns(
+			t,
+			t.map((i) => ((i + 18) % 24 < 12 ? 15 : 5))
+		);
+		const [res] = await fitFunction(fixed);
+		expect(res.warnings.some((s) => s.includes('pin down the active period'))).toBe(false);
+	});
+});

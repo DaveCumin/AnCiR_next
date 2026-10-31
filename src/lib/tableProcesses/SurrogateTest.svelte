@@ -30,13 +30,31 @@
 
 	const displayName = 'Surrogate Test';
 
+	/**
+	 * Block length (h) of the block bootstrap. A new node starts at 6 h, a quarter of a daily
+	 * cycle (decision 2026-11-01): a 24 h block always holds one whole cycle, so every bootstrap
+	 * series is a chain of complete cycles at random phases, its band power keeps part of the
+	 * rhythm and the null is pushed up. On 10-day hourly AR(1) records (phi 0.5) with a 24 h
+	 * cosine (surrogates.blockPower.test.js, 400 records x 199 surrogates): size 0.005 with
+	 * 24 h blocks against 0.043 with 6 h blocks, power at amplitude 0.6 0.49 against 0.78.
+	 * The block length is absolute hours (the test band is set separately), so a non-daily
+	 * rhythm wants about a quarter of its own period (3 h for a 12.4 h tidal rhythm).
+	 */
+	export const NEW_NODE_BLOCK_HOURS = 6;
+	/** The block length of every Surrogate Test saved before the setting's default changed. */
+	export const LEGACY_BLOCK_HOURS = 24;
+
 	const defaults = new Map([
 		['xIN', { val: -1 }], // time
 		['yIN', { val: -1 }], // values
 		['method', { val: 'block' }],
 		['nSurrogates', { val: 199 }],
 		['seed', { val: 12345 }],
-		['blockLengthHours', { val: 24 }],
+		// A NEW node's block (every creation path reads these defaults: the palette, the in-app AI
+		// edit, the MCP engine and the Worker's draft normalizer). A saved node always stored its
+		// own length; one that somehow lacks it computes, and is shown, with the legacy one-cycle
+		// block (LEGACY_BLOCK_HOURS: the compute fallback and the mount-time write below).
+		['blockLengthHours', { val: NEW_NODE_BLOCK_HOURS }],
 		['periodMin', { val: 20 }],
 		['periodMax', { val: 28 }],
 		['out', { pvalue: { val: -1 }, observed: { val: -1 } }],
@@ -118,7 +136,7 @@
 		const dt = g.dt;
 		const blockSamples =
 			Number.isFinite(dt) && dt > 0
-				? Math.max(1, Math.round((Number(argsIN.blockLengthHours) || 24) / dt))
+				? Math.max(1, Math.round((Number(argsIN.blockLengthHours) || LEGACY_BLOCK_HOURS) / dt))
 				: 24;
 
 		const periodMin = Number(argsIN.periodMin) || 20;
@@ -180,6 +198,9 @@
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
+	// A node saved without a block length computed with one cycle (the compute fallback); write
+	// it so the setting shows the length the result came from. A new node carries 6 h already.
+	if (p.args.blockLengthHours == null) p.args.blockLengthHours = LEGACY_BLOCK_HOURS;
 
 	let mounted = $state(false);
 	let result = $state({ pValue: NaN, observed: NaN, nSurrogates: 0, advice: '', reason: '' });
@@ -273,6 +294,11 @@
 		<ControlInput label="Block length (h)">
 			<NumberWithUnits bind:value={p.args.blockLengthHours} min="1" step="1" />
 		</ControlInput>
+		<p class="tp-hint">
+			About a quarter of the period works best (6 h for a daily rhythm): the test stays near its
+			nominal 5% with the most power. A block of one whole cycle keeps each cycle intact and makes
+			the test very conservative.
+		</p>
 	{/if}
 </div>
 

@@ -30,7 +30,12 @@
  * - `block` (moving-block bootstrap, Künsch 1989, Ann. Statist. 17:1217-1241)
  *   Resamples contiguous blocks. Preserves LOCAL structure without pinning the
  *   global spectrum, so it CAN test rhythmicity. Block length is the sensitive
- *   choice; for circadian data a whole number of cycles is the natural default.
+ *   choice. A block of one whole cycle (the node's default until 2026-11) keeps
+ *   every cycle intact, so each surrogate is a chain of complete cycles at random
+ *   phases and still carries part of the rhythm: the test was very conservative
+ *   (size 0.005 at AR(1) phi 0.5) and lost power. A quarter of the period (6 h
+ *   for a daily rhythm) held size near 5% (0.043) with the most power measured
+ *   (surrogates.blockPower.test.js); new Surrogate Test nodes start there.
  *
  * - `ar1` (red-noise, Torrence & Compo 1998 §4)
  *   Fits an AR(1) and simulates from it. The standard null for "is this
