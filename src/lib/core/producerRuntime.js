@@ -104,7 +104,7 @@ export function resolveProducer(producerNodeId, producerPort = 'output') {
 		const inputCol = findColumn(inColId);
 		if (!inputCol) return [];
 		const input = inputCol.getData() ?? [];
-		return proc.doProcess(input);
+		return proc.doProcess(input, inColId);
 	} finally {
 		_inFlight.delete(key);
 	}

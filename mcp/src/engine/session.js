@@ -31,6 +31,13 @@ import { timeTextFormat, columnZoneOf } from '../emit/timeColumns.js';
 import { joinNameOf } from '$lib/tableProcesses/JoinData.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
+import {
+	resolvePlotInputs,
+	plotInputIds,
+	mapPlotInputIds,
+	plotSeriesDataIns,
+	assertSeriesKept
+} from './plotInputs.js';
 import { manifestPortDescription, PLOT_PORT_DESCRIPTIONS } from '$lib/core/portDescriptions.js';
 import {
 	normalizeOverlaySpecs,
@@ -1007,18 +1014,18 @@ export class AncirSession {
 		const p = new Plot({ name: type, type });
 
 		if (type === 'tableplot') {
-			const ids = (Array.isArray(inputs) ? inputs : Object.values(inputs)).map(assertCol);
+			const ids = (Array.isArray(inputs) ? inputs : Object.values(inputs)).flat().map(assertCol);
 			p.plot.columnRefs = [...ids];
 			p.plot.showCol = ids.map(() => true);
 		} else {
 			const fields = entry.defaultInputs ?? [];
 			const optional = new Set(OPTIONAL_PLOT_INPUTS[type] ?? []);
-			const refOf = (field) =>
-				Array.isArray(inputs) ? inputs[fields.indexOf(field)] : inputs[field];
+			// Ids or names; the many input (see plotInputs.js) may be a list, one series each.
+			const resolved = resolvePlotInputs(type, fields, inputs, assertCol);
 			// Reject incomplete wiring BEFORE committing the plot. Previously a missing field was
 			// silently skipped and the plot inserted anyway (e.g. a scatterplot with x but no y),
 			// so add_plot reported success but the plot rendered blank / unusable.
-			const missing = fields.filter((f) => !optional.has(f) && refOf(f) == null);
+			const missing = fields.filter((f) => !optional.has(f) && resolved[f] == null);
 			if (missing.length) {
 				const required = fields.filter((f) => !optional.has(f));
 				throw new Error(
@@ -1027,14 +1034,13 @@ export class AncirSession {
 						`Call list_capabilities for this plot's inputs.`
 				);
 			}
-			const dataIn = {};
-			for (const field of fields) {
-				const ref = refOf(field);
-				if (ref == null) continue;
-				dataIn[field] = { refId: assertCol(ref) };
-			}
-			if (Object.keys(dataIn).length) p.plot.addData(dataIn);
-			applyPlotEncodingFields(p.plot.data?.[0], enc.fields);
+			const dataIns = plotSeriesDataIns(fields, resolved);
+			for (const dataIn of dataIns) p.plot.addData(dataIn);
+			assertSeriesKept(type, fields, dataIns, p.plot.data?.length ?? 0);
+			// Colour by / Size by on every series the call made (one unless a list was given).
+			(p.plot.data ?? []).forEach((series, i) =>
+				applyPlotEncodingFields(series, i === 0 ? enc.fields : structuredClone(enc.fields))
+			);
 		}
 
 		const overlaySummary = applyOverlays(p.plot, overlayJsons, type);
@@ -1095,15 +1101,16 @@ export class AncirSession {
 		});
 
 		// Series inputs by id OR name, as add_plot takes them (an ambiguous or unknown
-		// name is refused here, before a browser is launched).
-		inputs = Array.isArray(inputs)
-			? inputs.map(assertColumnRef)
-			: Object.fromEntries(Object.entries(inputs ?? {}).map(([k, r]) => [k, assertColumnRef(r)]));
+		// name is refused here, before a browser is launched). The many input may be a list.
+		inputs =
+			type === 'tableplot'
+				? (Array.isArray(inputs) ? inputs : Object.values(inputs ?? {})).flat().map(assertColumnRef)
+				: resolvePlotInputs(type, entry.defaultInputs ?? [], inputs, assertColumnRef);
 
 		// Gather referenced columns (series inputs + overlay wires) and renumber to
 		// compact ids the render page rebuilds.
 		const idList = [
-			...(Array.isArray(inputs) ? inputs : Object.values(inputs)),
+			...(Array.isArray(inputs) ? inputs : plotInputIds(inputs)),
 			...overlayColumnIds(overlayJsons)
 		];
 		const uniq = [...new Set(idList)];
@@ -1121,7 +1128,7 @@ export class AncirSession {
 		});
 		const newInputs = Array.isArray(inputs)
 			? inputs.map((id) => idMap.get(id))
-			: Object.fromEntries(Object.entries(inputs).map(([k, id]) => [k, idMap.get(id)]));
+			: mapPlotInputIds(inputs, (id) => idMap.get(id));
 
 		const payload = {
 			columns,

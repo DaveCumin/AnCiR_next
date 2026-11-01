@@ -1861,6 +1861,120 @@
 			"rFunc": "circadianfunctionindex"
 		},
 		{
+			"id": "tp-cfi-full-days",
+			"_comment": "Full days only (2026-11-01), as tp-npcra-full-days: 7.5 days hourly cut to the first 7 whole days, so the CFI folds the same IS/IV/RA the Nonparametric RA node reports.",
+			"kind": "tableProcess",
+			"jsName": "CircadianFunctionIndex",
+			"pyFunc": "circadianfunctionindex",
+			"rFunc": "circadianfunctionindex",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"CFI": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1
+				}
+			},
+			"compareOutputs": ["CFI", "IS", "IV", "RA"]
+		},
+		{
+			"id": "tp-cfi-full-days-off",
+			"_comment": "Full days only OFF on the same 7.5 days: the partial last day is folded into IS/IV/RA and the CFI (every session saved before the option).",
+			"kind": "tableProcess",
+			"jsName": "CircadianFunctionIndex",
+			"pyFunc": "circadianfunctionindex",
+			"rFunc": "circadianfunctionindex",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": false,
+				"out": {
+					"CFI": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1
+				}
+			},
+			"compareOutputs": ["CFI", "IS", "IV", "RA"]
+		},
+		{
+			"id": "tp-cfi-full-days-short",
+			"_comment": "Full days only on 20 h of data (less than one period): nothing to cut, every epoch is used.",
+			"kind": "tableProcess",
+			"jsName": "CircadianFunctionIndex",
+			"pyFunc": "circadianfunctionindex",
+			"rFunc": "circadianfunctionindex",
+			"generate": {
+				"type": "rhythm",
+				"n": 20,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"CFI": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1
+				}
+			},
+			"compareOutputs": ["CFI", "IS", "IV", "RA"]
+		},
+		{
 			"id": "util-weighted-circmean",
 			"kind": "pureUtil",
 			"jsFn": "weightedCircularMean",
@@ -25405,7 +25519,7 @@
 			"pyFunc": "actogram_plot_rule_outputs",
 			"rFunc": "actogram_plot_rule_outputs",
 			"tolerance": 1e-9,
-			"note": "Onset and offset rules on 0 / 1 data (rest 0, active 1, no noise; tau 24 h, onset 06:00Z). The non-zero 50th percentile is the active level itself, so no bin is above the threshold: every row reports no marker (NaN), not a made-up one 3 h into the window, and there is no fit.",
+			"note": "Onset and offset rules on 0 / 1 data (rest 0, active 1, no noise; tau 24 h, onset 06:00Z). The non-zero 50th percentile is the active level itself, so no bin is above the threshold and the two-level window (two distinct values) counts at-or-above as active: every row reports the real onset (06:00) and offset (18:00), not a made-up marker 3 h into the window and not none.",
 			"generate": {
 				"seed": 11,
 				"series": [
@@ -25469,7 +25583,7 @@
 			"pyFunc": "actogram_plot_rule_outputs",
 			"rFunc": "actogram_plot_rule_outputs",
 			"tolerance": 1e-9,
-			"note": "Onset rule with a 100% centile on ordinary noisy data: the threshold is each window's top value, nothing is above it, and every row reports no marker rather than one N hours into the window.",
+			"note": "Onset rule with a 100% centile on ordinary noisy data: the threshold is each window's top value and nothing is above it. The window has more than two distinct values, so the two-level at-or-above fallback does not apply: every row reports no marker rather than one N hours into the window.",
 			"generate": {
 				"seed": 11,
 				"series": [

@@ -16,7 +16,9 @@
 		defaults: multiply_defaults,
 		nodeSpec: {
 			id: 'process.multiply',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: one factor for every input; scaling a time column's ms is not meaningful
+			// beside a number (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

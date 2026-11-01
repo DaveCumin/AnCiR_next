@@ -77,7 +77,7 @@ export const PARAM_NOTES = {
 	NonparametricRA:
 		'IS/IV/RA/M10/L5 metrics. `epochHours` is the resampling bin width (HOURS). `period` is the expected period (HOURS; 24 for daily). `mWindow`/`lWindow` are the M10/L5 window lengths (HOURS; default 10 and 5). `fullDays`: true cuts to whole periods from the first sample (nparACT default; new nodes), false keeps the partial last day. `phaseReference`: "start" (default; phases in h after the first sample) or "clock" (local clock time; time x only).',
 	CircadianFunctionIndex:
-		'`period` (HOURS) is the expected period. `epochHours` (HOURS) is the resampling bin width. `mWindow`/`lWindow` (HOURS) are the most-/least-active window lengths.',
+		'`period` (HOURS) is the expected period. `epochHours` (HOURS) is the resampling bin width. `mWindow`/`lWindow` (HOURS) are the most-/least-active window lengths. `fullDays`: true cuts to whole periods from the first sample before IS/IV/RA and the CFI (nparACT default; new nodes), false keeps the partial last day.',
 	AverageProfile:
 		'Folds the data onto one cycle. `period` is the folding period (HOURS; 24 for daily); `nBins` is the number of bins. Samples in a bin are averaged per day first; the SEM output is across days (n = days). `phaseReference`: "start" (default; phases in h after the first sample) or "clock" (local clock time; time x only).',
 	RayleighTest:

@@ -44,7 +44,17 @@
 			// (enforced in WorkflowEditor.applyConnection). Time is blocked for now:
 			// Substitute matches the raw UNIX-ms value, which is meaningless for times
 			// — see "Known Issues and TODOs" until the behaviour is redesigned.
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', disallowTypes: ['time'] }],
+			// sameType: true: the find and replace values are in the inputs' type and units
+			// (core/processInputRules.js).
+			inputs: [
+				{
+					name: 'input',
+					kind: 'column',
+					cardinality: 'one',
+					disallowTypes: ['time'],
+					sameType: true
+				}
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

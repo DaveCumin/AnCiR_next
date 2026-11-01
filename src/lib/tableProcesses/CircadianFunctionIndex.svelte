@@ -27,6 +27,12 @@
 		['period', { val: 24 }],
 		['mWindow', { val: 10 }],
 		['lWindow', { val: 5 }],
+		// Full days only: cut the record to whole periods from the first sample before IS,
+		// IV and RA, as the Nonparametric RA node does (utils/npcra.js, FULL DAYS), so the CFI
+		// and the IS/IV/RA beside it rest on the same whole days. OFF here, so a saved session
+		// that never stored it keeps the partial last day it was computed with; a NEW node
+		// starts with it ON (newNodeArgs below). Decision 2026-11-01.
+		['fullDays', { val: false }],
 		['out', { CFI: { val: -1 }, IS: { val: -1 }, IV: { val: -1 }, RA: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
@@ -38,6 +44,9 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// A new node uses whole days only, as nparACT does by default; a loaded one keeps
+		// what it stored (or OFF, the behaviour before the option existed).
+		newNodeArgs: { fullDays: true },
 		func: circadianfunctionindex,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		nodeSpec: {
@@ -68,7 +77,8 @@
 			epochHours: argsIN.epochHours ?? 1,
 			period: argsIN.period ?? 24,
 			mWindow: argsIN.mWindow ?? 10,
-			lWindow: argsIN.lWindow ?? 5
+			lWindow: argsIN.lWindow ?? 5,
+			fullDays: argsIN.fullDays === true
 		};
 		const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
 
@@ -83,7 +93,14 @@
 				const res = computeNPCRA(t, y, opts);
 				if (!res) continue;
 				const { CFI } = circadianFunctionIndex({ IS: res.IS, IV: res.IV, RA: res.RA });
-				perY[yId] = { CFI, IS: res.IS, IV: res.IV, RA: res.RA };
+				perY[yId] = {
+					CFI,
+					IS: res.IS,
+					IV: res.IV,
+					RA: res.RA,
+					fullDaysKept: res.fullDaysKept,
+					droppedEpochs: res.droppedEpochs
+				};
 				anyValid = true;
 				// FIT-8, as NonparametricRA reports it: CFI folds the same IS and IV, so a
 				// record with many empty epochs carries the same caveat.
@@ -91,6 +108,13 @@
 				const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
 				if (w) warnings.push(w);
 			}
+		}
+		// Full days only on a record shorter than one period: there is no whole day to keep
+		// (same text as NonparametricRA).
+		if (opts.fullDays && Object.values(perY).some((r) => r.fullDaysKept === 0)) {
+			warnings.push(
+				`Full days only: the recording is shorter than one ${opts.period} h cycle, so there is no whole day to keep and every epoch is used.`
+			);
 		}
 		return { perY, yINs, anyValid, warnings };
 	}
@@ -129,6 +153,7 @@
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 	// Every stored-value button here is one entry per node, however many copies of this
@@ -136,6 +161,8 @@
 	provideStoredValueOwner('tp', () => p?.id);
 
 	migrateLegacyYIN(p.args);
+	// fillDefaults stores fullDays explicitly as false when a saved session never had it, so
+	// it keeps the partial last day it was computed with.
 	fillDefaults(p.args, defaults);
 
 	let cfiData = $state();
@@ -156,6 +183,7 @@
 		out += p.args.period;
 		out += p.args.mWindow;
 		out += p.args.lWindow;
+		out += '|' + (p.args.fullDays === true);
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -249,6 +277,16 @@
 				...cfiData.perY[yId]
 			}));
 	});
+	// What the full-days cut left out, from the first series (all share the x column).
+	let fullDaysNote = $derived.by(() => {
+		if (!p.args.fullDays || !rows.length) return '';
+		const r = rows[0];
+		if (!(r.fullDaysKept >= 1)) return '';
+		const cycles = `${r.fullDaysKept} whole ${r.fullDaysKept === 1 ? 'cycle' : 'cycles'}`;
+		if (!r.droppedEpochs) return `Full days only: ${cycles} used, nothing left out.`;
+		const h = Number((r.droppedEpochs * (p.args.epochHours ?? 1)).toFixed(2));
+		return `Full days only: ${cycles} used; the last ${h} h are left out.`;
+	});
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 </script>
 
@@ -280,6 +318,15 @@
 			<NumberWithUnits bind:value={p.args.lWindow} min="0.1" step="1" />
 		</ControlInput>
 	</div>
+	<div class="control-input-horizontal">
+		<label
+			class="control-input-checkbox"
+			title="Cut the record to whole days from the first sample, as nparACT does"
+		>
+			<input type="checkbox" bind:checked={p.args.fullDays} />
+			<span class="ci-label">Full days only</span>
+		</label>
+	</div>
 </div>
 
 {#if calculating}
@@ -288,36 +335,42 @@
 	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
 	<div class="cfi-results">
-		<table>
-			<thead>
-				<tr>
-					<th>Series</th>
-					<th>CFI</th>
-					<th>IS</th>
-					<th>IV</th>
-					<th>RA</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as r (r.yId)}
+		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
+		<div class="cfi-table scroll-fade-x" {@attach scrollFade()}>
+			<table>
+				<thead>
 					<tr>
-						<td>{r.name}</td>
-						<td>
-							{fmt(r.CFI)}
-							<StoreValueButton
-								label="CFI"
-								getter={() => r.CFI}
-								{...storedValueNames('CFI', r.yId)}
-								source="CFI"
-							/>
-						</td>
-						<td>{fmt(r.IS)}</td>
-						<td>{fmt(r.IV)}</td>
-						<td>{fmt(r.RA)}</td>
+						<th>Series</th>
+						<th>CFI</th>
+						<th>IS</th>
+						<th>IV</th>
+						<th>RA</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each rows as r (r.yId)}
+						<tr>
+							<td>{r.name}</td>
+							<td>
+								{fmt(r.CFI)}
+								<StoreValueButton
+									label="CFI"
+									getter={() => r.CFI}
+									{...storedValueNames('CFI', r.yId)}
+									source="CFI"
+								/>
+							</td>
+							<td>{fmt(r.IS)}</td>
+							<td>{fmt(r.IV)}</td>
+							<td>{fmt(r.RA)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+		{#if fullDaysNote}
+			<p class="cfi-hint">{fullDaysNote}</p>
+		{/if}
 		{#each cfiData?.warnings ?? [] as w (w)}
 			<p class="warn">{w}</p>
 		{/each}
@@ -340,9 +393,20 @@
 		padding: var(--space-1) var(--space-2);
 		margin: var(--space-1) 0 0;
 	}
+	/* The panel's .control-component aligns its children to flex-start, so without a width
+	   the results shrink-wrapped to the nowrap table and ran past the panel's clip edge,
+	   cutting the table, the full-days note, the warnings and the citation. Bounded to the
+	   panel, only the table scrolls. */
 	.cfi-results {
 		margin-top: var(--space-2, 0.5rem);
+		width: 100%;
+		min-width: 0;
+	}
+	/* 8 px under the table whether a note or a warning comes first (their own top margins
+	   are smaller and collapse into this one). */
+	.cfi-table {
 		overflow-x: auto;
+		margin-bottom: var(--space-4);
 	}
 	.cfi-results table {
 		border-collapse: collapse;

@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.66",
+  "generatedFromVersion": "β.82.67",
   "count": 62,
   "nodes": [
     {
@@ -556,7 +556,7 @@
           "name": "input",
           "kind": "column",
           "cardinality": "one",
-          "description": "A number column, or a time column (the value added is then a duration)."
+          "description": "A number column, or a time column (the value added is then a duration). Several inputs must all be one type."
         }
       ],
       "params": [
@@ -632,7 +632,7 @@
           "name": "input",
           "kind": "column",
           "cardinality": "one",
-          "description": "A column of any type."
+          "description": "A column of any type. Several inputs can mix types (time and number), each with its own output."
         }
       ],
       "params": [
@@ -1246,6 +1246,10 @@
         {
           "name": "lWindow",
           "default": 5
+        },
+        {
+          "name": "fullDays",
+          "default": false
         }
       ],
       "outputs": [

@@ -35,3 +35,40 @@ export async function loadSampleData(page) {
 export function isThirdPartyNoise(msg) {
 	return /cloudflareinsights\.com/.test(`${msg.location()?.url ?? ''} ${msg.text()}`);
 }
+
+/**
+ * Nothing in a side panel (e.g. the control panel's `.control-display`, which clips at
+ * overflow-x: hidden) reaches past its right edge: no element box and no run of text,
+ * except inside a box that itself scrolls or clips within the panel (a wide results table,
+ * an ellipsised name). Fails with what overflows and by how much.
+ */
+export async function expectNoOverflow(panel) {
+	const over = await panel.evaluate((el) => {
+		const edge = el.getBoundingClientRect().right + 0.5;
+		const clipped = (node) => {
+			for (let p = node.parentElement; p && p !== el; p = p.parentElement)
+				if (getComputedStyle(p).overflowX !== 'visible' && p.getBoundingClientRect().right <= edge)
+					return true;
+			return false;
+		};
+		const out = [];
+		for (const e of el.querySelectorAll('*')) {
+			const r = e.getBoundingClientRect();
+			if (r.width > 0 && r.right > edge && !clipped(e))
+				out.push(
+					`${e.tagName}.${String(e.className).split(' ')[0]}: +${Math.round(r.right - edge)} px`
+				);
+		}
+		const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+		for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+			if (!t.textContent.trim()) continue;
+			const range = document.createRange();
+			range.selectNodeContents(t);
+			const right = Math.max(-1, ...[...range.getClientRects()].map((q) => q.right));
+			if (right > edge && !clipped(t))
+				out.push(`text "${t.textContent.trim().slice(0, 30)}": +${Math.round(right - edge)} px`);
+		}
+		return out;
+	});
+	expect(over).toEqual([]);
+}

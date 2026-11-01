@@ -87,14 +87,18 @@
 			return core.data.find((c) => c.id === id) ?? null;
 		}
 
-		// Perform processes (add/filer etc)
-		doProcess(data) {
+		// Perform processes (add/filer etc). `inputColId` names the column `data` came from
+		// when a FREE node runs one of its several inputs (producerRuntime): the func then sees
+		// it as args.parentColId (Filter reads `data` for a condition on that column), not the
+		// node's first input, which is all the editor can write.
+		doProcess(data, inputColId = null) {
 			const proc = appConsts.processMap.get(this.name);
 			if (!proc) {
 				reportUnknownNode('column process', this.name);
 				return data;
 			}
-			return proc.func(data, this.args);
+			const args = inputColId == null ? this.args : { ...this.args, parentColId: inputColId };
+			return proc.func(data, args);
 		}
 
 		toJSON() {

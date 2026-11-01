@@ -14,6 +14,7 @@
 		"smoke:warmup": "node test/smoke-warmup.mjs",
 		"smoke:render": "node test/smoke-render.mjs",
 		"smoke:render:all": "node test/smoke-render-all.mjs",
+		"smoke:render:lists": "node test/smoke-render-lists.mjs",
 		"agnostic": "node --env-file-if-exists=app/.env test/agnostic-client.mjs",
 		"app": "node --env-file-if-exists=app/.env app/server.mjs",
 		"app:test": "node --env-file-if-exists=app/.env app/test-roundtrip.mjs",

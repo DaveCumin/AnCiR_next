@@ -54,8 +54,9 @@ import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
  * would do nothing on sparse records. Without zeros it sets how intense a bin must be to
  * count as active (a bin is active when strictly above the threshold). A side effect: on
  * two-level data (0 and one active level) the threshold is that level and no bin is above
- * it, so `matchTemplateMarkers` reports no marker for such a window rather than a made-up
- * one (findCentileValue.zeros.test.js pins this).
+ * it, so `matchTemplateMarkers` counts "at or above" as active for a window with at most two
+ * distinct values, which finds the real onsets and offsets of 0/1 data
+ * (findCentileValue.zeros.test.js pins this).
  */
 export function findCentileValue(data, centile) {
 	// isNaN-ok: callers pass yByPeriod slices, which Actogram builds with an explicit
@@ -87,6 +88,17 @@ export function findBestMatchIndex(test, template) {
 		}
 	}
 	return bestMatchIndex;
+}
+
+/** Whether the non-NaN values of `data` take at most `k` distinct values. */
+function distinctAtMost(data, k) {
+	const seen = [];
+	for (const v of data) {
+		if (isNaN(v) || seen.includes(v)) continue;
+		if (seen.length === k) return false;
+		seen.push(v);
+	}
+	return true;
 }
 
 /**
@@ -148,13 +160,24 @@ export function matchTemplateMarkers(
 		// The threshold is this window's own (the borrowed bins below do not move it).
 		const centileValue = findCentileValue(periodsData, centile);
 
-		// A bin counts as active only when it is strictly ABOVE the threshold. When no bin of
-		// the window is (the threshold is the window's top value: 0 / 1 or other two-level
-		// data, a 100% centile, or an all-zero window with no threshold at all) every bin
-		// reads the same, the template match is flat, and its first position would put a
-		// made-up marker N bins in. Report no marker instead. Any window with a bin above
-		// the threshold is matched exactly as before.
-		if (!periodsData.some((v) => !isNaN(v) && v > centileValue)) {
+		// A bin counts as active when it is strictly ABOVE the threshold. When no bin of the
+		// window is (the threshold is the window's top value: 0 / 1 or other two-level data,
+		// or a 100% centile) strict activity reads every bin the same, the template match is
+		// flat, and its first position would put a made-up marker N bins in. A TWO-LEVEL
+		// window (at most two distinct values: 0 and 1, 0 and 7, 1 and 10) counts bins AT OR
+		// ABOVE the threshold as active instead, so 0 / 1 data gets its real onsets. Any other
+		// window (ordinary noisy data, e.g. at a 100% centile) is matched exactly as before,
+		// so with nothing strictly above it gets no marker.
+		const strict = periodsData.some((v) => !isNaN(v) && v > centileValue);
+		const atOrAbove = !strict && distinctAtMost(periodsData, 2);
+		const isActive = atOrAbove ? (v) => v >= centileValue : (v) => v > centileValue;
+		// Flat, so no marker: nothing active (an all-zero window has no threshold, and noisy
+		// data with nothing strictly above it) or every bin active (one non-zero level
+		// throughout).
+		if (
+			!periodsData.some((v) => !isNaN(v) && isActive(v)) ||
+			periodsData.every((v) => !isNaN(v) && isActive(v))
+		) {
 			hours.push(NaN);
 			times.push(NaN);
 			continue;
@@ -170,7 +193,7 @@ export function matchTemplateMarkers(
 			periodsData = [...yByPeriod[i - 1].slice(-lead), ...periodsData];
 			xData = [...xByPeriod[i - 1].slice(-lead), ...xData];
 		}
-		const aboveBelow = periodsData.map((value) => (value <= centileValue || isNaN(value) ? -1 : 1));
+		const aboveBelow = periodsData.map((value) => (!isNaN(value) && isActive(value) ? 1 : -1));
 
 		// The template is N "before" bins (indices 0..N-1) then M "after" bins
 		// (N..N+M-1), so when it starts at bin s the transition is between s+N-1

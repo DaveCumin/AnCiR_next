@@ -180,7 +180,9 @@
 		},
 		nodeSpec: {
 			id: 'process.normalize',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: the method's range or centre is read in the inputs' units
+			// (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

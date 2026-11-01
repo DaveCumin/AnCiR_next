@@ -144,6 +144,7 @@
 
 <script>
 	// @ts-nocheck
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { displayNameById } from '$lib/core/columnLabels.js';
@@ -360,26 +361,29 @@
 	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
 	<div class="avgprof-results">
-		<table>
-			<thead>
-				<tr>
-					<th>Series</th>
-					<th>Points</th>
-					<th title="Days contributing to each bin: the n of its SEM">Days per bin</th>
-					<th>Bins filled</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as r (r.yId)}
+		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
+		<div class="avgprof-table scroll-fade-x" {@attach scrollFade()}>
+			<table>
+				<thead>
 					<tr>
-						<td>{r.name}</td>
-						<td>{r.nTotal}</td>
-						<td>{r.days}</td>
-						<td>{r.filled} / {r.nBins}</td>
+						<th>Series</th>
+						<th>Points</th>
+						<th title="Days contributing to each bin: the n of its SEM">Days per bin</th>
+						<th>Bins filled</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each rows as r (r.yId)}
+						<tr>
+							<td>{r.name}</td>
+							<td>{r.nTotal}</td>
+							<td>{r.days}</td>
+							<td>{r.filled} / {r.nBins}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 		{#each profData?.warnings ?? [] as w (w)}
 			<p class="warn">{w}</p>
 		{/each}
@@ -406,9 +410,19 @@
 		padding: var(--space-1) var(--space-2);
 		margin: var(--space-1) 0 0;
 	}
+	/* The panel's .control-component aligns its children to flex-start, so without a width
+	   the results shrink-wrapped to the nowrap table and ran past the panel's clip edge,
+	   cutting the warnings and explanation. Bounded to the panel, only the table scrolls. */
 	.avgprof-results {
 		margin-top: var(--space-2, 0.5rem);
+		width: 100%;
+		min-width: 0;
+	}
+	/* 8 px under the table whether a note or a warning comes first (their own top margins
+	   are smaller and collapse into this one). */
+	.avgprof-table {
 		overflow-x: auto;
+		margin-bottom: var(--space-4);
 	}
 	.avgprof-results table {
 		border-collapse: collapse;

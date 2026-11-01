@@ -86,7 +86,9 @@
 		defaults: filterbyothercol_defaults,
 		nodeSpec: {
 			id: 'process.filter',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: false: the conditions test OTHER columns, so each input (time, number, any
+			// type) just keeps or blanks its rows and keeps its own type (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: false }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

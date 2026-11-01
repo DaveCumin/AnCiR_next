@@ -9317,6 +9317,9 @@ def tp_circadianfunctionindex(args, cols, raw_data, _sv):
     period = float(args.get('period', 24))
     m_window = float(args.get('mWindow', 10))
     l_window = float(args.get('lWindow', 5))
+    # Absent (a session saved before the option) = off, as CircadianFunctionIndex.svelte;
+    # the CFI folds the IS/IV/RA of the same whole days the Nonparametric RA node uses.
+    full_days = args.get('fullDays') is True
     t = _t_for_col(cols[x_in])
     if not t:
         return False
@@ -9328,7 +9331,7 @@ def tp_circadianfunctionindex(args, cols, raw_data, _sv):
         y = cols[y_id].get_data()
         if not y:
             continue
-        res = compute_npcra(t, y, epoch, period, m_window, l_window)
+        res = compute_npcra(t, y, epoch, period, m_window, l_window, full_days=full_days)
         if not res:
             continue
         cfi = circadian_function_index(IS=res['IS'], IV=res['IV'], RA=res['RA'])['CFI']
@@ -19622,10 +19625,22 @@ def match_template_markers(x_by_period, y_by_period, period_hrs, bin_size, hrs_b
             xs = list(x_by_period[i])
         # The threshold is this window's own (the borrowed bins below do not move it).
         cv = find_centile_value(data, centile)
-        # Active = strictly above the threshold. With no bin above it (two-level data, a 100%
-        # centile, an all-zero window) the match is flat: no marker, not a made-up one
-        # (onsetUnwrap.js).
-        if cv is None or not any(not (v != v) and v > cv for v in data):
+        # Active = strictly above the threshold. With no bin above it the match would be flat;
+        # a TWO-LEVEL window (at most two distinct values: 0 / 1, 1 / 10) then counts
+        # at-or-above as active instead, any other window (noisy data at a 100% centile) is
+        # matched as before (onsetUnwrap.js). Still flat (nothing active, e.g. an all-zero
+        # window with no threshold; or one non-zero level throughout): no marker, not a
+        # made-up one.
+        if cv is None:
+            hours.append(nan)
+            times.append(nan)
+            continue
+        strict = any(not (v != v) and v > cv for v in data)
+        at_or_above = not strict and len({v for v in data if not (v != v)}) <= 2
+        def is_active(v, at_or_above=at_or_above, cv=cv):
+            return v >= cv if at_or_above else v > cv
+        if (not any(not (v != v) and is_active(v) for v in data)
+                or all(not (v != v) and is_active(v) for v in data)):
             hours.append(nan)
             times.append(nan)
             continue
@@ -19637,7 +19652,7 @@ def match_template_markers(x_by_period, y_by_period, period_hrs, bin_size, hrs_b
             if lead > 0:
                 data = list(yp)[-lead:] + data
                 xs = list(x_by_period[i - 1])[-lead:] + xs
-        above_below = [-1 if (v != v) or v <= cv else 1 for v in data]
+        above_below = [1 if not (v != v) and is_active(v) else -1 for v in data]
         # The new state starts at template start + N (onsetUnwrap.js, FIT-6); the old
         # midpoint (N + M) / 2 moved the marker by (M - N) / 2 bins when N != M. A window
         # shorter than the template has no match (-1), and so no marker.

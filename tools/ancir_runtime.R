@@ -4032,6 +4032,9 @@ tp_circadianfunctionindex <- function(args, env) {
   period <- as.numeric(if (is.null(args$period)) 24 else args$period)
   m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
   l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
+  # Absent (a session saved before the option) = off, as CircadianFunctionIndex.svelte;
+  # the CFI folds the IS/IV/RA of the same whole days the Nonparametric RA node uses.
+  full_days <- isTRUE(args$fullDays)
   t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
   if (!length(t)) return(FALSE)
   per_y <- list(); any_valid <- FALSE
@@ -4040,7 +4043,7 @@ tp_circadianfunctionindex <- function(args, env) {
     if (is.null(env$cols[[yk]])) next
     y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
     if (!length(y)) next
-    res <- compute_npcra(t, y, epoch, period, m_window, l_window)
+    res <- compute_npcra(t, y, epoch, period, m_window, l_window, full_days = full_days)
     if (is.null(res)) next
     per_y[[yk]] <- list(CFI = circadian_function_index(res$IS, res$IV, res$RA)$CFI,
                         IS = res$IS, IV = res$IV, RA = res$RA)
@@ -8789,10 +8792,19 @@ match_template_markers <- function(x_by_period, y_by_period, period_hrs, bin_siz
     }
     # The threshold is this window's own (the borrowed bins below do not move it).
     cv <- find_centile_value(data, centile)
-    # Active = strictly above the threshold. With no bin above it (two-level data, a 100%
-    # centile, an all-zero window) the match is flat: no marker, not a made-up one
-    # (onsetUnwrap.js).
-    if (is.null(cv) || !any(!is.na(data) & data > cv)) {
+    # Active = strictly above the threshold. With no bin above it the match would be flat;
+    # a TWO-LEVEL window (at most two distinct values: 0 / 1, 1 / 10) then counts
+    # at-or-above as active instead, any other window (noisy data at a 100% centile) is
+    # matched as before (onsetUnwrap.js). Still flat (nothing active, e.g. an all-zero
+    # window with no threshold; or one non-zero level throughout): no marker, not a
+    # made-up one.
+    if (is.null(cv)) {
+      hours <- c(hours, NaN); times <- c(times, NaN); next
+    }
+    strict <- any(!is.na(data) & data > cv)
+    at_or_above <- !strict && length(unique(data[!is.na(data)])) <= 2
+    is_active <- if (at_or_above) function(v) v >= cv else function(v) v > cv
+    if (!any(!is.na(data) & is_active(data)) || all(!is.na(data) & is_active(data))) {
       hours <- c(hours, NaN); times <- c(times, NaN); next
     }
     # No next row to search into (onsetUnwrap.js): borrow up to N bins from the end of the
@@ -8805,7 +8817,7 @@ match_template_markers <- function(x_by_period, y_by_period, period_hrs, bin_siz
       xs <- c(tail(xp, lead), xs)
     }
     above_below <- vapply(data, function(v) {
-      if (is.na(v) || v <= cv) -1 else 1
+      if (!is.na(v) && is_active(v)) 1 else -1
     }, numeric(1))
     # The new state starts at template start + N (onsetUnwrap.js, FIT-6). A window shorter
     # than the template has no match (-1), and so no marker.

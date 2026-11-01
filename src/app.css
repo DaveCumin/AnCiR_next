@@ -364,3 +364,10 @@ summary.section-details-summary:hover::after {
 		transparent
 	);
 }
+
+/* A number in running text (a statistic, a p-value): never broken inside. The control
+   panel breaks words anywhere (ControlPanel's overflow-wrap), and "9.971e-23" split after
+   "e-", "-3.0353" after its minus. Wrap each value: <span class="num">{value}</span>. */
+.num {
+	white-space: nowrap;
+}

@@ -64,6 +64,9 @@ Doc-only facts (not in the prompt, but agents should know):
 `add_plot.inputs` field names come from `list_capabilities().plots[].inputs`:
 scatterplot/boxplot → `{x, y}`; actogram/periodogram/correlogram/fft → `{time, values}`;
 histogram → `{column}`; tableplot → an array of column names/ids.
+The last field (`y`, `values`; `column` on one-input plots) also takes a LIST of columns, one
+series each (x/time is shared); correlationheatmap and pairsplot need two or more, e.g.
+`{ "column": ["a", "b", "c"] }`. A plot that draws one series (cwt) refuses a list.
 
 ## Worked example (what a correct sequence looks like)
 

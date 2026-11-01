@@ -160,6 +160,7 @@
 
 <script>
 	// @ts-nocheck
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { onMount, untrack } from 'svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
@@ -288,29 +289,27 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Correlations</summary>
-			<table class="corr-table">
-				<colgroup>
-					<col />
-					<col class="c-num" />
-					<col class="c-num" />
-					<col class="c-num" />
-				</colgroup>
-				<thead>
-					<tr><th>Pair</th><th>r</th><th>p</th><th title="Holm-adjusted p">p adj</th></tr>
-				</thead>
-				<tbody>
-					{#each previewRows as row (row.var_i + '\u0000' + row.var_j)}
-						<tr
-							title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, Holm-adjusted p=${fmt(row.padj)}, n=${row.n}`}
-						>
-							<td class="pair">{row.var_i} ~ {row.var_j}</td>
-							<td class="num">{fmt(row.r)}</td>
-							<td class="num">{fmt(row.pvalue)}</td>
-							<td class="num">{fmt(row.padj)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<!-- Only the table scrolls sideways (with an edge fade), as in the CFI / NPCRA panels.
+			     The pair name keeps a readable width and ellipsises; the row's title has it all. -->
+			<div class="corr-table-wrap scroll-fade-x" {@attach scrollFade()}>
+				<table class="corr-table">
+					<thead>
+						<tr><th>Pair</th><th>r</th><th>p</th><th title="Holm-adjusted p">p adj</th></tr>
+					</thead>
+					<tbody>
+						{#each previewRows as row (row.var_i + '\u0000' + row.var_j)}
+							<tr
+								title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, Holm-adjusted p=${fmt(row.padj)}, n=${row.n}`}
+							>
+								<td class="pair"><span class="pair-name">{row.var_i} ~ {row.var_j}</span></td>
+								<td class="num">{fmt(row.r)}</td>
+								<td class="num">{fmt(row.pvalue)}</td>
+								<td class="num">{fmt(row.padj)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 			{#if result.rows.length > previewRows.length}
 				<p class="more">+{result.rows.length - previewRows.length} more; open the full table.</p>
 			{/if}
@@ -347,6 +346,11 @@
 	}
 	/* Mirrors GroupComparison's tp-output-panel so the analysis nodes read consistently. */
 	.tp-output-panel {
+		/* Bounded to the panel, as NormalityTest's: otherwise it keeps its content width and
+		   the table's scroll box never gets narrower than the table. */
+		align-self: stretch;
+		min-width: 0;
+		box-sizing: border-box;
 		margin-top: var(--space-2);
 		padding: var(--space-2);
 		border: 1px solid var(--color-lightness-85);
@@ -369,15 +373,21 @@
 		background: var(--color-lightness-99);
 		padding: 0.1rem 0;
 	}
-	/* table-layout:fixed + ellipsis keeps long variable names inside the narrow node instead
-	   of forcing horizontal overflow; the full names are one click away in the full table. */
-	.corr-table {
-		width: 100%;
-		table-layout: fixed;
-		border-collapse: collapse;
+	/* The pair is the column that matters: table-layout:fixed with fixed numeric columns gave
+	   it what was left, which in the panel was one letter ("C...") and broke the header into
+	   "P / ai / r". Now the pair keeps 5rem, about 13 characters (ellipsis past that, full
+	   name on hover, so r and p still show beside it),
+	   headers and numbers never wrap, and a table wider than the panel scrolls sideways. */
+	.corr-table-wrap {
+		overflow-x: auto;
 		margin-top: var(--space-1);
 	}
+	.corr-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
 	.corr-table th {
+		white-space: nowrap;
 		text-align: right;
 		font-weight: 600;
 		color: var(--color-text-muted);
@@ -389,12 +399,13 @@
 	.corr-table td {
 		padding: 0.1rem 0.3rem;
 	}
-	/* the numeric columns take fixed narrow widths; the pair column gets the rest. */
-	.corr-table col.c-num {
-		width: 3.2rem;
-	}
 	.corr-table .pair {
 		text-align: left;
+		min-width: 5rem;
+	}
+	.corr-table .pair-name {
+		display: block;
+		max-width: 5rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

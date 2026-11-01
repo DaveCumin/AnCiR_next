@@ -486,59 +486,62 @@
 {:else if calcError}
 	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
-	<div class="npcra-results scroll-fade-x" {@attach scrollFade()}>
-		<table>
-			<thead>
-				<tr>
-					<th>Series</th>
-					<th>IS</th>
-					<th>IV</th>
-					<th>RA</th>
-					<th>M{p.args.mWindow}</th>
-					<th>L{p.args.lWindow}</th>
-					<th>M{p.args.mWindow} onset ({onsetUnit})</th>
-					<th>L{p.args.lWindow} onset ({onsetUnit})</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as r (r.yId)}
+	<div class="npcra-results">
+		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
+		<div class="npcra-table scroll-fade-x" {@attach scrollFade()}>
+			<table>
+				<thead>
 					<tr>
-						<td>{r.name}</td>
-						<td>
-							{fmt(r.IS)}
-							<StoreValueButton
-								label="IS"
-								getter={() => r.IS}
-								{...storedValueNames('IS', r.yId)}
-								source="NPCRA"
-							/>
-						</td>
-						<td>
-							{fmt(r.IV)}
-							<StoreValueButton
-								label="IV"
-								getter={() => r.IV}
-								{...storedValueNames('IV', r.yId)}
-								source="NPCRA"
-							/>
-						</td>
-						<td>
-							{fmt(r.RA)}
-							<StoreValueButton
-								label="RA"
-								getter={() => r.RA}
-								{...storedValueNames('RA', r.yId)}
-								source="NPCRA"
-							/>
-						</td>
-						<td>{fmt(r.M10, 2)}</td>
-						<td>{fmt(r.L5, 2)}</td>
-						<td>{fmt(r.M10onset, 1)}</td>
-						<td>{fmt(r.L5onset, 1)}</td>
+						<th>Series</th>
+						<th>IS</th>
+						<th>IV</th>
+						<th>RA</th>
+						<th>M{p.args.mWindow}</th>
+						<th>L{p.args.lWindow}</th>
+						<th>M{p.args.mWindow} onset ({onsetUnit})</th>
+						<th>L{p.args.lWindow} onset ({onsetUnit})</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each rows as r (r.yId)}
+						<tr>
+							<td>{r.name}</td>
+							<td>
+								{fmt(r.IS)}
+								<StoreValueButton
+									label="IS"
+									getter={() => r.IS}
+									{...storedValueNames('IS', r.yId)}
+									source="NPCRA"
+								/>
+							</td>
+							<td>
+								{fmt(r.IV)}
+								<StoreValueButton
+									label="IV"
+									getter={() => r.IV}
+									{...storedValueNames('IV', r.yId)}
+									source="NPCRA"
+								/>
+							</td>
+							<td>
+								{fmt(r.RA)}
+								<StoreValueButton
+									label="RA"
+									getter={() => r.RA}
+									{...storedValueNames('RA', r.yId)}
+									source="NPCRA"
+								/>
+							</td>
+							<td>{fmt(r.M10, 2)}</td>
+							<td>{fmt(r.L5, 2)}</td>
+							<td>{fmt(r.M10onset, 1)}</td>
+							<td>{fmt(r.L5onset, 1)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 		{#if fullDaysNote}
 			<p class="npcra-hint">{fullDaysNote}</p>
 		{/if}
@@ -564,9 +567,20 @@
 		padding: var(--space-1) var(--space-2);
 		margin: var(--space-1) 0 0;
 	}
+	/* The panel's .control-component aligns its children to flex-start, so without a width
+	   the results shrink-wrapped to the nowrap table and ran past the panel's clip edge,
+	   cutting the notes, warnings and explanation. Bounded to the panel, only the table
+	   scrolls. */
 	.npcra-results {
 		margin-top: var(--space-2, 0.5rem);
+		width: 100%;
+		min-width: 0;
+	}
+	/* 8 px under the table whether a note or a warning comes first (their own top margins
+	   are smaller and collapse into this one). */
+	.npcra-table {
 		overflow-x: auto;
+		margin-bottom: var(--space-4);
 	}
 	.npcra-results table {
 		border-collapse: collapse;

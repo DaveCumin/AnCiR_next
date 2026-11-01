@@ -142,3 +142,69 @@ describe('CircadianFunctionIndex: missing-epoch warning (FIT-8)', () => {
 		expect(evaluateCFI(args).warnings).toEqual([]);
 	});
 });
+
+// Full days only (decision 2026-11-01, as NonparametricRA in v82.66): the CFI folds the
+// IS, IV and RA it reports next to it, so it uses the same whole-day cut.
+describe('CircadianFunctionIndex: full days only', () => {
+	// 7.5 days whose extra half day is unlike the rest, so the partial day moves IS/IV/RA.
+	function withPartialDay() {
+		const { t, y } = restActivity(7);
+		for (let h = 168; h < 180; h++) {
+			t.push(h);
+			y.push(55);
+		}
+		return { t, y };
+	}
+
+	it('defaults OFF (saved sessions), ON for a new node (newNodeArgs)', async () => {
+		expect(definition.defaults.get('fullDays')?.val).toBe(false);
+		expect(definition.newNodeArgs).toEqual({ fullDays: true });
+		const { buildTableProcessDefaults } = await import('$lib/core/tpDefaults.js');
+		expect(buildTableProcessDefaults({ defaults: definition.defaults, definition }).fullDays).toBe(
+			true
+		);
+	});
+
+	it('a partial-day record gives a different CFI with the option on and off', () => {
+		const { t, y } = withPartialDay();
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const on = evaluateCFI({ xIN: 1, yIN: [2], fullDays: true }).perY[2];
+		const off = evaluateCFI({ xIN: 1, yIN: [2], fullDays: false }).perY[2];
+		const absent = evaluateCFI({ xIN: 1, yIN: [2] }).perY[2];
+		expect(Number.isFinite(on.CFI) && Number.isFinite(off.CFI)).toBe(true);
+		expect(Math.abs(on.CFI - off.CFI)).toBeGreaterThan(1e-3);
+		expect(on.IS).toBeCloseTo(1, 12); // the 7 clean days alone
+		expect(absent.CFI).toBe(off.CFI);
+	});
+
+	it('ON folds exactly the IS/IV/RA of the trimmed record (as Nonparametric RA reports them)', async () => {
+		const { computeNPCRA } = await import('$lib/utils/npcra.js');
+		const { circadianFunctionIndex } = await import('$lib/utils/cosinorAddons.js');
+		const { t, y } = withPartialDay();
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const opts = { epochHours: 1, period: 24, mWindow: 10, lWindow: 5 };
+		const trimmed = computeNPCRA(t, y, { ...opts, fullDays: true });
+		const on = evaluateCFI({ xIN: 1, yIN: [2], ...opts, fullDays: true }).perY[2];
+		expect(on.IS).toBe(trimmed.IS);
+		expect(on.IV).toBe(trimmed.IV);
+		expect(on.RA).toBe(trimmed.RA);
+		expect(on.CFI).toBe(circadianFunctionIndex(trimmed).CFI);
+		// ...and what the panel says was left out.
+		expect(on.fullDaysKept).toBe(7);
+		expect(on.droppedEpochs).toBe(12);
+	});
+
+	it('a record shorter than one period warns that nothing could be cut', () => {
+		const t = Array.from({ length: 20 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((h) => (h < 10 ? 100 : 10)) };
+		const r = evaluateCFI({ xIN: 1, yIN: [2], fullDays: true });
+		expect(r.warnings).toContain(
+			'Full days only: the recording is shorter than one 24 h cycle, so there is no whole day to keep and every epoch is used.'
+		);
+		const off = evaluateCFI({ xIN: 1, yIN: [2], fullDays: false });
+		expect(off.warnings.some((w) => w.startsWith('Full days only'))).toBe(false);
+	});
+});

@@ -52,7 +52,7 @@
 		"crosslinks": ["ch12", "ch7", "glossary"]
 	},
 	"CircadianFunctionIndex": {
-		"description": "The Circadian Function Index (CFI) condenses the robustness of a rest-activity rhythm into one number between 0 and 1. It is built from three nonparametric variables computed on activity resampled into equal epochs and folded onto an average day: interdaily stability (IS, how reproducible the daily pattern is from day to day), intradaily variability (IV, how fragmented activity is within a day), and relative amplitude (RA, the normalised contrast between the most active 10 h and least active 5 h). Because it is nonparametric, the CFI makes no assumption that the rhythm is sinusoidal, which suits fragmented or masked human and animal activity records.\n\nAnCiR computes IS, IV and RA with the same routine as the Nonparametric RA node, then combines them: IS and RA already lie in [0,1] and increase with rhythm quality, while IV is inverted as (2 - IV)/2 so that all three point the same way, and the three are averaged (each clamped to [0,1]). A CFI near 1 indicates a stable, high-amplitude, well-consolidated rhythm; a CFI near 0 indicates a weak or fragmented one. Reporting the component IS/IV/RA alongside the CFI is recommended so the driver of any difference is visible.",
+		"description": "The Circadian Function Index (CFI) condenses the robustness of a rest-activity rhythm into one number between 0 and 1. It is built from three nonparametric variables computed on activity resampled into equal epochs and folded onto an average day: interdaily stability (IS, how reproducible the daily pattern is from day to day), intradaily variability (IV, how fragmented activity is within a day), and relative amplitude (RA, the normalised contrast between the most active 10 h and least active 5 h). Because it is nonparametric, the CFI makes no assumption that the rhythm is sinusoidal, which suits fragmented or masked human and animal activity records.\n\nAnCiR computes IS, IV and RA with the same routine as the Nonparametric RA node, then combines them: IS and RA already lie in [0,1] and increase with rhythm quality, while IV is inverted as (2 - IV)/2 so that all three point the same way, and the three are averaged (each clamped to [0,1]). A CFI near 1 indicates a stable, high-amplitude, well-consolidated rhythm; a CFI near 0 indicates a weak or fragmented one. Reporting the component IS/IV/RA alongside the CFI is recommended so the driver of any difference is visible.\n\nFull days only (on for a new node, off for a session saved before the option existed) cuts the record to whole days (whole periods of the chosen length) from the first sample before anything is computed, exactly as the Nonparametric RA node does, so the CFI and the IS, IV and RA reported beside it all rest on the same whole days and a partial last day does not tilt them. This is what the nparACT R package does by default (fulldays = TRUE).",
 		"maths": [
 			"\\text{IS} = \\frac{n\\sum_{h}(\\bar{x}_h - \\bar{x})^2}{p\\sum_{i}(x_i - \\bar{x})^2}",
 			"\\text{IV} = \\frac{n\\sum_{i=2}^{n}(x_i - x_{i-1})^2}{(n-1)\\sum_{i}(x_i - \\bar{x})^2}",
@@ -69,6 +69,10 @@
 			},
 			{
 				"cite": "Witting, W., Kwa, I.H., Eikelenboom, P., Mirmiran, M. & Swaab, D.F. (1990). Alterations in the circadian rhythm of activity in Alzheimer's disease. Biological Psychiatry, 27(6), 563-572."
+			},
+			{
+				"cite": "Blume, C., Santhi, N. & Schabus, M. (2016). 'nparACT' package for R: a free software tool for the non-parametric analysis of actigraphy data. MethodsX, 3, 430-435.",
+				"doi": "10.1016/j.mex.2016.05.006"
 			}
 		],
 		"crosslinks": ["ch13", "ch5", "glossary"]
@@ -164,13 +168,13 @@
 		"crosslinks": ["ch3"]
 	},
 	"Add": {
-		"description": "A basic arithmetic transform: it takes an input column and returns a new column where a constant (or a second column, matched row-for-row) has been added to each value. Nulls/blanks pass through unchanged.\n\nUse it for simple offsets and baseline shifts, or as a building block in longer preprocessing chains.",
+		"description": "A basic arithmetic transform: it takes an input column and returns a new column where a constant has been added to each value (for a time column the constant is a duration in hours). Nulls/blanks pass through unchanged. One Add node can take several input columns, each with its own output, but they must all be the same type, because the constant is in their units.\n\nUse it for simple offsets and baseline shifts, or as a building block in longer preprocessing chains.",
 		"maths": ["y_i = x_i + c"],
 		"references": [],
 		"crosslinks": ["ch4"]
 	},
 	"Multiply": {
-		"description": "A basic arithmetic transform that returns a new column with each input value multiplied by a constant (or by a second column, matched row-for-row). Nulls/blanks pass through unchanged.\n\nHandy for unit conversion (e.g. minutes to hours), gain adjustment, or sign flips (multiply by -1).",
+		"description": "A basic arithmetic transform that returns a new column with each input value multiplied by a constant. Nulls/blanks pass through unchanged.\n\nHandy for unit conversion (e.g. minutes to hours), gain adjustment, or sign flips (multiply by -1).",
 		"maths": ["y_i = c \\cdot x_i"],
 		"references": [],
 		"crosslinks": ["ch4"]
@@ -188,7 +192,7 @@
 		"crosslinks": ["ch4"]
 	},
 	"FilterByOtherCol": {
-		"description": "Filter selects rows based on comparisons against another column: you choose a column, an operator (equality, inequality, ordering, or string-contains), and a target value; rows that pass are kept and the input column is returned filtered to those rows. Multiple conditions can be combined.\n\nTypical uses are restricting an analysis to one day, one subject, or one experimental condition, or dropping flagged/invalid samples before downstream steps.",
+		"description": "Filter selects rows based on comparisons against another column: you choose a column, an operator (equality, inequality, ordering, or string-contains), and a target value; rows that fail are blanked, so the output keeps the input's length and stays row-aligned with the other columns. Multiple conditions can be combined. One Filter node can take several input columns of any mix of types (a time column and a number column, say), each with its own output in its own type; most other column transforms need their inputs to be one type, because their settings are in the inputs' units.\n\nTypical uses are restricting an analysis to one day, one subject, or one experimental condition, or dropping flagged/invalid samples before downstream steps.",
 		"maths": [],
 		"references": [],
 		"crosslinks": ["ch4"]

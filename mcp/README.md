@@ -87,7 +87,9 @@ Apply one to an existing column; it runs the column's chain and is serialised:
 
 `list_capabilities` → `plots[]` lists each plot type and its input field names
 (scatterplot/boxplot → `{x, y}`; actogram/periodogram/correlogram/fft →
-`{time, values}`; histogram → `{column}`; tableplot → an array of column ids).
+`{time, values}`; histogram → `{column}`; tableplot → an array of column ids). The last
+field (`y`, `values`; `column` on one-input plots) also takes a list of columns, one series
+each: correlationheatmap and pairsplot need two or more, e.g. `{ column: ['a', 'b', 'c'] }`.
 
 ```jsonc
 // add_plot — embed a plot in the session (renders when opened in the GUI)

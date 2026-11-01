@@ -51,7 +51,9 @@
 		getWarnings: (p) => frequencyfilterWarnings(p.args ?? {}),
 		nodeSpec: {
 			id: 'process.frequencyfilter',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: the filter is only meaningful on number columns; kept at the safe
+			// default (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

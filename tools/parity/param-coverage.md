@@ -7,27 +7,9 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-36 analyses have at least one fixture; 31 reach every enumerable value.
+36 analyses have at least one fixture; 35 reach every enumerable value.
 
 ## Values no fixture reaches
-
-### Cosinor
-
-- `permuteTest`: [true]
-
-### DoubleLogistic
-
-- `permuteTest`: [true]
-
-### FitFunction
-
-- `permuteTest`: [true]
-- `autoPermutations`: [true]
-- `permutationStatistic`: ["rmse"]
-
-### RectangularWave
-
-- `permuteTest`: [true]
 
 ### TrendFit
 
@@ -44,10 +26,13 @@ runtimes all claim to agree on and that nothing has ever compared.
 - CollectColumns
 - ColumnFunctions
 - Correlation
+- Cosinor
 - CrossCorrelation
 - Crossing
 - DescribeData
+- DoubleLogistic
 - FDRCorrection
+- FitFunction
 - FormulaColumn
 - GroupComparison
 - Interpolate
@@ -58,6 +43,7 @@ runtimes all claim to agree on and that nothing has ever compared.
 - NonparametricRA
 - NormalityTest
 - RayleighTest
+- RectangularWave
 - RhythmicityAnalysis
 - SequenceColumn
 - SimulatedData

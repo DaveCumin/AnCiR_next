@@ -31,6 +31,7 @@
 	import { reconcileOutputs } from '$lib/core/reconcileOutputs.js';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { processInputRefusal } from '$lib/core/processInputRules.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { displayNameById } from '$lib/core/columnLabels.js';
 	import { mutationService } from '$lib/core/mutationService.js';
@@ -2098,18 +2099,6 @@
 		return tap;
 	}
 
-	// Column types a free process refuses on its input, declared as `disallowTypes`
-	// on the process definition's nodeSpec input (e.g. Substitute blocks 'time').
-	function disallowedInputTypes(proc) {
-		if (!proc) return [];
-		const entry = appConsts.processMap.get(proc.name);
-		return (
-			entry?.definition?.nodeSpec?.inputs?.[0]?.disallowTypes ??
-			entry?.nodeSpec?.inputs?.[0]?.disallowTypes ??
-			[]
-		);
-	}
-
 	// True when a node's output port carries a column SET (bundle) rather than a
 	// single column — currently only a Column Set node's `set` port.
 	function isColumnSetOutput(node, portName) {
@@ -2275,22 +2264,12 @@
 					: proc.args?.inIN != null && proc.args.inIN >= 0
 						? [proc.args.inIN]
 						: [];
-				// Same-type inputs only: a free process fans one shared operation out
-				// over every input, so mixing column types (e.g. number + time, which
-				// take different value units) isn't meaningful. Reject a mismatch.
-				const newType = core.data.find((c) => c.id === colId)?.type;
-				const banned = disallowedInputTypes(proc);
-				if (newType != null && banned.includes(newType)) {
-					addNotification(
-						`${proc.displayName || proc.name} doesn't support ${newType} columns yet.`
-					);
-					return;
-				}
-				const existingType = cur.length ? getColumnById(cur[0])?.type : null;
-				if (existingType != null && newType != null && existingType !== newType) {
-					addNotification(
-						`${proc.displayName || proc.name} inputs must all be the same type (already ${existingType}).`
-					);
+				// The process's declared input rules (core/processInputRules.js): types it
+				// refuses (`disallowTypes`), and whether every input must share one type
+				// (`sameType`, default true: one shared setting is in the inputs' units).
+				const refusal = processInputRefusal(proc, colId, cur);
+				if (refusal) {
+					addNotification(refusal);
 					return;
 				}
 				const ops = [];
@@ -2319,7 +2298,8 @@
 						}
 					});
 				}
-				if (ops.length) mutationService.batch(ops);
+				// One undo step per wire (inIN + its paired output column together).
+				if (ops.length) mutationService.atomicBatch(ops);
 			}
 			return;
 		}
@@ -3063,6 +3043,14 @@
 			if (pc) removeColumn(pc.id);
 		}
 	}
+	// A splice adds an input to the dragged process, so it obeys the same declared
+	// input rules as drawing a wire (core/processInputRules.js). Notifies and returns
+	// true when the column is refused.
+	function _spliceRefused(proc, inputColId) {
+		const refusal = processInputRefusal(proc, inputColId, _procInputIds(proc));
+		if (refusal) addNotification(refusal);
+		return !!refusal;
+	}
 	function _ensureProducerColumn(proc, inputColId) {
 		const procNodeId = `process_${proc.id}`;
 		const port = `out_${inputColId}`;
@@ -3105,6 +3093,7 @@
 		const proc = draggedNode.processObj;
 		const sourceColId = resolveOutputColumnId(edge.fromId, edge.fromPort);
 		if (sourceColId == null || sourceColId < 0) return;
+		if (_spliceRefused(proc, sourceColId)) return;
 		_addProcInput(proc, sourceColId);
 		const D = _ensureProducerColumn(proc, sourceColId);
 		if (
@@ -3230,6 +3219,7 @@
 		const proc = draggedNode.processObj;
 		const colId = resolveOutputColumnId(sourceNodeId, sourcePort);
 		if (colId == null || colId < 0) return;
+		if (_spliceRefused(proc, colId)) return;
 
 		_addProcInput(proc, colId);
 		const D = _ensureProducerColumn(proc, colId);
@@ -3263,6 +3253,7 @@
 		for (const edge of edges) {
 			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
 			if (c == null || c < 0) continue;
+			if (_spliceRefused(proc, c)) continue;
 			_addProcInput(proc, c);
 			const D = _ensureProducerColumn(proc, c);
 			if (isProcTarget) {

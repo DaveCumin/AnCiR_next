@@ -115,6 +115,14 @@ function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS
 	]);
 	// Colour by / Size by: a column name or id, or the settings object. Passed through as given;
 	// the shared rules (plotbits/encodingSpec.js) check keys and values and say what is wrong.
+	// Plot inputs: field → column (id or name). The many input (a one-input plot's only field,
+	// else the second: y / values) also takes a LIST, one series per column (engine/plotInputs.js).
+	const colRef = z.union([z.number().int(), z.string()]);
+	const plotInputsSchema = z
+		.union([z.record(z.union([colRef, z.array(colRef)])), z.array(colRef)])
+		.describe(
+			'Field → column id or NAME. The last field (y, values; column on one-input plots) also takes a LIST: one series per column; correlationheatmap/pairsplot need 2+, e.g. {column:["a","b","c"]}. tableplot: an array of columns.'
+		);
 	const encodingSchema = z.union([z.string(), z.number().int(), z.record(z.any())]).optional();
 	const overlaysSchema = z
 		.array(
@@ -155,15 +163,10 @@ function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS
 
 	return {
 		add_plot: {
-			description: `Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
+			description: `Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; correlationheatmap/pairsplot → {column:[a,b,…]}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
 			params: {
 				type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
-				inputs: z
-					.union([
-						z.record(z.union([z.number().int(), z.string()])),
-						z.array(z.union([z.number().int(), z.string()]))
-					])
-					.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+				inputs: plotInputsSchema,
 				overlays: overlaysSchema,
 				colourBy: encodingSchema.describe(
 					`Colour by (${ENC.colourHosts.join(', ')}): colour the series' marks by a column. A column name, or { column, mode, colormap, range: [min, max], colourLine }. mode: auto (default), ${ENC.modes.join(', ')}. colormap: ${ENC.sequentialMaps}; for ${ENC.cyclicModes.join(', ')}: ${ENC.cyclicMaps}. colourLine: colour the line too.`
@@ -178,12 +181,7 @@ function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS
 				'Rasterise a plot of session columns to PNG (and SVG) using a real headless browser — the actual AnCiR plot component, with axes/gridlines/legend. Returns the written file paths. Inputs work like add_plot; columns may be raw or analysis outputs. A tableplot draws HTML, so it gives a PNG only (svg null). (Standalone: does not modify the session.)',
 			params: {
 				type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
-				inputs: z
-					.union([
-						z.record(z.union([z.number().int(), z.string()])),
-						z.array(z.union([z.number().int(), z.string()]))
-					])
-					.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+				inputs: plotInputsSchema,
 				overlays: overlaysSchema,
 				path: z
 					.string()

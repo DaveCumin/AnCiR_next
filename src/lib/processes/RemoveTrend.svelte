@@ -118,7 +118,9 @@
 		},
 		nodeSpec: {
 			id: 'process.removetrend',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: the trend is fitted in the inputs' units against one shared x column
+			// (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

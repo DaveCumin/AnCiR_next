@@ -7,6 +7,7 @@
 //
 // Payload shape (see src/engine/renderPlot.js):
 //   { columns:[{id,name,type,values[]}], plot:{type, inputs, overlays?, settings?}, width, height }
+// `inputs`: { field: id }, the plot's many input (engine/plotInputs.js) possibly a list of ids.
 // `settings` (payload only; no tool sets it) assigns plain plot fields after the series are
 // wired, e.g. an FFT's `{ showPeriod: false, xlimsIN: [0, 0.1] }`. Only a field the plot
 // already has, with a value of the same type (or an array of the same length), is accepted;
@@ -28,6 +29,7 @@ import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { allowedForms, capabilitiesOf } from '$lib/components/plotbits/overlaySpec.js';
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 import { applyInnerEdits } from '$lib/plots/pairedEdits.js';
+import { plotSeriesDataIns, assertSeriesKept } from '../engine/plotInputs.js';
 
 async function run() {
 	const data = window.__ANCIR_RENDER__;
@@ -72,15 +74,15 @@ async function run() {
 		p.plot.columnRefs = [...ids];
 		p.plot.showCol = ids.map(() => true);
 	} else {
+		// `inputs` arrives resolved ({ field: id }, the many input possibly id[]); one series per
+		// column of the many input, as add_plot wires them (engine/plotInputs.js).
 		const fields = entry.defaultInputs ?? [];
-		const dataIn = {};
-		for (const f of fields) {
-			const id = Array.isArray(data.plot.inputs)
-				? data.plot.inputs[fields.indexOf(f)]
-				: data.plot.inputs[f];
-			if (id != null) dataIn[f] = { refId: id };
-		}
-		if (Object.keys(dataIn).length) p.plot.addData(dataIn);
+		const resolved = Array.isArray(data.plot.inputs)
+			? Object.fromEntries(fields.map((f, i) => [f, data.plot.inputs[i]]))
+			: data.plot.inputs;
+		const dataIns = plotSeriesDataIns(fields, resolved);
+		for (const dataIn of dataIns) p.plot.addData(dataIn);
+		assertSeriesKept(data.plot.type, fields, dataIns, p.plot.data?.length ?? 0);
 	}
 	const settings = [];
 	for (const [key, value] of Object.entries(data.plot.settings ?? {})) {

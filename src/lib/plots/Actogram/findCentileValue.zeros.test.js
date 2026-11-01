@@ -15,7 +15,11 @@
  * A side effect: on two-level data (0 and one active level, e.g. 0/1 scored sleep-wake or
  * beam breaks) the threshold IS the active level and nothing is above it. The template match
  * was then flat and every marker landed N hours into the window whatever the true onset (all
- * 10 days 3 h off in the case below). Since 2026-10-28 such a window reports no marker.
+ * 10 days 3 h off in the case below). From 2026-10-28 such a window reported no marker. Since
+ * 2026-11-01 a TWO-LEVEL window (at most two distinct values) with nothing strictly above the
+ * threshold counts "at or above" as active instead, so 0/1 data gets its real onsets and
+ * offsets. Every other window is matched exactly as before (noisy data at a 100% centile still
+ * has no marker), and an all-zero window (no threshold) still has none.
  */
 import { describe, it, expect } from 'vitest';
 import { findCentileValue, matchTemplateMarkers } from './onsetUnwrap.js';
@@ -79,26 +83,123 @@ describe('FIT-U6: findCentileValue ignores zeros', { timeout: 120000 }, () => {
 	}
 	const opts = { periodHrs: 24, binSize: 0.25, hrsBefore: 3, hrsAfter: 3, centile: 50 };
 
+	// Active 06:00 to 18:00 every day, so each row's onset is at 6 h and its offset at 18 h.
+	const truth = { onset: 6, offset: 18 };
+
 	for (const type of ['onset', 'offset']) {
-		it(`on 0 / 1 data no bin is above the threshold, so there is no ${type} marker (not a made-up one)`, () => {
+		it(`on 0 / 1 data nothing is above the threshold, so at-or-above is active: the real ${type} every day`, () => {
 			const { xByPeriod, yByPeriod } = twoLevel();
 			expect(findCentileValue(yByPeriod[0], 50)).toBe(1); // the only non-zero level
 			const { hours, times } = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, type });
-			expect(hours).toHaveLength(10);
-			expect(hours.every(Number.isNaN)).toBe(true);
-			expect(times.every(Number.isNaN)).toBe(true);
+			expect(hours).toEqual(Array(10).fill(truth[type]));
+			expect(times).toEqual(Array.from({ length: 10 }, (_, i) => i * 24 + truth[type]));
 		});
 	}
 
-	it('the same holds for one active level other than 1, and for every centile', () => {
+	it('the same holds for one active level other than 1 (0 / 7), and for every centile', () => {
 		const { xByPeriod, yByPeriod } = twoLevel(7);
-		for (const centile of [10, 50, 90]) {
+		for (const centile of [10, 50, 90, 100]) {
+			for (const type of ['onset', 'offset']) {
+				const { hours } = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, centile, type });
+				expect(hours, `${type} at ${centile}%`).toEqual(Array(10).fill(truth[type]));
+			}
+		}
+	});
+
+	it('a 0 / 1 record whose onset drifts is followed day by day (the onset after the rest)', () => {
+		// Active 10 h from an onset that starts at 05:00 and moves 0.5 h later every day.
+		const xByPeriod = {};
+		const yByPeriod = {};
+		const onsets = Array.from({ length: 12 }, (_, k) => 5 + k * 24.5 - 24.5);
+		for (let t = 0; t < 8 * 24; t += 0.25) {
+			const p = Math.floor(t / 24);
+			const active = onsets.some((o) => t >= o && t < o + 10);
+			(xByPeriod[p] ||= []).push(t);
+			(yByPeriod[p] ||= []).push(active ? 1 : 0);
+		}
+		const { times } = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, type: 'onset' });
+		expect(times).toEqual(Array.from({ length: 8 }, (_, i) => 5 + i * 24.5));
+	});
+
+	it('two-level data with a non-zero rest level (1 / 10) gets its real onsets at 50% and 100%', () => {
+		const xByPeriod = {};
+		const yByPeriod = {};
+		for (let t = 0; t < 240; t += 0.25) {
+			const ph = (((t - 6) % 24) + 24) % 24;
+			const p = Math.floor(t / 24);
+			(xByPeriod[p] ||= []).push(t);
+			(yByPeriod[p] ||= []).push(ph < 12 ? 10 : 1);
+		}
+		for (const centile of [50, 100]) {
 			const { hours } = matchTemplateMarkers(xByPeriod, yByPeriod, {
 				...opts,
 				centile,
 				type: 'onset'
 			});
-			expect(hours.every(Number.isNaN)).toBe(true);
+			expect(hours, `${centile}%`).toEqual(Array(10).fill(6));
 		}
+	});
+
+	it('noisy data at a 100% centile still gives no marker (more than two levels: no fallback)', () => {
+		const r = rng(9);
+		const xByPeriod = {};
+		const yByPeriod = {};
+		for (let t = 0; t < 240; t += 0.25) {
+			const ph = (((t - 6) % 24) + 24) % 24;
+			const p = Math.floor(t / 24);
+			(xByPeriod[p] ||= []).push(t);
+			(yByPeriod[p] ||= []).push(ph < 12 ? 10 + 4 * r() : r());
+		}
+		const at100 = matchTemplateMarkers(xByPeriod, yByPeriod, {
+			...opts,
+			centile: 100,
+			type: 'onset'
+		});
+		expect(at100.hours).toHaveLength(10);
+		expect(at100.hours.every(Number.isNaN)).toBe(true);
+		expect(at100.times.every(Number.isNaN)).toBe(true);
+		// The same record at 50% has bins strictly above, so it is matched as always.
+		const at50 = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, type: 'onset' });
+		expect(at50.hours.every(Number.isFinite)).toBe(true);
+	});
+
+	it('an all-zero window still gives no marker (there is no threshold to be at)', () => {
+		const { xByPeriod, yByPeriod } = twoLevel();
+		const y = { ...yByPeriod, 4: yByPeriod[4].map(() => 0), 5: yByPeriod[5].map(() => 0) };
+		const { hours } = matchTemplateMarkers(xByPeriod, y, { ...opts, type: 'onset' });
+		expect(Number.isNaN(hours[4])).toBe(true);
+		// Row 3 searches into the zero row 4 and row 5 into row 6, so they still find 6 h.
+		expect(hours[3]).toBe(6);
+		expect(hours[5]).toBe(6);
+	});
+
+	it('a window that is one non-zero level throughout gives no marker (nothing to match)', () => {
+		const xByPeriod = { 0: [], 1: [] };
+		const yByPeriod = { 0: [], 1: [] };
+		for (let t = 0; t < 48; t += 0.25) {
+			xByPeriod[Math.floor(t / 24)].push(t);
+			yByPeriod[Math.floor(t / 24)].push(3);
+		}
+		const { hours } = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, type: 'onset' });
+		expect(hours.every(Number.isNaN)).toBe(true);
+	});
+
+	it('a window with any bin strictly above the threshold is matched exactly as before', () => {
+		// Integer counts with many bins tied AT the threshold: at-or-above would move these
+		// markers, so pinning them shows the fallback never reaches such a window.
+		const r = rng(5);
+		const xByPeriod = {};
+		const yByPeriod = {};
+		for (let t = 0; t < 6 * 24; t += 0.25) {
+			const ph = (((t - 6) % 24) + 24) % 24;
+			const p = Math.floor(t / 24);
+			(xByPeriod[p] ||= []).push(t);
+			(yByPeriod[p] ||= []).push(Math.floor(r() * (ph < 12 ? 4 : 2)) + (ph < 12 ? 1 : 0));
+		}
+		const thr = findCentileValue([...yByPeriod[0], ...yByPeriod[1]], 50);
+		expect([...yByPeriod[0], ...yByPeriod[1]].filter((v) => v === thr).length).toBeGreaterThan(20);
+		const { hours } = matchTemplateMarkers(xByPeriod, yByPeriod, { ...opts, type: 'onset' });
+		// Pinned on the strict-only code (before 2026-11-01).
+		expect(hours).toEqual([9.25, 6, 6.75, 6.75, 5.25, 6]);
 	});
 });

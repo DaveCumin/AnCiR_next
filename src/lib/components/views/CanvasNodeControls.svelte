@@ -21,6 +21,8 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { processInputRefusal } from '$lib/core/processInputRules.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { unknownAnalysisText } from '$lib/core/unknownNode.js';
@@ -38,7 +40,21 @@
 	function setProcessInputs(proc, nextIds) {
 		const procNodeId = `process_${proc.id}`;
 		const cur = processInputIds(proc);
-		const next = (nextIds ?? []).filter((id) => typeof id === 'number' && id >= 0);
+		// Each newly picked column obeys the process's declared input rules, the same as
+		// drawing a wire (core/processInputRules.js): refused ones are dropped, with a note.
+		const picked = (nextIds ?? []).filter((id) => typeof id === 'number' && id >= 0);
+		const accepted = picked.filter((id) => cur.includes(id));
+		const next = picked.filter((id) => {
+			if (cur.includes(id)) return true;
+			const refusal = processInputRefusal(proc, id, accepted);
+			if (refusal) {
+				addNotification(refusal);
+				return false;
+			}
+			accepted.push(id);
+			return true;
+		});
+		if (next.length === cur.length && next.every((id, i) => id === cur[i])) return;
 		const ops = [{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: next }];
 		for (const colId of next) {
 			if (cur.includes(colId)) continue;
@@ -65,7 +81,7 @@
 			);
 			if (pc) ops.push({ kind: 'removeColumn', id: pc.id });
 		}
-		mutationService.batch(ops);
+		mutationService.atomicBatch(ops);
 	}
 
 	// Friendly label for a composite member node id (members may be hidden, so

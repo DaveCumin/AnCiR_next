@@ -407,20 +407,24 @@ describe('template matching in the last row', () => {
 
 // REPORTED (2026-10-28): when no bin of a window is above the threshold (two-level data, a
 // 100% centile, an all-zero row) every bin reads "inactive", the match is flat, and the first
-// position put a made-up marker N bins in. Such a window now reports no marker.
+// position put a made-up marker N bins in. From 2026-10-28 such a window reported no marker;
+// since 2026-11-01 a two-level window (at most two distinct values) counts bins AT OR ABOVE the
+// threshold as active instead. Other windows still report none (noisy data at 100%, and an
+// all-zero row, which has no threshold).
 describe('template matching with no bin above the threshold', () => {
 	const opts = { periodHrs: 24, hrsBefore: 3, hrsAfter: 3, type: 'onset' };
 
-	it('a 100% centile gives no markers (nothing is above the top value)', () => {
+	it('a 100% centile counts the top value as active, so the onsets are the real ones', () => {
+		// Two levels (1 at rest, 10 active), onset 06:00: nothing is above the top value, and
+		// the window has only two distinct values, so at-or-above applies.
 		const sim = simulate({ tau: 24, P: 24, days: 4, firstOnset: 6 });
 		const { hours, times } = matchTemplateMarkers(sim.xByPeriod, sim.yByPeriod, {
 			...opts,
 			centile: 100,
 			binSize: sim.binSize
 		});
-		expect(hours).toHaveLength(4);
-		expect(hours.every(Number.isNaN)).toBe(true);
-		expect(times.every(Number.isNaN)).toBe(true);
+		expect(hours).toEqual([6, 6, 6, 6]);
+		expect(times).toEqual([6, 30, 54, 78]);
 	});
 
 	it('an all-zero row (no threshold) gives no marker; the rows around it are unchanged', () => {

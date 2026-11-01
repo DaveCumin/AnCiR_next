@@ -1474,7 +1474,7 @@
 			</div>
 		</div>
 		{#if p.args.useFixedPeriod}
-			<div class="control-input-horizontal">
+			<div class="control-input-horizontal fixed-period-row">
 				<ControlInput label={`Fixed period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
@@ -2142,5 +2142,24 @@
 	.resid-btn:hover {
 		border-color: var(--color-accent);
 		background: var(--color-hover);
+	}
+	/* Three fields in one row: at the panel's narrowest (200 px) "Harmonics" broke mid-word
+	   (the panel breaks words anywhere) and Alpha's field was cut to "0.0". Labels now break
+	   only between words, each field keeps room for its value, and the row wraps a field
+	   onto a second line when they do not fit; at the default width it stays one row. */
+	.fixed-period-row {
+		flex-wrap: wrap;
+		row-gap: var(--space-4);
+		/* Fields line up along their bottoms whatever their labels' line counts. */
+		align-items: flex-end;
+	}
+	.fixed-period-row > :global(.control-input) {
+		min-width: min-content;
+	}
+	.fixed-period-row :global(.ci-label) {
+		overflow-wrap: normal;
+	}
+	.fixed-period-row :global(input) {
+		min-width: 3.5rem;
 	}
 </style>

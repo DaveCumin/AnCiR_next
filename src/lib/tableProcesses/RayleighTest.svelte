@@ -421,61 +421,64 @@
 </div>
 
 {#if rows.length}
-	<div class="rayleigh-results scroll-fade-x" {@attach scrollFade()}>
-		<table>
-			<thead>
-				<tr>
-					<th>Series</th>
-					<th>n</th>
-					<th>R</th>
-					<th>z</th>
-					<th>p</th>
-					<th>Mean angle</th>
-					{#if isWeighted}
-						<th>Acrophase</th>
-					{/if}
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as r (r.yId)}
+	<div class="rayleigh-results">
+		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
+		<div class="rayleigh-table scroll-fade-x" {@attach scrollFade()}>
+			<table>
+				<thead>
 					<tr>
-						<td>{r.name}</td>
-						<td>{r.n}</td>
-						<td>
-							{fmt(r.R)}
-							<StoreValueButton
-								label="R"
-								getter={() => r.R}
-								{...storedValueNames('rayleigh_R', r.yId)}
-								source="RayleighTest"
-							/>
-						</td>
-						<td>{fmt(r.z, 2)}</td>
-						<td>
-							{Number.isFinite(r.pValue) ? r.pValue.toPrecision(3) : '—'}
-							<StoreValueButton
-								label="p"
-								getter={() => r.pValue}
-								{...storedValueNames('rayleigh_p', r.yId)}
-								source="RayleighTest"
-							/>
-						</td>
-						<td>{fmt(r.meanAngle, 3)}</td>
+						<th>Series</th>
+						<th>n</th>
+						<th>R</th>
+						<th>z</th>
+						<th>p</th>
+						<th>Mean angle</th>
 						{#if isWeighted}
+							<th>Acrophase</th>
+						{/if}
+					</tr>
+				</thead>
+				<tbody>
+					{#each rows as r (r.yId)}
+						<tr>
+							<td>{r.name}</td>
+							<td>{r.n}</td>
 							<td>
-								{fmt(r.meanValue, 2)}
+								{fmt(r.R)}
 								<StoreValueButton
-									label="Acrophase"
-									getter={() => r.meanValue}
-									{...storedValueNames('rayleigh_acrophase', r.yId)}
+									label="R"
+									getter={() => r.R}
+									{...storedValueNames('rayleigh_R', r.yId)}
 									source="RayleighTest"
 								/>
 							</td>
-						{/if}
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+							<td>{fmt(r.z, 2)}</td>
+							<td>
+								{Number.isFinite(r.pValue) ? r.pValue.toPrecision(3) : '—'}
+								<StoreValueButton
+									label="p"
+									getter={() => r.pValue}
+									{...storedValueNames('rayleigh_p', r.yId)}
+									source="RayleighTest"
+								/>
+							</td>
+							<td>{fmt(r.meanAngle, 3)}</td>
+							{#if isWeighted}
+								<td>
+									{fmt(r.meanValue, 2)}
+									<StoreValueButton
+										label="Acrophase"
+										getter={() => r.meanValue}
+										{...storedValueNames('rayleigh_acrophase', r.yId)}
+										source="RayleighTest"
+									/>
+								</td>
+							{/if}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 		{#each rayleighData.warnings ?? [] as w (w)}
 			<p class="warn">{w}</p>
 		{/each}
@@ -502,28 +505,29 @@
 				Watson-Williams compares raw-angle columns; it is unavailable when a time is wired.
 			</p>
 		{:else if ww}
-			<p>
-				F({ww.df1}, {ww.df2}) = {fmt(ww.F, 4)}, p = {Number.isFinite(ww.pValue)
-					? ww.pValue.toPrecision(4)
-					: '—'}
+			<!-- Each value carries its store button, as the results table and the fit panels do;
+			     a statistic and its button never break apart (or a number at "e-"). -->
+			<p class="ww-stats">
+				<span class="ww-stat"
+					>F({ww.df1}, {ww.df2}) = {fmt(ww.F, 4)}<StoreValueButton
+						label="F"
+						getter={() => ww.F}
+						defaultName="watson_williams_F"
+						source="RayleighTest (Watson-Williams)"
+					/></span
+				>
+				<span class="ww-stat"
+					>p = {Number.isFinite(ww.pValue) ? ww.pValue.toPrecision(4) : '—'}<StoreValueButton
+						label="p-value"
+						getter={() => ww.pValue}
+						defaultName="watson_williams_p"
+						source="RayleighTest (Watson-Williams)"
+					/></span
+				>
 			</p>
 			<p class="rayleigh-hint" style="opacity:0.8;">
 				{ww.k} groups, N = {ww.N}; κ̂ = {fmt(ww.kappa, 3)}, correction β = {fmt(ww.beta, 3)}
 			</p>
-			<div class="section-row" style="gap: 0.4rem;">
-				<StoreValueButton
-					label="F"
-					getter={() => ww.F}
-					defaultName="watson_williams_F"
-					source="RayleighTest (Watson-Williams)"
-				/>
-				<StoreValueButton
-					label="p-value"
-					getter={() => ww.pValue}
-					defaultName="watson_williams_p"
-					source="RayleighTest (Watson-Williams)"
-				/>
-			</div>
 			<p class="rayleigh-hint">
 				Tests whether the groups share a mean direction (needs 2+ columns). Assumes concentrated,
 				similarly-dispersed samples (κ̂ ≳ 2); a small p means the mean angles differ.
@@ -545,9 +549,19 @@
 		padding: var(--space-1) var(--space-2);
 		margin: var(--space-1) 0 0;
 	}
+	/* The panel's .control-component aligns its children to flex-start, so without a width
+	   the results shrink-wrapped to the nowrap table and ran past the panel's clip edge,
+	   cutting the warnings and explanation. Bounded to the panel, only the table scrolls. */
 	.rayleigh-results {
 		margin-top: var(--space-2, 0.5rem);
+		width: 100%;
+		min-width: 0;
+	}
+	/* 8 px under the table whether a note or a warning comes first (their own top margins
+	   are smaller and collapse into this one). */
+	.rayleigh-table {
 		overflow-x: auto;
+		margin-bottom: var(--space-4);
 	}
 	.rayleigh-results table {
 		border-collapse: collapse;
@@ -577,6 +591,14 @@
 	}
 	.ww-panel p {
 		margin: 0.14rem 0;
+	}
+	.ww-stats {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: var(--space-5);
+	}
+	.ww-stat {
+		white-space: nowrap;
 	}
 	.ww-summary {
 		font-weight: 600;

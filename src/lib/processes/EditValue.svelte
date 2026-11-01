@@ -58,7 +58,9 @@
 		},
 		nodeSpec: {
 			id: 'process.editvalue',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: the typed values are in the inputs' type and units
+			// (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

@@ -16,7 +16,9 @@
 		defaults: add_defaults,
 		nodeSpec: {
 			id: 'process.add',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// sameType: true: the value is in the inputs' units (5, or 5 hours for a time column)
+			// (core/processInputRules.js).
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};

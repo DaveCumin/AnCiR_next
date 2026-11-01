@@ -184,9 +184,13 @@
 				counts as active when it is above the percentile of the non-zero activity in its row and the
 				next, so its markers need not match ClockLab's. Zeros are left out so that the percentage
 				still matters on sparse records (counted, they would pull the threshold to 0 whenever most
-				bins are empty). When no bin in a row's window is above the threshold (data with only one
-				non-zero level, such as 0/1 scores, or a 100% threshold) that row gets no marker, rather
-				than one placed N hours in.
+				bins are empty). On two-level data (at most two distinct values in a row's window, such as
+				0/1 scores, 0 and 7, or 1 and 10) often no bin is above the threshold (0/1 scores at any
+				threshold, 1 and 10 at 100%); then the bins at the threshold count as active instead, so
+				such data gets its real onsets and offsets. Other data is unchanged: when no bin is above
+				the threshold (a 100% threshold on ordinary counts, say) that row gets no marker, rather
+				than one placed N hours in, and so does a row whose window has no activity at all or one
+				level throughout.
 			</li>
 			<li>
 				<strong>Marker rules:</strong> with several animals on one actogram, click

@@ -957,7 +957,10 @@ export const NODE_PORT_DESCRIPTIONS = {
 
 export const PROCESS_PORT_DESCRIPTIONS = {
 	Add: {
-		inputs: { input: 'A number column, or a time column (the value added is then a duration).' },
+		inputs: {
+			input:
+				'A number column, or a time column (the value added is then a duration). Several inputs must all be one type.'
+		},
 		outputs: {
 			output: 'The input plus the value, row by row. Same length and type; blanks stay blank.'
 		}
@@ -977,7 +980,10 @@ export const PROCESS_PORT_DESCRIPTIONS = {
 		outputs: { output: 'A copy of the input with the cells you typed changed, by row number.' }
 	},
 	FilterByOtherCol: {
-		inputs: { input: 'A column of any type.' },
+		inputs: {
+			input:
+				'A column of any type. Several inputs can mix types (time and number), each with its own output.'
+		},
 		outputs: {
 			output:
 				'The input with the rows that fail the conditions (tested on other columns) blanked. Same length.'

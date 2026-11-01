@@ -1302,6 +1302,24 @@
 		/* margin-bottom: var(--space-4); */
 	}
 
+	/* align-items: flex-start above sizes each child to its content, and content can be
+	   wider than the 200 to 500 px panel: a column row (Column.svelte: a nowrap name and a
+	   "Label" field), a column picker, a formula editor. An analysis's Output <details> or
+	   .section-row then ran past the panel's clip edge, cutting the summary's chevron and
+	   the Label fields. Capped at the panel width, names ellipsise and fields shrink; a
+	   child that already fits is unchanged (this only ever narrows). The global details
+	   rule indents a details by var(--space-4); its cap ends it at the same right edge as
+	   everything else in the panel (the Node note box), not one margin short. */
+	:global(.control-component > *) {
+		max-width: 100%;
+	}
+	:global(.control-component > details) {
+		max-width: calc(100% - var(--space-4));
+	}
+	:global(.control-component > .section-row) {
+		box-sizing: border-box;
+	}
+
 	:global(.control-component-title) {
 		width: 100%;
 		display: flex;

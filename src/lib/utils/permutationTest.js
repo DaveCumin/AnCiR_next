@@ -16,17 +16,15 @@
  * The 'block' scheme keeps short-range dependence: the series is cut, from a random
  * circular offset, into blocks one period long, each block is rotated circularly by a
  * random amount (which scrambles its phase relative to the rhythm) and the blocks are put
- * in a random order. Measured false-positive rates at alpha 0.05 (same design, 1,000
- * records): 0.042 at phi = 0, 0.046 at phi = 0.5, 0.015 at phi = 0.9; 300 records each:
- * 0.040 at n = 168 (phi 0.5), 0.000 at 15 min sampling (n = 960, phi 0.95). Power is
- * somewhat lower than the shuffle test's on independent data (amplitude 0.3 SD, phi 0:
- * 0.75 against 0.80; amplitude 0.5 SD, phi 0.5: 0.78, where the shuffle test's 0.98 is
- * not a valid comparison). permutationScheme.calibration.test.js re-runs a reduced version
- * of this simulation. A re-run on 2026-11-01 with that file's generator (1,000 records,
- * 199 permutations) gave lower rates than quoted above: 0.030 (phi 0), 0.031 (phi 0.5),
- * 0.008 (phi 0.9), power 0.69 and 0.61; the numbers and why the blocks stay one period long
- * (shorter ones over-reject at phi 0.5) are in that file. residualAutocorrelationWarning flags records where the shuffle scheme
- * is not valid.
+ * in a random order. Measured false-positive rates at alpha 0.05 (same AR(1) design, 1,000
+ * records, 199 permutations, re-run 2026-11-01): 0.030 at phi = 0, 0.031 at phi = 0.5 and
+ * 0.008 at phi = 0.9, so it is conservative. Power with a 24 h cosine added (innovation SD 1)
+ * is 0.690 at amplitude 0.3, phi 0, and 0.606 at amplitude 0.5, phi 0.5. The blocks stay one
+ * period long because shorter ones over-reject at phi 0.5 (0.077 for half-period blocks, 0.074
+ * for quarter-period ones). permutationScheme.calibration.test.js holds these numbers, the
+ * full-run switch that reproduces them and a reduced version of the simulation that runs in
+ * the suite. residualAutocorrelationWarning flags records where the shuffle scheme is not
+ * valid.
  */
 
 import minstd from '@stdlib/random-base-minstd-shuffle';

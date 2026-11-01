@@ -1317,51 +1317,61 @@
 				{#if !res.valid}
 					<p>{res.reason || 'Not enough valid grouped data.'}</p>
 				{:else if res.test === 'Welch t-test'}
+					<!-- Numbers sit in .num spans (app.css) so they never break inside ("e-", a
+					     minus sign); each stored value's button sits beside its value. -->
 					<p>
-						{res.test}: t({res.df.toFixed(2)}) = {res.t.toFixed(4)}, p = {res.pValue.toPrecision(4)}
-					</p>
-					<p>
-						Mean difference ({res.groups[0].name} - {res.groups[1].name}) = {res.difference.toFixed(
-							4
-						)}
-						(95% CI {res.ciLow.toFixed(4)} to {res.ciHigh.toFixed(4)})
-					</p>
-					<div class="section-row" style="gap: 0.4rem;">
-						<StoreValueButton
+						{res.test}: t(<span class="num">{res.df.toFixed(2)}</span>) =
+						<span class="num">{res.t.toFixed(4)}</span><StoreValueButton
+							label="t-stat"
+							getter={() => res.t}
+							{...storedValueNames('groupcmp_ttest_t', yId)}
+							source="GroupComparison"
+						/>, p = <span class="num">{res.pValue.toPrecision(4)}</span><StoreValueButton
 							label="p-value"
 							getter={() => res.pValue}
 							{...storedValueNames('groupcmp_ttest_p', yId)}
 							source="GroupComparison"
 						/>
-						<StoreValueButton
-							label="t-stat"
-							getter={() => res.t}
-							{...storedValueNames('groupcmp_ttest_t', yId)}
-							source="GroupComparison"
-						/>
-					</div>
+					</p>
+					<p>
+						Mean difference ({res.groups[0].name} - {res.groups[1].name}) =
+						<span class="num">{res.difference.toFixed(4)}</span>
+						(95% CI <span class="num">{res.ciLow.toFixed(4)}</span> to
+						<span class="num">{res.ciHigh.toFixed(4)}</span>)
+					</p>
 				{:else if res.test === 'One-way ANOVA'}
 					<p>
-						{res.test}: F({res.dfBetween}, {res.dfWithin}) = {res.f.toFixed(4)}, p = {res.pValue.toPrecision(
-							4
-						)}
+						{res.test}: F({res.dfBetween}, {res.dfWithin}) =
+						<span class="num">{res.f.toFixed(4)}</span>, p =
+						<span class="num">{res.pValue.toPrecision(4)}</span>
 					</p>
-					<p>Eta squared = {Number.isFinite(res.etaSquared) ? res.etaSquared.toFixed(4) : 'NaN'}</p>
+					<p>
+						Eta squared = <span class="num"
+							>{Number.isFinite(res.etaSquared) ? res.etaSquared.toFixed(4) : 'NaN'}</span
+						>
+					</p>
 				{:else if res.test === 'Mann-Whitney U'}
 					<p>
-						{res.test}: U = {res.u.toFixed(3)}, z = {res.z.toFixed(3)}, p = {res.pValue.toPrecision(
-							4
-						)}{res.pMethod === 'exact' ? ' (exact)' : ''}
+						{res.test}: U = <span class="num">{res.u.toFixed(3)}</span>, z =
+						<span class="num">{res.z.toFixed(3)}</span>, p =
+						<span class="num">{res.pValue.toPrecision(4)}</span>{res.pMethod === 'exact'
+							? ' (exact)'
+							: ''}
 					</p>
-					<p>Effect size r = {Number.isFinite(res.rEffect) ? res.rEffect.toFixed(4) : 'NaN'}</p>
+					<p>
+						Effect size r = <span class="num"
+							>{Number.isFinite(res.rEffect) ? res.rEffect.toFixed(4) : 'NaN'}</span
+						>
+					</p>
 				{:else}
 					<p>
-						{res.test}: H({res.df}) = {res.h.toFixed(4)}, p = {res.pValue.toPrecision(4)}
+						{res.test}: H({res.df}) = <span class="num">{res.h.toFixed(4)}</span>, p =
+						<span class="num">{res.pValue.toPrecision(4)}</span>
 					</p>
 					<p>
-						Epsilon squared = {Number.isFinite(res.epsilonSquared)
-							? res.epsilonSquared.toFixed(4)
-							: 'NaN'}
+						Epsilon squared = <span class="num"
+							>{Number.isFinite(res.epsilonSquared) ? res.epsilonSquared.toFixed(4) : 'NaN'}</span
+						>
 					</p>
 				{/if}
 
@@ -1376,17 +1386,17 @@
 				{#if (res.postHoc?.length ?? 0) > 0}
 					<p style="margin-top: 0.35rem;"><strong>{res.postHocLabel}</strong></p>
 					{#each res.postHoc as pair (pair.groupA + '\u0000' + pair.groupB)}
+						{@const n = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : 'NaN')}
+						{@const pr = (v) => (Number.isFinite(v) ? v.toPrecision(4) : 'NaN')}
 						<p>
-							<strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong>: stat = {Number.isFinite(
-								pair.statistic
-							)
-								? pair.statistic.toFixed(4)
-								: 'NaN'}, p = {Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}, p
-							adj = {Number.isFinite(pair.pAdjusted)
-								? pair.pAdjusted.toPrecision(4)
-								: 'NaN'}{#if Number.isFinite(pair.ciLow)}, CI = [{pair.ciLow.toFixed(4)}, {pair.ciHigh.toFixed(
-									4
-								)}]{/if}, significant = {pair.significant ? 'Yes' : 'No'}
+							<strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong>: stat =
+							<span class="num">{n(pair.statistic, 4)}</span>, p =
+							<span class="num">{pr(pair.pValue)}</span>, p adj =
+							<span class="num">{pr(pair.pAdjusted)}</span>{#if Number.isFinite(pair.ciLow)}, CI =
+								<span class="num">[{pair.ciLow.toFixed(4)},</span>
+								<span class="num">{pair.ciHigh.toFixed(4)}]</span>{/if}, significant = {pair.significant
+								? 'Yes'
+								: 'No'}
 						</p>
 					{/each}
 				{/if}
@@ -1394,9 +1404,9 @@
 				{#if (res.groups?.length ?? 0) > 0}
 					{#each res.groups as g (g.name)}
 						<p>
-							<strong>{g.name}</strong>: n = {g.n}, mean = {Number.isFinite(g.mean)
-								? g.mean.toFixed(4)
-								: 'NaN'}, sd = {Number.isFinite(g.sd) ? g.sd.toFixed(4) : 'NaN'}
+							<strong>{g.name}</strong>: n = <span class="num">{g.n}</span>, mean =
+							<span class="num">{Number.isFinite(g.mean) ? g.mean.toFixed(4) : 'NaN'}</span>, sd =
+							<span class="num">{Number.isFinite(g.sd) ? g.sd.toFixed(4) : 'NaN'}</span>
 						</p>
 					{/each}
 				{/if}
