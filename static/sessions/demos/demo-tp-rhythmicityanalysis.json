@@ -740,7 +740,7 @@
       "name": "x",
       "data": 855,
       "type": "number",
-      "tableProcessGUId": "480dc201-f7f1-459e-99d5-8e7bf28f4a7e",
+      "tableProcessGUId": "48864610-aabd-4805-950b-c6907d99346d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -762,7 +762,7 @@
       "name": "856_period_84",
       "data": 857,
       "type": "number",
-      "tableProcessGUId": "e6b9bba5-09d6-460c-9671-f1bf1ccc8199",
+      "tableProcessGUId": "cb15fe3a-8807-4ed0-b49b-816908bddc0c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -773,7 +773,7 @@
       "name": "856_power_84",
       "data": 858,
       "type": "number",
-      "tableProcessGUId": "e6b9bba5-09d6-460c-9671-f1bf1ccc8199",
+      "tableProcessGUId": "cb15fe3a-8807-4ed0-b49b-816908bddc0c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,7 +784,7 @@
       "name": "rhythmicityy_856_84",
       "data": 859,
       "type": "number",
-      "tableProcessGUId": "e6b9bba5-09d6-460c-9671-f1bf1ccc8199",
+      "tableProcessGUId": "cb15fe3a-8807-4ed0-b49b-816908bddc0c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1223,5 +1223,5 @@
       "No"
     ]
   },
-  "version": "β.82.66"
+  "version": "β.82.67"
 }

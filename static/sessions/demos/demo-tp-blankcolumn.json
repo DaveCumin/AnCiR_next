@@ -19,7 +19,7 @@
       "name": "result_55",
       "data": 669,
       "type": "category",
-      "tableProcessGUId": "02ed68df-881f-46c1-95f5-c1387d3a9f36",
+      "tableProcessGUId": "b2cbe025-47da-4363-b6bf-aaf8d7dfa56d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -200,5 +200,5 @@
       "No"
     ]
   },
-  "version": "β.82.66"
+  "version": "β.82.67"
 }
