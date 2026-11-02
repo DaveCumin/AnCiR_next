@@ -245,8 +245,14 @@ export function cwt(values, dt, opts = {}) {
 	}
 
 	// Cone of influence: e-folding time, tapering to zero at both ends (T&C §3.g).
+	// At a distance t from an edge the wavelet whose e-folding time equals t has
+	// scale s = t / coiFactor, so the affected PERIOD is fourierFactor * t / coiFactor
+	// (T&C wave_bases.m: coi = fourier_factor / sqrt(2) for Morlet and DOG,
+	// fourier_factor * sqrt(2) for Paul). Multiplying here instead of dividing once
+	// drew the Morlet cone half as wide as it should be (about 22 h in from each
+	// end at a 32 h period, where the handbook and Torrence & Compo give about 44 h).
 	const coi = new Array(n);
-	const coiConst = props.fourierFactor * props.coiFactor;
+	const coiConst = props.fourierFactor / props.coiFactor;
 	for (let i = 0; i < n; i++) {
 		const edge = Math.min(i, n - 1 - i);
 		// +1e-9 keeps the endpoints off exactly zero so a log axis stays plottable.

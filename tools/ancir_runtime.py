@@ -17221,7 +17221,9 @@ def cwt_transform(values, dt, wavelet='morlet', param=None, dj=0.125, s0=None, j
         w = np.fft.ifft(spec * props['psiHat'](omega, sc, dt))[:n]
         row = (w.real ** 2 + w.imag ** 2) / (sc if rectify else 1)
         power.append(row)
-    coi_const = props['fourierFactor'] * props['coiFactor']
+    # Period affected at distance t from an edge: fourierFactor * t / coiFactor (Torrence &
+    # Compo wave_bases.m: fourier_factor / sqrt(2) for Morlet and DOG). Mirrors cwt.js.
+    coi_const = props['fourierFactor'] / props['coiFactor']
     i = np.arange(n)
     coi = coi_const * dt * (np.minimum(i, n - 1 - i) + 1e-9)
     return {'periods': periods, 'scales': scales, 'power': power, 'coi': list(coi), 'dt': dt,

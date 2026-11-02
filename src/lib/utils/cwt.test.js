@@ -156,6 +156,31 @@ describe('cwt — cone of influence', () => {
 		const { coi } = cwt(sine(n, DT, 24), DT);
 		expect(coi[7]).toBeCloseTo(coi[n - 8], 10);
 	});
+
+	// Torrence & Compo (1998) Table 1 and wave_bases.m: the cone in period units is
+	// fourier_factor / sqrt(2) x (time from the edge) for Morlet and DOG, and
+	// fourier_factor x sqrt(2) for Paul. For Morlet w0 = 6 that slope is 0.7305 per
+	// sample, so a 32 h period is edge-affected about 44 h in from each end. The
+	// code once multiplied instead of dividing and drew the cone half that wide.
+	it('has the Torrence and Compo slope for each wavelet', () => {
+		const n = 512;
+		const slope = (opts) => {
+			const { coi } = cwt(sine(n, DT, 24), DT, opts);
+			return coi[100] / (100 * DT);
+		};
+		const morletFF = (4 * Math.PI) / (6 + Math.sqrt(2 + 36)); // 1.0330
+		expect(slope({ wavelet: 'morlet', param: 6 })).toBeCloseTo(morletFF / Math.SQRT2, 6);
+		expect(slope({ wavelet: 'dog', param: 2 })).toBeCloseTo(
+			(2 * Math.PI) / Math.sqrt(2.5) / Math.SQRT2,
+			6
+		);
+		expect(slope({ wavelet: 'paul', param: 4 })).toBeCloseTo(((4 * Math.PI) / 9) * Math.SQRT2, 6);
+		// The number the handbook quotes: at 32 h the Morlet cone reaches ~44 h in.
+		const { coi } = cwt(sine(n, DT, 24), DT, { wavelet: 'morlet', param: 6 });
+		const reach = coi.findIndex((c) => c >= 32) * DT;
+		expect(reach).toBeGreaterThan(42);
+		expect(reach).toBeLessThan(46);
+	});
 });
 
 describe('waveletRidge', () => {
