@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: >-
   If you use AnCiR, please cite this record. The companion handbook is a
-  separate work with its own DOI (10.5281/zenodo.21727169); if you are citing
+  separate work with its own DOI (10.5281/zenodo.21727168); if you are citing
   the handbook rather than the software, cite that instead. See the references
   section below.
 title: "AnCiR: Analysis of Chronobiological Rhythms"
@@ -17,7 +17,7 @@ abstract: >-
   This repository also holds the source of A Handbook of Chronobiological Data
   Analysis, an interactive companion text with worked examples and animations
   that explains the methods and shows how to carry them out in AnCiR. The
-  handbook is archived as a separate Zenodo record (10.5281/zenodo.21727169)
+  handbook is archived as a separate Zenodo record (10.5281/zenodo.21727168)
   so that it can be cited at its own version, and is published at
   https://ancir.pages.dev/handbook.html.
 type: software
@@ -55,7 +55,7 @@ references:
     publisher:
       name: Zenodo
     year: 2026
-    doi: 10.5281/zenodo.21727169
+    doi: 10.5281/zenodo.21727168
     url: "https://ancir.pages.dev/handbook.html"
     notes: >-
       The companion handbook. A separate Zenodo record with its own DOI and

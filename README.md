@@ -60,7 +60,7 @@ The software and the handbook are archived separately, so please cite whichever 
 | Work                                         | Licence    | DOI                                                                |
 | -------------------------------------------- | ---------- | ------------------------------------------------------------------ |
 | AnCiR (the software)                         | Apache-2.0 | [10.5281/zenodo.19340642](https://doi.org/10.5281/zenodo.19340642) |
-| A Handbook of Chronobiological Data Analysis | CC BY 4.0  | [10.5281/zenodo.21727169](https://doi.org/10.5281/zenodo.21727169) |
+| A Handbook of Chronobiological Data Analysis | CC BY 4.0  | [10.5281/zenodo.21727168](https://doi.org/10.5281/zenodo.21727168) |
 
 Both DOIs are concept DOIs: each resolves to the most recent release, and every release also has its own version DOI if you need to pin one. See `CITATION.cff` for machine-readable metadata.
 

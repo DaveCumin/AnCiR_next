@@ -37,10 +37,12 @@
 		<p>
 			<strong>Describe Data</strong> (Analysis) returns the standard battery for each variable:
 			<strong>n</strong>, <strong>mean</strong>,
-			<strong>median</strong>, <strong>sd</strong>, <strong>min</strong>,
+			<strong>median</strong>, <strong>sd</strong>, <strong>sem</strong>, the 95% confidence
+			interval of the mean (<strong>ciLow</strong>, <strong>ciHigh</strong>), <strong>min</strong>,
 			<strong>max</strong>, <strong>range</strong>, <strong>q1</strong>,
 			<strong>q3</strong>, <strong>iqr</strong>, <strong>skewness</strong> and
-			<strong>kurtosis</strong>.
+			<strong>kurtosis</strong> (reported as <em>excess</em> kurtosis, so a normal distribution scores
+			0).
 		</p>
 		<p>
 			Pair it with a <strong>Histogram</strong> and a <strong>Boxplot</strong>
@@ -113,7 +115,10 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Auto</strong> (default): two groups: Welch t-test; three or more: ANOVA.
+				<strong>Auto</strong> (default): two groups: Welch t-test; three or more: ANOVA. Auto does not
+				switch to a rank-based test for you. It checks each group for normality (Jarque-Bera) and warns
+				when a group looks non-normal, or when the group variances differ by more than fourfold; on a
+				warning, choose Mann-Whitney U or Kruskal-Wallis yourself.
 			</li>
 			<li>
 				<strong>Welch t-test</strong>: two groups. Does <em>not</em> assume equal variances, which is
@@ -125,15 +130,24 @@
 				p-value and simultaneous confidence interval come from the studentized range, so they
 				already allow for all the pairs being compared.
 			</li>
-			<li><strong>Kruskal-Wallis</strong>: three or more, rank based.</li>
+			<li>
+				<strong>Kruskal-Wallis</strong>: three or more, rank based, with Holm-adjusted pairwise
+				Mann-Whitney tests as the post-hoc.
+			</li>
 		</ul>
+		<p>
+			Alongside the p-value the node reports an <strong>effectSize</strong> (Cohen's d, &eta;&sup2;, r
+			or &epsilon;&sup2;, by test), which is the number to quote next to it.
+		</p>
 		<p>
 			For a categorical outcome (counts of rhythmic versus arrhythmic animals, say), use the <strong
 				>Categorical tests</strong
 			>
 			node instead, with
-			<strong>Independence</strong> (a contingency table) or
-			<strong>Goodness-of-fit</strong> (observed against expected proportions).
+			<strong>Independence</strong> (a contingency table),
+			<strong>Goodness-of-fit</strong> (observed against expected proportions) or
+			<strong>Fisher's exact test</strong> (a 2&times;2 table with small counts, where the &chi;&sup2;
+			approximation is poor).
 		</p>
 	</AnCiRBox>
 
@@ -162,17 +176,17 @@
 			everything past the shorter column is thrown away, and the table that results describes no
 			real comparison. On the 7-of-10 versus 2-of-25 example it keeps just 10 of the 35 observations
 			and reports p&nbsp;=&nbsp;0.86, no association, where the correct test on all 35 gives
-			p&nbsp;=&nbsp;0.0008 with Cram&eacute;r&rsquo;s V&nbsp;=&nbsp;0.64, a strong one. A real
-			effect vanishes silently.
+			p&nbsp;=&nbsp;0.0008 (p&nbsp;=&nbsp;0.003 with the node's default Yates continuity correction)
+			with Cram&eacute;r&rsquo;s V&nbsp;=&nbsp;0.64, a strong one. A real effect vanishes silently.
 		</p>
 		<p>
 			So state the layout rather than assuming it. AnCiR&rsquo;s Categorical tests node has an <strong
 				>Input format</strong
 			>
-			control for exactly this. It defaults to independent groups, because in AnCiR a column is a data
-			series and two groups in two columns is the shape the data usually takes; switch it to
-			<em>Paired</em> when your rows really are subjects. It also warns when the two columns differ markedly
-			in length, which is the usual sign that the wrong layout is selected.
+			control for exactly this. It defaults to <em>Two independent groups</em>, because in AnCiR a
+			column is a data series and two groups in two columns is the shape the data usually takes;
+			switch it to <em>Paired</em> when your rows really are subjects. It also warns when the two columns
+			differ markedly in length, which is the usual sign that the wrong layout is selected.
 		</p>
 	</WarnBox>
 
@@ -230,8 +244,12 @@
 	<AnCiRBox title="Correlation, pairs plot, Fit trend, Logistic regression">
 		<ul>
 			<li>
-				<strong>Correlation</strong> (Analysis) returns <strong>r</strong>,
-				<strong>pvalue</strong> and <strong>n</strong> for each variable pair.
+				<strong>Correlation</strong> (Analysis) returns <strong>r</strong> with its 95% interval (<strong
+					>ciLow</strong
+				>, <strong>ciHigh</strong>), <strong>pvalue</strong>,
+				<strong>n</strong> and, because every pair is a separate test, a Holm-adjusted
+				<strong>padj</strong> for each variable pair. Its <strong>Method</strong> is Pearson, Spearman,
+				or Auto, which picks by a normality check of the columns.
 			</li>
 			<li>
 				<strong>Pairs plot</strong> and <strong>Correlation heatmap</strong> (Plots) show all pairs at
@@ -348,7 +366,8 @@
 		keeps that plus the distribution of values. Keeping the whole autocorrelation function keeps any
 		rhythm too, so phase and AAFT surrogates suit questions about coupling between series, not
 		whether a rhythm is present. This is the subject of
-		<a href="#ch6">Chapter 6</a>, where the <strong>Surrogate Test</strong> node is described in full.
+		<a href="#ch6">Chapter 6</a>, where the <strong>Surrogate Test</strong> node (which offers the block
+		bootstrap and AR(1) methods) is described in full.
 	</p>
 
 	<h4 class="sub-head">Correcting for many tests</h4>

@@ -65,7 +65,11 @@
 		estimator: because the numerator has only N − k terms while the denominator has N, r(k) is automatically
 		shrunk by roughly (N − k)/N. Peak heights therefore decline with lag
 		<em>even for a perfect, noiseless rhythm</em>, and only the excess decline reflects genuine loss
-		of rhythm stability. Under the null of white noise, r(k) has approximate 95% bounds of
+		of rhythm stability. AnCiR's Correlogram plot does not use this form: it divides the lag-k sum
+		by the N − k pairs that make it up (the mean product over the variance), so its peaks are not
+		shrunk this way and a perfect rhythm keeps its height at every lag. The price is that the long
+		lags rest on fewer pairs and are noisier, which is why the plot's lag window stops at half the
+		record by default. Under the null of white noise, r(k) has approximate 95% bounds of
 		<strong>±1.96/√N</strong>, conventionally drawn on the correlogram; peaks outside them are taken
 		as significant.
 	</p>
@@ -152,7 +156,9 @@
 		<strong>epoch-dependent</strong>: IS and IV computed at 1-minute and 1-hour epochs are not
 		comparable, so always report the epoch. IS is biased upward in short records and needs at least
 		7 days. Note that IS is arithmetically the Sokolove-Bushell statistic at a 24 h trial period
-		divided by N, linking this chapter to Chapter 6. Finally, all of these describe
+		divided by N (on a record of whole days, so that every bin of the average day holds the same
+		number of epochs), linking this chapter to <a href="#ch6">Chapter 6</a>. Finally, all of these
+		describe
 		<em>observed behaviour, not the endogenous clock</em>: they are fully exposed to masking by
 		light, feeding and social schedule. AnCiR also provides a <strong>Cross-correlation</strong> node
 		(Analysis family) for the correlation between two series at each lag (useful for measuring the delay
@@ -178,6 +184,15 @@
 				<strong>Period (h)</strong> (default 24 h), and the <strong>M window (h)</strong> /
 				<strong>L window (h)</strong>
 				lengths (default 10 h and 5 h).
+			</li>
+			<li>
+				<strong>Full days only</strong> (ticked for a new node) cuts the record to whole periods
+				from the first sample before anything is computed, as the R package <em>nparACT</em><sup
+					class="cite"><a href="#ref-44">[44]</a></sup
+				> does by default, so every statistic rests on the same complete days; the node says how many
+				cycles it used and how many hours it left out. Untick it to use a partial last day as well (what
+				sessions saved before the option existed do). A record shorter than one period has no whole day
+				to keep and is used whole either way.
 			</li>
 			<li>
 				The node reports <strong>IS</strong>, <strong>IV</strong>, <strong>RA</strong>,

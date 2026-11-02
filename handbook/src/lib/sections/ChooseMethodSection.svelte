@@ -147,7 +147,7 @@
 				<tr>
 					<td class="goal-cell">What does this variable look like?</td>
 					<td>Summary statistics plus a histogram and boxplot, never the numbers alone</td>
-					<td class="need-cell">Describe Data, histogram, boxplot</td>
+					<td class="need-cell">Describe Data, Histogram, Boxplot</td>
 					<td class="go-cell"><a href="#stats">Stats</a></td>
 				</tr>
 				<tr>
@@ -173,8 +173,11 @@
 				</tr>
 				<tr>
 					<td class="goal-cell">Do counts differ between categories?</td>
-					<td>Chi-squared (independence for a contingency table)</td>
-					<td class="need-cell">Chi-squared test</td>
+					<td
+						>Chi-squared (independence for a contingency table); Fisher's exact for a small
+						2&times;2</td
+					>
+					<td class="need-cell">Categorical tests</td>
 					<td class="go-cell"><a href="#stats">Stats</a></td>
 				</tr>
 				<tr>
@@ -183,12 +186,12 @@
 						>Pearson if linear; Spearman if skewed, curved-but-monotonic, or outlier-driven. Plot
 						first.</td
 					>
-					<td class="need-cell">Correlation, pairsplot</td>
+					<td class="need-cell">Correlation, Pairs plot</td>
 					<td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch9">Ch 9</a></td>
 				</tr>
 				<tr>
 					<td class="goal-cell">Does a predictor explain an outcome?</td>
-					<td>Trend fit for continuous; logistic regression for binary. Check the residuals.</td>
+					<td>Fit trend for continuous; logistic regression for binary. Check the residuals.</td>
 					<td class="need-cell">Fit trend, Logistic regression</td>
 					<td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch11">Ch 11</a></td>
 				</tr>

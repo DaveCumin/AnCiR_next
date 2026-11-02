@@ -65,8 +65,8 @@
 			href="./handbook.html"
 			target="_blank">here</a
 		>. It is a separate, citable work with its own DOI (<a
-			href="https://doi.org/10.5281/zenodo.21727169"
-			target="_blank">10.5281/zenodo.21727169</a
+			href="https://doi.org/10.5281/zenodo.21727168"
+			target="_blank">10.5281/zenodo.21727168</a
 		>); please cite it rather than AnCiR when citing the text. There is also a video introduction
 		available
 		<a href="https://youtu.be/3FZSJZrKF_M" target="_blank">here</a>.
@@ -142,7 +142,7 @@
 	<p style="font-size:var(--font-sm);">
 		Cite the software: <a href="https://doi.org/10.5281/zenodo.19340642">10.5281/zenodo.19340642</a
 		>. Cite the handbook:
-		<a href="https://doi.org/10.5281/zenodo.21727169">10.5281/zenodo.21727169</a>.
+		<a href="https://doi.org/10.5281/zenodo.21727168">10.5281/zenodo.21727168</a>.
 	</p>
 
 	<p style="font-size:var(--font-sm);">Build Number: {buildInfo.buildNumber}</p>

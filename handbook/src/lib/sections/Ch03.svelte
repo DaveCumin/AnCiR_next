@@ -51,9 +51,14 @@
 		cycle), φ is the <a class="gloss" href="#gloss-phase">phase</a> offset, and ε(t) ~ N(0, σ²) is
 		random measurement noise. The handbook uses the <strong>cosine convention</strong> throughout
 		(Chapters 1, 7 and 11), so that φ is the <a class="gloss" href="#gloss-acrophase">acrophase</a>:
-		written this way the peak occurs at t = φ·τ/2π. This matches AnCiR's Simulate Data node, which
-		builds a cosine plus noise; note the node takes the phase offset in <strong>hours</strong>
-		(φ<sub>h</sub> = φ·τ/2π), not radians.
+		written this way the peak occurs at t = φ·τ/2π. Note that AnCiR's <strong>Simulate Data</strong>
+		node does <em>not</em> build this cosine. It generates a rectangular (square-wave) rhythm: the
+		value sits at the <strong>Rhythm amplitude</strong> for the active fraction of each cycle and at 1
+		for the rest, with optional noise multiplied into or added to the signal, which is a closer
+		imitation of an active/rest actogram than a smooth cosine. Its phase shift is given in
+		<strong>hours</strong>, not radians. Recovering the period you set is still a valid pipeline check,
+		but do not expect a cosinor fitted to it to return the node's amplitude exactly: a square wave is
+		not a cosine (see <a href="#ch7">Chapter 7</a> on harmonics).
 	</p>
 	<p>
 		<strong>Worked example.</strong> With M = 100, A = 20, τ = 24 h and φ = 0, and no noise, the signal
@@ -89,9 +94,12 @@
 			<li>
 				Add one or more <strong>Data sections</strong>: each section defines a phase of recording
 				with its own <strong>Duration</strong>, <strong>Rhythm period</strong>,
-				<strong>Rhythm phase shift</strong>, and <strong>Rhythm amplitude</strong>, plus an optional
-				<strong>Noise</strong> term (mode and amplitude). Using multiple sections lets you simulate a
-				free-running rhythm that shifts partway through.
+				<strong>Rhythm phase shift</strong> (hours), <strong>Active fraction of the cycle</strong>
+				(0.5 is a 12:12 active/rest pattern at 24 h) and <strong>Rhythm amplitude</strong> (the value
+				while active; the rest level is 1), plus an optional <strong>Noise</strong> term with a mode
+				(<strong>Multiply</strong>, the default, or <strong>Add</strong>) and a <strong>Noise
+				amplitude</strong>. Using multiple sections lets you simulate a free-running rhythm that
+				shifts partway through.
 			</li>
 			<li>
 				Noise is <em>on by default</em>. For a clean pipeline check (below), turn the section's

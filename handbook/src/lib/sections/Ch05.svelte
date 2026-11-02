@@ -14,12 +14,12 @@
 			text: 'Maynard Johnson creates some of the first recognisably modern actograms, plotting locomotor activity of wild mice over consecutive days.<sup class="cite"><a href="#ref-24">[24]</a></sup>'
 		},
 		{
-			year: '1960s',
-			text: 'Colin Pittendrigh popularises the double-plotted actogram, displaying two consecutive 24-hour cycles side by side on each row, invaluable for revealing free-running rhythms.'
-		},
-		{
 			year: '1930s–60s',
 			text: 'Esterline-Angus event recorders enable continuous paper records; actograms were produced by physically cutting and re-aligning paper tapes.'
+		},
+		{
+			year: '1960s',
+			text: 'Colin Pittendrigh popularises the double-plotted actogram, displaying two consecutive 24-hour cycles side by side on each row, invaluable for revealing free-running rhythms.'
 		},
 		{
 			year: 'Present',

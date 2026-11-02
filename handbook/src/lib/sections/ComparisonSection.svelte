@@ -12,7 +12,7 @@
 			['CSV/Excel import', '✅', 'Partial', '✅', '✅'],
 			['Actograms', '✅', '✅', '✅', '❌'],
 			['Chi-squared periodogram', '✅', '✅', '✅', '✅'],
-			['Lomb-Scargle periodogram', '✅', '❌', '✅', '✅'],
+			['Lomb-Scargle periodogram', '✅', '✅', '✅', '✅'],
 			['Cosinor analysis', '✅', '❌', '✅', '✅'],
 			['Correlogram / NPCRA', '✅', '❌', '✅', '❌'],
 			['Preprocessing pipeline', '✅', 'Partial', '✅', 'Partial'],

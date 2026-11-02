@@ -1,5 +1,5 @@
 <script>
-	// Searchable Node Reference (Appendix E).
+	// Searchable Node Reference (Appendix D).
 	//
 	// Structure (inputs / params / outputs / family / demo link) comes from a
 	// machine-readable manifest generated straight from the live AnCiR registry

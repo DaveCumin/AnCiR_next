@@ -5,7 +5,7 @@
 	import { VERSION } from '$lib/version.js';
 
 	// The handbook's own Zenodo record, not AnCiR's. See ColophonSection.svelte.
-	const DOI = '10.5281/zenodo.21727169';
+	const DOI = '10.5281/zenodo.21727168';
 	const DOI_URL = `https://doi.org/${DOI}`;
 
 	let { children } = $props();

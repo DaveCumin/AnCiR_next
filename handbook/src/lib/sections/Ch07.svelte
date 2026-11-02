@@ -57,8 +57,9 @@
 
 	<h3 class="section-head">The Cosinor Model</h3>
 	<p>
-		A rhythm is modelled as a cosine function fitted by linear regression. By substituting β =
-		A·cos(φ) and γ = −A·sin(φ):
+		A rhythm is modelled as a cosine riding on a constant level, M + A·cos(2πt/τ + φ). That form
+		is not linear in A and φ, but substituting β = A·cos(φ) and γ = −A·sin(φ) turns it into one
+		that is:
 	</p>
 
 	<Formula tex={_tex1} />
@@ -111,7 +112,9 @@
 	</p>
 	<p>
 		For fixed τ the model is linear in (M, β, γ) and the test of rhythmicity is the joint hypothesis
-		H₀: β = γ = 0, an F-test with <strong>2 and N − 3 degrees of freedom</strong>. This assumes
+		H₀: β = γ = 0, an F-test with <strong>2 and N − 3 degrees of freedom</strong> for a single
+		harmonic (2h and N − 2h − 1 with h harmonics, every harmonic's pair of coefficients tested
+		together). This assumes
 		<strong>independent residuals</strong>. Circadian recordings are strongly autocorrelated, so
 		p-values are optimistic and confidence intervals too narrow unless the data are binned coarsely
 		enough to decorrelate, or an autocorrelation-aware model is used (Chapter 11). In free-period

@@ -35,13 +35,20 @@
 	</p>
 
 	<h3 class="section-head">Types of PRCs</h3>
+	<p>
+		Winfree's classification<sup class="cite"><a href="#ref-36">[36]</a></sup> divides PRCs into two
+		types by how strongly the stimulus resets the clock; Johnson's PRC atlas and review<sup
+			class="cite"><a href="#ref-37">[37]</a></sup
+		>
+		survey the curves measured across organisms and stimuli.
+	</p>
 	<ul>
 		<li>
-			<strong>Type 1 (weak) resetting</strong>: small, continuous advances and delays
-			(conventionally &lt; ~6 h), with a smooth transition between the delay and advance regions.
-			Plotted as a <strong>phase transition curve</strong> (new phase vs. old phase) it has an average
-			slope of 1: the new phase still depends on the old one. Produced by most zeitgebers at moderate
-			strength.
+			<a class="gloss" href="#gloss-type-0-type-1"><strong>Type 1 (weak) resetting</strong></a>:
+			small, continuous advances and delays (conventionally &lt; ~6 h), with a smooth transition
+			between the delay and advance regions. Plotted as a <strong>phase transition curve</strong> (new
+			phase vs. old phase) it has an average slope of 1: the new phase still depends on the old one. Produced
+			by most zeitgebers at moderate strength.
 		</li>
 		<li>
 			<strong>Type 0 (strong) resetting</strong>: very large shifts (up to ~12 h) with an abrupt
@@ -56,8 +63,9 @@
 
 	<h3 class="section-head">Constructing a PRC</h3>
 	<p>
-		Because there is no external light-dark cycle in constant conditions, time is measured in <strong
-			>circadian time (CT)</strong
+		Because there is no external light-dark cycle in constant conditions, time is measured in <a
+			class="gloss"
+			href="#gloss-circadian-time"><strong>circadian time (CT)</strong></a
 		>: the organism's own clock is divided into 24 equal hours, with CT0 defined as the start of
 		subjective day. <strong>Subjective day</strong> is the part of the cycle the clock "thinks" is
 		daytime (rest phase in a nocturnal animal); <strong>subjective night</strong> is the part it thinks
@@ -132,7 +140,7 @@
 
 	<AnCiRBox
 		title="Phase Response Curves in AnCiR"
-		tip="For formal PRC construction and Type 0/1 classification, dedicated tools such as BioDare2, or PRC-fitting routines in R, are recommended."
+		tip="For formal PRC construction and Type 0/1 classification (which needs the phase transition curve), dedicated PRC-fitting routines, for example in R, are recommended."
 	>
 		<p>
 			PRC analysis is not yet implemented as a dedicated module in AnCiR. To construct a PRC

@@ -98,13 +98,15 @@
 			</li>
 			<li>
 				Double-click the node to open its settings and choose the <strong>Method</strong>:
-				<strong>IQR</strong>
-				(set the <strong>IQR multiplier</strong>, default 1.5) or <strong>Z-score</strong> (set the
-				<strong>Z-score threshold</strong>, default 3).
+				<strong>Z-score</strong> (the default; set the <strong>Z-score threshold</strong>, default
+				3) or <strong>IQR</strong> (set the <strong>IQR multiplier</strong>, default 1.5). The IQR
+				rule is the robust one: its fences come from the quartiles, which the outliers themselves
+				barely move.
 			</li>
 			<li>
-				Detected outliers are removed and listed in the node. The cleaned column is available on the
-				node's output port to feed downstream steps.
+				Detected outliers are set to missing (the column keeps its length, so rows still line up
+				with the time column) and listed under <strong>Removed values</strong> in the node. The
+				cleaned column is available on the node's output port to feed downstream steps.
 			</li>
 			<li>The original data is untouched; delete the node to restore it.</li>
 		</ol>
@@ -231,11 +233,12 @@
 				Set the <strong>Bin size (h)</strong> (e.g., 1 h) and <strong>Bin start</strong> offset.
 			</li>
 			<li>
-				Choose the <strong>Function</strong>: <strong>Mean</strong> (continuous measurements),
-				<strong>Count</strong>
-				(count data such as wheel revolutions),
-				<strong>Median</strong>, <strong>Min</strong>, <strong>Max</strong>, or
-				<strong>Std dev</strong>.
+				Choose the <strong>Function</strong>: <strong>Mean</strong> (the default, for continuous
+				measurements), <strong>Median</strong>, <strong>Min</strong>, <strong>Max</strong>,
+				<strong>Std dev</strong>, or <strong>Count</strong>. Note that <strong>Count</strong> is the
+				number of samples that fell in each bin; it ignores their values. There is no Sum: for a
+				total per bin (wheel revolutions per hour, say) bin with <strong>Mean</strong> and multiply
+				by the samples per bin, for example in a <strong>Formula Column</strong>.
 			</li>
 			<li>
 				Tick <strong>Different step size</strong> and set a smaller <strong>Step size (h)</strong> for
@@ -442,7 +445,9 @@
 		<ol>
 			<li>
 				From the <strong>node palette</strong>, under <strong>Filtering</strong>, choose
-				<strong>Remove Trend</strong>, and wire the column you want to detrend into it.
+				<strong>Remove Trend</strong>, and wire the column you want to detrend into it. In its
+				settings pick the time column as the x axis; otherwise the trend is fitted against row
+				number, which is only equivalent when the sampling is perfectly regular.
 			</li>
 			<li>
 				Expand the node and choose the <strong>Model</strong>: <strong>Linear</strong> is sufficient

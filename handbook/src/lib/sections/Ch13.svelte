@@ -6,6 +6,11 @@
 	import DemoLink from '$lib/components/DemoLink.svelte';
 	import WarnBox from '$lib/components/WarnBox.svelte';
 	import NoteBox from '$lib/components/NoteBox.svelte';
+	import manifest from '$ancir/static/nodes.json';
+
+	// The AnCiR release is stamped into nodes.json by the manifest generator, so
+	// the version quoted in the example report follows a version bump automatically.
+	const ancirDisplay = manifest.generatedFromVersion ?? 'unknown';
 </script>
 
 <ChapterSection id="ch13" num="Chapter 13" title="Best Practices and Reporting">
@@ -68,7 +73,7 @@
 			['Curve fitting (cosinor)', '✅', '✅', 'Cosinor (Fitting)'],
 			['Curve fitting (square wave)', '✅', '✅', 'Rectangular Wave (Fitting)'],
 			['Curve fitting (double logistic)', '✅', '✅', 'Double Logistic (Fitting)'],
-			['ANOVA (general additive model, GAM)', '✅', '✅', '<em>not available</em>'],
+			['ANOVA (generalised additive model, GAM)', '✅', '✅', '<em>not available</em>'],
 			['ANOVA (general linear model, GLM)', '✅', '✅', '<em>not available</em>']
 		]}
 	/>
@@ -148,7 +153,7 @@
 				estimate τ.
 			</li>
 			<li>
-				<strong>Cosinor:</strong> apply Cosinor (Fitting; fixed period = τ from step 7, or 24 h) to extract
+				<strong>Cosinor:</strong> apply Cosinor (Fitting; fixed period = τ from step 8, or 24 h) to extract
 				MESOR, amplitude, and acrophase with 95% confidence intervals.
 			</li>
 			<li>
@@ -195,7 +200,7 @@
 			<li>
 				<strong>Time-unspecified group comparisons</strong>: comparing groups at uncontrolled times
 				without accounting for circadian variation can reverse effect directions (Refinetti et al.
-				2007, Fig. 26).
+				2007<sup class="cite"><a href="#ref-1">[1]</a></sup>, Fig. 26).
 			</li>
 			<li>
 				<strong>Ignoring masking</strong>: acute environmental effects can temporarily obscure the
@@ -212,8 +217,8 @@
 				not n = 172,800.
 			</li>
 			<li>
-				<strong>Unlabelled error bars</strong>: SD, SEM and 95% CI differ by up to a factor of five.
-				State which you plotted.
+				<strong>Unlabelled error bars</strong>: SD, SEM and 95% CI differ by factors that depend on
+				n (SEM = SD/√n; a 95% CI is roughly 2 SEM). State which you plotted.
 			</li>
 			<li>
 				<strong>Using a normality test as an automatic gate</strong>: it has least power at small n
@@ -265,9 +270,9 @@
 		period step, 60 bins) identified a dominant period of τ = 23.8 h (Q_P = 412, p &lt; 0.001). A
 		95% CI for τ of 23.7–23.9 h was obtained by linear regression of daily activity onsets on cycle
 		number. Fixed-period cosinor (τ = 23.8 h) estimated MESOR = 102 ± 6, amplitude = 24 ± 5, and
-		acrophase at 14:20 ± 40 min (referenced to day 1; all 95% CI; n = 12). Acrophase differed
-		between treatment and control (Watson-Williams F(1, 22) = 6.1, p = 0.02). Analysed in AnCiR (v
-		β6)."
+		acrophase at 14:20 ± 40 min (referenced to day 1; all 95% CI; n = 12 per group). Acrophase
+		differed between treatment and control (Watson-Williams F(1, 22) = 6.1, p = 0.02). Analysed in
+		AnCiR (version {ancirDisplay}; doi:10.5281/zenodo.19340642)."
 	</blockquote>
 	<p>
 		A <a class="gloss" href="#gloss-p-value">p-value</a> alone is not enough: always pair it with the

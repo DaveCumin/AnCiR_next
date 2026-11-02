@@ -44,10 +44,14 @@
 	</p>
 	<Formula tex={_tex1} />
 	<p>
-		Where N is the number of (binned) data points included, k is the number of bins per fold, x̄ⱼ is
-		the mean of bin j, x̄ is the grand mean, and the divisor is the <strong>population</strong>
+		Where N is the number of (binned) data points included, k is the number of bins per fold
+		(written P in the next section), x̄ⱼ is the mean of bin j, x̄ is the grand mean, and the divisor
+		s² is the <strong>population</strong>
 		<a class="gloss" href="#gloss-variance">variance</a>
-		σ̂² = (1/N)·Σ(xᵢ − x̄)² (divisor N, not N−1). In the classic form N/k is the number of
+		s² = (1/N)·Σ(xᵢ − x̄)² (divisor N, not N−1). The degrees of freedom depend on the
+		<em>bin count</em>, k − 1, not on the length of the record: a longer record raises Q_p for a
+		real rhythm but leaves the null distribution where it was. In the classic form N/k is the number
+		of
 		<em>complete</em> cycles at that trial period, ⌊N/k⌋, and the points after the last complete
 		cycle are dropped. Tackenberg and Hughey showed that this truncation makes the periodogram jump
 		from one trial period to the next and can pull the period estimate low; keeping every point
@@ -163,9 +167,14 @@
 	<h3 class="section-head">Lomb-Scargle Periodogram</h3>
 	<p>
 		Handles irregularly sampled time series by fitting sinusoidal models at each test frequency,
-		correcting for unequal spacing via a time-offset parameter. Its power is the share of the
-		variance that one fitted sinusoid explains at that period (in AnCiR, (N&minus;1)/2 &times;
-		R&sup2;); the data's mean is subtracted first rather than fitted. Increasingly used in
+		correcting for unequal spacing via a time-offset parameter τ, defined at each angular frequency
+		ω = 2π/P by tan(2ωτ) = Σ sin(2ωtᵢ) / Σ cos(2ωtᵢ), which makes the cosine and sine terms
+		orthogonal over the actual sample times<sup class="cite"
+			><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a></sup
+		>. Its power is the share of the variance that one fitted sinusoid explains at that period;
+		AnCiR normalises it by the sample variance s² = Σ(yᵢ − ȳ)²/(N&minus;1), so the reported power is
+		(N&minus;1)/2 &times; R&sup2;, where R&sup2; is the fraction of the variance the sinusoid
+		explains. The data's mean is subtracted first rather than fitted. Increasingly used in
 		chronobiology for sparse clinical datasets, actigraphy with gaps, and hormone time-course data.
 	</p>
 	<NoteBox title="How this relates to the FFT">
@@ -182,22 +191,26 @@
 			time offset computed at each frequency, which is what lets it cope with gaps and irregular timestamps.
 		</p>
 		<p>
-			For evenly spaced, complete data the two give the same answer. The differences only appear
-			when the sampling is not ideal (which, for clinical and field data, is most of the time).
+			For evenly spaced, complete data the two give the same answer at the FFT's grid frequencies,
+			where the Lomb-Scargle periodogram reduces to the classical periodogram (up to how the power
+			is scaled); between those frequencies Lomb-Scargle interpolates the same information. The
+			differences in what can be analysed only appear when the sampling is not ideal (which, for
+			clinical and field data, is most of the time).
 		</p>
 	</NoteBox>
 	<p>
 		Lomb-Scargle is not assumption-free. It fits a <strong>single sinusoid</strong>
-		at each frequency, so like <a class="gloss" href="#gloss-cosinor">cosinor</a> it underestimates the
-		amplitude of, and can miss, strongly non-sinusoidal (square-wave) rhythms; its noise model is Gaussian
-		and homoscedastic, which count data violate (consider a variance-stabilising transform); and the textbook
-		false-alarm probability assumes independent trial frequencies, so it understates the false-positive
-		rate on a fine period grid. AnCiR's peak p for Lomb-Scargle is instead Baluev's (2008) false-alarm
-		probability, which allows for the correlated grid and for uneven sampling: an upper bound, slightly
-		conservative, on the chance that noise alone puts a peak that high anywhere in the period range. It
-		still assumes Gaussian white noise, so for autocorrelated noise a permutation or surrogate test is
-		safer. Irregular sampling also imposes a spectral window whose sidelobes can create spurious peaks,
-		so inspect the sampling pattern when it is structured (e.g. daytime-only clinical sampling).
+		at each frequency, so like <a class="gloss" href="#gloss-cosinor">cosinor</a> it underestimates
+		the amplitude of, and can miss, strongly non-sinusoidal (square-wave) rhythms; its noise model
+		is Gaussian and homoscedastic, which count data violate (consider a variance-stabilising
+		transform); and the textbook false-alarm probability assumes independent trial frequencies, so
+		it understates the false-positive rate on a fine period grid. AnCiR's peak p for Lomb-Scargle is
+		instead Baluev's (2008)<sup class="cite"><a href="#ref-42">[42]</a></sup> false-alarm probability,
+		which allows for the correlated grid and for uneven sampling: an upper bound, slightly conservative,
+		on the chance that noise alone puts a peak that high anywhere in the period range. It still assumes
+		Gaussian white noise, so for autocorrelated noise a permutation or surrogate test is safer. Irregular
+		sampling also imposes a spectral window whose sidelobes can create spurious peaks, so inspect the
+		sampling pattern when it is structured (e.g. daytime-only clinical sampling).
 	</p>
 
 	<h3 class="section-head">Enright Periodogram</h3>
@@ -308,7 +321,8 @@
 	<WarnBox title="Harmonic Artefact">
 		<p>
 			The chi-squared periodogram may identify a spurious 12 h component in square-wave data
-			(Refinetti et al. 2007, Fig. 16). Lomb<sup class="cite"><a href="#ref-3">[3]</a></sup
+			(Refinetti et al. 2007<sup class="cite"><a href="#ref-1">[1]</a></sup>, Fig. 16). Lomb<sup
+				class="cite"><a href="#ref-3">[3]</a></sup
 			>-Scargle<sup class="cite"><a href="#ref-4">[4]</a></sup> is not a clean check on it: a
 			non-sinusoidal daily waveform also gives Lomb-Scargle a 12 h peak, because one cosine cannot
 			follow the shape (try the <em>Narrow activity bout</em> button above). Look at the record folded
@@ -388,18 +402,20 @@
 				<strong>Bin size (h)</strong>. A new series starts at the median sampling interval of its x
 				(one sample per bin); type a value to set your own. A bin narrower than the sampling
 				interval leaves bins empty, which both methods treat as missing. For Chi-squared, also set
-				the significance level <strong>Alpha</strong> (default 0.05); a significance threshold line is
-				then drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line;
-				Lomb-Scargle still reports its peak's family-wise p (Baluev's false-alarm probability), and for
-				Enright judge the peak against a permutation threshold if you need a formal test.
+				the significance level <strong>Alpha</strong> (default 0.05); a significance threshold line
+				is then drawn across the plot. The Lomb-Scargle and Enright methods do not draw a
+				significance line; Lomb-Scargle still reports its peak's family-wise p (Baluev's false-alarm
+				probability<sup class="cite"><a href="#ref-42">[42]</a></sup>), and for Enright judge the
+				peak against a permutation threshold if you need a formal test.
 			</li>
 			<li>
 				The dominant <strong>Peak period</strong> and its <strong>Peak power</strong>
 				are reported in the node. For Chi-squared the peak is the period that rises furthest above its
 				threshold line, and the node adds its family-wise p, marked
 				<em>not significant</em> when the peak does not cross the line. For Lomb-Scargle the
-				family-wise p is Baluev's false-alarm probability, marked <em>not significant</em> at 0.05 or
-				above.
+				family-wise p is Baluev's false-alarm probability<sup class="cite"
+					><a href="#ref-42">[42]</a></sup
+				>, marked <em>not significant</em> at 0.05 or above.
 			</li>
 			<li>
 				The y axis is titled after the statistic each method computes: <strong
@@ -588,8 +604,9 @@
 			the resulting p-value is spuriously tiny.
 		</p>
 		<p>
-			Use <strong>block</strong> or <strong>ar1</strong> for any densely sampled record. Reserve
-			<strong>shuffle</strong> for genuinely independent observations: one value per subject, for instance.
+			Use <strong>Block bootstrap</strong> or <strong>AR(1) red noise</strong> for any densely
+			sampled record. Reserve <strong>Shuffle</strong> for genuinely independent observations: one value
+			per subject, for instance.
 		</p>
 	</WarnBox>
 

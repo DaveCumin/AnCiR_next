@@ -47,14 +47,17 @@
 		(the two-argument arctangent, which keeps track of the correct quadrant), is the
 		<strong>mean phase</strong>
 		θ̄; its length R is the
-		<strong>mean resultant length</strong>.
+		<a class="gloss" href="#gloss-mean-resultant-length"><strong>mean resultant length</strong></a>.
 	</p>
 	<Formula tex={_tex1} />
 	<p>
 		R measures how tightly the phases cluster: R = 1 means every phase is identical (arrows all
 		point the same way and reinforce), while R = 0 means they are spread evenly around the clock
-		(arrows cancel out). <strong>Circular variance</strong> = 1 − R is the mirror image: 0 for perfectly
-		clustered, 1 for perfectly scattered.
+		(arrows cancel out). <strong>Circular variance</strong> = 1 − R is the mirror image: 0 for
+		perfectly clustered, 1 for perfectly scattered. The
+		<strong>circular standard deviation</strong>, √(−2 ln R), expresses the same spread in angular
+		units (radians, or hours after scaling by τ/2π); for tightly clustered data it is close to the
+		ordinary SD of the unwrapped times<sup class="cite"><a href="#ref-13">[13]</a></sup>.
 	</p>
 	<p>
 		<strong>Worked example.</strong> Five subjects have peak (acrophase) times of 23:30, 00:15, 23:45,
@@ -69,16 +72,24 @@
 	<ul>
 		<li>
 			<a class="gloss" href="#gloss-rayleigh"><strong>Rayleigh test</strong></a>:
-			<em>Is there a preferred phase at all?</em> The null hypothesis is that the phases are spread uniformly
-			around the clock; a significant result (large R for the sample size n) means the group clusters
-			at some time. Use it for a single group, e.g. "do these animals reliably peak at a particular time?"
+			<em>Is there a preferred phase at all?</em> The null hypothesis is that the phases are spread
+			uniformly around the clock; a significant result (large R for the sample size n) means the
+			group clusters at some time. The statistic is Rayleigh's z = nR²; for large n the p-value is
+			approximately e<sup>−z</sup>, and AnCiR uses the small-sample series correction of Wilkie<sup
+				class="cite"><a href="#ref-41">[41]</a></sup
+			>
+			(the same one as R's <em>circular</em> package). Use it for a single group, e.g. "do these animals
+			reliably peak at a particular time?" It assumes a single cluster: two clusters 12 h apart (a bimodal
+			distribution) cancel out and look uniform to it.
 		</li>
 		<li>
 			<a class="gloss" href="#gloss-watson-williams"><strong>Watson-Williams test</strong></a>:
-			<em>Do two groups peak at different times?</em> The circular analogue of the two-sample
-			<a class="gloss" href="#gloss-t-test">t-test</a>; its null hypothesis is that both groups
-			share the same mean phase. Use it to compare, say, treatment vs. control acrophases. It
-			assumes both samples are von Mises distributed with a <strong>common concentration κ</strong>
+			<em>Do two (or more) groups peak at different times?</em> The circular analogue of the
+			two-sample
+			<a class="gloss" href="#gloss-t-test">t-test</a> (and, with more than two groups, of one-way
+			ANOVA)<sup class="cite"><a href="#ref-38">[38]</a></sup>; its null hypothesis is that all
+			groups share the same mean phase. Use it to compare, say, treatment vs. control acrophases. It
+			assumes the samples are von Mises distributed with a <strong>common concentration κ</strong>
 			(the circular analogue of equal variances) and are reasonably clustered (<strong
 				>R̄ ≳ 0.7 in each group</strong
 			>). Unequal concentration is the commonest violation, since treated groups are often more
@@ -86,10 +97,11 @@
 			differ.
 		</li>
 		<li>
-			<strong>Watson U² test</strong>: <em>Do two groups differ in any way</em> (mean phase or spread)?
-			A non-parametric test of whether two samples come from the same circular distribution. Prefer it
-			to Watson-Williams when the data are scattered or clearly non-symmetric, where the Watson-Williams
-			assumptions fail.
+			<strong>Watson U² test</strong>: <em>Do two groups differ in any way</em> (mean phase or
+			spread)? A non-parametric test of whether two samples come from the same circular
+			distribution. Prefer it to Watson-Williams when the data are scattered or clearly
+			non-symmetric, where the Watson-Williams assumptions fail. It is not implemented in AnCiR; R's
+			<em>circular</em> package provides it.
 		</li>
 	</ul>
 

@@ -51,7 +51,9 @@
 		baseline: this "random intercept" absorbs the fact that some individuals are simply more active
 		than others, so that between-subject scatter is not mistaken for a treatment effect. Use a
 		mixed-effects model whenever you have repeated measures from multiple subjects and want
-		group-level inference. Implemented in R via <em>lme4</em>; in Python via <em>statsmodels</em>.
+		group-level inference. Implemented in R via <em>lme4</em><sup class="cite"
+			><a href="#ref-39">[39]</a></sup
+		>; in Python via <em>statsmodels</em>.
 	</p>
 	<p>
 		A <strong>random intercept alone</strong> lets subjects differ in
@@ -82,7 +84,9 @@
 		is used: a smooth curve, built from polynomial pieces, that wraps seamlessly around the day. GAMs
 		are the right tool when the waveform clearly departs from a cosine and you care about its true shape;
 		the price is that they estimate a curve rather than a few interpretable parameters like amplitude
-		and acrophase. Implemented in R via <em>mgcv</em>.
+		and acrophase. Implemented in R via <em>mgcv</em><sup class="cite"
+			><a href="#ref-40">[40]</a></sup
+		>.
 	</p>
 
 	<AnCiRBox title="Linear/Additive Models in AnCiR" tip="">

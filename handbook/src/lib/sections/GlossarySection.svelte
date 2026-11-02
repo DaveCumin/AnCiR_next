@@ -42,6 +42,14 @@
 					>A body rhythm with a period close to 24 hours, driven by an internal clock.</td
 				></tr
 			>
+			<tr id="gloss-circadian-time"
+				><td>Circadian time (CT)</td><td
+					>Time measured on the organism's own clock under constant conditions: one free-running
+					cycle is divided into 24 "circadian hours" (each τ/24 real hours). By convention CT12 is
+					activity onset in a nocturnal animal and CT0 is activity onset in a diurnal one (Chapter
+					10). Contrast zeitgeber time (ZT), which is measured from lights-on.</td
+				></tr
+			>
 			<tr id="gloss-circular-statistics"
 				><td>Circular statistics</td><td
 					>Maths for data that wrap around a circle, such as clock times where 23:59 sits right next
@@ -59,6 +67,13 @@
 				><td>Confidence interval (CI)</td><td
 					>A range of plausible values for a measurement. A 95% CI means: if you repeated the
 					experiment many times, 95% of such intervals would contain the true value.</td
+				></tr
+			>
+			<tr id="gloss-cone-of-influence"
+				><td>Cone of influence</td><td
+					>The band near each end of a wavelet scalogram, widening with period, where the wavelet
+					overlaps the padded edge of the record. Values there are partly padding rather than signal
+					and are not to be read (Chapter 8).</td
 				></tr
 			>
 			<tr id="gloss-correlogram"
@@ -191,6 +206,13 @@
 					need to fill in missing values first (Chapter 6).</td
 				></tr
 			>
+			<tr id="gloss-mean-resultant-length"
+				><td>Mean resultant length (R)</td><td
+					>How tightly a set of phases cluster on the clock face, from 0 (spread evenly round the
+					clock) to 1 (all identical). Each phase is treated as an arrow of length 1 and R is the
+					length of the average arrow. Circular variance is 1 − R (Chapter 12).</td
+				></tr
+			>
 			<tr id="gloss-mesor"
 				><td>MESOR</td><td
 					>The average level of a fitted cosine curve. A "rhythm-adjusted mean" that isn't thrown
@@ -274,7 +296,8 @@
 			<tr id="gloss-prc"
 				><td>PRC</td><td
 					>Phase Response Curve. Shows how much a stimulus shifts the clock depending on when in the
-					cycle it is given.</td
+					cycle it is given. By convention advances are plotted as positive and delays as negative
+					(Chapter 10).</td
 				></tr
 			>
 			<tr id="gloss-rayleigh"
@@ -334,6 +357,14 @@
 					use the Watson-Williams test for phases instead.</td
 				></tr
 			>
+			<tr id="gloss-type-0-type-1"
+				><td>Type 0 / Type 1 resetting</td><td
+					>Winfree's two kinds of phase response. Type 1 (weak): small shifts and the new phase
+					still depends on the old one. Type 0 (strong): the stimulus sends the clock to roughly the
+					same phase whatever its starting phase. Told apart on the phase transition curve (new
+					phase against old phase), whose average slope is 1 or 0 (Chapter 10).</td
+				></tr
+			>
 			<tr id="gloss-ultradian"
 				><td>Ultradian rhythm</td><td
 					>A body rhythm with a period shorter than 24 hours (e.g., REM sleep cycles of about 90
@@ -348,8 +379,9 @@
 			>
 			<tr id="gloss-watson-williams"
 				><td>Watson-Williams test</td><td
-					>The circular-statistics equivalent of a t-test: compares the average timing of peaks
-					between two groups, without getting confused by the midnight wrap-around (Chapter 12).</td
+					>The circular-statistics equivalent of a t-test (or, with more than two groups, of one-way
+					ANOVA): compares the average timing of peaks between groups, without getting confused by
+					the midnight wrap-around. Assumes the groups are similarly concentrated (Chapter 12).</td
 				></tr
 			>
 			<tr id="gloss-whittaker-eilers"

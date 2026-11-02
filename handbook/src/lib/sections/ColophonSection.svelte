@@ -7,7 +7,8 @@
 	// The handbook and AnCiR are archived as two separate Zenodo records, so that
 	// the handbook can be cited at its own version rather than at whichever AnCiR
 	// release happened to ship alongside it.
-	const DOI = '10.5281/zenodo.21727169'; // this handbook
+	const DOI = '10.5281/zenodo.21727168'; // this handbook: the concept DOI, all versions
+	const VERSION_DOI = '10.5281/zenodo.21727169'; // the deposited beta 9.0 edition
 	const DOI_URL = `https://doi.org/${DOI}`;
 	const ANCIR_DOI = '10.5281/zenodo.19340642'; // the AnCiR software
 	const ANCIR_DOI_URL = `https://doi.org/${ANCIR_DOI}`;
@@ -72,9 +73,11 @@
 	<SectionHead text="How to cite the handbook" />
 
 	<p>
-		Cite the Zenodo record. The DOI below is a <em>concept</em> DOI: it always resolves to the most recent
-		release, and each release also has its own version DOI if you need to pin a specific one. Please cite
-		the version you actually used.
+		Cite the Zenodo record. The DOI below is a <em>concept</em> DOI: it always resolves to the most
+		recent release, and each release also has its own version DOI if you need to pin a specific one
+		(the deposited β9.0 edition is
+		<a href={`https://doi.org/${VERSION_DOI}`} target="_blank" rel="noopener">{VERSION_DOI}</a>).
+		Please cite the version you actually used.
 	</p>
 
 	<div class="cite-block">
@@ -158,7 +161,7 @@
 
 	<p class="small-note">
 		If you reuse a figure or an animation from this handbook, the handbook citation above is the
-		attribution CC BY 4.0 asks for.
+		attribution CC BY 4.0 asks for; add a link to the licence and note any changes you made.
 	</p>
 
 	<SectionHead text="Versions" />

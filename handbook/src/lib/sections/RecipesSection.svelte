@@ -73,7 +73,7 @@
 		data="A time column and a value column. Sparse or unevenly sampled data are fine; fix the period if you already know it."
 		steps={[
 			'<strong>Remove Trend</strong> (Filtering, linear) first if there is a slow baseline drift; a trend biases the MESOR and inflates the amplitude.',
-			'<strong>Cosinor</strong> (Fitting): tick <strong>Use fixed period</strong> and enter 24 h (or your measured τ), <strong>N harmonics</strong> = 1, and a 95% CI. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
+			'<strong>Cosinor</strong> (Fitting): tick <strong>Use fixed period</strong> and enter 24 h (or your measured τ), <strong>N harmonics</strong> = 1, and <strong>CI level</strong> 95%. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
 			'Read the <strong>acrophase</strong>, <strong>amplitude</strong>, <strong>MESOR</strong> and F-test p-value from the node; overlay the fitted curve on a scatterplot to sanity-check it.'
 		]}
 		readoff="Acrophase as the time of peak in hours (already in hours, no conversion needed): by default hours after the first sample, or clock time of day with the clock phase reference. Amplitude and MESOR with their 95% CIs, plus an F-test p-value for whether a rhythm is present at all."
@@ -174,7 +174,7 @@
 			'Look at where the twelve peak periods land: scattered arbitrarily across the search window. That scatter is the signature of a null result in aggregate.'
 		]}
 		readoff="Every record reports a peak period, because a periodogram always returns its largest value. Picking the most impressive single spectrum out of many is how noise becomes a &lsquo;finding&rsquo;."
-		pitfall="Decide what you are testing <strong>before</strong> you test it. Correct for the number of trial periods (Bonferroni, or a permutation threshold), and read this next to the arrhythmic negative control above."
+		pitfall="Decide what you are testing <strong>before</strong> you test it. Correct for the number of trial periods: AnCiR's Periodogram already reports a <strong>peak_pvalue</strong> corrected for the periods tested, and across many records wire the per-record p-values into <strong>FDR Correction</strong>. Read this next to the arrhythmic negative control above."
 		session="sessions/demos/demo-workflow-noise-peak.json"
 		sessionLabel="Open the multiple-comparison-trap example"
 	/>

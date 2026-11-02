@@ -9,19 +9,23 @@
 		],
 		"references": [
 			{
-				"cite": "Kruskal, W.H. & Wallis, W.A. (1952). Use of ranks in one-criterion variance analysis. Journal of the American Statistical Association, 47(260), 583-621."
+				"cite": "Kruskal, W.H. & Wallis, W.A. (1952). Use of ranks in one-criterion variance analysis. Journal of the American Statistical Association, 47(260), 583-621.",
+				"doi": "10.1080/01621459.1952.10483441"
 			},
 			{
-				"cite": "Mann, H.B. & Whitney, D.R. (1947). On a test of whether one of two random variables is stochastically larger than the other. Annals of Mathematical Statistics, 18(1), 50-60."
+				"cite": "Mann, H.B. & Whitney, D.R. (1947). On a test of whether one of two random variables is stochastically larger than the other. Annals of Mathematical Statistics, 18(1), 50-60.",
+				"doi": "10.1214/aoms/1177730491"
 			},
 			{
-				"cite": "Welch, B.L. (1947). The generalization of \"Student's\" problem when several different population variances are involved. Biometrika, 34(1-2), 28-35."
+				"cite": "Welch, B.L. (1947). The generalization of \"Student's\" problem when several different population variances are involved. Biometrika, 34(1-2), 28-35.",
+				"doi": "10.1093/biomet/34.1-2.28"
 			},
 			{
 				"cite": "Cohen, J. (1988). Statistical Power Analysis for the Behavioral Sciences, 2nd ed. Lawrence Erlbaum."
 			},
 			{
-				"cite": "Kramer, C.Y. (1956). Extension of multiple range tests to group means with unequal numbers of replications. Biometrics, 12, 307-310."
+				"cite": "Kramer, C.Y. (1956). Extension of multiple range tests to group means with unequal numbers of replications. Biometrics, 12(3), 307-310.",
+				"doi": "10.2307/3001469"
 			}
 		],
 		"crosslinks": ["ch13", "ch11", "glossary"]
@@ -45,8 +49,12 @@
 				"cite": "Fisher, N.I. (1993). Statistical Analysis of Circular Data. Cambridge University Press."
 			},
 			{
-				"cite": "Watson GS, Williams EJ (1956) On the construction of significance tests on the circle and the sphere. Biometrika 43:344-352.",
+				"cite": "Watson GS, Williams EJ (1956) On the construction of significance tests on the circle and the sphere. Biometrika 43(3-4):344-352.",
 				"doi": "10.1093/biomet/43.3-4.344"
+			},
+			{
+				"cite": "Wilkie D (1983) Rayleigh test for randomness of circular data. Applied Statistics 32(3):311-312.",
+				"doi": "10.2307/2347954"
 			}
 		],
 		"crosslinks": ["ch12", "ch7", "glossary"]
@@ -65,10 +73,12 @@
 				"doi": "10.1371/journal.pcbi.1000996"
 			},
 			{
-				"cite": "Van Someren, E.J.W., Swaab, D.F., Colenda, C.C., Cohen, W., McCall, W.V. & Rosenquist, P.B. (1999). Bright light therapy: improved sensitivity to its effects on rest-activity rhythms in Alzheimer patients by application of nonparametric methods. Chronobiology International, 16(4), 505-518."
+				"cite": "Van Someren, E.J.W., Swaab, D.F., Colenda, C.C., Cohen, W., McCall, W.V. & Rosenquist, P.B. (1999). Bright light therapy: improved sensitivity to its effects on rest-activity rhythms in Alzheimer patients by application of nonparametric methods. Chronobiology International, 16(4), 505-518.",
+				"doi": "10.3109/07420529908998724"
 			},
 			{
-				"cite": "Witting, W., Kwa, I.H., Eikelenboom, P., Mirmiran, M. & Swaab, D.F. (1990). Alterations in the circadian rhythm of activity in Alzheimer's disease. Biological Psychiatry, 27(6), 563-572."
+				"cite": "Witting, W., Kwa, I.H., Eikelenboom, P., Mirmiran, M. & Swaab, D.F. (1990). Alterations in the circadian rest-activity rhythm in aging and Alzheimer's disease. Biological Psychiatry, 27(6), 563-572.",
+				"doi": "10.1016/0006-3223(90)90523-5"
 			},
 			{
 				"cite": "Blume, C., Santhi, N. & Schabus, M. (2016). 'nparACT' package for R: a free software tool for the non-parametric analysis of actigraphy data. MethodsX, 3, 430-435.",
@@ -144,8 +154,11 @@
 		"crosslinks": ["ch4", "ch13"]
 	},
 	"SimulatedData": {
-		"description": "Simulate Data produces a synthetic time-series table from a cosine-plus-noise model. It supports multiple consecutive sections, each with its own duration, rhythm period, phase, and amplitude, and optional noise added either additively or multiplicatively, sampled at a chosen interval. Because the underlying rhythm is known exactly, simulated data is ideal for teaching, for building demos, and for checking that a chosen analysis recovers the parameters it should.",
-		"maths": ["y(t) = A\\cos\\!\\left(\\frac{2\\pi (t - \\phi)}{\\tau}\\right) + \\varepsilon(t)"],
+		"description": "Simulate Data produces a synthetic time-series table from a rectangular (square-wave) active/rest model, the shape of a locomotor-activity record rather than a smooth cosine. Each cycle of length Rhythm period is split into an active part, lasting the Active fraction of the cycle, and a rest part. During the active part the underlying level is the Rhythm amplitude; during rest it is 1. A Rhythm phase shift slides the cycle along the time axis. The record is built from one or more consecutive sections, each with its own duration, period, phase shift, active fraction and amplitude, sampled at a common Sampling period, so a free-running or a phase-shifted record can be assembled piece by piece.\n\nNoise is drawn from a seeded uniform generator (the Noise seed makes a simulation reproducible), scaled by Noise amplitude, and either multiplied with the underlying level (the default, so active samples are noisier than rest samples, as real activity counts are) or added to it. Untick Noise for the clean square wave.\n\nBecause the underlying rhythm is known exactly, simulated data is ideal for teaching, for building demos, and for checking that a chosen analysis recovers the parameters it should. It is also a useful reminder that a square wave is not a cosine: a cosinor fitted to it recovers the period and phase but underestimates the amplitude, and the chi-squared periodogram shows harmonic peaks at tau/2 and tau/3.",
+		"maths": [
+			"L(t) = \\begin{cases} A & (t + \\phi) \\bmod \\tau < \\alpha\\,\\tau \\\\ 1 & \\text{otherwise} \\end{cases}",
+			"y(t) = L(t)\\,\\varepsilon(t)\\ \\text{(multiply)}\\quad\\text{or}\\quad y(t) = L(t) + \\varepsilon(t)\\ \\text{(add)},\\quad \\varepsilon(t) \\sim \\sigma\\,U(0,1)"
+		],
 		"references": [],
 		"crosslinks": ["ch3", "ch1"]
 	},
@@ -298,7 +311,8 @@
 		"maths": [],
 		"references": [
 			{
-				"cite": "Refinetti, R., Cornélissen, G. & Halberg, F. (2007). Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325."
+				"cite": "Refinetti, R., Cornélissen, G. & Halberg, F. (2007). Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+				"doi": "10.1080/09291010600903692"
 			}
 		],
 		"crosslinks": ["ch5"]
@@ -308,16 +322,20 @@
 		"maths": [],
 		"references": [
 			{
-				"cite": "Baluev, R.V. (2008). Assessing the statistical significance of periodogram peaks. Monthly Notices of the Royal Astronomical Society 385(3):1279-1285."
+				"cite": "Baluev, R.V. (2008). Assessing the statistical significance of periodogram peaks. Monthly Notices of the Royal Astronomical Society 385(3):1279-1285.",
+				"doi": "10.1111/j.1365-2966.2008.12689.x"
 			},
 			{
-				"cite": "Sokolove, P.G. & Bushell, W.N. (1978). The chi-square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160."
+				"cite": "Sokolove, P.G. & Bushell, W.N. (1978). The chi-square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160.",
+				"doi": "10.1016/0022-5193(78)90022-X"
 			},
 			{
-				"cite": "Lomb, N.R. (1976). Least-squares frequency analysis of unequally spaced data. Astrophysics and Space Science 39(2):447-462."
+				"cite": "Lomb, N.R. (1976). Least-squares frequency analysis of unequally spaced data. Astrophysics and Space Science 39(2):447-462.",
+				"doi": "10.1007/BF00648343"
 			},
 			{
-				"cite": "Scargle, J.D. (1982). Studies in astronomical time series analysis. II. Statistical aspects of spectral analysis of unevenly spaced data. The Astrophysical Journal 263:835-853."
+				"cite": "Scargle, J.D. (1982). Studies in astronomical time series analysis. II. Statistical aspects of spectral analysis of unevenly spaced data. The Astrophysical Journal 263:835-853.",
+				"doi": "10.1086/160554"
 			}
 		],
 		"crosslinks": ["ch6"]
@@ -379,7 +397,8 @@
 				"doi": "10.3109/07420529908998724"
 			},
 			{
-				"cite": "Witting W, Kwa IH, Eikelenboom P, Mirmiran M, Swaab DF (1990) Alterations in the circadian rest-activity rhythm in aging and Alzheimer's disease. Biological Psychiatry 27(6):563-572."
+				"cite": "Witting W, Kwa IH, Eikelenboom P, Mirmiran M, Swaab DF (1990) Alterations in the circadian rest-activity rhythm in aging and Alzheimer's disease. Biological Psychiatry 27(6):563-572.",
+				"doi": "10.1016/0006-3223(90)90523-5"
 			},
 			{
 				"cite": "Blume C, Santhi N, Schabus M (2016) 'nparACT' package for R: a free software tool for the non-parametric analysis of actigraphy data. MethodsX 3:430-435.",
@@ -397,7 +416,8 @@
 		],
 		"references": [
 			{
-				"cite": "Baluev RV (2008) Assessing the statistical significance of periodogram peaks. Monthly Notices of the Royal Astronomical Society 385(3):1279-1285."
+				"cite": "Baluev RV (2008) Assessing the statistical significance of periodogram peaks. Monthly Notices of the Royal Astronomical Society 385(3):1279-1285.",
+				"doi": "10.1111/j.1365-2966.2008.12689.x"
 			},
 			{
 				"cite": "Lomb NR (1976) Least-squares frequency analysis of unequally spaced data. Astrophysics and Space Science 39(2):447-462.",
@@ -412,7 +432,8 @@
 				"doi": "10.1016/0022-5193(78)90022-X"
 			},
 			{
-				"cite": "Enright JT (1965) The search for rhythmicity in biological time-series. Journal of Theoretical Biology 8(3):426-468."
+				"cite": "Enright JT (1965) The search for rhythmicity in biological time-series. Journal of Theoretical Biology 8(3):426-468.",
+				"doi": "10.1016/0022-5193(65)90021-4"
 			}
 		],
 		"crosslinks": ["ch6", "ch8", "ch9"]
@@ -522,7 +543,10 @@
 			"g_2 = \\frac{n-1}{(n-2)(n-3)}\\Big[(n+1)\\big(\\tfrac{m_4}{m_2^{2}}-3\\big) + 6\\Big]"
 		],
 		"references": [
-			{ "cite": "Student (1908) The probable error of a mean. Biometrika 6(1):1-25." },
+			{
+				"cite": "Student (1908) The probable error of a mean. Biometrika 6(1):1-25.",
+				"doi": "10.1093/biomet/6.1.1"
+			},
 			{
 				"cite": "Tukey, J.W. (1977). Exploratory Data Analysis. Addison-Wesley, Reading MA."
 			},
@@ -552,6 +576,10 @@
 			{
 				"cite": "Royston P (1992) Approximating the Shapiro-Wilk W-test for non-normality. Statistics and Computing 2:117-119.",
 				"doi": "10.1007/BF01891203"
+			},
+			{
+				"cite": "Royston P (1995) Remark AS R94: a remark on Algorithm AS 181: the W-test for normality. Applied Statistics 44(4):547-551.",
+				"doi": "10.2307/2986146"
 			},
 			{
 				"cite": "D'Agostino R, Pearson ES (1973) Tests for departure from normality. Empirical results for the distributions of b2 and sqrt(b1). Biometrika 60:613-622.",
@@ -626,7 +654,8 @@
 		],
 		"references": [
 			{
-				"cite": "Best DJ, Roberts DE (1975) Algorithm AS 89: the upper tail probabilities of Spearman's rho. Applied Statistics 24(3):377-379."
+				"cite": "Best DJ, Roberts DE (1975) Algorithm AS 89: the upper tail probabilities of Spearman's rho. Applied Statistics 24(3):377-379.",
+				"doi": "10.2307/2347111"
 			},
 			{
 				"cite": "Pearson K (1896) Mathematical contributions to the theory of evolution. III. Regression, heredity and panmixia. Phil. Trans. R. Soc. A 187:253-318.",
@@ -671,7 +700,7 @@
 		],
 		"references": [
 			{
-				"cite": "Cox DR (1958) The regression analysis of binary sequences. JRSS Series B 20:215-242.",
+				"cite": "Cox DR (1958) The regression analysis of binary sequences. Journal of the Royal Statistical Society, Series B 20(2):215-232.",
 				"doi": "10.1111/j.2517-6161.1958.tb00292.x"
 			},
 			{

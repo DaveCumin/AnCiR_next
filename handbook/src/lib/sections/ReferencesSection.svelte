@@ -94,9 +94,16 @@
 		</li>
 		<li id="ref-15">
 			Shannon CE. Communication in the presence of noise. <em>Proc IRE.</em> 1949;37(1):10–21.
+			<a href="https://doi.org/10.1109/JRPROC.1949.232969"
+				>https://doi.org/10.1109/JRPROC.1949.232969</a
+			>
 		</li>
 		<li id="ref-16">
-			Nyquist H. Certain topics in telegraph transmission theory. <em>Trans AIEE.</em> 1928;47(2):617–644.
+			Nyquist H. Certain topics in telegraph transmission theory. <em>Trans AIEE.</em>
+			1928;47(2):617–644.
+			<a href="https://doi.org/10.1109/T-AIEE.1928.5055024"
+				>https://doi.org/10.1109/T-AIEE.1928.5055024</a
+			>
 		</li>
 		<li id="ref-17">
 			Czeisler CA, Duffy JF, Shanahan TL, et al. Stability, precision, and near-24-hour period of
@@ -150,7 +157,7 @@
 		<li id="ref-25">
 			Hastings JW, Sweeney BM. A persistent diurnal rhythm of luminescence in
 			<em>Gonyaulax polyedra.</em> <em>Biol Bull.</em> 1958;115(3):440–458.
-			<a href="https://doi.org/10.2307/1539105">https://doi.org/10.2307/1539105</a>
+			<a href="https://doi.org/10.2307/1539108">https://doi.org/10.2307/1539108</a>
 		</li>
 		<li id="ref-26">
 			DeCoursey PJ. Daily light sensitivity rhythm in a rodent. <em>Science.</em>
@@ -212,6 +219,66 @@
 			Bartlett MS. On the theoretical specification and sampling properties of autocorrelated
 			time-series. <em>J R Stat Soc Suppl.</em> 1946;8(1):27–41.
 			<a href="https://doi.org/10.2307/2983611">https://doi.org/10.2307/2983611</a>
+		</li>
+		<li id="ref-36">
+			Winfree AT. <em>The Geometry of Biological Time.</em> 2nd ed. New York: Springer; 2001.
+			<a href="https://doi.org/10.1007/978-1-4757-3484-3"
+				>https://doi.org/10.1007/978-1-4757-3484-3</a
+			>
+		</li>
+		<li id="ref-37">
+			Johnson CH. Forty years of PRCs: what have we learned? <em>Chronobiol Int.</em>
+			1999;16(6):711–743.
+			<a href="https://doi.org/10.3109/07420529909016940"
+				>https://doi.org/10.3109/07420529909016940</a
+			>
+		</li>
+		<li id="ref-38">
+			Watson GS, Williams EJ. On the construction of significance tests on the circle and the
+			sphere. <em>Biometrika.</em> 1956;43(3–4):344–352.
+			<a href="https://doi.org/10.1093/biomet/43.3-4.344"
+				>https://doi.org/10.1093/biomet/43.3-4.344</a
+			>
+		</li>
+		<li id="ref-39">
+			Bates D, Mächler M, Bolker B, Walker S. Fitting linear mixed-effects models using lme4. <em
+				>J Stat Softw.</em
+			>
+			2015;67(1):1–48.
+			<a href="https://doi.org/10.18637/jss.v067.i01">https://doi.org/10.18637/jss.v067.i01</a>
+		</li>
+		<li id="ref-40">
+			Wood SN. <em>Generalized Additive Models: An Introduction with R.</em> 2nd ed. Boca Raton:
+			Chapman and Hall/CRC; 2017.
+			<a href="https://doi.org/10.1201/9781315370279">https://doi.org/10.1201/9781315370279</a>
+		</li>
+		<li id="ref-41">
+			Wilkie D. Rayleigh test for randomness of circular data. <em>Appl Stat.</em>
+			1983;32(3):311–312.
+			<a href="https://doi.org/10.2307/2347954">https://doi.org/10.2307/2347954</a>
+		</li>
+		<li id="ref-42">
+			Baluev RV. Assessing the statistical significance of periodogram peaks. <em
+				>Mon Not R Astron Soc.</em
+			>
+			2008;385(3):1279–1285.
+			<a href="https://doi.org/10.1111/j.1365-2966.2008.12689.x"
+				>https://doi.org/10.1111/j.1365-2966.2008.12689.x</a
+			>
+		</li>
+		<li id="ref-43">
+			Torrence C, Compo GP. A practical guide to wavelet analysis. <em>Bull Am Meteorol Soc.</em>
+			1998;79(1):61–78.
+			<a href="https://doi.org/10.1175/1520-0477(1998)079&lt;0061:APGTWA&gt;2.0.CO;2"
+				>https://doi.org/10.1175/1520-0477(1998)079&lt;0061:APGTWA&gt;2.0.CO;2</a
+			>
+		</li>
+		<li id="ref-44">
+			Blume C, Santhi N, Schabus M. 'nparACT' package for R: a free software tool for the
+			non-parametric analysis of actigraphy data. <em>MethodsX.</em> 2016;3:430–435.
+			<a href="https://doi.org/10.1016/j.mex.2016.05.006"
+				>https://doi.org/10.1016/j.mex.2016.05.006</a
+			>
 		</li>
 	</ol>
 </ChapterSection>

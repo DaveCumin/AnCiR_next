@@ -39,11 +39,15 @@
 	<Formula tex={_tex1} />
 
 	<p>
-		Each component sits at frequency fⱼ = j/(NΔt). The <a class="gloss" href="#gloss-power-spectrum"
-			>power spectrum</a
-		>
-		|Fⱼ|² (or, as AnCiR plots it, the magnitude √|Fⱼ|²) against period 1/fⱼ reveals dominant rhythmic
-		components. AnCiR uses the Cooley-Tukey <a class="gloss" href="#gloss-fft">FFT</a>
+		Each component sits at frequency fⱼ = j/(NΔt), for j from 0 up to the
+		<a class="gloss" href="#gloss-nyquist">Nyquist frequency</a> 1/(2Δt)<sup class="cite"
+			><a href="#ref-16">[16]</a></sup
+		>, so the shortest period a sampled record can show is twice the sampling interval (see
+		<a href="#ch2">Chapter 2</a>). The
+		<a class="gloss" href="#gloss-power-spectrum">power spectrum</a>
+		|Fⱼ|² (or, as AnCiR plots it, the magnitude |Fⱼ|, scaled as described below) against period 1/fⱼ reveals
+		dominant rhythmic components. AnCiR uses the Cooley-Tukey
+		<a class="gloss" href="#gloss-fft">FFT</a>
 		algorithm at the record's own length N (Bluestein's chirp-z form when N is not a power of 2), after
 		removing the mean. It plots 2|Fⱼ|/N, so a sinusoid of amplitude A reads A whatever the record length.
 		It does not
@@ -167,9 +171,10 @@
 		</p>
 		<p>
 			So what makes this the <em>discrete Fourier transform</em> rather than something more general?
-			Just one thing: <strong>k is a whole number</strong>. The test frequencies are locked to a
-			fixed grid of one, two, three… complete cycles across the record. You can ask about 24 h and
-			12 h because they land on that grid. You cannot ask about 23.7 h at all.
+			Just one thing: <strong>the number of cycles across the record is a whole number</strong>
+			(k in the animation, j in the formula above). The test frequencies are locked to a fixed grid of
+			one, two, three… complete cycles across the record. You can ask about 24 h and 12 h because they
+			land on that grid. You cannot ask about 23.7 h at all.
 		</p>
 		<p>
 			Relax that single constraint (allow any frequency you like, and do the extra work needed to
@@ -244,9 +249,10 @@
 	<WarnBox title="The cone of influence: do not interpret the shaded edges">
 		<p>
 			Near the start and end of the record the wavelet runs off the edge of the data, and software
-			pads the gap. Values there are partly made of padding rather than signal. That region is the <strong
-				>cone of influence</strong
-			>, hatched in the animation.
+			pads the gap. Values there are partly made of padding rather than signal. That region is the <a
+				class="gloss"
+				href="#gloss-cone-of-influence">cone of influence</a
+			>, hatched in the animation<sup class="cite"><a href="#ref-43">[43]</a></sup>.
 		</p>
 		<p>
 			Notice how <em>wide</em> it is: because longer wavelets reach further, the cone at 32 h extends
@@ -290,7 +296,8 @@
 			<li>
 				Set <strong>omega0</strong> for Morlet. This is the trade-off dial. Larger values sharpen period
 				resolution and blur time; smaller does the reverse. The conventional 6 is a sensible default,
-				and it makes period ≈ scale.
+				and it makes period ≈ scale: the Fourier period of a Morlet wavelet at scale s is 4πs / (ω₀ +
+				√(2 + ω₀²)), which is 1.03 s at ω₀ = 6, so the period axis AnCiR draws is almost the scale itself.
 			</li>
 			<li>
 				Set <strong>Min period (h)</strong> and <strong>Max period (h)</strong>. The default 1–48 h
