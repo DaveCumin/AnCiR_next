@@ -57,9 +57,9 @@
 
 	<h3 class="section-head">The Cosinor Model</h3>
 	<p>
-		A rhythm is modelled as a cosine riding on a constant level, M + A·cos(2πt/τ + φ). That form
-		is not linear in A and φ, but substituting β = A·cos(φ) and γ = −A·sin(φ) turns it into one
-		that is:
+		A rhythm is modelled as a cosine riding on a constant level, M + A·cos(2πt/τ + φ). That form is
+		not linear in A and φ, but substituting β = A·cos(φ) and γ = −A·sin(φ) turns it into one that
+		is:
 	</p>
 
 	<Formula tex={_tex1} />

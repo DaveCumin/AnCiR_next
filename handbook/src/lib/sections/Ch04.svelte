@@ -105,8 +105,8 @@
 			</li>
 			<li>
 				Detected outliers are set to missing (the column keeps its length, so rows still line up
-				with the time column) and listed under <strong>Removed values</strong> in the node. The
-				cleaned column is available on the node's output port to feed downstream steps.
+				with the time column) and listed under <strong>Removed values</strong> in the node. The cleaned
+				column is available on the node's output port to feed downstream steps.
 			</li>
 			<li>The original data is untouched; delete the node to restore it.</li>
 		</ol>
