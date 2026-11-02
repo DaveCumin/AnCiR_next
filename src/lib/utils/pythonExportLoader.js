@@ -12,10 +12,11 @@
  * scripts/buildRExport.mjs.
  *
  * The trade is that the sidecar is a SEPARATE FILE, and a deploy that publishes only
- * index.html will not carry it. That is not a hypothetical: this repo tracks just
- * build/index.html, and there are two FTP commands (a routine one and `uploadall`).
- * So "sidecar missing" is a supported state, not a bug — it has to fail in a way that
- * tells the user what to do rather than throwing a bare TypeError.
+ * index.html will not carry it. The FTP deploy (scripts/ftpUpload.mjs) now ships the whole
+ * build/ tree, but a hand-copied index.html, or a host that was last filled by the old
+ * three-file upload, still will not have it. So "sidecar missing" is a supported state,
+ * not a bug: it has to fail in a way that tells the user what to do rather than throwing
+ * a bare TypeError.
  */
 
 /** Resolved lazily and cached per URL, so the second export in a session costs nothing. */

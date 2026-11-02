@@ -11,7 +11,7 @@
 		"build": "node scripts/check-prose.mjs && vite build && node scripts/build-animations.mjs && mv build/index.html build/handbook.html",
 		"build:animations": "node scripts/build-animations.mjs",
 		"check:layout": "node scripts/check-anim-layout.mjs",
-		"deploy:ftp": "node ../scripts/deployFtp.mjs DEPLOY_COMMAND",
+		"deploy:ftp": "node ../scripts/ftpUpload.mjs build/handbook.html build/animations && node ../scripts/syncHandbook.mjs",
 		"preview": "vite preview"
 	},
 	"devDependencies": {
