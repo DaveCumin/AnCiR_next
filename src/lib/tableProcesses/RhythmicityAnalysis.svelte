@@ -37,6 +37,10 @@
 		// correlogram params
 		['corrMinLag', { val: 0 }],
 		['corrMaxLag', { val: 0 }],
+		// Correlogram normalisation (utils/correlogram.js ACF_NORMALIZATIONS): false divides each
+		// lag by its own pair count (N - k, AnCiR's default), true is the standard biased ACF (/N),
+		// as R acf and MATLAB autocorr report.
+		['corrBiased', { val: false }],
 		// outputs & misc
 		['out', {}],
 		['valid', { val: false }],
@@ -216,7 +220,9 @@
 		if (args.analysis === 'correlogram') {
 			const minLag = args.corrMinLag > 0 ? args.corrMinLag : 0;
 			const maxLag = args.corrMaxLag > 0 ? args.corrMaxLag : null;
-			const r = computeAutocorrelation(tt, yy, null, maxLag, minLag);
+			const r = computeAutocorrelation(tt, yy, null, maxLag, minLag, {
+				normalization: args.corrBiased ? 'biased' : 'pairs'
+			});
 			outputs.lag = r.lags ?? [];
 			outputs.correlation = r.correlations ?? [];
 			if (!r.lags?.length) return { outputs, stats };
@@ -419,6 +425,8 @@
 			p.args.corrMinLag +
 			'|' +
 			p.args.corrMaxLag +
+			'|' +
+			p.args.corrBiased +
 			'|' +
 			p.args.useFixedPeriod +
 			'|' +
@@ -847,6 +855,11 @@
 		<div class="control-input-horizontal">
 			<ControlInput label={`Max lag (${xUnit}; 0 = half range)`}>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
+			</ControlInput>
+		</div>
+		<div class="control-input-horizontal">
+			<ControlInput label="Standard ACF (÷N, as R acf / MATLAB autocorr)">
+				<input type="checkbox" bind:checked={p.args.corrBiased} />
 			</ControlInput>
 		</div>
 	{/if}

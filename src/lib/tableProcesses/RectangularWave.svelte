@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		normalizeYInputs,
 		migrateLegacyYIN,
@@ -193,6 +193,11 @@
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
 		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
+		// The x every curve is written on: the output x when set, else ONE grid shared by every
+		// series (the rows where x is valid), so each curve has the length of the single x
+		// output. A curve at its own series' valid rows made a y with missing values shorter
+		// than the x output (as Cosinor's was, 2026-11-09). The fit still uses its own rows.
+		const curveX = outputXData ?? t.filter((v) => !isInvalidValue(v)).map(Number);
 
 		// Per-column fit outcomes: a null or all-NaN fit is reported by name rather
 		// than shown as dashes with nothing to explain them.
@@ -213,6 +218,10 @@
 		};
 		// Residual-autocorrelation warnings for the shuffle permutation test (FIT-5).
 		const permWarnings = [];
+		// One namer for every series label, built on first use: a namer indexes every column
+		// owner in the session, so one per label made n y columns cost O(n^2).
+		let namer = null;
+		const nameOf = (col) => displayNameOf(col, (namer ??= columnNamer()));
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -239,26 +248,25 @@
 				maxPeriod
 			});
 
-			fitEntries.push({ label: `"${displayNameOf(yCol)}"`, result: fitResult ?? null, t: tt });
+			fitEntries.push({ label: `"${nameOf(yCol)}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
-				const xOutData = outputXData ?? tt;
-				const yOutData = outputXData
-					? evaluateRectWaveAtPoints(fitResult.parameters, outputXData)
-					: fitResult.fitted;
+				const xOutData = curveX;
+				const yOutData = evaluateRectWaveAtPoints(fitResult.parameters, curveX);
+				const fitted = outputXData ? yOutData : fitResult.fitted;
 
 				const perm = argsIN.permuteTest
 					? fitPermutationPValue(tt, yy, 'rectangular', permOptions, argsIN)
 					: null;
 				result.y_results[yId] = attachPermutation(
-					{ fitResult, fitted: yOutData, t: tt, xOutData, yOutData },
+					{ fitResult, fitted, t: tt, xOutData, yOutData },
 					perm
 				);
 				permWarnings.push(
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitResult.fitted[i]),
-						`"${displayNameOf(yCol)}"`
+						`"${nameOf(yCol)}"`
 					)
 				);
 				if (result.t.length === 0) result.t = tt;
@@ -413,12 +421,16 @@
 	let rwave = $state();
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
-	let permEntries = $derived(
-		Object.entries(rwave?.y_results ?? {}).map(([yId, result]) => ({
-			name: displayNameById(Number(yId), String(yId)),
+	// One namer per render for the per-series rows below (a namer per row is O(n^2)).
+	const labelNamer = $derived(columnNamer());
+
+	let permEntries = $derived.by(() => {
+		const namer = columnNamer();
+		return Object.entries(rwave?.y_results ?? {}).map(([yId, result]) => ({
+			name: displayNameById(Number(yId), String(yId), namer),
 			result
-		}))
-	);
+		}));
+	});
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -639,8 +651,10 @@
 			'M',
 			'A'
 		];
+		// One namer for every row (a namer per row is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const rows = validEntries.map(([yId, r]) => {
-			const name = displayNameById(Number(yId), String(yId));
+			const name = displayNameById(Number(yId), String(yId), namer);
 			const fr = r.fitResult;
 			return [
 				name,
@@ -974,7 +988,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = rwave?.y_results?.[yId]}
-								{@const srcName = displayNameById(Number(yId), yId)}
+								{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
@@ -989,7 +1003,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(rwave?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = displayNameById(Number(yId), yId)}
+					{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render rwaveStats(yResult, srcName, yId)}
@@ -1002,7 +1016,8 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(rwave.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
+								(rwave.outputXData ? 'predicted ' : 'fitted ') +
+								displayNameById(Number(id), id, labelNamer)
 						)
 					]}
 					data={[

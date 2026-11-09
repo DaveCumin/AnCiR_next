@@ -47,7 +47,7 @@ describe('Moving Analysis double logistic reliability warning', { timeout: 60000
 		const w = res.warnings.filter((s) => s.includes('pin down the active period'));
 		expect(w).toHaveLength(1);
 		expect(w[0]).toMatch(
-			/^The rise and fall are too gradual to pin down the active period in 6 of 6 fitted windows/
+			/^The rise and fall are too gradual to pin down the active period in 7 of 7 fitted windows/
 		);
 		expect(w[0]).toContain('treat the onset and offset in those windows as unreliable');
 	});

@@ -7,6 +7,10 @@ import quantile_chisq from '@stdlib/stats-base-dists-chisquare-quantile';
 import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
 import { isInvalidValue } from './stats.js';
+import { medianSamplingInterval, samplingStep } from './samplingInterval.js';
+
+// Re-exported: callers have long imported medianSamplingInterval from here.
+export { medianSamplingInterval, samplingStep };
 
 // ========== Degenerate input (ROB-13) ==========
 
@@ -40,62 +44,99 @@ export function isFlatSeries(values) {
 }
 
 /**
- * Where the binned methods start their first bin: the first sample's bin on the binSize
- * grid, floor(min(x) / binSize) * binSize.
+ * An approximate greatest common divisor of two positive numbers: Euclid's algorithm with a
+ * remainder within 1% of the current divisor counted as zero (stored times are rounded, so
+ * an exact gcd of 0.1667 and 1/6 would be a meaningless 3e-5). NaN when the remainders
+ * shrink below 1% of the smaller input without dividing evenly (no common grid).
  *
- * The bins used to start at t = 0 whatever the data. A record starting at -120 h lost every
- * sample before 0 (binData drops points below the start: Qp 238 instead of 477), and
- * Unix-second-sized times (~1.7e8) made binData walk hundreds of millions of empty bins
- * (seconds of stall at ~1 GB, then a RangeError). Snapping to the binSize grid rather than
- * to min(x) itself keeps every bin edge exactly where it was for data at t >= 0: leading
- * empty bins only rotate the fold columns of Chi-squared and Enright (both treat an empty
- * bin as missing, so neither statistic changes), so existing results do not move.
+ * @param {number} a
+ * @param {number} b
+ * @returns {number}
+ */
+function approxGcd(a, b) {
+	let hi = Math.max(a, b);
+	let lo = Math.min(a, b);
+	const floor = 0.01 * lo;
+	for (let i = 0; i < 64 && lo >= floor; i++) {
+		const r = hi % lo;
+		if (r < 0.01 * lo || lo - r < 0.01 * lo) return lo;
+		hi = lo;
+		lo = r;
+	}
+	return NaN;
+}
+
+/** Fraction of samples that must sit on the sample grid for the grid origin to apply. */
+const ON_GRID_SHARE = 0.9;
+/** How far (as a fraction of the grid step) a sample may sit from the grid and count as on it. */
+const ON_GRID_TOL = 0.05;
+
+/**
+ * Where the binned methods start their first bin.
+ *
+ * REGULAR data (at least 90% of the samples within 5% of a step of the grid min(x) + k * dt):
+ * min(x) - g / 2, where g = gcd(dt, binSize) is the finest spacing between bin edges and
+ * samples (g = dt when binSize is a whole number of samples, g = binSize when it is a
+ * fraction of one). Every bin edge then lies as far as possible from every sample (midway
+ * between two, when binSize is a whole number of samples), never on one. dt is samplingStep
+ * (the mean of the gaps near the median), so rounded stored times do not drift off the grid
+ * over a long record.
+ *
+ * Edges used to sit on the binSize grid, floor(min(x) / binSize) * binSize, which for the
+ * common case (bin size = sampling interval, times on the grid) put EVERY sample exactly on a
+ * bin edge. Times are usually stored rounded (10-min data as 24.1667, 24.3333, ... h with
+ * binSize 1/6 h), so which side of the edge a sample fell on was decided by floating-point
+ * noise: some bins got two samples and others none (672 non-empty bins for 1008 samples).
+ * The Chi-squared fold then had fewer effective columns at some periods than others, so its
+ * df and threshold saw-toothed from fold to fold (every third fold ~30% lower) and the peak
+ * could move by hours. With the edges g / 2 from any sample, rounding smaller than that
+ * cannot change which bin a sample falls in. Each bin keeps the samples it had under the old
+ * origin whenever those samples were not on an edge, so such results do not move.
+ *
+ * IRREGULAR data (jittered times) has no edge placement that avoids every sample, so it keeps
+ * the binSize grid, floor(min(x) / binSize) * binSize (one binSize lower if that rounds above
+ * min(x)), and its results do not move either.
+ *
+ * Both anchor on min(x) rather than t = 0: a record starting at -120 h keeps every sample,
+ * and Unix-second times (~1.7e8) do not make binData walk hundreds of millions of leading
+ * empty bins. Mirrored in tools/ancir_runtime.py and tools/ancir_runtime.R (bin_origin).
  *
  * @param {number[]} xs  times, already filtered to finite values
  * @param {number} binSize
  * @returns {number}
  */
 export function binOrigin(xs, binSize) {
+	const vals = [];
 	let min = Infinity;
 	for (let i = 0; i < xs.length; i++) {
 		if (isInvalidValue(xs[i])) continue;
 		const v = Number(xs[i]); // Number-ok: checked with isInvalidValue on the line above
+		if (!Number.isFinite(v)) continue;
+		vals.push(v);
 		if (v < min) min = v;
 	}
 	if (!Number.isFinite(min) || !(binSize > 0) || !Number.isFinite(binSize)) return 0;
-	let origin = Math.floor(min / binSize) * binSize;
-	// floor(min / binSize) * binSize can round to just above min for a large min and a
-	// binSize that is not a power of two; binData would then drop the first sample.
-	if (origin > min) origin -= binSize;
-	return origin;
-}
 
-/**
- * The series' median sampling interval: the median of the positive gaps between consecutive
- * valid times (sorted; repeated times are not a gap). NaN with fewer than two distinct times.
- *
- * The default bin size of a NEW binned periodogram (Chi-squared or Enright), so that one
- * bin holds one sample: a bin narrower than the sampling leaves most bins empty, a wider one
- * averages samples together (SPEC-8). The Periodogram plot's data warnings compare the bin
- * size against the same number.
- *
- * @param {ArrayLike<any>} times
- * @returns {number}
- */
-export function medianSamplingInterval(times) {
-	const xs = [];
-	for (let i = 0; i < (times?.length ?? 0); i++) {
-		if (isInvalidValue(times[i])) continue;
-		const v = Number(times[i]); // Number-ok: checked with isInvalidValue on the line above
-		if (Number.isFinite(v)) xs.push(v);
+	const gridOrigin = () => {
+		let origin = Math.floor(min / binSize) * binSize;
+		// floor(min / binSize) * binSize can round to just above min for a large min and a
+		// binSize that is not a power of two; binData would then drop the first sample.
+		if (origin > min) origin -= binSize;
+		return origin;
+	};
+
+	const dt = samplingStep(vals);
+	if (!(dt > 0)) return gridOrigin();
+	const g = approxGcd(dt, binSize);
+	if (!(g > 0)) return gridOrigin();
+	// The sample grid is min + k * dt; g divides dt, so on-grid samples are also on min + k * g.
+	let onGrid = 0;
+	for (const v of vals) {
+		const k = (v - min) / dt;
+		if (Math.abs(k - Math.round(k)) <= ON_GRID_TOL) onGrid++;
 	}
-	xs.sort((a, b) => a - b);
-	const gaps = [];
-	for (let i = 1; i < xs.length; i++) if (xs[i] > xs[i - 1]) gaps.push(xs[i] - xs[i - 1]);
-	if (gaps.length === 0) return NaN;
-	gaps.sort((a, b) => a - b);
-	const mid = Math.floor(gaps.length / 2);
-	return gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+	if (onGrid < ON_GRID_SHARE * vals.length) return gridOrigin();
+	return min - g / 2;
 }
 
 // ========== Periodogram Calculation Functions ==========

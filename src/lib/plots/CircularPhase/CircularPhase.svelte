@@ -1,4 +1,5 @@
 <script module>
+	import { autoSeriesColour, pickedColour } from '$lib/plots/autoSeriesColour.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import {
@@ -8,7 +9,7 @@
 		viewPadFloorFor
 	} from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
@@ -55,6 +56,27 @@
 	// and the untimed placeCircularPoints stack/bin/rim placement.
 	const INNER_RIM = 0.12;
 	const OUTER_RIM = 0.98;
+
+	/**
+	 * The timed (value-radius) clock's radial scale: the value axis from the inner rim to the
+	 * clock ring, with a value ring at each tick (PolarGrid `rings`), the axis minimum's ring
+	 * at the inner rim. The hole keeps a zero (an inactive bin, common in activity data) at its
+	 * angle instead of collapsing onto the centre. The grid's rings used to stay at quarters of
+	 * the radius, so no value label sat on a ring and "0" floated inside the first one.
+	 * @param {[number, number]} axis
+	 */
+	export function timedValueScale(axis) {
+		return scaleLinear().domain(axis).range([INNER_RIM, 1]);
+	}
+
+	/** The value ticks a timed clock labels, and the ring fraction each sits on. */
+	export function timedValueTicks(axis) {
+		const scale = timedValueScale(axis);
+		return scale
+			.ticks(3)
+			.map((t) => ({ t, r01: scale(t) }))
+			.filter(({ r01 }) => r01 >= INNER_RIM - 1e-9 && r01 <= 1 + 1e-9);
+	}
 	// The clock ring's radius, as a fraction of half the plot square.
 	const RING_RADIUS = 0.82;
 	// What the clock draws past its ring (PolarGrid), in px: a legend beside, above or below
@@ -89,7 +111,15 @@
 		x = $state(); // optional time column: wiring this turns the series into a value-radius clock plot
 		y = $state(); // phase column (untimed) or measurement column (timed)
 		label = $state('Phase 1');
-		colour = $state(getPaletteColor(0));
+		// The user's pick, or null while automatic (autoSeriesColour.js): read at draw time, so
+		// the column's appearance-map colour applies, and saved as null.
+		#explicitColour = $state(null);
+		get colour() {
+			return autoSeriesColour(this, this.#explicitColour, this.y);
+		}
+		set colour(v) {
+			this.#explicitColour = pickedColour(v);
+		}
 		shape = $state('circle');
 		radius = $state(3.4);
 		draw = $state(true); // show this series' points
@@ -105,7 +135,7 @@
 			this.y = yJSON ? ColumnClass.fromJSON(yJSON) : new ColumnClass({ refId: -1 });
 			// Blank by default; `displayLabel` falls back to the wired column's name.
 			this.label = dataIN?.label ?? '';
-			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length) ?? getPaletteColor(0);
+			this.colour = dataIN?.colour ?? null;
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.radius = dataIN?.radius ?? 3.4;
 			this.draw = dataIN?.draw ?? true;
@@ -228,7 +258,7 @@
 				x: this.x,
 				y: this.y,
 				label: this.label,
-				colour: this.colour,
+				colour: this.#explicitColour,
 				shape: this.shape,
 				radius: this.radius,
 				draw: this.draw,
@@ -610,7 +640,7 @@
 			out.push({
 				rects: [[P.cx - 110, P.cy + P.radius + 24, P.cx + 110, P.cy + P.radius + HINT_BOTTOM]]
 			});
-			const valueScale = scaleLinear().domain(this.valueAxis).range([INNER_RIM, OUTER_RIM]);
+			const valueScale = timedValueScale(this.valueAxis);
 			for (const d of this.data) {
 				if (d.draw) {
 					const px = [];
@@ -987,7 +1017,8 @@
 	{@const cy = plot.padding.top + (corner?.offsetY ?? 0) + plot.clockShiftY + size / 2}
 	{@const P = createPolar({ cx, cy, radius: (size / 2) * RING_RADIUS, period: plot.displayPeriod })}
 	{@const hasTimed = plot.hasTimed}
-	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([INNER_RIM, OUTER_RIM])}
+	{@const valueScale = timedValueScale(plot.valueAxis)}
+	{@const valueTicks = hasTimed ? timedValueTicks(plot.valueAxis) : []}
 	<svg
 		id={'plot' + plot.parentBox.id}
 		width={plot.viewWidth}
@@ -998,6 +1029,7 @@
 	>
 		<PolarGrid
 			projection={P}
+			rings={hasTimed ? valueTicks.map((k) => k.r01) : undefined}
 			hint={hasTimed
 				? `value ${plot.valueAxis[0]}–${plot.valueAxis[1]} · period ${plot.displayPeriod} ${unitSuffix(plot.displayUnit)}`
 				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.displayUnit)}`}
@@ -1048,11 +1080,10 @@
 			paint-order="stroke"
 		>
 			{#if hasTimed}
-				{#each valueScale.ticks(3) as t (t)}
-					{@const r01 = valueScale(t)}
-					{#if r01 >= 0 && r01 <= 1}
-						<text x={P.cx + 3} y={P.cy - P.radius * r01 + 4}>{t}</text>
-					{/if}
+				{#each valueTicks as { t, r01 } (t)}
+					<!-- On its ring (centred on the line, the halo parting it), right of the 0
+					     spoke; the axis minimum on the inner rim's ring. -->
+					<text x={P.cx + 3} y={P.cy - P.radius * r01 + 3.5}>{t}</text>
 				{/each}
 			{:else}
 				{#each [0.5, 1] as f (f)}

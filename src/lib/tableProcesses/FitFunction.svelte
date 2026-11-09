@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { displayNameById } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import {
@@ -162,8 +162,9 @@
 
 	export const definition = {
 		displayName,
-		// Param-dependent metric ports (seeded by the MCP engine, reconciled by the component).
-		paramOutKeys: fitCurveOutKeys,
+		// Param-dependent metric ports (seeded by the MCP engine, reconciled by the component):
+		// the current model's metrics, the same list the component's port reconcile reads.
+		paramOutKeys: getFitMetricKeys,
 		// The args that change which metric ports exist: an edit of one is recorded with the
 		// port reconcile it sets off as ONE undo step (mutationService.setFreeTableProcessArg).
 		outputShapingArgs: ['model', 'useFixedPeriod', 'Ncurves'],
@@ -472,13 +473,15 @@
 	/**
 	 * The refusal for a series with fewer valid rows than the model's parameters + 1, or
 	 * null when it can be fitted: the Cosinor node's rule and message (utils/fitMinPoints.js).
+	 * `namer`: one columnNamer() shared by every series of a run (a namer indexes every column
+	 * owner in the session, so one per series made n y columns cost O(n^2)).
 	 */
-	function tooFewPointsWarning(argsIN, n, yId) {
+	function tooFewPointsWarning(argsIN, n, yId, namer) {
 		return fitTooFewPointsWarning(
 			n,
 			argsIN.model ?? 'cosinor',
 			getModelOptions(argsIN),
-			`"${displayNameById(Number(yId), yId)}"`
+			`"${displayNameById(Number(yId), yId, namer)}"`
 		);
 	}
 
@@ -495,17 +498,26 @@
 		return evaluateCurveModelAtPoints(fitResult, argsIN.model ?? 'cosinor', outputXData);
 	}
 
-	async function buildYResult(tt, yy, argsIN, outputXData) {
+	/**
+	 * @param {number[]} tFull the whole x (hours), for the curve grid every series shares
+	 */
+	async function buildYResult(tt, yy, argsIN, outputXData, tFull) {
 		const fitResult = await computeSingleFit(tt, yy, argsIN);
 		if (!fitResult) return null;
 		const predicted = evaluateForOutput(fitResult, argsIN, outputXData);
+		// The x every curve is written on: the output x when set, else ONE grid shared by every
+		// series (the rows where x is valid), so each curve has the length of the single fitx
+		// output. The fit's own `fitted` covers only this series' valid rows, which made a y
+		// with missing values a curve shorter than fitx (as Cosinor's was, 2026-11-09).
+		const curveX = outputXData ?? tFull.filter((v) => !isInvalidValue(v)).map(Number);
 		return {
 			fitResult,
 			predicted,
 			t: tt,
 			yy,
-			xOutData: outputXData ?? tt,
-			yOutData: predicted ?? fitResult.fitted
+			xOutData: curveX,
+			yOutData:
+				predicted ?? evaluateCurveModelAtPoints(fitResult, argsIN.model ?? 'cosinor', curveX)
 		};
 	}
 
@@ -553,6 +565,8 @@
 		result.outputXWarning = outputXWarning;
 		// The frame the phase outputs are reported in (FIT-9).
 		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
+		// One namer for every series label, built on first use (see tooFewPointsWarning).
+		let namer = null;
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -563,13 +577,13 @@
 			const { tt, yy } = getValidPairs(t, y);
 			// Too few rows to estimate the model: say so rather than fitting (the free-period
 			// cosinor put 4 parameters through 2 points) or skipping the series silently.
-			const tooFew = tooFewPointsWarning(argsIN, tt.length, yId);
+			const tooFew = tooFewPointsWarning(argsIN, tt.length, yId, (namer ??= columnNamer()));
 			if (tooFew) {
 				result.tooFewWarnings.push(tooFew);
 				continue;
 			}
 
-			const yResult = await buildYResult(tt, yy, argsIN, outputXData);
+			const yResult = await buildYResult(tt, yy, argsIN, outputXData, t);
 			if (!yResult) continue;
 
 			// Permutation test on the HEADLESS path too (MCP engine, doProcess),
@@ -678,8 +692,12 @@
 	// shows the same warnings the engine computes (getFit used to publish none).
 	export function fitWarnings(argsIN, result) {
 		const model = argsIN.model ?? 'cosinor';
+		// One namer for every series label below, built on first use: a namer indexes every
+		// column owner in the session, so one per series made n y columns cost O(n^2).
+		let namer = null;
+		const nameOf = (yId) => displayNameById(Number(yId), yId, (namer ??= columnNamer()));
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
-			label: `"${displayNameById(Number(yId), yId)}"`,
+			label: `"${nameOf(yId)}"`,
 			result: yr?.fitResult ?? null,
 			t: yr?.t
 		}));
@@ -724,7 +742,7 @@
 				...permutationValidityWarnings(
 					yr.perm ?? null,
 					yy.map((v, i) => v - fitted[i]),
-					`"${displayNameById(Number(yId), yId)}"`,
+					`"${nameOf(yId)}"`,
 					{ fTest: model === 'cosinor' && !!argsIN.useFixedPeriod }
 				)
 			);
@@ -827,6 +845,8 @@
 	fillDefaults(p.args, defaults);
 
 	let fitData = $state();
+	// One namer per render for the per-series rows below (a namer per row is O(n^2)).
+	const labelNamer = $derived(columnNamer());
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -1014,13 +1034,15 @@
 		};
 
 		const activeY = [];
+		// One namer for every series label, built on first use (see tooFewPointsWarning).
+		let namer = null;
 		for (const yId of yINs) {
 			const yCol = getColumnById(yId);
 			if (!yCol) continue;
 			const y = yCol.getData();
 			const { tt, yy } = getValidPairs(t, y);
 			// The same refusal as the headless path above.
-			const tooFew = tooFewPointsWarning(p.args, tt.length, yId);
+			const tooFew = tooFewPointsWarning(p.args, tt.length, yId, (namer ??= columnNamer()));
 			if (tooFew) {
 				result.tooFewWarnings.push(tooFew);
 				continue;
@@ -1034,7 +1056,7 @@
 			const { yId, tt, yy } = activeY[index];
 			if (my !== _calcToken) return null;
 
-			const yResult = await buildYResult(tt, yy, p.args, outputXData);
+			const yResult = await buildYResult(tt, yy, p.args, outputXData, t);
 			if (!yResult) continue;
 
 			if (p.args.permuteTest) {
@@ -1345,8 +1367,10 @@
 
 		if (includePermutation) headers.push('significant');
 
+		// One namer for every row (a namer per row is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const rows = validEntries.map(([yId, r]) => {
-			const name = displayNameById(Number(yId), String(yId));
+			const name = displayNameById(Number(yId), String(yId), namer);
 			const fr = r.fitResult;
 			const row = [name, fr.rmse, fr.rSquared];
 			if (model === 'cosinor') {
@@ -1998,7 +2022,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = fitData?.y_results?.[yId]}
-								{@const srcName = displayNameById(Number(yId), yId)}
+								{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 								{@const permOutKey = 'permstats_' + yId}
 								{@const permOutId = p.args.out[permOutKey]}
 								{@const permOut = permOutId >= 0 ? getColumnById(permOutId) : null}
@@ -2022,7 +2046,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(fitData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = displayNameById(Number(yId), yId)}
+					{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render fitStats(yResult, srcName, yId)}
@@ -2035,7 +2059,8 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(fitData.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
+								(fitData.outputXData ? 'predicted ' : 'fitted ') +
+								displayNameById(Number(id), id, labelNamer)
 						)
 					]}
 					data={[

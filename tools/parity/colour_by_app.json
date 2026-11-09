@@ -6552,8 +6552,8 @@
 							"line": "#234154",
 							"points": "#234154",
 							"colourCategories": {
-								"labels": ["het", "ko", "wt"],
-								"colours": ["#7a1f5c", "#BE796B", "#234154"]
+								"labels": ["wt", "ko", "het"],
+								"colours": ["#234154", "#BE796B", "#7a1f5c"]
 							}
 						}
 					]
@@ -6574,11 +6574,11 @@
 								"hi": null,
 								"cyclic": false,
 								"period": null,
-								"categories": ["het", "ko", "wt"],
+								"categories": ["wt", "ko", "het"],
 								"firstSeen": ["wt", "ko", "het"]
 							},
 							"title": "genotype",
-							"idx": [2, 1, -1, 0, 1, 2, -1, 0, 1, 2],
+							"idx": [0, 1, -1, 2, 1, 0, -1, 2, 1, 0],
 							"pointColours": [
 								"#234154",
 								"#BE796B",
@@ -6594,11 +6594,11 @@
 							"segments": [
 								[2, 3, "#234154"],
 								[6, 7, "#234154"],
-								[7, 8, "#7a1f5c"],
+								[0, 1, "#234154"],
+								[5, 6, "#234154"],
 								[1, 2, "#BE796B"],
 								[8, 9, "#BE796B"],
-								[0, 1, "#234154"],
-								[5, 6, "#234154"]
+								[7, 8, "#7a1f5c"]
 							],
 							"legend": {
 								"label": "hive",
@@ -6632,7 +6632,7 @@
 							"hi": null,
 							"cyclic": false,
 							"period": null,
-							"categories": ["het", "ko", "wt"],
+							"categories": ["wt", "ko", "het"],
 							"firstSeen": ["wt", "ko", "het"]
 						},
 						"title": "genotype",
@@ -6640,9 +6640,9 @@
 						"noValue": { "colour": "#234154", "label": "no value" },
 						"categorical": true,
 						"categories": [
-							{ "label": "het", "colour": "#7a1f5c" },
+							{ "label": "wt", "colour": "#234154" },
 							{ "label": "ko", "colour": "#BE796B" },
-							{ "label": "wt", "colour": "#234154" }
+							{ "label": "het", "colour": "#7a1f5c" }
 						],
 						"geometry": {
 							"width": 71.6,
@@ -6656,9 +6656,9 @@
 							"columns": 1,
 							"titleLines": [{ "text": "genotype", "y": 0 }],
 							"rows": [
-								{ "label": "het", "colour": "#7a1f5c", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "wt", "colour": "#234154", "noValue": false, "x": 0, "y": 16 },
 								{ "label": "ko", "colour": "#BE796B", "noValue": false, "x": 0, "y": 31 },
-								{ "label": "wt", "colour": "#234154", "noValue": false, "x": 0, "y": 46 },
+								{ "label": "het", "colour": "#7a1f5c", "noValue": false, "x": 0, "y": 46 },
 								{ "label": "no value", "colour": "#234154", "noValue": true, "x": 0, "y": 61 }
 							]
 						}
@@ -7209,7 +7209,7 @@
 							"line": "#234154",
 							"points": "#234154",
 							"colourCategories": {
-								"labels": ["a", "b", "c"],
+								"labels": ["c", "a", "b"],
 								"colours": ["#222222", "#666666", "#aaaaaa"]
 							}
 						}
@@ -7231,12 +7231,12 @@
 								"hi": null,
 								"cyclic": false,
 								"period": null,
-								"categories": ["a", "b", "c"],
+								"categories": ["c", "a", "b"],
 								"firstSeen": ["c", "a", "b"]
 							},
 							"title": "site",
-							"idx": [2, 0, 1, 0, 2, 1],
-							"pointColours": ["#aaaaaa", "#222222", "#666666", "#222222", "#aaaaaa", "#666666"],
+							"idx": [0, 1, 2, 1, 0, 2],
+							"pointColours": ["#222222", "#666666", "#aaaaaa", "#666666", "#222222", "#aaaaaa"],
 							"segments": [],
 							"legend": {
 								"label": "y",
@@ -7263,7 +7263,7 @@
 							"hi": null,
 							"cyclic": false,
 							"period": null,
-							"categories": ["a", "b", "c"],
+							"categories": ["c", "a", "b"],
 							"firstSeen": ["c", "a", "b"]
 						},
 						"title": "site",
@@ -7271,9 +7271,9 @@
 						"noValue": null,
 						"categorical": true,
 						"categories": [
-							{ "label": "a", "colour": "#222222" },
-							{ "label": "b", "colour": "#666666" },
-							{ "label": "c", "colour": "#aaaaaa" }
+							{ "label": "c", "colour": "#222222" },
+							{ "label": "a", "colour": "#666666" },
+							{ "label": "b", "colour": "#aaaaaa" }
 						],
 						"geometry": {
 							"width": 28.799999999999997,
@@ -7287,9 +7287,9 @@
 							"columns": 1,
 							"titleLines": [{ "text": "site", "y": 0 }],
 							"rows": [
-								{ "label": "a", "colour": "#222222", "noValue": false, "x": 0, "y": 16 },
-								{ "label": "b", "colour": "#666666", "noValue": false, "x": 0, "y": 31 },
-								{ "label": "c", "colour": "#aaaaaa", "noValue": false, "x": 0, "y": 46 }
+								{ "label": "c", "colour": "#222222", "noValue": false, "x": 0, "y": 16 },
+								{ "label": "a", "colour": "#666666", "noValue": false, "x": 0, "y": 31 },
+								{ "label": "b", "colour": "#aaaaaa", "noValue": false, "x": 0, "y": 46 }
 							]
 						}
 					}

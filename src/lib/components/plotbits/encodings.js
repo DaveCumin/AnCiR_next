@@ -27,6 +27,7 @@ import { isInvalidValue } from '$lib/utils/stats.js';
 import { isMissingCategory } from '$lib/utils/chisquare.js';
 import { wallClockDayjs } from '$lib/utils/time/zones.js';
 import { colormapRGB } from './colormaps.js';
+import { orderCategories } from '$lib/plots/categoryOrder.js';
 
 /** Colour buckets per scale (plan 3.5: no visible banding at 64; at most 64 paths). */
 export const COLOUR_BUCKETS = 64;
@@ -333,22 +334,10 @@ export function categoryLabel(v) {
 }
 
 /**
- * The order the Boxplot lists categories in (Boxplotclass.uniqueXValues): numerically when
- * both labels read as numbers, else by localeCompare.
- * @param {string} a
- * @param {string} b
- */
-export function compareCategories(a, b) {
-	const sa = String(a);
-	const sb = String(b);
-	if (!isNaN(+sa) && !isNaN(+sb)) return +sa - +sb;
-	return sa.localeCompare(sb);
-}
-
-/**
  * The categories a colour scale spans: every label of every array (pass all series, or all
- * facet panels, so they share one key), `categories` in the Boxplot's order (the key and the
- * monochrome greys), `firstSeen` in order of first appearance (the order a label claims a
+ * facet panels, so they share one key), `categories` in the Boxplot's order (first appearance, or
+ * numeric when every label is a number: plots/categoryOrder.js; the key and the monochrome
+ * greys), `firstSeen` in order of first appearance (the order a label claims a
  * palette slot in, as the Boxplot claims them: plots/seriesColour.js colourForCategory).
  * @param {ArrayLike<any>[]} labelArrays encoded labels (null: no value)
  */
@@ -364,7 +353,7 @@ export function categoryDomain(labelArrays) {
 			firstSeen.push(v);
 		}
 	}
-	const categories = firstSeen.slice().sort(compareCategories);
+	const categories = orderCategories(firstSeen);
 	return { lo: NaN, hi: NaN, cyclic: false, period: null, categories, firstSeen };
 }
 

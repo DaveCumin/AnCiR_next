@@ -1,4 +1,5 @@
 <script module>
+	import { autoSeriesColour, pickedColour } from '$lib/plots/autoSeriesColour.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import {
 		viewFontScale,
@@ -13,7 +14,7 @@
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
@@ -61,7 +62,15 @@
 		stepSize = $state(/** @type {number|null} */ (null));
 		diffStep = $state(false);
 		cuts = $state(/** @type {number[]} */ ([]));
-		fillColour = $state(getPaletteColor(0));
+		// The user's pick, or null while automatic (autoSeriesColour.js): read at draw time, so
+		// the column's appearance-map colour applies, and saved as null.
+		#explicitFillColour = $state(null);
+		get fillColour() {
+			return autoSeriesColour(this, this.#explicitFillColour, this.column);
+		}
+		set fillColour(v) {
+			this.#explicitFillColour = pickedColour(v);
+		}
 		fillOpacity = $state(0.5);
 		strokeWidth = $state(1);
 		stroke = $state('#000000');
@@ -84,7 +93,7 @@
 			this.stepSize = dataIN?.stepSize ?? null;
 			this.diffStep = dataIN?.diffStep ?? false;
 			this.cuts = Array.isArray(dataIN?.cuts) ? dataIN.cuts.slice() : [];
-			this.fillColour = dataIN?.fillColour ?? getPaletteColor(parent.data.length);
+			this.fillColour = dataIN?.fillColour ?? null;
 			this.fillOpacity = dataIN?.fillOpacity ?? 0.5;
 			this.strokeWidth = dataIN?.strokeWidth ?? 1;
 			this.stroke = dataIN?.stroke ?? '#000000';
@@ -241,7 +250,7 @@
 				stepSize: this.stepSize,
 				diffStep: this.diffStep,
 				cuts: this.cuts,
-				fillColour: this.fillColour,
+				fillColour: this.#explicitFillColour,
 				fillOpacity: this.fillOpacity,
 				strokeWidth: this.strokeWidth,
 				stroke: this.stroke,

@@ -9,6 +9,7 @@
 // Protocol: parent → { rid, method, args }; worker → { rid, ok, result } | { rid,
 // ok:false, error }. On startup the worker sends { type: 'ready' }.
 import { ensureDom } from './engine/bootstrapDom.js';
+import { createSerialQueue } from './serial.js';
 
 await ensureDom();
 const { AncirSession, ensureRegistry, describeCapabilities } = await import('./engine/session.js');
@@ -38,16 +39,22 @@ const methods = {
 	export_session: () => ({ json: requireSession().exportSession() })
 };
 
-process.on('message', async (msg) => {
+// Calls run one at a time (serial.js): a create_session must not empty the store under a call
+// that is still awaiting.
+const serial = createSerialQueue();
+
+process.on('message', (msg) => {
 	const { rid, method, args } = msg ?? {};
-	try {
-		const fn = methods[method];
-		if (!fn) throw new Error(`Unknown method "${method}"`);
-		const result = await fn(args ?? {});
-		process.send({ rid, ok: true, result });
-	} catch (err) {
-		process.send({ rid, ok: false, error: err?.message || String(err) });
-	}
+	serial(async () => {
+		try {
+			const fn = methods[method];
+			if (!fn) throw new Error(`Unknown method "${method}"`);
+			const result = await fn(args ?? {});
+			process.send({ rid, ok: true, result });
+		} catch (err) {
+			process.send({ rid, ok: false, error: err?.message || String(err) });
+		}
+	});
 });
 
 process.send({ type: 'ready' });

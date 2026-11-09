@@ -195,6 +195,7 @@ export const R_PURE_UTILS = [
 	'moving_windows',
 	'output_x_sequence_probe',
 	'p_adjust',
+	'periodogram_bins',
 	'permutation_orders',
 	'qq_correlation',
 	'qq_points',

@@ -117,3 +117,35 @@ def test_exported_figure_draws_the_series_band(extra, method):
         assert list(bounds[1].get_ydata())[5] == pytest.approx(-want[5])
     finally:
         plt.close(fig)
+
+
+def test_a_series_saved_with_the_standard_acf_exports_it():
+    """CorrelogramDataclass `biased` (the Standard ACF option): the export computes the
+    series' ACF with normalization 'biased'; a series without it keeps the pair-count ACF."""
+    from ancir_runtime import correlogram_series_acf, compute_autocorrelation
+
+    class Col:
+        type, eff_bin_width = 'number', None
+
+        def __init__(self, v):
+            self._v, self.hours_since_start = v, v
+
+        def get_data(self):
+            return self._v
+
+    t = list(range(120))
+    y = [math.cos(2 * math.pi * k / 24) + 0.3 * math.sin(k * 1.7) for k in t]
+    cols = {0: Col(t), 1: Col(y)}
+    base = {'x': {'refId': 0}, 'y': {'refId': 1}}
+    import ancir_runtime as rt
+    orig = rt._resolve_plot_col
+    rt._resolve_plot_col = lambda ref, index: index[ref['refId']]
+    try:
+        plain = correlogram_series_acf(base, cols)
+        biased = correlogram_series_acf({**base, 'biased': True}, cols)
+    finally:
+        rt._resolve_plot_col = orig
+    assert plain['correlations'] == compute_autocorrelation(t, y)['correlations']
+    assert biased['correlations'] == compute_autocorrelation(
+        t, y, normalization='biased')['correlations']
+    assert abs(biased['correlations'][48]) < abs(plain['correlations'][48])

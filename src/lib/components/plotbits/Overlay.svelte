@@ -38,6 +38,13 @@
 
 	let _overlayCounter = 0;
 
+	// Only for a store that has just been emptied (the headless engine's fresh session,
+	// mcp/src/engine/session.js): ids then restart at 0 so the same build gives the same ids.
+	// Never call it while any overlay is still live: it would hand out a held id again.
+	export function resetOverlayIdCounter() {
+		_overlayCounter = 0;
+	}
+
 	const MS_PER_HOUR = 3600000;
 
 	/** Colours for reference lines: explicit, never the series identity map. */

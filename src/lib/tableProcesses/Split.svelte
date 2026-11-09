@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
@@ -40,6 +40,9 @@
 
 		const segmentCount = splitTimes.length + 1;
 		const y_results = {};
+		// One namer for every source name, built on first use: a namer indexes every column
+		// owner in the session, so one per y made n y columns cost O(n^2).
+		let namer = null;
 
 		// Process each Y column
 		for (const yId of yINs) {
@@ -68,7 +71,7 @@
 
 			y_results[yId] = {
 				segments,
-				sourceColName: displayNameOf(yCol) || String(yId)
+				sourceColName: displayNameOf(yCol, (namer ??= columnNamer())) || String(yId)
 			};
 		}
 
@@ -438,8 +441,9 @@
 
 			if (hasData) {
 				const y_results = {};
+				const namer = columnNamer();
 				for (const yId of p.args.yIN ?? []) {
-					const srcName = displayNameById(yId, String(yId));
+					const srcName = displayNameById(yId, String(yId), namer);
 					const segments = [];
 					for (let seg = 0; seg < segmentCount; seg++) {
 						const outKey = `${yId}_${seg + 1}`;

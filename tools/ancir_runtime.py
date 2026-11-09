@@ -679,23 +679,82 @@ def is_flat_series(values):
     return True
 
 
+def sampling_step(times):
+    """periodogram.js samplingStep: the mean of the gaps within 10% of the median gap (rounding
+    errors of stored times cancel in the sum); NaN with fewer than two distinct times."""
+    xs = []
+    for v in times or []:
+        if _js_invalid(v):
+            continue
+        f = _js_number(v)
+        if math.isfinite(f):
+            xs.append(f)
+    median = median_sampling_interval(xs)
+    if not (median > 0):
+        return math.nan
+    xs.sort()
+    gaps = [b - a for a, b in zip(xs, xs[1:]) if abs((b - a) - median) <= 0.1 * median]
+    if not gaps:
+        return median
+    total = 0.0
+    for gp in gaps:
+        total += gp
+    return total / len(gaps)
+
+
+def _approx_gcd(a, b):
+    """periodogram.js approxGcd: Euclid's algorithm with a remainder within 1% of the current
+    divisor counted as zero; NaN when there is no common grid."""
+    hi, lo = max(a, b), min(a, b)
+    floor = 0.01 * lo
+    i = 0
+    while i < 64 and lo >= floor:
+        r = math.fmod(hi, lo)
+        if r < 0.01 * lo or lo - r < 0.01 * lo:
+            return lo
+        hi, lo = lo, r
+        i += 1
+    return math.nan
+
+
 def bin_origin(xs, bin_size):
-    """periodogram.js binOrigin: floor(min(x) / binSize) * binSize, one binSize lower if that
-    rounds above min(x). The binned methods used to start at t = 0 whatever the data, which
-    dropped every sample before 0 and walked ~1e8 empty bins for epoch-sized times."""
-    mn = math.inf
+    """periodogram.js binOrigin. Regular data (>= 90% of samples within 5% of a step of
+    min + k * dt, dt = mean of the gaps within 10% of the median gap): min - g / 2 with
+    g = approx gcd(dt, bin_size), so no bin edge sits on a sample (rounded stored times on
+    edges used to double some bins and empty others). Irregular data keeps the bin_size grid:
+    floor(min / bin_size) * bin_size, one bin_size lower if that rounds above min."""
+    vals = []
     for v in xs or []:
         if _js_invalid(v):
             continue
         x = _js_number(v)
-        if x < mn:
-            mn = x
-    if not math.isfinite(mn) or not (bin_size > 0) or not math.isfinite(bin_size):
+        if math.isfinite(x):
+            vals.append(x)
+    if not vals or not (bin_size > 0) or not math.isfinite(bin_size):
         return 0.0
-    origin = math.floor(mn / bin_size) * bin_size
-    if origin > mn:
-        origin -= bin_size
-    return origin
+    mn = min(vals)
+
+    def grid_origin():
+        origin = math.floor(mn / bin_size) * bin_size
+        if origin > mn:
+            origin -= bin_size
+        return origin
+
+    dt = sampling_step(vals)
+    if not (dt > 0):
+        return grid_origin()
+    vals.sort()
+    g = _approx_gcd(dt, bin_size)
+    if not (g > 0):
+        return grid_origin()
+    on_grid = 0
+    for v in vals:
+        k = (v - mn) / dt
+        if abs(k - _js_round(k)) <= 0.05:
+            on_grid += 1
+    if on_grid < 0.9 * len(vals):
+        return grid_origin()
+    return mn - g / 2
 
 
 def _pgram_pairs(t, y):
@@ -992,8 +1051,9 @@ def chi_squared_periodogram(t, y, opts):
     holds at most one point, so this mod-binning port and the JS
     binData-then-fold pipeline are the SAME fold and must agree exactly —
     including on grids where most bins are empty, the regime whose
-    empty-bin handling this pins. (With several points per bin the two
-    pipelines still differ — that regime stays unpinned.)"""
+    empty-bin handling this pins. Several points per bin (bin > dt) is pinned too
+    (pure-chisq-periodogram-offset-start): the port bins with bin_data from
+    bin_origin, as the app does."""
     res = run_periodogram_calculation({
         't': t, 'y': y, 'method': 'Chi-squared',
         'minPeriod': opts.get('periodMin', 1.0),
@@ -1004,6 +1064,21 @@ def chi_squared_periodogram(t, y, opts):
     })
     return {'period': res['x'], 'power': res['y'], 'df': res['df'],
             'threshold': res['threshold'], 'pvalue': res['pvalue']}
+
+
+def periodogram_bins(t, y, opts):
+    """Pure-util parity surface for the bins a binned periodogram (Chi-squared, Enright)
+    folds: the valid pairs binned at binSize from bin_origin. `origin` is the first bin's
+    start, `bins` every bin start, `means` the bin means (NaN when empty), `counts` the
+    samples in each bin."""
+    tt, yy = _pgram_pairs(t, y)
+    bs = opts.get('binSize', 0.25)
+    origin = bin_origin(tt, bs)
+    means = bin_data(tt, yy, bs, origin)
+    counts = bin_data(tt, yy, bs, origin, agg_func='count')
+    return {'origin': [origin], 'bins': means['bins'],
+            'means': [float('nan') if v is None else v for v in means['y_out']],
+            'counts': counts['y_out']}
 
 
 def lomb_scargle_periodogram(t, y, opts):
@@ -1350,7 +1425,7 @@ def _js_upper_median(diffs):
 
 
 def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
-                            min_lag=0.0):
+                            min_lag=0.0, normalization='pairs'):
     """Port of utils/correlogram.js computeAutocorrelation.
 
     `bin_size` None estimates the lag step as the UPPER median of the successive spacings
@@ -1362,7 +1437,14 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     As in the app (see the rules in utils/correlogram.js): lag 0 is exactly 1 on both paths;
     slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt, so a pair on a
     boundary counts once (in the upper lag); distinct pairs closer than half a step are not
-    used at any lag; the default lag window is half the recording span in hours."""
+    used at any lag; the default lag window is half the recording span in hours.
+
+    `normalization` (correlogram.js ACF_NORMALIZATIONS): 'pairs' (default) divides each lag's
+    sum by its pair count, 'biased' by N (the standard sample ACF of R acf / MATLAB autocorr).
+    With bin_size None the median step is refined to sampling_step when they agree within 1%
+    (rounded stored times)."""
+    biased = normalization == 'biased'
+
     def empty(dt):
         return {'lags': [], 'correlations': [], 'counts': [], 'n': 0, 'dt': dt,
                 'peakLag': float('nan'), 'peakCorrelation': float('nan')}
@@ -1381,6 +1463,10 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     n = y.size
     diffs = np.diff(t).tolist()
     dt = float(bin_size) if bin_size is not None else _js_upper_median(diffs)
+    if bin_size is None:
+        step = sampling_step(t.tolist())
+        if step > 0 and abs(step - dt) <= 0.1 * dt:
+            dt = step
     if not math.isfinite(dt) or dt <= 0:
         return empty(1.0)
     # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
@@ -1396,8 +1482,9 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     min_lag_t = mn if (mn is not None and math.isfinite(mn) and mn > 0) else 0.0
     if min_lag_t >= max_lag_t:
         return empty(dt)
-    n_lags = min(math.floor(max_lag_t / dt), math.floor(span / dt))
-    start_idx = math.ceil(min_lag_t / dt)
+    # Snapped by 5% of a step, as correlogram.js (dt is measured from rounded times).
+    n_lags = min(math.floor(max_lag_t / dt + 0.05), math.floor(span / dt + 0.05))
+    start_idx = math.ceil(min_lag_t / dt - 0.05)
     ymean = float(y.mean())
     yvar = float(((y - ymean) ** 2).sum() / n)
     if yvar == 0:
@@ -1422,7 +1509,8 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
             b = ydem[lag:]
             count = a.size
             # A lag with no pairs is missing (NaN), not r = 0 (correlogram.js rule 4).
-            corrs.append(float((a * b).sum() / (count * yvar)) if count > 0 else float('nan'))
+            corrs.append(float((a * b).sum() / ((n if biased else count) * yvar))
+                         if count > 0 else float('nan'))
             lags.append(lag * dt)
             counts.append(int(count))
     else:
@@ -1447,11 +1535,12 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                         break
             # An empty slot is missing (NaN), not r = 0: the slotted estimator is a ratio over
             # the slot's pairs (Rehfeld et al. 2011, NPG 18:389, Eq. 10), undefined with none.
-            corrs.append(sum_ / (count * yvar) if count > 0 else float('nan'))
+            corrs.append(sum_ / ((n if biased else count) * yvar) if count > 0 else float('nan'))
             lags.append(target)
             counts.append(count)
     peak_lag, peak_r = find_autocorrelation_peak(lags, corrs)
     return {'lags': lags, 'correlations': corrs, 'counts': counts, 'n': int(n), 'dt': dt,
+            'normalization': 'biased' if biased else 'pairs',
             'peakLag': peak_lag, 'peakCorrelation': peak_r}
 
 
@@ -1508,7 +1597,9 @@ def correlogram_band(acf, method='bartlett', level=0.95, full=None, n_white=None
                          src.get('counts') or []):
         k = _js_round(lag / dt)
         if k >= 1 and math.isfinite(r) and c > 0:
-            r2[k] = ((r * c) / n) ** 2
+            # A 'biased' correlogram is N-normalised already.
+            r_n = r if src.get('normalization') == 'biased' else (r * c) / n
+            r2[k] = r_n ** 2
     k_of = [_js_round(lag / acf['dt']) for lag in lags]
     k_max = max([0] + k_of)
     cum = [0.0] * (k_max + 1)
@@ -1558,7 +1649,8 @@ def correlogram_series_acf(series, columns_index):
       interval of the valid times, as the Rhythmicity node's correlogram does (SPEC-10).
       The mean spacing it used before, (last - first) / (count - 1), is stretched by a
       recording gap (fixture correlogram-data-gap);
-    - maxLag / minLag are PER SERIES (the saved series' `maxLag`, `minLag`)."""
+    - maxLag / minLag are PER SERIES (the saved series' `maxLag`, `minLag`);
+    - `biased` true is the standard ACF (every lag over N; normalization 'biased')."""
     x_col = _resolve_plot_col(series.get('x'), columns_index)
     y_col = _resolve_plot_col(series.get('y'), columns_index)
     if x_col is None or y_col is None:
@@ -1569,7 +1661,9 @@ def correlogram_series_acf(series, columns_index):
     bw = x_col.eff_bin_width
     bin_size = float(bw) if bw else None
     return compute_autocorrelation(times, values, bin_size,
-                                   series.get('maxLag'), series.get('minLag') or 0)
+                                   series.get('maxLag'), series.get('minLag') or 0,
+                                   normalization='biased' if series.get('biased') is True
+                                   else 'pairs')
 
 
 # ----------------------------------------------------------------------
@@ -4184,6 +4278,11 @@ def tp_cosinor(args, cols, raw_data, _sv):
     any_valid = False
     curves = {}
     failed = []  # fitted but the fit failed: the app writes an empty curve for these
+    # Every curve is written on ONE x (Cosinor.svelte curveX): the output x when set, else the
+    # rows where x is valid, shared by every series (each curve used to be its fit at its own
+    # valid rows, so a y with gaps was shorter than the x output).
+    curve_x = (output_x_data if output_x_data is not None
+               else [_js_number(v) for v in t if not _js_invalid(v)])
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -4201,17 +4300,15 @@ def tp_cosinor(args, cols, raw_data, _sv):
             if fixed_res is None:
                 failed.append(y_id)
                 continue
-            xs = output_x_data if output_x_data is not None else tt
-            ys = (evaluate_cosinor_at_points({**fixed_res, 'period': fixed_period}, xs)
-                  if output_x_data is not None else fixed_res['fitted'])
+            xs = curve_x
+            ys = evaluate_cosinor_at_points({**fixed_res, 'period': fixed_period}, xs)
         else:
             free_res = fit_cosine_curves(tt, yy, n_curves, period_range)
             if free_res is None:
                 failed.append(y_id)
                 continue
-            xs = output_x_data if output_x_data is not None else tt
-            ys = (evaluate_cosinor_at_points(free_res['parameters'], xs)
-                  if output_x_data is not None else free_res['fitted'])
+            xs = curve_x
+            ys = evaluate_cosinor_at_points(free_res['parameters'], xs)
         metrics_by_y[y_id] = cosinor_metrics(fixed_res, free_res, args, phase_ref)
         # The optional permutation test (Cosinor.svelte permOptions: this node's own fit).
         # Run only when its port is written (wired, with the x output), since the refits
@@ -4240,7 +4337,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
 
     # writeCosinorOutputs writes nothing without the x output wired. The x is the FIRST
     # y result's by Object.keys order (the smallest column id, _js_first_key), not the first
-    # y wired; each y's curve is its own (its own valid x when no output x is set).
+    # y wired; every curve is on the one shared x (curve_x).
     if any_valid and _out_id(args, 'cosinorx') != -1:
         xs = curves[_js_first_key(curves)][0]
         x_out_ms = ([origin_ms + h * 3600000 for h in xs]
@@ -5539,7 +5636,12 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     t = _t_for_col(x_col)
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
-    first_xs = None
+    # Every curve is written on ONE x (DoubleLogistic.svelte curveX): the output x when set,
+    # else the rows where x is valid, shared by every series (each curve used to be its fit at
+    # its own valid rows, so a y with gaps was shorter than the x output). The fit still uses
+    # its own rows.
+    curve_x = (output_x_data if output_x_data is not None
+               else [_js_number(v) for v in t if not _js_invalid(v)])
     any_valid = False
     stats_by_y = {}
     perm_by_y = {}
@@ -5552,13 +5654,10 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
             continue
         tt = [_js_number(t[i]) for i in idx]
         yy = [_js_number(y[i]) for i in idx]
-        if first_xs is None:
-            first_xs = output_x_data if output_x_data is not None else tt
         res = fit_double_logistic(tt, yy, opts)
         if res is None:
             continue
-        ys = (evaluate_dl_at_points(res['parameters'], output_x_data, True)
-              if output_x_data is not None else res['fitted'])
+        ys = evaluate_dl_at_points(res['parameters'], curve_x, True)
         y_out = _out_id(args, f'dlogy_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'dlogy')
@@ -5584,8 +5683,8 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
                 label=f'Double logistic, column {y_id}')['pValue']
         any_valid = True
     if any_valid:
-        x_vals = ([origin_ms + h * 3600000 for h in first_xs] if origin_ms is not None
-                  else first_xs)
+        x_vals = ([origin_ms + h * 3600000 for h in curve_x] if origin_ms is not None
+                  else curve_x)
         _set_col(raw_data, cols, _out_id(args, 'dlogx'), x_vals,
                  type_='time' if origin_ms is not None else 'number')
     if any_valid:
@@ -6348,8 +6447,8 @@ def tp_widetolong(args, cols, raw_data, _sv):
 
 def tp_movinganalysis(args, cols, raw_data, _sv):
     """Port of MovingAnalysis.svelte movinganalysis over compute_moving_windows (the same
-    core as the moving_windows parity surface): windows from the minimum valid x, s += step
-    while s <= max - size; a skipped window is NaN in every stat; the x output (start, centre
+    core as the moving_windows parity surface): windows from the minimum valid x
+    (moving_window_starts: every complete window over the sampled span); a skipped window is NaN in every stat; the x output (start, centre
     or end) is written back from the minimum time for a time x; phases use the record start
     and the node's phase reference (FIT-9)."""
     x_in = args.get('xIN', -1)
@@ -6366,14 +6465,8 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
     valid_x = [_js_number(v) for v in t_all if not _js_invalid(v)]
     if len(valid_x) < 3:
         return False
-    x_min, x_max = min(valid_x), max(valid_x)
-    if x_max - x_min < win:
-        return False
-    starts = []
-    s_ = x_min
-    while s_ <= x_max - win + 1e-9:
-        starts.append(s_)
-        s_ += step
+    x_min = min(valid_x)
+    starts = moving_window_starts(valid_x, win, step)
     if not starts:
         return False
     label = args.get('binLabel') or 'center'
@@ -6481,6 +6574,12 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
     }
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
+    # Every curve is written on ONE x (RectangularWave.svelte curveX): the output x when set,
+    # else the rows where x is valid, shared by every series (each curve used to be its fit at
+    # its own valid rows, so a y with gaps was shorter than the x output). The fit still uses
+    # its own rows.
+    curve_x = (output_x_data if output_x_data is not None
+               else [_js_number(v) for v in t if not _js_invalid(v)])
     curves = {}
     any_valid = False
     stats_by_y = {}
@@ -6500,9 +6599,8 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         res = fit_rectangular_wave(tt, yy, opts)
         if res is None:
             continue
-        xs_out = output_x_data if output_x_data is not None else tt
-        ys = (evaluate_rectwave_at_points(res['parameters'], output_x_data)
-              if output_x_data is not None else res['fitted'])
+        xs_out = curve_x
+        ys = evaluate_rectwave_at_points(res['parameters'], curve_x)
         # preProcesses on the fitted curve only (RectangularWave.svelte).
         curves[y_id] = (xs_out, apply_output_pre_processes(ys, args, cols))
         # Residuals (RectangularWave.svelte): only with the x output wired; the model
@@ -6604,7 +6702,8 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
             ac = compute_autocorrelation(
                 t, y,
                 min_lag=float(args.get('corrMinLag', 0.0)),
-                max_lag=args.get('corrMaxLag') or None)
+                max_lag=args.get('corrMaxLag') or None,
+                normalization='biased' if args.get('corrBiased') else 'pairs')
             xs, ys = ac['lags'], ac['correlations']
             per_key = {'lag': xs, 'correlation': ys}
         else:
@@ -6762,8 +6861,10 @@ def _fit_residuals(evaluate, x_full, y_full):
 def tp_smootheddata(args, cols, raw_data, _sv):
     """Port of SmoothedData.svelte smootheddata. Per y: rows kept by the house rule on x and
     y (validPairs), converted with Number(), fewer than 3 -> skipped, then stably sorted by x.
-    The x output is the FIRST valid y's sorted x (a time input is written back as epoch ms
-    from the first time). Smoother options use the JS names and defaults; an unknown smoother
+    The x output is ONE grid shared by every series: the rows where x is valid, stably sorted
+    by x (a time input is written back as epoch ms from the first time); each smoothed curve
+    and its residual are placed on it, None on the rows its y is missing (it used to be the
+    first valid y's own sorted x, so a y with gaps wrote a curve shorter than smoothedx). Smoother options use the JS names and defaults; an unknown smoother
     type is the moving average, as in smoothArrays."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
@@ -6777,7 +6878,16 @@ def tp_smootheddata(args, cols, raw_data, _sv):
     options = {k: args.get(k) for k in (
         'whittakerLambda', 'whittakerOrder', 'savitzkyWindowSize', 'savitzkyPolyOrder',
         'loessBandwidth', 'movingAvgWindowSize', 'movingAvgType')}
-    x_out = []
+    # The shared grid (SmoothedData.svelte gridRows): row indices where x is valid, stably
+    # sorted by x.
+    grid_rows = [i for i, v in enumerate(x_data or []) if not _js_invalid(v)]
+    grid_rows.sort(key=lambda i: _js_number(x_data[i]))  # stable, like Array.prototype.sort
+    x_out = [_js_number(x_data[i]) for i in grid_rows]
+
+    def on_grid(row_ids, values):
+        at = dict(zip(row_ids, values))
+        return [at.get(r) for r in grid_rows]
+
     y_results, raw_by_y = {}, {}
     any_valid = False
     for y_id in y_ins:
@@ -6785,22 +6895,21 @@ def tp_smootheddata(args, cols, raw_data, _sv):
             continue
         y_data = cols[y_id].get_data()
         idx = _js_valid_pairs(x_data, y_data)
-        rows = [(_js_number(x_data[i]), _js_number(y_data[i])) for i in idx]
+        rows = [(_js_number(x_data[i]), _js_number(y_data[i]), i) for i in idx]
         if len(rows) < 3:
             continue
         rows.sort(key=lambda r: r[0])  # stable, like Array.prototype.sort
         xs = [r[0] for r in rows]
         ys = [r[1] for r in rows]
+        row_ids = [r[2] for r in rows]
         try:
             sy = _smooth_dispatch(xs, ys, smoother, options)
         except Exception:  # noqa: BLE001  JS: console.warn and skip this column
             continue
         if sy is None:
             continue
-        if not x_out:
-            x_out = xs
-        y_results[y_id] = list(sy)
-        raw_by_y[y_id] = ys
+        y_results[y_id] = on_grid(row_ids, list(sy))
+        raw_by_y[y_id] = on_grid(row_ids, ys)
         any_valid = True
     for pp in args.get('preProcesses') or []:
         name = (pp or {}).get('processName')
@@ -7031,10 +7140,10 @@ def _write_trend_metrics(args, cols, raw_data, y_ins, fits):
 
 
 def tp_trendfit(args, cols, raw_data, _sv):
-    """Port of TrendFit.svelte trendfit. Each y is fitted on its own valid (x, y) pairs; with
-    no output x its curve is its OWN fitted values (one per valid pair), and the x output is
-    the first fitted y's valid x, exactly as the app writes them (this port used to evaluate
-    every y at the first y's x). The curve then goes through the node's preProcesses. The x,
+    """Port of TrendFit.svelte trendfit. Each y is fitted on its own valid (x, y) pairs; every
+    curve is then evaluated on ONE x shared by all series (TrendFit.svelte curveX): the output
+    x when set, else the rows where x is valid (a curve at its own series' valid rows made a
+    y with gaps shorter than the x output, 2026-11-09). The curve then goes through the node's preProcesses. The x,
     the curves, the residuals and the metric ports are written only with the x output wired.
     A y outside its model's domain (fitDomain.js) is refused; when every y is refused the app
     CLEARS the outputs (x, curves and residuals empty, every metric NaN), which this port now
@@ -7051,6 +7160,8 @@ def tp_trendfit(args, cols, raw_data, _sv):
     # time) that turns it back into timestamps (fit_time_frame, STAT-19).
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
+    curve_x = (output_x_data if output_x_data is not None
+               else [_js_number(v) for v in t if not _js_invalid(v)])
     results = {}
     any_valid = False
     any_refused = False
@@ -7069,9 +7180,8 @@ def tp_trendfit(args, cols, raw_data, _sv):
         res = fit_trend(tt, yy, model, deg)
         if res is None:
             continue
-        x_out_data = output_x_data if output_x_data is not None else tt
-        y_out_data = (evaluate_trend_at_points(res['parameters'], model, output_x_data)
-                      if output_x_data is not None else list(res['fitted']))
+        x_out_data = curve_x
+        y_out_data = list(evaluate_trend_at_points(res['parameters'], model, curve_x))
         results[y_id] = {'fit': res, 'xOutData': x_out_data, 'yOutData': y_out_data,
                          'y': y}
         if res['fitted']:
@@ -8328,6 +8438,11 @@ def tp_fitfunction(args, cols, raw_data, _sv):
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(t_col, args, cols)
     phase_ref = node_phase_reference(args, t_col, node='Fit waveform model')
+    # Every curve is written on ONE x (FitFunction.svelte buildYResult curveX): the output x
+    # when set, else the rows where x is valid, shared by every series (each curve used to be
+    # its fit at its own valid rows, so a y with gaps was shorter than fitx).
+    curve_x = (output_x_data if output_x_data is not None
+               else [_js_number(v) for v in t if not _js_invalid(v)])
 
     y_results = {}     # JS result.y_results
     any_valid = False
@@ -8357,10 +8472,8 @@ def tp_fitfunction(args, cols, raw_data, _sv):
                                           label=f'Fit waveform model, column {y_id}')
             fit_result['permPValue'] = perm['pValue']
             fit_result['permutedStats'] = perm['permutedStats']
-        predicted = (_ff_evaluate_at_points(fit_result, model, output_x_data)
-                     if output_x_data is not None else None)
-        y_out_data = predicted if predicted is not None else fit_result['fitted']
-        x_out_data = output_x_data if output_x_data is not None else tt
+        y_out_data = _ff_evaluate_at_points(fit_result, model, curve_x)
+        x_out_data = curve_x
         y_results[y_id] = {'fitResult': fit_result, 'xOutData': x_out_data,
                            'yOutData': y_out_data, 't': tt, 'y': y}
         if not t_ref:
@@ -10870,28 +10983,10 @@ def category_label(v):
     return None if _is_missing_category(v) else _js_string(v)
 
 
-def _category_cmp(a, b):
-    """encodings.js compareCategories (the Boxplot's order): numerically when both labels
-    read as numbers, else alphabetically (localeCompare, approximated case-insensitively)."""
-    def num(x):
-        if '_' in str(x):
-            return None
-        try:
-            v = float(str(x).strip()) if str(x).strip() != '' else 0.0
-        except ValueError:
-            return None
-        return None if math.isnan(v) else v
-    na, nb = num(a), num(b)
-    if na is not None and nb is not None:
-        return (na > nb) - (na < nb)
-    ka, kb = (str(a).casefold(), str(a)), (str(b).casefold(), str(b))
-    return (ka > kb) - (ka < kb)
-
-
 def category_domain(label_arrays):
-    """encodings.js categoryDomain: {'categories' (the Boxplot's order), 'first_seen'} over
-    every array, plus the numeric domain's keys (NaN) so the rest of the code reads it."""
-    import functools
+    """encodings.js categoryDomain: {'categories' (the Boxplot's order: first appearance, or
+    numeric when every label is a number; order_categories), 'first_seen'} over every array,
+    plus the numeric domain's keys (NaN) so the rest of the code reads it."""
     seen, first = set(), []
     for arr in label_arrays or []:
         for v in arr or []:
@@ -10899,7 +10994,7 @@ def category_domain(label_arrays):
                 continue
             seen.add(v)
             first.append(v)
-    cats = sorted(first, key=functools.cmp_to_key(_category_cmp))
+    cats = order_categories(first)
     return {'lo': _NAN, 'hi': _NAN, 'cyclic': False, 'period': None, 'categories': cats,
             'first_seen': first}
 
@@ -13793,6 +13888,29 @@ def marker_padded_domain(lo, hi, pad_px, length_px, log=False):
     return widen(lo, hi)
 
 
+def nice_domain(lo, hi, count=5):
+    """axisDomain.js niceDomain: the range rounded outward from its span (d3 nice); a flat
+    range gets 5% of its magnitude either side first."""
+    if not (_finite(lo) and _finite(hi)):
+        return 0.0, 1.0
+    return padded_domain(lo, hi, pad=0.05 if lo == hi else 0, nice=count)
+
+
+def axis_default_label(cols):
+    """axisLabels.js defaultAxisLabel: the wired columns' display name when they are all one
+    column, else ''."""
+    only = None
+    for col in cols:
+        name = _display_name(col) if col is not None else ''
+        if not name:
+            continue
+        if only is None:
+            only = name
+        elif only != name:
+            return ''
+    return only or ''
+
+
 def nice_axis_limit(value, direction):
     """Boxplot.svelte niceAxisLimit: round out to the value's leading decade."""
     if not _finite(value) or value == 0:
@@ -15061,7 +15179,9 @@ def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, 
         'kind': x_kind, 'domain': xd, 'axis': x_axis,
         'zone': xctx.get('x_zone') or shown_zone(None),
         'time_format': p.get('xTickFormat') or '',
-        'tick_mode': 'time' if is_time else 'numeric'}}
+        'tick_mode': 'time' if is_time else 'numeric',
+        # An empty title is the wired column's name (axisLabels.js defaultAxisLabel).
+        'default_label': axis_default_label(x for _, x, _ in series)}}
     has_left = any((s.get('yAxis') or 'left') == 'left' for s, _, _ in series)
     has_right = any(s.get('yAxis') == 'right' for s, _, _ in series)
     ov_side = 'left' if has_left or not has_right else 'right'
@@ -15083,7 +15203,8 @@ def scatter_axis_specs(plot, columns_index, ax, xctx=None, overlay_extent=None, 
         axis_json = p.get('yAxisLeft' if side == 'left' else 'yAxisRight') or (
             {'gridlines': side == 'left'})
         specs[side] = {'kind': 'log' if log and dom[0] > 0 and dom[1] > 0 else 'linear',
-                       'domain': dom, 'axis': axis_json}
+                       'domain': dom, 'axis': axis_json,
+                       'default_label': axis_default_label(y for _, _, y in ss)}
     if 'left' not in specs:
         specs['left'] = {'kind': 'linear', 'domain': (0.0, 0.0),
                          'axis': p.get('yAxisLeft') or {}}
@@ -15730,18 +15851,37 @@ def _boxplot_series_frames(p, columns_index):
         x = list(x_col.get_data()) if x_col is not None else []
         has_x = len(x) > 0
         name = s.get('label') or f'Box plot {i + 1}'
-        out.append({'index': i, 'series': s, 'y_col': y_col,
+        out.append({'index': i, 'series': s, 'y_col': y_col, 'x_col': x_col,
                     'box': _with_defaults(s.get('boxPlot'), _BOX_DEFAULTS),
                     'x': x if has_x else [name] * len(y), 'y': y, 'has_x': has_x,
                     'name': name})
     return out
 
 
+def _number_like(v):
+    """categoryOrder.js isNumberLike: a finite number, or text that reads as one."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        return math.isfinite(v)
+    if not isinstance(v, str) or v.strip() == '':
+        return False
+    return math.isfinite(_js_number(v))
+
+
+def order_categories(first_seen):
+    """categoryOrder.js orderCategories: the order groups first appear in, unless every one
+    is a number (then numerically)."""
+    found = list(first_seen)
+    if len(found) > 1 and all(_number_like(c) for c in found):
+        return sorted(found, key=lambda c: _js_number(c))
+    return found
+
+
 def boxplot_categories(frames):
     """Boxplotclass.uniqueXValues: every category with a present value, over every series (a
-    series without categories contributes its name), as labels, numerically when both read
-    as numbers, else alphabetically."""
-    import functools
+    series without categories contributes its name), as labels, in the order they first
+    appear (numerically when every one is a number; categoryOrder.js)."""
     seen, found = set(), []
     for f in frames:
         added = False
@@ -15758,13 +15898,7 @@ def boxplot_categories(frames):
             if f['name'] not in seen:
                 seen.add(f['name'])
                 found.append(f['name'])
-
-    def cmp(a, b):
-        na, nb = _js_number(a), _js_number(b)
-        if not math.isnan(na) and not math.isnan(nb):
-            return (na > nb) - (na < nb)
-        return _category_cmp(a, b)
-    return sorted(found, key=functools.cmp_to_key(cmp))
+    return order_categories(found)
 
 
 def _boxplot_groups(frame):
@@ -15923,7 +16057,7 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
     else:
         xd = (xin[0] if xin[0] is not None else -0.5,
               xin[1] if xin[1] is not None else n_cats - 0.5)
-    # y: the data's range (with the overlays'), out to the leading decade, the top raised for
+    # y: the data's range (with the overlays'), rounded out from its span, the top raised for
     # the brackets, both ends kept clear of a whisker cap.
     lo, hi = math.inf, -math.inf
     for f in frames:
@@ -15936,15 +16070,17 @@ def boxplot_layout(plot, columns_index, plot_w, plot_h, overlay_extent=None):
     if lo == math.inf or hi == -math.inf:
         yd = (0.0, 10.0)
     else:
-        bot = yin[0] if yin[0] is not None else nice_axis_limit(lo, 'floor')
-        top = yin[1] if yin[1] is not None else nice_axis_limit(hi, 'ceil')
+        n_ticks = _nn((p.get('yAxis') or {}).get('nticks'), 5)
+        nice = nice_domain(lo, hi, n_ticks)
+        bot = yin[0] if yin[0] is not None else nice[0]
+        top = yin[1] if yin[1] is not None else nice[1]
         if opt['showSigBars'] and yin[1] is None and levels:
             n_levels = max(e['level'] for e in levels) + 1
             base = data_max if math.isfinite(data_max) else hi
             step = (top - bot) * 0.1 * opt['sigBarSpacing']
             needed = base + step * (n_levels + 1)
             if needed > top:
-                top = nice_axis_limit(needed, 'ceil')
+                top = nice_domain(bot, needed, n_ticks)[1]
         yd = clear_ends(bot, top, lo, hi, 4, plot_h, auto_lo=yin[0] is None,
                         auto_hi=yin[1] is None)
 
@@ -16232,15 +16368,18 @@ def plot_boxplot(plot, columns_index, ax):
     x_axis = p.get('xAxis') or {}
     cats = lay['categories']
     n = len(cats)
+    # An empty title is the wired column's name (axisLabels.js defaultAxisLabel).
+    frames = _boxplot_series_frames(p, columns_index)
     specs = {
         # One tick per category at its index (its centre), labelled with it; enabled x
         # gridlines at each category's centre (getXAxisForManualCategories).
         'bottom': {'kind': 'category', 'domain': xd,
                    'axis': {**x_axis, 'gridlines': x_axis.get('gridlines') is True},
                    'ticks': list(range(n)),
-                   'format': lambda v: cats[int(v)] if 0 <= int(v) < n else ''},
+                   'format': lambda v: cats[int(v)] if 0 <= int(v) < n else '',
+                   'default_label': axis_default_label(f['x_col'] for f in frames)},
         'left': {'kind': 'linear', 'domain': yd, 'axis': y_axis,
-                 'label': y_axis.get('label') or ''},
+                 'label': y_axis.get('label') or axis_default_label(f['y_col'] for f in frames)},
     }
     _draw_app_axes(ax, None, specs, look)
     lay['legend_artist'] = None
@@ -16805,6 +16944,27 @@ def _legend_item_handle(item):
                   markeredgecolor='none')
 
 
+def with_series_colours(plot, field='colour'):
+    """The plot with each series' own colour as the app draws it (plots/autoSeriesColour.js):
+    a saved pick, else the colour the app resolved and exported (seriesColours: the column's
+    appearance-map colour), else the palette entry of the series' place. Since 82.68 an
+    automatic colour is saved as null (Actogram, CircularPhase, QQPlot `colour`, Histogram
+    `fillColour`)."""
+    p = plot.get('plot', {}) or {}
+    data = p.get('data') or []
+    out = []
+    for i, s in enumerate(data):
+        if not isinstance(s, dict):
+            out.append(s)
+            continue
+        got = s.get(field) or (s.get('color') if field == 'colour' else None)
+        if not (isinstance(got, str) and got):
+            got = _resolved_series_colours(plot, i).get(field) or \
+                APP_PALETTE[i % len(APP_PALETTE)]
+        out.append({**s, field: got})
+    return {**plot, 'plot': {**p, 'data': out}}
+
+
 def plot_actogram(plot, columns_index, ax, zone=None):
     """Double-plotted actogram drawn from the SAME rows as the plot-data CSV
     (actogram_download_data), so the PNG folds where the app does: every series at the
@@ -16830,6 +16990,7 @@ def plot_actogram(plot, columns_index, ax, zone=None):
     from matplotlib.patches import Rectangle
     from matplotlib.collections import PatchCollection
     from matplotlib.lines import Line2D
+    plot = with_series_colours(plot)  # an automatic (null) colour, as the app draws it
     p = plot.get('plot', {})
     look = plot_look(plot)
     zone = actogram_clock(plot, columns_index)[0]['zone'] if zone is None else zone
@@ -17352,15 +17513,38 @@ def cwt_period_to_y(period, periods, h, log_scale):
     return h - (period - lo) / (hi - lo) * h
 
 
-def cwt_period_ticks(periods):
-    """CWT.svelte periodTicks: the readable periods inside the range, else the ends and
+_CWT_END_TICK_GAP = 0.08
+
+
+def cwt_period_ticks(periods, log_scale=True):
+    """CWT.svelte periodTicks: the readable periods inside the range, plus an end of the range
+    when the nearest readable period is at least 8% of the axis from it; else the ends and
     their geometric mean."""
     if len(periods) < 2:
         return []
     lo, hi = periods[0], periods[-1]
     inside = [c for c in (0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 36, 48, 72, 96, 168, 336)
               if lo <= c <= hi]
-    return inside if len(inside) >= 2 else [lo, math.sqrt(lo * hi), hi]
+    if len(inside) < 2:
+        return [lo, math.sqrt(lo * hi), hi]
+
+    def at(v):
+        if log_scale:
+            return (math.log(v) - math.log(lo)) / (math.log(hi) - math.log(lo))
+        return (v - lo) / (hi - lo)
+    out = list(inside)
+    if at(inside[0]) - at(lo) >= _CWT_END_TICK_GAP:
+        out.insert(0, lo)
+    if at(hi) - at(inside[-1]) >= _CWT_END_TICK_GAP:
+        out.append(hi)
+    return out
+
+
+def cwt_period_label(v):
+    """CWT.svelte fmtPeriod: a whole number as it is, else 3 significant figures."""
+    if float(v).is_integer():
+        return _js_number_to_string(float(v))
+    return _js_number_to_string(float(_js_to_precision_signed(v, 3)))
 
 
 def _js_to_fixed(v, digits):
@@ -17386,6 +17570,39 @@ def cwt_transform_of_plot(plot, columns_index):
                            param=_nn(p.get('waveletParam'), 6), dj=_nn(p.get('dj'), 0.125),
                            period_range=[_nn(p.get('periodMin'), 1), _nn(p.get('periodMax'), 48)],
                            rectify=_nn(p.get('rectify'), True))
+
+
+def _cwt_column_origin(x_col):
+    """cwtTimeAxis.js columnOrigin: the column's own value at hours-since-start 0 (epoch ms
+    for a time column, hours otherwise), or None with no paired finite value."""
+    if x_col is None:
+        return None
+    hss = list(x_col.hours_since_start or [])
+    raw = list(x_col.get_data() or [])
+    for h, v in zip(hss, raw):
+        if h is None or v is None or v == '':
+            continue
+        hn, vn = _js_number(h), _js_number(v)
+        if not (math.isfinite(hn) and math.isfinite(vn)):
+            continue
+        return vn - hn * _MS_PER_HOUR if x_col.type == 'time' else vn - hn
+    return None
+
+
+def cwt_time_axis(t0, t1, width, x_col):
+    """cwtTimeAxis.js cwtTimeAxis: the time axis in the column's own time. A time column gets
+    clock ticks in the zone it is shown in; a numeric one the five evenly spaced ticks with its
+    own first value added. Returns (title, [(x_px, label)])."""
+    origin = _cwt_column_origin(x_col)
+    if x_col is not None and x_col.type == 'time' and origin is not None:
+        lo, hi = origin + t0 * _MS_PER_HOUR, origin + t1 * _MS_PER_HOUR
+        zone = shown_zone(x_col)
+        ticks = zone_aligned_ticks(lo, hi, 5, zone)
+        return 'Time', [((ms - lo) / ((hi - lo) or 1) * width, time_tick_label(ms, zone))
+                        for ms in ticks]
+    off = origin if origin is not None else 0
+    return 'Time (h)', [(f * width, _js_to_fixed(off + t0 + f * (t1 - t0), 0))
+                        for f in (0, 0.25, 0.5, 0.75, 1)]
 
 
 _CWT_GREY_25 = '#333333'   # --color-lightness-25
@@ -17498,24 +17715,26 @@ def plot_cwt(plot, columns_index, ax):
     ax.add_patch(Rectangle((0, 0), W, H, facecolor='none', edgecolor=_CWT_GREY_75,
                            linewidth=_PX_TO_PT, zorder=1.3, clip_on=False, gid='cwt-frame'))
     fs = 1.0  # a figure is drawn at its own size (viewFontScale 1)
-    for per in cwt_period_ticks(periods):
+    for per in cwt_period_ticks(periods, log_scale):
         y = ypx(per)
         ax.add_line(Line2D([-4, 0], [y, y], color=_CWT_GREY_50, linewidth=_PX_TO_PT,
                            clip_on=False, zorder=1.3, gid='cwt-period-tick'))
-        ax.text(-(4 + 3 * fs), y, _js_to_fixed(per, 0) if per >= 10 else _js_to_fixed(per, 1),
+        ax.text(-(4 + 3 * fs), y, cwt_period_label(per),
                 ha='right', va='center', fontsize=10 * fs * _PX_TO_PT, color=_CWT_GREY_25,
                 fontfamily=family, clip_on=False, gid='cwt-period-label')
     ax.text(-(4 + 42 * fs), H / 2, 'Period (h)', rotation=90, rotation_mode='anchor',
             ha='center', va='baseline', fontsize=11 * fs * _PX_TO_PT, color=_CWT_GREY_25,
             fontfamily=family, clip_on=False, gid='cwt-period-title')
-    for f in (0, 0.25, 0.5, 0.75, 1):
-        x = f * W
+    data0 = (p.get('data') or [None])[0] or {}
+    x_col = _resolve_plot_col(data0.get('x') or data0.get('time'), columns_index)
+    time_title, time_ticks = cwt_time_axis(t0, t1, W, x_col)
+    for x, label in time_ticks:
         ax.add_line(Line2D([x, x], [H, H + 4], color=_CWT_GREY_50, linewidth=_PX_TO_PT,
                            clip_on=False, zorder=1.3, gid='cwt-time-tick'))
-        ax.text(x, H + 4 + 12 * fs, _js_to_fixed(t0 + f * (t1 - t0), 0), ha='center',
+        ax.text(x, H + 4 + 12 * fs, label, ha='center',
                 va='baseline', fontsize=10 * fs * _PX_TO_PT, color=_CWT_GREY_25,
                 fontfamily=family, clip_on=False, gid='cwt-time-label')
-    ax.text(W / 2, H + 4 + 30 * fs, 'Time', ha='center', va='baseline',
+    ax.text(W / 2, H + 4 + 30 * fs, time_title, ha='center', va='baseline',
             fontsize=11 * fs * _PX_TO_PT, color=_CWT_GREY_25, fontfamily=family, clip_on=False,
             gid='cwt-time-title')
     for ov, g, gid in lines_later:
@@ -18123,10 +18342,29 @@ def actogram_download_data(plot, columns_index, zone=None):
 CWT_EXPORT_MAX_ROWS = 250000
 
 
+def _js_iso_string(ms):
+    """new Date(ms).toISOString(): UTC, millisecond precision, the ms truncated toward 0."""
+    from datetime import datetime, timedelta, timezone
+    d = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(milliseconds=math.trunc(ms))
+    return d.strftime('%Y-%m-%dT%H:%M:%S.') + f'{d.microsecond // 1000:03d}Z'
+
+
+def cwt_export_time_of(x_col):
+    """cwtTimeAxis.js exportTimeOf: an hours-since-start offset in the record's own time (an
+    ISO instant for a time column, the column's own hours otherwise)."""
+    origin = _cwt_column_origin(x_col)
+    if origin is None:
+        return lambda h: h
+    if x_col.type == 'time':
+        return lambda h: _js_iso_string(origin + h * _MS_PER_HOUR)
+    return lambda h: origin + h
+
+
 def cwt_download_data(plot, columns_index):
     """CWT.svelte scalogramExport: the scalogram as a long table (time, period, power), one
     row per cell, periods outer; past CWT_EXPORT_MAX_ROWS cells the time axis is binned
-    (power averaged, each row's time its bin's mean time) to the most time points that fit."""
+    (power averaged, each row's time its bin's mean time) to the most time points that fit.
+    Times are the record's own (cwt_export_time_of), as the axis shows them."""
     headers = ['time', 'period', 'power']
     tr = cwt_transform_of_plot(plot, columns_index)
     if not tr['valid']:
@@ -18138,10 +18376,13 @@ def cwt_download_data(plot, columns_index):
     if n_t > max_cols:
         times = downsample_columns([times], max_cols)[0]
         power = downsample_columns(power, max_cols)
+    p = plot.get('plot', {}) or {}
+    d0 = (p.get('data') or [None])[0] or {}
+    to_time = cwt_export_time_of(_resolve_plot_col(d0.get('x') or d0.get('time'), columns_index))
     rows = []
     for j in range(n_p):
         for i in range(len(times)):
-            rows.append([float(times[i]), tr['periods'][j], float(power[j][i])])
+            rows.append([to_time(float(times[i])), tr['periods'][j], float(power[j][i])])
     return headers, rows
 
 
@@ -19171,7 +19412,8 @@ def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
         mn = args.get('corrMinLag')
         mx = args.get('corrMaxLag')
         r = compute_autocorrelation(tt, yy, None, mx if (_finite(mx) and mx > 0) else None,
-                                    mn if (_finite(mn) and mn > 0) else 0)
+                                    mn if (_finite(mn) and mn > 0) else 0,
+                                    normalization='biased' if args.get('corrBiased') else 'pairs')
         if not r['lags']:
             return st
         lag, cr = find_autocorrelation_peak(r['lags'], r['correlations'])
@@ -19253,6 +19495,32 @@ def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
     return st
 
 
+def moving_window_starts(valid_x, window_size, step_size):
+    """movinganalysis.js movingWindowStarts: x_min + i * step while the window fits inside the
+    sampled span (last sample + one sampling_step), with half a step of slack (rounded stored
+    times); never a
+    partial window."""
+    if not (window_size > 0) or not (step_size > 0):
+        return []
+    xs = [v for v in valid_x if math.isfinite(v)]
+    if not xs:
+        return []
+    x_min, x_max = min(xs), max(xs)
+    dt = sampling_step(xs)
+    step = dt if dt > 0 else 0.0
+    span_end = x_max + step
+    tol = 0.5 * step + 1e-9 * max(1.0, abs(span_end))
+    starts = []
+    i = 0
+    while True:
+        s_ = x_min + i * step_size
+        if s_ + window_size > span_end + tol:
+            break
+        starts.append(s_)
+        i += 1
+    return starts
+
+
 def compute_moving_windows(t_all, ys, starts, window_size, stat_keys, args, phase=None):
     """movinganalysis.js computeMovingWindows: per y, per window [start, start + size), the
     rows with a valid x and y (house rule, Number()); fewer than 3, a trend outside its
@@ -19307,12 +19575,8 @@ def moving_windows(times, values, opts):
     tt = [_NAN if _js_invalid(v) else _js_number(v) for v in times]
     yv = [_NAN if _js_invalid(v) else _js_number(v) for v in values]
     valid = [v for v in tt if math.isfinite(v)]
-    lo, hi = min(valid), max(valid)
-    starts = []
-    s_ = lo
-    while s_ <= hi - window + 1e-9:
-        starts.append(s_)
-        s_ += step
+    lo = min(valid)
+    starts = moving_window_starts(valid, window, step)
     keys = moving_stat_keys(opts)
     off = opts.get('clockOffsetHours')
     phase = {'recordStart': lo,

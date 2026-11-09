@@ -1,4 +1,5 @@
 <script module>
+	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
@@ -621,6 +622,14 @@
 		xAxis = $state();
 		yAxisLeft = $state();
 		yAxisRight = $state();
+		// The titles drawn while an axis label is empty: its wired column's name (plots/axisLabels.js).
+		defaultXLabel = $derived(defaultAxisLabel(this.data.map((d) => d.x)));
+		defaultYLeftLabel = $derived(
+			defaultAxisLabel(this.data.filter((d) => d.yAxis !== 'right').map((d) => d.y))
+		);
+		defaultYRightLabel = $derived(
+			defaultAxisLabel(this.data.filter((d) => d.yAxis === 'right').map((d) => d.y))
+		);
 
 		YScaleLeft = $derived.by(() => {
 			if (this.yLogScaleLeft && this.ylimsLeft[0] > 0 && this.ylimsLeft[1] > 0) {
@@ -1310,7 +1319,12 @@
 		{#if theData.hasLeftAxisData}
 			<div class="div-line"></div>
 
-			<Axis axisData={theData.yAxisLeft} which="controls" title="Left Y-axis">
+			<Axis
+				axisData={theData.yAxisLeft}
+				which="controls"
+				title="Left Y-axis"
+				defaultLabel={theData.defaultYLeftLabel}
+			>
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits
@@ -1360,7 +1374,12 @@
 		{#if theData.hasRightAxisData}
 			<div class="div-line"></div>
 
-			<Axis axisData={theData.yAxisRight} which="controls" title="Right Y-axis">
+			<Axis
+				axisData={theData.yAxisRight}
+				which="controls"
+				title="Right Y-axis"
+				defaultLabel={theData.defaultYRightLabel}
+			>
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits
@@ -1409,7 +1428,13 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.xAxis} which="controls" title="X-axis" tickMode={theData.xTickMode}>
+		<Axis
+			axisData={theData.xAxis}
+			which="controls"
+			title="X-axis"
+			tickMode={theData.xTickMode}
+			defaultLabel={theData.defaultXLabel}
+		>
 			<div class="control-input-horizontal">
 				{#if theData.anyXdataTime}
 					<div class="control-input">
@@ -1595,6 +1620,7 @@
 				position="left"
 				plotPadding={theData.plot.padding}
 				axisData={theData.plot.yAxisLeft}
+				defaultLabel={theData.plot.defaultYLeftLabel}
 				which="plot"
 			/>
 		{/if}
@@ -1609,6 +1635,7 @@
 				position="right"
 				plotPadding={theData.plot.padding}
 				axisData={theData.plot.yAxisRight}
+				defaultLabel={theData.plot.defaultYRightLabel}
 				which="plot"
 			/>
 		{/if}
@@ -1622,6 +1649,7 @@
 			position="bottom"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.xAxis}
+			defaultLabel={theData.plot.defaultXLabel}
 			tickMode={theData.plot.xTickMode}
 			tickFormat={theData.plot.anyXCategoryData
 				? (/** @type {any} */ d) => String(d)

@@ -60,9 +60,15 @@ import { sequenceLimitWarning } from '$lib/tableProcesses/SequenceColumn.svelte'
 import { joinTooLargeWarning, joinZoneNotes } from '$lib/utils/joinData.js';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
-import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
+import {
+	getStatKeys,
+	computeMovingWindows,
+	movingWindowStarts
+} from '$lib/utils/movinganalysis.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
-import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+import { runPeriodogramCalculation, binOrigin } from '$lib/utils/periodogram.js';
+import { validPairs } from '$lib/utils/validPairs.js';
+import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
 import { createSeededRNG, permutationTest } from '$lib/utils/permutationTest.js';
 import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
@@ -279,8 +285,9 @@ const PURE_UTIL_FNS = {
 	// agree exactly — including on grids where most bins are empty, which is the
 	// regime whose occupancy-weighted empty-bin handling (effective df =
 	// occupied columns - 1) the pure-chisq-periodogram-emptybins fixture pins.
-	// With several points per bin the pipelines still differ (grand mean over
-	// bin means vs raw points); that regime stays unpinned. These fixtures exist
+	// Several points per bin (bin > dt) is pinned too, by
+	// pure-chisq-periodogram-offset-start: the ports now bin with binData from
+	// binOrigin as the app does. These fixtures exist
 	// because the drawn threshold was wrong in all three languages, differently,
 	// and then the statistic itself was ~2.5-10x inflated on empty-bin grids,
 	// and nothing compared either.
@@ -296,6 +303,19 @@ const PURE_UTIL_FNS = {
 			chiSquaredAlpha: opts.alpha ?? 0.05
 		});
 		return { period: r.x, power: r.y, df: r.df, threshold: r.threshold, pvalue: r.pvalue };
+	},
+	// The bins a binned periodogram (Chi-squared, Enright) folds: the valid pairs binned at
+	// binSize from binOrigin, as runPeriodogramCalculation does. `origin` is the first bin's
+	// start, `bins` every bin start, `means` the bin means (NaN when empty), `counts` the
+	// samples in each bin. Pins the bin origin itself, not only the spectrum it feeds.
+	periodogramBins: (t, y, opts) => {
+		const { tt, yy } = validPairs(t, y);
+		const xs = tt.map(Number);
+		const ys = yy.map(Number);
+		const origin = binOrigin(xs, opts.binSize);
+		const means = binData(xs, ys, opts.binSize, origin, null, 'mean');
+		const counts = binData(xs, ys, opts.binSize, origin, null, 'count');
+		return { origin: [origin], bins: means.bins, means: means.y_out, counts: counts.y_out };
 	},
 	// Lomb-Scargle through runPeriodogramCalculation (valid pairs, flat-data rule).
 	lombScarglePeriodogram: (t, y, opts) => {
@@ -350,9 +370,7 @@ function movingWindowsAdapter(t, y, opts) {
 	const tt = t.map(coerce);
 	const validT = tt.filter(Number.isFinite);
 	const lo = Math.min(...validT);
-	const hi = Math.max(...validT);
-	const starts = [];
-	for (let s = lo; s <= hi - windowSize + 1e-9; s += step) starts.push(s);
+	const starts = movingWindowStarts(validT, windowSize, step);
 
 	const statKeys = getStatKeys(opts);
 	const per = computeMovingWindows({

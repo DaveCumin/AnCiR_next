@@ -140,8 +140,14 @@ export default defineConfig({
 		maxWorkers: Math.max(1, Math.floor(availableParallelism() / 2)),
 		setupFiles: ['./src/test/setup.js'],
 		// scripts/ is included so the build tooling (e.g. the Python-export sidecar
-		// generator) is covered by the same suite as the app.
-		include: ['src/**/*.{test,spec}.{js,svelte}', 'scripts/**/*.{test,spec}.{js,mjs}'],
+		// generator) is covered by the same suite as the app. The MCP engine's registry-wide
+		// guard tests (mcp/test/guard.*.test.js) run here too, so the release gate runs them;
+		// the rest of mcp/test runs in the mcp workspace's own suite (`cd mcp && npm test`).
+		include: [
+			'src/**/*.{test,spec}.{js,svelte}',
+			'scripts/**/*.{test,spec}.{js,mjs}',
+			'mcp/test/guard.*.test.js'
+		],
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],

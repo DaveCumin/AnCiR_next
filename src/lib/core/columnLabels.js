@@ -67,7 +67,10 @@ export function displayNameById(id, fallback = '', namer) {
  * @returns {string[]} one label per id
  */
 export function bakeInputLabels(args, ids) {
-	const labels = ids.map((id) => displayNameById(id, String(id)));
+	// One namer for every id: a namer indexes every column owner in the session, so one per
+	// id made a node with n inputs cost O(n^2).
+	const namer = createColumnNamer(core);
+	const labels = ids.map((id) => displayNameById(id, String(id), namer));
 	const baked = Object.fromEntries(ids.map((id, i) => [String(id), labels[i]]));
 	if (JSON.stringify(args._inputLabels ?? null) !== JSON.stringify(baked)) {
 		args._inputLabels = baked;

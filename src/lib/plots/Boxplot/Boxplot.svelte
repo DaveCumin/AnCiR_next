@@ -1,4 +1,5 @@
 <script module>
+	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import {
 		viewFontScale,
@@ -35,7 +36,8 @@
 	} from '$lib/tableProcesses/GroupComparison.svelte';
 	import { resolveCssVar } from '$lib/plots/exportStyle.js';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
-	import { clearEnds } from '$lib/plots/axisDomain.js';
+	import { clearEnds, niceDomain } from '$lib/plots/axisDomain.js';
+	import { orderCategories, numericGroupsWarning } from '$lib/plots/categoryOrder.js';
 	import {
 		SIG_METHODS,
 		SIG_METHOD_VALUES,
@@ -540,13 +542,16 @@
 					}
 				}
 			});
-			return Array.from(allXValues).sort((a, b) => {
-				// Safe sort for numbers or strings
-				const sa = String(a);
-				const sb = String(b);
-				if (!isNaN(+sa) && !isNaN(+sb)) return +sa - +sb;
-				return sa.localeCompare(sb);
-			});
+			// First appearance for text groups, numeric order when every group is a number.
+			return orderCategories(allXValues);
+		});
+
+		// A numeric x with many distinct values: each number became its own box, which is
+		// almost never meant (a time or measurement column wired as the groups).
+		categoryWarnings = $derived.by(() => {
+			const xCol = this.data.find((d) => (d.x?.getData()?.length ?? 0) > 0)?.x;
+			const w = numericGroupsWarning(this.uniqueXValues, xCol?.displayName ?? '');
+			return w ? [w] : [];
 		});
 
 		sigTableResult = $derived.by(() => {
@@ -645,8 +650,11 @@
 				return [0, 10];
 			}
 
-			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : niceAxisLimit(ymin, 'floor');
-			let yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : niceAxisLimit(ymax, 'ceil');
+			// Round from the data's span (niceDomain), not each end to its own decade: 22.5 .. 23.3
+			// used to become 20 .. 30.
+			const nice = niceDomain(ymin, ymax, this.yAxis?.nticks ?? 5);
+			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : nice[0];
+			let yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : nice[1];
 
 			// Extend top to accommodate sig bar brackets when auto-scaling
 			if (this.showSigBars && this.ylimsIN[1] == null) {
@@ -658,7 +666,7 @@
 					const base = Number.isFinite(dataMax) ? dataMax : ymax;
 					const levelStep = dataRange * 0.1 * this.sigBarSpacing;
 					const topNeeded = base + levelStep * (numLevels + 1);
-					if (topNeeded > yTop) yTop = niceAxisLimit(topNeeded, 'ceil');
+					if (topNeeded > yTop) yTop = niceDomain(yBot, topNeeded, this.yAxis?.nticks ?? 5)[1];
 				}
 			}
 
@@ -683,6 +691,9 @@
 		});
 
 		xAxis = $state();
+		// The titles drawn while an axis label is empty: the wired column's name (plots/axisLabels.js).
+		defaultXLabel = $derived(defaultAxisLabel(this.data.map((d) => d.x)));
+		defaultYLabel = $derived(defaultAxisLabel(this.data.map((d) => d.y)));
 		yAxis = $state();
 		sigBarPreviewStart = $state(1);
 
@@ -1232,7 +1243,12 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
+		<Axis
+			axisData={theData.yAxis}
+			which="controls"
+			title="Y-axis"
+			defaultLabel={theData.defaultYLabel}
+		>
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
@@ -1274,7 +1290,7 @@
 			</div>
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
-					<AxisLabelInput axisData={theData.xAxis} />
+					<AxisLabelInput axisData={theData.xAxis} placeholder={theData.defaultXLabel} />
 				</ControlInput>
 				<!-- The same Grid switch as every other axis (Axis.svelte): one vertical line at
 				     each category's centre. -->
@@ -1539,6 +1555,13 @@
 								</button>
 							{/if}
 						</div>
+						{#if i === 0 && theData.categoryWarnings.length > 0}
+							<div class="data-warning">
+								{#each theData.categoryWarnings as warning, wi (wi)}
+									<p>⚠ {warning}</p>
+								{/each}
+							</div>
+						{/if}
 						<div class="y-select">
 							<ControlInput label="y (values)"></ControlInput>
 							<Column col={datum.y} canChange={true} />
@@ -1585,6 +1608,7 @@
 			position="left"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.yAxis}
+			defaultLabel={theData.plot.defaultYLabel}
 			which="plot"
 		/>
 
@@ -1598,6 +1622,7 @@
 			plotPadding={theData.plot.padding}
 			axisData={getXAxisForManualCategories(theData.plot.xAxis, theData.plot.uniqueXValues)}
 			tickFormat={(d) => formatCategoryTick(d, theData.plot.uniqueXValues)}
+			defaultLabel={theData.plot.defaultXLabel}
 			which="plot"
 		/>
 

@@ -12,12 +12,17 @@
 // "page per session" browser-rendering design).
 
 import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelte.js';
-import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
-import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { Plot } from '$lib/core/Plot.svelte';
+import { Column, getColumnById, removeColumn, resetColumnIdCounter } from '$lib/core/Column.svelte';
+import { TableProcess, resetTableProcessIdCounter } from '$lib/core/TableProcess.svelte';
+import { Plot, resetPlotIdCounter } from '$lib/core/Plot.svelte';
+import { resetProcessIdCounters } from '$lib/core/Process.svelte';
+import { resetOverlayIdCounter } from '$lib/components/plotbits/Overlay.svelte';
 import { seriesChannelRefs } from '$lib/core/seriesChannelRefs.js';
 import { evaluateCosinor } from '$lib/tableProcesses/Cosinor.svelte';
-import { getOutputKeys as rhythmicityOutputKeys } from '$lib/tableProcesses/RhythmicityAnalysis.svelte';
+import {
+	getOutputKeys as rhythmicityOutputKeys,
+	getStatKeys as rhythmicityStatKeys
+} from '$lib/tableProcesses/RhythmicityAnalysis.svelte';
 import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysis.svelte';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
@@ -36,9 +41,12 @@ import {
 	plotInputIds,
 	mapPlotInputIds,
 	plotSeriesDataIns,
-	assertSeriesKept
+	assertSeriesKept,
+	plotInputAliases
 } from './plotInputs.js';
 import { manifestPortDescription, PLOT_PORT_DESCRIPTIONS } from '$lib/core/portDescriptions.js';
+import { loadSelectOptions, assertSelectOptions } from './paramOptions.js';
+import { plotWarnings } from '../render/payloadColumn.js';
 import {
 	normalizeOverlaySpecs,
 	applyOverlays,
@@ -107,7 +115,12 @@ function synthesizeDynamicOut(name, args) {
 	switch (name) {
 		case 'RhythmicityAnalysis': {
 			const ks = rhythmicityOutputKeys(args); // periodogram→[period,power], fft→…, etc.
-			return seedKeys(yIdsOf(args).flatMap((y) => ks.map((k) => `${y}_${k}`)));
+			const ys = yIdsOf(args);
+			// The scalar-metric ports the node adds in standalone mode (syncOutputColumns): one
+			// `stat_<key>` column per stat of the analysis (peak period/power/p, peak lag and
+			// correlation, …), one value per y in yIN order. Only when a y is wired, as the node.
+			const stats = ys.length ? rhythmicityStatKeys(args).map((k) => `stat_${k}`) : [];
+			return seedKeys([...ys.flatMap((y) => ks.map((k) => `${y}_${k}`)), ...stats]);
 		}
 		case 'MovingAnalysis': {
 			const ks = movingStatKeys(args); // [peak_period, peak_power] | fft/corr variants
@@ -148,6 +161,28 @@ function synthesizeDynamicOut(name, args) {
 	}
 }
 
+/**
+ * The per-y output keys of a node's extra per-y families: every many-port its nodeSpec declares
+ * with a `dynamicPrefix` that is not a metric and not the constructor's own `yOutKeyPrefix`
+ * family, on a node that has per-y outputs at all (`yOutKeyPrefix`), one `<prefix><yId>` per
+ * wired y. Nodes whose keys synthesizeDynamicOut builds (a dual-mode node's collected family)
+ * are left to it.
+ */
+function perYFamilyKeys(entry, args) {
+	const yPrefix = entry.yOutKeyPrefix;
+	if (!yPrefix || DYNAMIC_OUT_NODES.has(entry.definition?.nodeSpec?.id)) return [];
+	const prefixes = (entry.definition?.nodeSpec?.outputs ?? [])
+		.filter((o) => o.cardinality === 'many' && o.dynamicPrefix && !o.metric)
+		.map((o) => o.dynamicPrefix)
+		.filter((pre) => pre !== yPrefix);
+	return yIdsOf(args).flatMap((y) => prefixes.map((pre) => `${pre}${y}`));
+}
+// Nodes whose dynamic keys come from synthesizeDynamicOut (by nodeSpec id).
+const DYNAMIC_OUT_NODES = new Set([
+	'tableprocess.rhythmicityanalysis',
+	'tableprocess.movinganalysis'
+]);
+
 // The node registry (every table-process `definition`, every column process, every
 // plot) is loaded once per process and cached on `appConsts`, mirroring the GUI's
 // startup in routes/+page.svelte. Lazy so that tools which don't need it (e.g.
@@ -158,6 +193,8 @@ export async function ensureRegistry() {
 	appConsts.tableProcessMap = await loadTableProcesses();
 	appConsts.processMap = await loadProcesses();
 	appConsts.plotMap = await loadPlots();
+	// The legal values of every select param, read from the nodes' markup (paramOptions.js).
+	await loadSelectOptions();
 	registryLoaded = true;
 }
 
@@ -269,6 +306,8 @@ export function describeCapabilities() {
 						.map((k) => [k, manifestPortDescription('plot', id, k, 'out')])
 				)
 			},
+			// The other pair of names a two-input plot takes ({time, values} on a cwt).
+			inputAliases: plotInputAliases(entry.defaultInputs ?? []),
 			status: 'available — add_plot (session); render_plot for PNG/SVG',
 			// Reference lines / shaded bands (add_plot / render_plot `overlays`): the forms the
 			// class declares in `overlayCapabilities`, so a plot that gains them is advertised
@@ -392,6 +431,14 @@ function resetCore() {
 	// Mirror the slices the GUI's importJson resets. NB: the `Table` class /
 	// `core.tables` was removed in the 2026-06 migration — columns are now a flat
 	// list in core.data and table processes are free-standing in core.tableProcesses.
+	// The id counters restart too (the store is empty, so no id is held): a fresh session's
+	// ids, and the output names built from them (`mesor_<tableProcessId>`), then depend only
+	// on what this session does, not on the sessions built earlier in the same process.
+	resetColumnIdCounter();
+	resetTableProcessIdCounter();
+	resetPlotIdCounter();
+	resetProcessIdCounters();
+	resetOverlayIdCounter();
 	core.rawData.clear();
 	core.data.length = 0;
 	core.plots.length = 0;
@@ -449,6 +496,28 @@ export function validateColumnValues(name, type, values) {
 			);
 		}
 	}
+}
+
+/**
+ * The reasons an invalid result gives, when the process states them (GroupComparison gives one
+ * per y: "Need at least 2 groups with data for comparison."), so a refusal says what to change.
+ * @param {any} r the process's first result
+ * @returns {string[]}
+ */
+function invalidReasons(r) {
+	if (!r || typeof r !== 'object' || Array.isArray(r)) return [];
+	const out = [];
+	for (const k of ['reason', 'error']) if (typeof r[k] === 'string' && r[k]) out.push(r[k]);
+	// The warnings the node shows beside a refused result (a log fit refused for x <= 0 says
+	// so there), so the engine's refusal carries the same explanation.
+	for (const w of Array.isArray(r.warnings) ? r.warnings : [])
+		if (typeof w === 'string' && w) out.push(w);
+	for (const c of Object.values(r.comparisons ?? {})) {
+		if (c && c.valid === false && typeof c.reason === 'string') {
+			out.push(c.columnName ? `${c.columnName}: ${c.reason}` : c.reason);
+		}
+	}
+	return [...new Set(out.map((w) => w.trim().replace(/\.+$/, '')))];
 }
 
 /** Remove a table process and its output columns from the engine state. */
@@ -603,11 +672,49 @@ export function fillOmittedArgs(entry, args) {
 	return args;
 }
 
+// The session that owns `core` now. `core` is a module singleton, so creating a session empties
+// it: every earlier session in the process is superseded and refuses further use, rather than
+// silently reading or exporting the newer session's columns as its own.
+let activeSession = null;
+// Async engine calls (runTableProcess, runCosinor, renderPlotToFiles) still running. While one
+// is, creating a session is refused: it would empty the store and restart the id counters under
+// the running call, which then wrote its outputs over the new session's columns.
+let inFlight = 0;
+
 export class AncirSession {
 	constructor(id = 'default') {
+		if (inFlight > 0) {
+			throw new Error(
+				`Cannot create AnCiR session "${id}": ${inFlight} call${inFlight > 1 ? 's' : ''} of session ` +
+					`"${activeSession?.id}" ${inFlight > 1 ? 'are' : 'is'} still running. Await ${inFlight > 1 ? 'them' : 'it'} ` +
+					`first (one process holds one session; the engine's store is a singleton).`
+			);
+		}
 		this.id = id;
-		this._nextId = 0;
 		resetCore();
+		activeSession = this;
+	}
+
+	/** Run an async engine call, counted as in flight until it settles. */
+	async _inFlight(fn) {
+		this._assertActive();
+		inFlight++;
+		try {
+			return await fn();
+		} finally {
+			inFlight--;
+		}
+	}
+
+	/** Throw when a newer session has taken over the process's single store. */
+	_assertActive() {
+		if (activeSession === this) return;
+		throw new Error(
+			`AnCiR session "${this.id}" was superseded by session "${activeSession?.id}": one process ` +
+				`holds one session (the engine's store is a singleton), and creating a session empties ` +
+				`it. Finish and export a session before creating the next, or run each session in its ` +
+				`own process (SessionManager).`
+		);
 	}
 
 	/**
@@ -621,6 +728,7 @@ export class AncirSession {
 	 * @returns {Array<{id:number,name:string,type:string,time_zone?:string}>}
 	 */
 	importColumns(cols) {
+		this._assertActive();
 		// Validate EVERY column up-front so a bad value in a later column doesn't leave the earlier
 		// ones half-imported. Bad data (Infinity, NaN, strings in a numeric column, arbitrary
 		// objects) is rejected at the door rather than causing opaque failures downstream. This is
@@ -643,18 +751,23 @@ export class AncirSession {
 		}
 		const added = [];
 		for (const c of cols) {
-			const id = this._nextId++;
-			core.rawData.set(id, c.values.slice());
+			// The id comes from the app's own column counter (id: null), the one every output
+			// column a table process or the app creates also takes, so it can never repeat one.
+			// A session-local counter here once handed an imported column the id of an analysis
+			// output, and later analyses silently read the wrong column.
 			const t = time.get(c);
 			const col = Column.fromJSON({
-				id,
-				name: c.name ?? `col_${id}`,
+				id: null,
 				type: c.type ?? 'number',
-				data: id,
+				...(c.name != null ? { name: c.name } : {}),
 				...(t?.format ? { timeFormat: t.format } : {}),
 				...(t?.zone ? { timeZone: t.zone } : {}),
 				processes: []
 			});
+			if (c.name == null) col.name = `col_${col.id}`;
+			// Raw values are keyed by the column's id, as the app stores an imported column's.
+			col.data = col.id;
+			core.rawData.set(col.id, c.values.slice());
 			pushObj(col);
 			added.push({
 				id: col.id,
@@ -667,6 +780,7 @@ export class AncirSession {
 	}
 
 	listColumns() {
+		this._assertActive();
 		return core.data.map((c) => {
 			let length = 0;
 			try {
@@ -679,6 +793,7 @@ export class AncirSession {
 	}
 
 	getColumnData(id) {
+		this._assertActive();
 		const col = core.data.find((c) => c.id === id);
 		return col ? col.getData() : null;
 	}
@@ -694,7 +809,11 @@ export class AncirSession {
 	 * @param {number}  [opts.Ncurves=1]   - used when useFixedPeriod is false
 	 * @param {number}  [opts.alpha=0.05]
 	 */
-	async runCosinor({
+	runCosinor(opts) {
+		return this._inFlight(() => this._runCosinor(opts));
+	}
+
+	async _runCosinor({
 		x,
 		y,
 		useFixedPeriod = true,
@@ -717,6 +836,7 @@ export class AncirSession {
 			out: { cosinorx: -1 },
 			preProcesses: []
 		});
+		this._assertActive();
 
 		if (!valid) return { valid: false, results: [] };
 
@@ -766,7 +886,11 @@ export class AncirSession {
 	 * @returns {{name:string, tableProcessId:number, valid:boolean,
 	 *   outputs:Array<{key:string,columnId:number,name:string,type:string,length:number,preview:number[]}>}}
 	 */
-	async runTableProcess(name, args = {}) {
+	runTableProcess(name, args = {}) {
+		return this._inFlight(() => this._runTableProcess(name, args));
+	}
+
+	async _runTableProcess(name, args) {
 		const entry = appConsts.tableProcessMap?.get(name);
 		if (!entry) {
 			const known = [...(appConsts.tableProcessMap?.keys() ?? [])].join(', ');
@@ -788,9 +912,25 @@ export class AncirSession {
 			}
 		}
 
+		// A select param must hold a value the node offers: one it does not (`"Periodogram"`
+		// for "periodogram") matched none of the node's branches and ran to no outputs.
+		assertSelectOptions('tableProcess', name, a, entry.defaults);
+
 		// Resolve column references (numbers, numeric strings, OR column names) to ids
 		// for this process's input fields, before out-synthesis/construction.
 		const cif = entry.columnIdFields ?? {};
+		// An input field the node does not have (`groupIN` on GroupComparison, whose group input
+		// is `xIN`) used to be ignored, so the node ran unwired and reported only "no valid result".
+		const inputFields = [...(cif.scalar ?? []), ...(cif.array ?? [])];
+		const strayInputs = Object.keys(a).filter(
+			(k) => /IN$/.test(k) && !inputFields.includes(k) && !entry.defaults?.has?.(k)
+		);
+		if (strayInputs.length) {
+			throw new Error(
+				`${name} has no input ${strayInputs.map((k) => `"${k}"`).join(', ')}. Its input fields are ` +
+					`${inputFields.join(', ') || '(none)'}; call list_capabilities with name "${name}" for what each takes.`
+			);
+		}
 		try {
 			for (const f of cif.scalar ?? []) if (a[f] != null) a[f] = resolveColRef(a[f]);
 			// Array fields (e.g. yIN): coerce a bare scalar to a 1-element array — LLMs
@@ -825,6 +965,13 @@ export class AncirSession {
 			// …plus param-dependent metric ports the node declares itself (Cosinor's
 			// `<metric>_c<c>` for curves 2..Ncurves), which the app reconciles on mount.
 			for (const k of entry.definition?.paramOutKeys?.(a) ?? []) {
+				if (!(k in a.out)) a.out[k] = -1;
+				synthesizedKeys?.add(k);
+			}
+			// …plus the node's other per-y families (a fit's `resid_<y>`, a profile's
+			// `avgprofsem_<y>`), which its component adds on mount with useMultiYTP. Read off the
+			// nodeSpec, so a family a node gains is seeded without editing this file.
+			for (const k of perYFamilyKeys(entry, a)) {
 				if (!(k in a.out)) a.out[k] = -1;
 				synthesizedKeys?.add(k);
 			}
@@ -871,9 +1018,12 @@ export class AncirSession {
 		try {
 			res = entry.func ? await entry.func(tp.args) : undefined;
 		} catch (e) {
+			this._assertActive();
 			discardTp(tp);
 			return { ...badArgs(e), tableProcessId: tp.id };
 		}
+		// Superseded while the process ran: the store is another session's now, so stop here.
+		this._assertActive();
 		let valid = true;
 		let stats = null;
 		let fit = null;
@@ -910,11 +1060,16 @@ export class AncirSession {
 		// columns; drop the whole node so it can't pollute the export or crash the GUI.
 		if (!valid) {
 			discardTp(tp);
+			const why = invalidReasons(Array.isArray(res) ? res[0] : null);
 			return {
 				name,
 				tableProcessId: tp.id,
 				valid: false,
-				error: `${name} did not produce a valid result (check inputs/parameters via list_capabilities).`,
+				error:
+					`${name} did not produce a valid result` +
+					(why.length
+						? `: ${why.join('; ')}.`
+						: ' (check inputs/parameters via list_capabilities).'),
 				outputs: []
 			};
 		}
@@ -937,6 +1092,7 @@ export class AncirSession {
 	 * @returns {{columnId:number, processId:number, name:string, length:number, preview:number[]}}
 	 */
 	addColumnProcess(columnId, name, args = {}) {
+		this._assertActive();
 		columnId = resolveColRef(columnId); // accept a column name too
 		const col = getColumnById(columnId);
 		if (!col) throw new Error(`No column with id ${columnId}. Call list_columns.`);
@@ -948,6 +1104,7 @@ export class AncirSession {
 			);
 		}
 
+		assertSelectOptions('process', name, args, entry.defaults);
 		const processId = col.addProcess(name);
 		const proc = col.processes.find((p) => p.id === processId);
 		if (proc && args && typeof args === 'object') {
@@ -991,6 +1148,7 @@ export class AncirSession {
 	 *   encodings?:object[], warnings?:string[]}}
 	 */
 	addPlot(type, inputs = {}, overlays = undefined, encodings = undefined) {
+		this._assertActive();
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
@@ -1062,6 +1220,11 @@ export class AncirSession {
 		}
 
 		const encodingSummary = plotEncodingSummary(p);
+		// What the plot warns about in its controls (e.g. a boxplot's numeric x with too many
+		// distinct values), as render_plot reports it.
+		const warnings = [...enc.warnings, ...plotWarnings(p.plot)].filter(
+			(w, i, all) => all.indexOf(w) === i
+		);
 		return {
 			plotId: p.id,
 			type,
@@ -1069,7 +1232,7 @@ export class AncirSession {
 			inputs,
 			...(overlaySummary.length ? { overlays: overlaySummary } : {}),
 			...(encodingSummary.length ? { encodings: encodingSummary } : {}),
-			...(enc.warnings.length ? { warnings: enc.warnings } : {})
+			...(warnings.length ? { warnings } : {})
 		};
 	}
 
@@ -1085,7 +1248,11 @@ export class AncirSession {
 	 *   `overlays` as for addPlot (reference lines / bands, per the plot's capabilities).
 	 * @returns {Promise<{png:string, svg:string, bytes:number, width:number, height:number}>}
 	 */
-	async renderPlotToFiles(type, inputs, { outBase, width = 700, height = 420, overlays } = {}) {
+	renderPlotToFiles(type, inputs, opts = {}) {
+		return this._inFlight(() => this._renderPlotToFiles(type, inputs, opts));
+	}
+
+	async _renderPlotToFiles(type, inputs, { outBase, width = 700, height = 420, overlays } = {}) {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
@@ -1124,7 +1291,15 @@ export class AncirSession {
 			} catch {
 				values = [];
 			}
-			return { id: idMap.get(id), name: col.name, type: col.type, values };
+			return {
+				id: idMap.get(id),
+				name: col.name,
+				type: col.type,
+				// The clock a time column was recorded on, so the render labels its times there
+				// rather than in UTC (render/payloadColumn.js).
+				...(col.type === 'time' && col.timeZone ? { timeZone: col.timeZone } : {}),
+				values
+			};
 		});
 		const newInputs = Array.isArray(inputs)
 			? inputs.map((id) => idMap.get(id))
@@ -1141,15 +1316,19 @@ export class AncirSession {
 			height
 		};
 		const { renderPlot } = await import('./renderPlot.js');
-		return await renderPlot(payload, { outBase });
+		this._assertActive();
+		const out = await renderPlot(payload, { outBase });
+		this._assertActive();
+		return out;
 	}
 
 	/** Serialise the whole session to an AnCiR-compatible JSON string. */
 	exportSession() {
+		this._assertActive();
 		return outputCoreAsJson();
 	}
 
 	exportSessionObject() {
-		return JSON.parse(outputCoreAsJson());
+		return JSON.parse(this.exportSession());
 	}
 }

@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -72,6 +72,9 @@
 		// polynomial's degree): an edit of one is recorded with the port reconcile it sets off
 		// as ONE undo step (mutationService.setFreeTableProcessArg).
 		outputShapingArgs: ['model', 'polyDegree'],
+		// Param-dependent metric ports (seeded by the MCP engine): the ones the component's
+		// port reconcile keeps (syncTrendMetricColumns), so a polynomial gets its coef_c<k> ports.
+		paramOutKeys: (args) => ['r2', 'rmse', ...getCoefKeys(args)],
 		defaults,
 		func: trendfit,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
@@ -274,6 +277,10 @@
 		let anyValid = false;
 		// Domain refusals collected per y column, surfaced as node warnings.
 		const domainWarnings = [];
+		// One namer for every series label, built on first use: a namer indexes every column
+		// owner in the session, so one per label made n y columns cost O(n^2).
+		let namer = null;
+		const nameOf = (col) => displayNameOf(col, (namer ??= columnNamer()));
 
 		if (xIN == -1 || !getColumnById(xIN) || yINs.length === 0) return [result, false];
 
@@ -294,6 +301,11 @@
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
 		result.outputXWarning = outputXWarning;
+		// The x every curve is written on: the output x when set, else ONE grid shared by every
+		// series (the rows where x is valid), so each curve has the length of the single x
+		// output. A curve at its own series' valid rows made a y with missing values shorter
+		// than the x output (as Cosinor's was, 2026-11-09). The fit still uses its own rows.
+		const curveX = outputXData ?? t.filter((v) => !isInvalidValue(v)).map(Number);
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -316,8 +328,8 @@
 			// wrong instead; see utils/fitDomain.js for why refusing beats quietly
 			// dropping the offending points.
 			const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
-				xLabel: displayNameOf(tCol) ? `"${displayNameOf(tCol)}"` : 'x',
-				yLabel: displayNameOf(yCol) ? `"${displayNameOf(yCol)}"` : 'y'
+				xLabel: nameOf(tCol) ? `"${nameOf(tCol)}"` : 'x',
+				yLabel: nameOf(yCol) ? `"${nameOf(yCol)}"` : 'y'
 			});
 			if (shouldRefuse(domainIssues)) {
 				domainWarnings.push(...issueMessages(domainIssues));
@@ -335,8 +347,8 @@
 				fittedData,
 				predicted,
 				t: tt,
-				xOutData: outputXData ?? tt,
-				yOutData: predicted ?? fittedData.fitted
+				xOutData: curveX,
+				yOutData: predicted ?? evaluateTrendAtPoints(fittedData.parameters, model, curveX)
 			};
 			if (result.t.length === 0) result.t = tt;
 			if (fittedData.fitted.length > 0) anyValid = true;
@@ -434,6 +446,8 @@
 	applyPermutationDefaults(p.args);
 
 	let trendData = $state();
+	// One namer per render for the per-series rows below (a namer per row is O(n^2)).
+	const labelNamer = $derived(columnNamer());
 	// The message of the last failed fit, shown with a Retry (ROB-11).
 	let calcError = $state(null);
 	let mounted = $state(false);
@@ -603,6 +617,9 @@
 			// Same domain refusals as the non-permutation path; a permutation test
 			// over an all-NaN statistic is meaningless too.
 			const domainWarnings = [];
+			// One namer for every series label, built on first use (see trendfit).
+			let namer = null;
+			const nameOf = (col) => displayNameOf(col, (namer ??= columnNamer()));
 
 			for (const yId of yINs) {
 				if (yId == null || yId === -1) continue;
@@ -619,8 +636,8 @@
 				if (tt.length === 0) continue;
 
 				const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
-					xLabel: displayNameOf(xCol) ? `"${displayNameOf(xCol)}"` : 'x',
-					yLabel: displayNameOf(yCol) ? `"${displayNameOf(yCol)}"` : 'y'
+					xLabel: nameOf(xCol) ? `"${nameOf(xCol)}"` : 'x',
+					yLabel: nameOf(yCol) ? `"${nameOf(yCol)}"` : 'y'
 				});
 				if (shouldRefuse(domainIssues)) {
 					domainWarnings.push(...issueMessages(domainIssues));
@@ -651,8 +668,15 @@
 					predicted,
 					t: tt,
 					yy,
-					xOutData: outputXData ?? tt,
-					yOutData: predicted ?? fittedData.fitted
+					// The shared curve grid, as the plain fit above (one x output for every series).
+					xOutData: outputXData ?? t.filter((v) => !isInvalidValue(v)).map(Number),
+					yOutData:
+						predicted ??
+						evaluateTrendAtPoints(
+							fittedData.parameters,
+							model,
+							t.filter((v) => !isInvalidValue(v)).map(Number)
+						)
 				};
 
 				if (result.t.length === 0) result.t = tt;
@@ -701,7 +725,7 @@
 				...domainWarnings,
 				...trendPermutationWarnings(
 					result.y_results,
-					(yId) => `"${displayNameById(Number(yId), yId)}"`
+					(yId) => `"${displayNameById(Number(yId), yId, (namer ??= columnNamer()))}"`
 				),
 				...fitSampleWarnings(p.args),
 				...(outputXWarning ? [outputXWarning] : [])
@@ -860,8 +884,10 @@
 			...paramHeaders,
 			...(includePermutation ? ['pValue', 'significant'] : [])
 		];
+		// One namer for every row (a namer per row is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const rows = validEntries.map(([yId, r]) => {
-			const name = displayNameById(Number(yId), String(yId));
+			const name = displayNameById(Number(yId), String(yId), namer);
 			const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
 			if (model === 'linear') {
 				row.push(
@@ -1199,7 +1225,7 @@
 								{@const yout = getColumnById(yOutId)}
 								{#if yout}
 									{@const yResult = trendData?.y_results?.[yId]}
-									{@const srcName = displayNameById(Number(yId), yId)}
+									{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 									{@const permOutKey = 'permstats_' + yId}
 									{@const permOutId = p.args.out[permOutKey]}
 									{@const permOut = permOutId >= 0 ? getColumnById(permOutId) : null}
@@ -1220,7 +1246,7 @@
 				{:else if p.args.valid}
 					<p>Preview:</p>
 					{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult] (yId)}
-						{@const srcName = displayNameById(Number(yId), yId)}
+						{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 						<div class="div-line"></div>
 						<p><strong>{srcName}</strong></p>
 						{@render trendStats(yResult, srcName, yId)}
@@ -1234,7 +1260,7 @@
 							...yIds.map(
 								(id) =>
 									(trendData.outputXData ? 'predicted ' : 'fitted ') +
-									displayNameById(Number(id), id)
+									displayNameById(Number(id), id, labelNamer)
 							)
 						]}
 						data={[

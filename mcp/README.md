@@ -86,8 +86,9 @@ Apply one to an existing column; it runs the column's chain and is serialised:
 ### `add_plot` and `render_plot`
 
 `list_capabilities` → `plots[]` lists each plot type and its input field names
-(scatterplot/boxplot → `{x, y}`; actogram/periodogram/correlogram/fft →
-`{time, values}`; histogram → `{column}`; tableplot → an array of column ids). The last
+(scatterplot/boxplot/meansem/cwt → `{x, y}`; actogram/periodogram/correlogram/fft/circularphase
+→ `{time, values}`, and a two-input plot takes either pair; histogram → `{column}`; tableplot →
+an array of column ids). A field the plot does not have is refused. The last
 field (`y`, `values`; `column` on one-input plots) also takes a list of columns, one series
 each: correlationheatmap and pairsplot need two or more, e.g. `{ column: ['a', 'b', 'c'] }`.
 

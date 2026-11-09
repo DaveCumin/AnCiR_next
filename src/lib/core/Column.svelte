@@ -79,9 +79,39 @@
 		}
 	}
 
+	// id → index into core.data, for getColumnById. A hint, never trusted: every hit is checked
+	// against core.data itself, and a miss or a stale hint rescans the array and rebuilds it.
+	let _columnIndexById = new Map();
+
+	/**
+	 * The column with this id, or undefined. Was core.data.find(...) on every call: O(n) per
+	 * lookup, so a node with n y columns that looks up each of its inputs and outputs cost
+	 * O(n^2) (a Cosinor over 9471 columns took ~17 min). A hit in the id index is O(1); it reads
+	 * core.data[i] and checks the id, so a removed or moved column falls through to the full
+	 * scan, which (like find) reads the whole array and so keeps the same reactive dependencies
+	 * when the id is not there.
+	 */
 	export function getColumnById(id) {
-		const theColumn = core.data.find((column) => column.id === id);
-		return theColumn;
+		// Column ids are non-negative numbers; -1 / null / undefined mean "not wired" and no
+		// column (find compared with ===, so a string never matched either).
+		if (typeof id !== 'number' || !(id >= 0)) return undefined;
+		const data = core.data;
+		const hint = _columnIndexById.get(id);
+		if (hint !== undefined) {
+			const c = data[hint];
+			if (c != null && c.id === id) return c;
+		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- see _columnIndexById
+		const index = new Map();
+		let found;
+		for (let i = 0; i < data.length; i++) {
+			const c = data[i];
+			if (c == null) continue;
+			if (!index.has(c.id)) index.set(c.id, i);
+			if (found === undefined && c.id === id) found = c;
+		}
+		_columnIndexById = index;
+		return found;
 	}
 
 	// --- Producer-column naming (dataflow model) -------------------------------
@@ -278,6 +308,13 @@
 	}
 
 	let _columnIdCounter = 0;
+
+	// Only for a store that has just been emptied (the headless engine's fresh session,
+	// mcp/src/engine/session.js): ids then restart at 0 so the same build gives the same ids.
+	// Never call it while any column is still live: it would hand out a held id again.
+	export function resetColumnIdCounter() {
+		_columnIdCounter = 0;
+	}
 
 	export class Column {
 		id; //Unique Id for the column

@@ -128,6 +128,7 @@ describe('legacy session (display zone Pacific/Auckland): clock phases are uncha
 			  14.980518443,
 			  14.995675876,
 			  15.015738336,
+			  15.017693398,
 			]
 		`);
 	});

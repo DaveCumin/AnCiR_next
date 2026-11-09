@@ -9,6 +9,13 @@
 	import { loadKeepingUnknown } from '$lib/core/unknownFields.js';
 	let _tableprocessidCounter = 0;
 
+	// Only for a store that has just been emptied (the headless engine's fresh session,
+	// mcp/src/engine/session.js): ids then restart at 0 so the same build gives the same ids.
+	// Never call it while any table process is still live: it would hand out a held id again.
+	export function resetTableProcessIdCounter() {
+		_tableprocessidCounter = 0;
+	}
+
 	// --- Live Column Set → table-process inputs --------------------------------
 	// A Column Set wired to a table-process many-in port (e.g. Split's yIN) is
 	// recorded in `tp.args.setRefs = { [port]: [columnSetId] }` (parallel to the
@@ -272,10 +279,12 @@
 					}
 				}
 
-				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
+				// The keys once: Object.keys on the reactive `out` proxy, twice per key, made a node
+				// with n per-y outputs O(n^2) to create (seconds for a few thousand y columns).
+				for (const key of Object.keys(this.args.out)) {
 					const tempCol = new Column({});
-					tempCol.name = Object.keys(this.args.out)[i] + '_' + this.id;
-					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
+					tempCol.name = key + '_' + this.id;
+					this.args.out[key] = tempCol.id;
 					pushObj(tempCol);
 				}
 

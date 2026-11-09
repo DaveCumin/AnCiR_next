@@ -229,3 +229,35 @@ def test_the_plot_data_is_the_apps(name):
     for got, w in zip(rows[:3] + rows[-3:], want["head"] + want["tail"]):
         assert got[:2] == pytest.approx(w[:2], abs=1e-9)
         assert got[2] == pytest.approx(w[2], abs=1e-7 * pmax)
+
+
+def test_export_times_are_the_records_own():
+    """cwtTimeAxis.js exportTimeOf: ISO instants for a time column (new Date().toISOString(),
+    1918 too), the column's own hours for a numeric one."""
+    from ancir_runtime import _js_iso_string, cwt_export_time_of
+
+    class Col:
+        def __init__(self, type_, raw, hours):
+            self.type, self._raw, self.hours_since_start = type_, raw, hours
+
+        def get_data(self):
+            return self._raw
+
+    t0 = -1640995200000  # 1918-01-01T00:00:00.000Z
+    assert _js_iso_string(t0) == '1918-01-01T00:00:00.000Z'
+    # truncated toward 0, as JS: -...998.1 ms is -...998, i.e. .002 after the second
+    assert _js_iso_string(t0 + 1.9) == '1918-01-01T00:00:00.002Z'
+    to_time = cwt_export_time_of(Col('time', [t0, t0 + 3600000], [0, 1]))
+    assert to_time(1.5) == '1918-01-01T01:30:00.000Z'
+    assert cwt_export_time_of(Col('number', [48, 49], [0, 1]))(2) == 50
+    assert cwt_export_time_of(None)(3) == 3
+
+
+def test_period_ticks_label_the_short_end_and_read_as_numbers():
+    """CWT.svelte periodTicks / fmtPeriod: the shortest period gets a tick when "1" falls
+    just outside the range; whole numbers have no decimals."""
+    from ancir_runtime import cwt_period_ticks, cwt_period_label
+    periods = [1.033 * 2 ** (j / 8) for j in range(45)]
+    ticks = cwt_period_ticks(periods)
+    assert ticks[0] == periods[0] and ticks[1] == 2
+    assert [cwt_period_label(v) for v in (0.5, 2, 12, 1.0331)] == ['0.5', '2', '12', '1.03']

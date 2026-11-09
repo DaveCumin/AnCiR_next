@@ -22,7 +22,6 @@ import { mount, flushSync } from 'svelte';
 // in a chart resolved to nothing.
 import '../../../src/app.css';
 import { core, appConsts } from '$lib/core/core.svelte.js';
-import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
@@ -30,6 +29,7 @@ import { allowedForms, capabilitiesOf } from '$lib/components/plotbits/overlaySp
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 import { applyInnerEdits } from '$lib/plots/pairedEdits.js';
 import { plotSeriesDataIns, assertSeriesKept } from '../engine/plotInputs.js';
+import { payloadColumn, plotWarnings } from './payloadColumn.js';
 
 async function run() {
 	const data = window.__ANCIR_RENDER__;
@@ -45,16 +45,8 @@ async function run() {
 	// Rebuild columns, preserving the ids the payload references.
 	for (const c of data.columns) {
 		core.rawData.set(c.id, (c.values ?? []).slice());
-		const col = Column.fromJSON({
-			id: c.id,
-			name: c.name ?? `col_${c.id}`,
-			type: c.type ?? 'number',
-			data: c.id,
-			processes: []
-		});
-		if (c.type === 'time') col.timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
-		col.customName = c.name ?? `col_${c.id}`;
-		core.data.push(col);
+		// A time column arrives as instants (epoch ms) and keeps no text format (payloadColumn.js).
+		core.data.push(payloadColumn(c));
 	}
 
 	const entry = appConsts.plotMap.get(data.plot.type);
@@ -139,6 +131,9 @@ async function run() {
 
 	// Let onMount effects (axis auto-scaling, etc.) settle before signalling ready.
 	await new Promise((r) => setTimeout(r, 150));
+	// What the plot warns about in its own controls (a box plot whose numeric x made one group
+	// per value, a violin with too few points, ...), so a render does not hide it.
+	window.__ancirWarnings = plotWarnings(p.plot);
 	window.__ancirReady = true;
 }
 

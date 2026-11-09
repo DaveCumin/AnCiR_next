@@ -116,6 +116,29 @@
 	}
 
 	/**
+	 * The warning for two columns read as independent GROUPS that look like two VARIABLES of the
+	 * same subjects, or null. Groups share an outcome vocabulary (success / failure in both);
+	 * two variables recorded per subject (treatment A / B and outcome win / lose) do not. When
+	 * each column holds at least two distinct values and no value appears in both, the groups
+	 * table is block-diagonal (each "group" only has its own labels), so its test is meaningless,
+	 * and Fisher's exact refuses it as not 2x2. The default format is groups, so this is the
+	 * easy mistake to make with tidy one-row-per-subject data.
+	 */
+	function pairedLookingGroups(a, b) {
+		const values = (col) => new Set(col.filter((v) => !isMissingCategory(v)).map(String));
+		const va = values(a);
+		const vb = values(b);
+		if (va.size < 2 || vb.size < 2) return null;
+		for (const v of va) if (vb.has(v)) return null;
+		const list = (set) =>
+			[...set]
+				.slice(0, 4)
+				.map((v) => `"${v}"`)
+				.join(', ');
+		return `Read as two independent groups, the two columns share no values (${list(va)} vs ${list(vb)}), so each group is compared on different outcomes and the test is meaningless. If each row is one subject with both variables recorded, set Input format to "Paired (one row per subject)".`;
+	}
+
+	/**
 	 * Turn the two wired columns into a contingency table, honouring dataFormat.
 	 *
 	 * Also returns any format warnings. The one that matters: in 'paired' mode the
@@ -132,7 +155,9 @@
 
 		if (argsIN.dataFormat === 'groups') {
 			const built = groupsToTable([a, b], [rowVar?.name ?? 'Group 1', colVar?.name ?? 'Group 2']);
-			return { ...built, warnings, format: 'groups' };
+			const hint = pairedLookingGroups(a, b);
+			if (hint) warnings.push(hint);
+			return { ...built, warnings, format: 'groups', pairedHint: hint };
 		}
 
 		const built = contingencyTable(a, b);
@@ -169,7 +194,16 @@
 						}
 					: {
 							valid: false,
-							reason: `Fisher's exact test needs exactly 2 categories in each variable (found ${builtF.rowLabels.length} and ${builtF.colLabels.length}).`,
+							// Say what the chosen input format needs: in groups format the two
+							// columns are the 2 groups and their OUTCOMES must take 2 values.
+							reason:
+								builtF.pairedHint ??
+								(builtF.format === 'groups'
+									? `Fisher's exact test needs a 2x2 table: with "Two independent groups", the two groups' outcomes must take exactly 2 distinct values between them (found ${builtF.colLabels.length}: ${builtF.colLabels
+											.slice(0, 6)
+											.map((v) => `"${v}"`)
+											.join(', ')}).`
+									: `Fisher's exact test needs a 2x2 table: exactly 2 categories in each variable (found ${builtF.rowLabels.length} and ${builtF.colLabels.length}).`),
 							table: builtF.table,
 							rowLabels: builtF.rowLabels,
 							colLabels: builtF.colLabels,
@@ -182,7 +216,9 @@
 				return [
 					{
 						testType,
-						warnings: [fx.reason],
+						// The reason first; the format warnings (the paired-looking hint is often the
+						// reason itself) after it, once.
+						warnings: [fx.reason, ...warnings.filter((w) => w !== fx.reason)],
 						rowLabels: fx.rowLabels,
 						colLabels: fx.colLabels,
 						table: fx.table,

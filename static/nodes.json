@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.67",
+  "generatedFromVersion": "β.82.68",
   "count": 62,
   "nodes": [
     {
@@ -3076,6 +3076,10 @@
           "default": 0
         },
         {
+          "name": "corrBiased",
+          "default": false
+        },
+        {
           "name": "rwFixKappa",
           "default": false
         },
@@ -3673,6 +3677,10 @@
         {
           "name": "corrMaxLag",
           "default": 0
+        },
+        {
+          "name": "corrBiased",
+          "default": false
         }
       ],
       "outputs": [

@@ -18,13 +18,65 @@ export function manyInputField(fields) {
 	return null;
 }
 
+// A two-input plot stores its series positionally as x / y whatever its ports are called
+// (src/lib/plots/portVsStorageFields.test.js), so the two vocabularies name the same inputs:
+// scatterplot, boxplot, meansem and cwt call them x / y; actogram, periodogram, correlogram,
+// fft and circularphase call them time / values. Either pair is accepted on every two-input
+// plot (a cwt used to refuse {time, values} that a periodogram takes, and the reverse).
+const TWO_INPUT_NAMES = [
+	['x', 'y'],
+	['time', 'values']
+];
+
+/** Other names a plot's inputs are accepted under: `{ alias: field }`. */
+export function plotInputAliases(fields) {
+	if (fields.length !== 2) return {};
+	const out = {};
+	for (const pair of TWO_INPUT_NAMES) {
+		pair.forEach((name, i) => {
+			if (!fields.includes(name)) out[name] = fields[i];
+		});
+	}
+	return out;
+}
+
+/**
+ * The caller's `{ field: ref }` keyed by the plot's own field names. Throws for a field the plot
+ * does not have (it used to be ignored, so a misspelt field surfaced only as "missing input")
+ * and for one input given under both its names.
+ */
+function canonicalInputs(type, fields, byField) {
+	const aliases = plotInputAliases(fields);
+	const out = {};
+	const from = {};
+	for (const [key, ref] of Object.entries(byField)) {
+		const field = fields.includes(key) ? key : aliases[key];
+		if (!field) {
+			const also = Object.keys(aliases);
+			throw new Error(
+				`Plot "${type}" has no input "${key}". Its inputs are ${fields.join(', ') || '(none)'}` +
+					`${also.length ? ` (also accepted: ${also.map((a) => `${a} for ${aliases[a]}`).join(', ')})` : ''}. ` +
+					`Call list_capabilities for this plot's inputs.`
+			);
+		}
+		if (field in out) {
+			throw new Error(
+				`Plot "${type}" input "${field}" was given twice, as "${from[field]}" and "${key}". Pass it once.`
+			);
+		}
+		out[field] = ref;
+		from[field] = key;
+	}
+	return out;
+}
+
 /**
  * The tool's `inputs` as `{ field: id }`, the many field as `id[]` when a list was given, each
  * column resolved by `resolve` (an id or a name; it throws for one that does not exist).
  * A positional array lists the fields in order; on a one-field plot it is that field's list.
- * Unknown fields are ignored, as they always were. Throws, naming the plot and field, for a
- * list on a field that takes one column, for too many positional entries, and for an unknown
- * column in a list.
+ * A two-input plot also takes its inputs under the other pair of names (plotInputAliases).
+ * Throws, naming the plot and field, for a field the plot does not have, for a list on a field
+ * that takes one column, for too many positional entries, and for an unknown column in a list.
  */
 export function resolvePlotInputs(type, fields, inputs, resolve) {
 	const many = manyInputField(fields);
@@ -39,7 +91,7 @@ export function resolvePlotInputs(type, fields, inputs, resolve) {
 			}
 			byField = Object.fromEntries(fields.map((f, i) => [f, inputs[i]]));
 		}
-	} else byField = inputs ?? {};
+	} else byField = canonicalInputs(type, fields, inputs ?? {});
 
 	const out = {};
 	for (const f of fields) {

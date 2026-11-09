@@ -11,6 +11,7 @@
 // it as `opts.childDefaults`. Never call this inside a running effect: the instances construct
 // `Column` wrappers (the derived_inert rule, see plotMetricOutputs.svelte.js).
 import { COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
+import { SERIES_OWN_COLOUR } from '$lib/plots/legacyAutoColours.js';
 
 const snapshot = (v) =>
 	JSON.parse(JSON.stringify(v, (k, x) => (typeof x === 'function' ? undefined : x)));
@@ -32,7 +33,17 @@ export function defaultChildFor(plotMap, type) {
 		if (typeof inst?.addData === 'function') inst.addData(stub);
 		const json = snapshot(inst);
 		const { data, ...inner } = json ?? {};
-		return { inner, series: Array.isArray(data) ? (data[0] ?? null) : null };
+		const series = Array.isArray(data) ? (data[0] ?? null) : null;
+		// A v76.4 child's own series colour (Actogram, Histogram, ...) was COPIED from the
+		// palette when the series was made, so it saved the slot's string; today it saves null
+		// while automatic (plots/autoSeriesColour.js). The default child is the legacy one, so
+		// it carries the string the copy produced: the colour the series draws in now.
+		const own = SERIES_OWN_COLOUR[type];
+		if (series && own && series[own] == null) {
+			const drawn = inst.data?.[0]?.[own];
+			if (typeof drawn === 'string') series[own] = drawn;
+		}
+		return { inner, series };
 	} catch {
 		return null;
 	}

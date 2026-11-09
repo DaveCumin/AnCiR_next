@@ -16,7 +16,7 @@
 	// ww_pvalue are the optional Watson-Williams metrics (a single value; NaN when
 	// the test is off), like Cosinor's mode-specific ports.
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import {
 		rayleighTest,
@@ -177,8 +177,10 @@
 		);
 		if (!small.length) return warnings;
 
+		// One namer for every series (a namer per series is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const describe = small
-			.map(([yId, r]) => `${displayNameById(Number(yId), yId)} (n = ${r.n})`)
+			.map(([yId, r]) => `${displayNameById(Number(yId), yId, namer)} (n = ${r.n})`)
 			.join(', ');
 		warnings.push(
 			`Small sample: ${describe}. The Rayleigh p-value uses a series approximation recommended for n ≥ ${RAYLEIGH_MIN_N} (Zar 1999); below that, published critical values are the correct reference.`
@@ -199,12 +201,15 @@
 
 		const groups = [];
 		const groupNames = [];
+		// One namer for every group name, built on first use: a namer indexes every column
+		// owner in the session, so one per y made n y columns cost O(n^2).
+		let namer = null;
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
 			const yCol = getColumnById(yId);
 			if (!yCol) continue;
 			groups.push(anglesToRadians(yCol.getData(), unit, period));
-			groupNames.push(displayNameOf(yCol) || String(yId));
+			groupNames.push(displayNameOf(yCol, (namer ??= columnNamer())) || String(yId));
 		}
 
 		const result = watsonWilliams(groups, pUpperFromF);
@@ -362,11 +367,12 @@
 
 	let rows = $derived.by(() => {
 		if (!rayleighData?.perY) return [];
+		const namer = columnNamer();
 		return (p.args.yIN ?? [])
 			.filter((yId) => rayleighData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: displayNameById(Number(yId), String(yId)),
+				name: displayNameById(Number(yId), String(yId), namer),
 				...rayleighData.perY[yId]
 			}));
 	});

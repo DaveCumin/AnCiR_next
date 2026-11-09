@@ -1,6 +1,23 @@
 // @ts-nocheck
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
+import { samplingStep } from './samplingInterval.js';
+
+/**
+ * How each lag's sum of products is normalised (the `normalization` option of
+ * computeAutocorrelation).
+ *  - 'pairs' (the default, and every correlogram before the choice existed): over the pairs
+ *    behind that lag, r_k = [sum / count_k] / c_0 with c_0 the variance (n divisor). On evenly
+ *    spaced data count_k = N - k, the "unbiased" autocovariance normalisation. Long lags are
+ *    not shrunk, so a rhythm's later peaks stay near its first.
+ *  - 'biased': the standard sample ACF, r_k = [sum / N] / c_0 (Box and Jenkins; Chatfield,
+ *    The Analysis of Time Series, Sect. 4.1; what R's acf() and MATLAB's autocorr() report).
+ *    Equal to 'pairs' times count_k / N, so its peaks are lower by (N - k) / N: lag 24 h of 5
+ *    days of hourly data reads 0.8 of the 'pairs' value. Use it to compare with those tools.
+ *    On unevenly sampled data (the slotted estimator) it is the slot's sum over N * c_0.
+ * Mirrored in tools/ancir_runtime.py and tools/ancir_runtime.R (compute_autocorrelation).
+ */
+export const ACF_NORMALIZATIONS = ['pairs', 'biased'];
 
 /**
  * Compute the autocorrelation function of a 1-D signal sampled at `times`.
@@ -57,6 +74,15 @@ import { validPairs } from './validPairs.js';
  * @param {number|null} maxLag  - Maximum lag (hours); null = half the recording span,
  *                               (last valid time - first) / 2. Capped at the span.
  * @param {number}      minLag  - Minimum lag (hours); defaults to 0. Lags below this are dropped.
+ * @param {{normalization?: 'pairs'|'biased'}} [options] - see ACF_NORMALIZATIONS ('pairs'
+ *                               by default; anything else unknown is 'pairs').
+ *
+ * With binSize null the lag step is the median spacing, refined to samplingStep (the mean of
+ * the spacings within 10% of the median, so it is always within 10% of it): stored times are
+ * rounded (10-min data as 0.1667 h steps), and the rounded median made every lag k * 0.1667 h,
+ * 0.03 h past the true lag by 168 h, where samplingStep gives k / 6 h to ~1e-7. It was only
+ * taken within 1% of the median, so 1-min data written to 3 dp (median gap 0.017 h, 2% off)
+ * kept the rounded step and every lag was 2% long (a 24 h peak read 24.5 h).
  *
  * `peakLag` / `peakCorrelation` are the dominant period, via findAutocorrelationPeak
  * below (one implementation, reachable either from here or directly).
@@ -64,7 +90,15 @@ import { validPairs } from './validPairs.js';
  * significance band is built from them (correlogramBand).
  * @returns {{ lags: number[], correlations: number[], counts: number[], n: number, dt: number, peakLag: number, peakCorrelation: number }}
  */
-export function computeAutocorrelation(times, values, binSize = null, maxLag = null, minLag = 0) {
+export function computeAutocorrelation(
+	times,
+	values,
+	binSize = null,
+	maxLag = null,
+	minLag = 0,
+	{ normalization = 'pairs' } = {}
+) {
+	const biased = normalization === 'biased';
 	if (
 		!times ||
 		!values ||
@@ -95,6 +129,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		for (let i = 1; i < t.length; i++) diffs.push(t[i] - t[i - 1]);
 		diffs.sort((a, b) => a - b);
 		dt = diffs[Math.floor(diffs.length / 2)];
+		const step = samplingStep(t);
+		if (step > 0 && Math.abs(step - dt) <= 0.1 * dt) dt = step;
 	}
 
 	// A non-time / non-monotonic X axis gives a non-positive or non-finite sample
@@ -122,8 +158,14 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		return { lags: [], correlations: [], dt };
 	}
 
-	let nLags = Math.min(Math.floor(maxLagTime / dt), Math.floor(span / dt));
-	const startLagIdx = Math.ceil(minLagTime / dt);
+	// The lag window in steps, snapped by 5% of a step: dt is measured from the times, which
+	// are stored rounded, so it is off by up to (rounding / span) relative and 72 steps can be
+	// 72.0025 (10-min data written to 2 dp). A plain floor dropped the max lag (30 h on hourly
+	// data stored as 1000.13, 1001.13, ... h) and a ceil dropped the min lag. 5% of a step is
+	// the most rounding the analyses absorb (binOrigin's ON_GRID_TOL).
+	const SNAP = 0.05;
+	let nLags = Math.min(Math.floor(maxLagTime / dt + SNAP), Math.floor(span / dt + SNAP));
+	const startLagIdx = Math.ceil(minLagTime / dt - SNAP);
 
 	const yMean = mean(y);
 	const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / n;
@@ -171,7 +213,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 				}
 			}
 			// Rule 4 (unreachable here, as lag <= n - 1 always leaves a pair; kept for symmetry).
-			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
+			const correlation = count > 0 ? sum / ((biased ? n : count) * yVariance) : NaN;
 			lags.push(lag * dt);
 			correlations.push(correlation);
 			counts.push(count);
@@ -206,7 +248,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 				}
 			}
 			// Rule 4: an empty slot is missing, not r = 0.
-			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
+			const correlation = count > 0 ? sum / ((biased ? n : count) * yVariance) : NaN;
 			lags.push(targetLag);
 			correlations.push(correlation);
 			counts.push(count);
@@ -220,6 +262,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		counts,
 		n,
 		dt,
+		normalization: biased ? 'biased' : 'pairs',
 		peakLag: peak?.lag ?? NaN,
 		peakCorrelation: peak?.correlation ?? NaN
 	};
@@ -402,7 +445,9 @@ export function correlogramBand(
 				const k = Math.round(src.lags[i] / dt);
 				const r = src.correlations[i];
 				const c = src.counts?.[i] ?? 0;
-				if (k >= 1 && Number.isFinite(r) && c > 0) r2.set(k, ((r * c) / n) ** 2);
+				// A 'biased' correlogram is N-normalised already.
+				const rN = src.normalization === 'biased' ? r : (r * c) / n;
+				if (k >= 1 && Number.isFinite(r) && c > 0) r2.set(k, rN ** 2);
 			}
 			const kOf = lags.map((l) => Math.round(l / acf.dt));
 			let kMax = 0;

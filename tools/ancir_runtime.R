@@ -621,8 +621,9 @@ tp_threshold <- function(args, env) {
 }
 
 # Port of TrendFit.svelte trendfit (see the Python port). Each y is fitted on its own valid
-# (x, y) pairs; with no output x its curve is its OWN fitted values and the x output is the
-# first y result's valid x (Object.keys order: the smallest column id). The curve then goes
+# (x, y) pairs; every curve is evaluated on ONE x shared by all series (TrendFit.svelte
+# curveX): the output x when set, else the rows where x is valid (a curve at its own series'
+# valid rows made a y with gaps shorter than the x output, 2026-11-09). The curve then goes
 # through the node's preProcesses. The x, the curves, the residuals and the metric ports are
 # written only with the x output wired. When every y is refused (fitDomain.js) the app CLEARS
 # the outputs (x, curves and residuals empty, every metric NaN), and so does this port.
@@ -638,6 +639,8 @@ tp_trendfit <- function(args, env) {
   # Column or sequence output x (resolve_output_x, outputXSequence.js).
   frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
+  curve_x <- if (!is.null(output_x)) output_x else
+    vapply(Filter(function(v) !.js_invalid(v), as.list(t)), .js_number, numeric(1))
   results <- list(); any_valid <- FALSE; any_refused <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
@@ -654,9 +657,8 @@ tp_trendfit <- function(args, env) {
     res <- fit_trend(tt, yv, model, deg)
     if (is.null(res)) next
     results[[yk]] <- list(
-      fit = res, x = if (!is.null(output_x)) output_x else tt,
-      y_out = if (!is.null(output_x)) evaluate_trend_at_points(res$parameters, model, output_x)
-              else res$fitted,
+      fit = res, x = curve_x,
+      y_out = evaluate_trend_at_points(res$parameters, model, curve_x),
       y = y)
     if (length(res$fitted)) any_valid <- TRUE
   }
@@ -701,8 +703,10 @@ tp_trendfit <- function(args, env) {
 
 # Port of SmoothedData.svelte smootheddata, matching the Python port: per y, rows kept by the
 # house rule on x and y, converted with Number(), fewer than 3 skipped, stably sorted by x.
-# The x output is the FIRST valid y's sorted x (a time input written back as epoch ms from
-# the first time). Residual outputs resid_<yId> are raw - smoothed.
+# The x output is ONE grid shared by every series (SmoothedData.svelte gridRows): the rows
+# where x is valid, stably sorted by x (a time input written back as epoch ms from the first
+# time). Each smoothed curve and its residual (raw - smoothed) are placed on it, NA on the
+# rows its y is missing.
 tp_smootheddata <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -715,12 +719,24 @@ tp_smootheddata <- function(args, env) {
     o <- time_origin_ms(x_col, env$cols, env$raw_data)
     if (is.null(o)) NA_real_ else o
   } else NA_real_
-  x_out <- NULL; y_res <- list(); raw_by <- list(); any_valid <- FALSE
+  # The shared grid: row indices where x is valid, stably sorted by x.
+  xl <- as.list(x_data)
+  grid_rows <- which(vapply(xl, function(v) !.js_invalid(v), logical(1)))
+  grid_x <- vapply(xl[grid_rows], .js_number, numeric(1))
+  go <- order(grid_x, method = "radix")
+  grid_rows <- grid_rows[go]
+  x_out <- grid_x[go]
+  on_grid <- function(rows, values) {
+    out <- rep(NA_real_, length(grid_rows))
+    out[match(rows, grid_rows)] <- values
+    out
+  }
+  y_res <- list(); raw_by <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     y_data <- col_data(env$cols[[yk]], env$cols, env$raw_data)
-    xl <- as.list(x_data); yl <- as.list(y_data)
+    yl <- as.list(y_data)
     n <- min(length(xl), length(yl))
     keep <- which(vapply(seq_len(n), function(i)
       !.js_invalid(xl[[i]]) && !.js_invalid(yl[[i]]), logical(1)))
@@ -728,11 +744,10 @@ tp_smootheddata <- function(args, env) {
     xs <- vapply(xl[keep], .js_number, numeric(1))
     ys <- vapply(yl[keep], .js_number, numeric(1))
     o <- order(xs, method = "radix")
-    xs <- xs[o]; ys <- ys[o]
+    xs <- xs[o]; ys <- ys[o]; rows <- keep[o]
     sy <- tryCatch(smooth_arrays(xs, ys, args$smootherType, args)$y, error = function(e) NULL)
     if (is.null(sy)) next
-    if (is.null(x_out)) x_out <- xs
-    y_res[[yk]] <- sy; raw_by[[yk]] <- ys
+    y_res[[yk]] <- on_grid(rows, sy); raw_by[[yk]] <- on_grid(rows, ys)
     any_valid <- TRUE
   }
   for (pp in args$preProcesses) {
@@ -757,7 +772,7 @@ tp_smootheddata <- function(args, env) {
       rid <- out_id(args, paste0("resid_", yk))
       if (rid != -1) {
         p <- y_res[[yk]]
-        r <- ifelse(is.finite(p), raw_by[[yk]] - p, NaN)
+        r <- ifelse(is.finite(p) & is.finite(raw_by[[yk]]), raw_by[[yk]] - p, NaN)
         set_col(env, env$cols, rid, r, type = "number")
       }
     }
@@ -2147,6 +2162,10 @@ tp_cosinor <- function(args, env) {
 
   any_valid <- FALSE; curves <- list(); metrics <- list()
   failed <- character(0)  # fitted but the fit failed: the app writes an empty curve for these
+  # Every curve on ONE x (Cosinor.svelte curveX): the output x when set, else the rows where
+  # x is valid, shared by every series.
+  curve_x <- if (!is.null(fr$out)) fr$out else
+    vapply(Filter(function(v) !.js_invalid(v), as.list(t)), .js_number, numeric(1))
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -2170,7 +2189,7 @@ tp_cosinor <- function(args, env) {
       next
     }
     params <- if (!is.null(res$harmonics)) res else res$parameters
-    xs <- if (!is.null(fr$out)) fr$out else tt
+    xs <- curve_x
     metrics[[yk]] <- cosinor_metrics(fixed_res, free_res, args, phase_ref)
     # The optional permutation test (Cosinor.svelte permOptions: this node's own fit), run
     # only when its port is written (wired, with the x output), since refits can be slow.
@@ -4318,6 +4337,10 @@ tp_rectangularwave <- function(args, env) {
   frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
+  # Every curve on ONE x (RectangularWave.svelte curveX): the output x when set, else the
+  # rows where x is valid, shared by every series. The fit still uses its own rows.
+  curve_x <- if (!is.null(output_x)) output_x else
+    vapply(Filter(function(v) !.js_invalid(v), as.list(t)), .js_number, numeric(1))
 
   curves <- list(); any_valid <- FALSE; stats_by_y <- list(); perm_by_y <- list()
   for (y_id in y_ins) {
@@ -4328,9 +4351,8 @@ tp_rectangularwave <- function(args, env) {
     if (length(pr$t) < 4) next
     res <- fit_rectangular_wave(pr$t, pr$y, opts)
     if (is.null(res)) next
-    xs_out <- if (!is.null(output_x)) output_x else pr$t
-    ys <- if (!is.null(output_x)) evaluate_rectwave_at_points(res$parameters, output_x)
-          else res$fitted
+    xs_out <- curve_x
+    ys <- evaluate_rectwave_at_points(res$parameters, curve_x)
     # preProcesses on the fitted curve only (RectangularWave.svelte).
     curves[[yk]] <- list(x = xs_out, y = apply_output_pre_processes(ys, args, env))
     # Residuals (RectangularWave.svelte): only with the x output wired; the model evaluated
@@ -4603,18 +4625,20 @@ tp_doublelogistic <- function(args, env) {
   frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
+  # Every curve on ONE x (DoubleLogistic.svelte curveX): the output x when set, else the rows
+  # where x is valid, shared by every series. The fit still uses its own rows.
+  curve_x <- if (!is.null(output_x)) output_x else
+    vapply(Filter(function(v) !.js_invalid(v), as.list(t)), .js_number, numeric(1))
 
-  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list(); perm_by_y <- list()
+  any_valid <- FALSE; stats_by_y <- list(); perm_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
     if (length(pr$t) < 4) next
-    if (is.null(first_xs)) first_xs <- if (!is.null(output_x)) output_x else pr$t
     res <- fit_double_logistic(pr$t, pr$y, opts)
     if (is.null(res)) next
-    ys <- if (!is.null(output_x)) evaluate_dl_at_points(res$parameters, output_x, TRUE)
-          else res$fitted
+    ys <- evaluate_dl_at_points(res$parameters, curve_x, TRUE)
     y_out <- out_id(args, paste0("dlogy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "dlogy")
     # preProcesses on the fitted curve only (DoubleLogistic.svelte); the curves are written
@@ -4643,8 +4667,8 @@ tp_doublelogistic <- function(args, env) {
   }
   if (any_valid) {
     if (is.finite(origin)) set_col(env, env$cols, out_id(args, "dlogx"),
-                                   origin + first_xs * 3600000, type = "time")
-    else set_col(env, env$cols, out_id(args, "dlogx"), first_xs, type = "number")
+                                   origin + curve_x * 3600000, type = "time")
+    else set_col(env, env$cols, out_id(args, "dlogx"), curve_x, type = "number")
   }
   if (any_valid) {
     # r2/rmse were declared but unwritten in the Python port until 2026-07-28;
@@ -4886,6 +4910,10 @@ tp_fitfunction <- function(args, env) {
   output_x <- frm$out
   phase_ref <- node_phase_reference(args, t_col, env$cols, env$raw_data,
                                     node = "Fit waveform model")
+  # Every curve on ONE x (FitFunction.svelte buildYResult curveX): the output x when set,
+  # else the rows where x is valid, shared by every series.
+  curve_x <- if (!is.null(output_x)) output_x else
+    vapply(Filter(function(v) !.js_invalid(v), as.list(t)), .js_number, numeric(1))
 
   y_results <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
@@ -4908,9 +4936,8 @@ tp_fitfunction <- function(args, env) {
       fr$permPValue <- perm$pValue
       fr$permutedStats <- perm$permutedStats
     }
-    y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)
-                  else fr$fitted
-    y_results[[yk]] <- list(fr = fr, xOutData = if (!is.null(output_x)) output_x else tt,
+    y_out_data <- ff_evaluate_at_points(fr, model, curve_x)
+    y_results[[yk]] <- list(fr = fr, xOutData = curve_x,
                             yOutData = y_out_data,
                             y = col_data(env$cols[[yk]], env$cols, env$raw_data))
     if (length(fr$fitted)) any_valid <- TRUE
@@ -5718,16 +5745,60 @@ is_flat_series <- function(values) {
   length(v) < 2 || all(v == v[1])
 }
 
-# periodogram.js binOrigin: floor(min(x) / binSize) * binSize, one binSize lower when that
-# rounds above min(x). The binned methods used to start at t = 0 whatever the data.
+# periodogram.js samplingStep: the mean of the gaps within 10% of the median positive gap
+# (rounding errors of stored times cancel in the sum); NaN with fewer than two distinct times.
+sampling_step <- function(times) {
+  x <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
+  x <- sort(x[is.finite(x)])
+  gaps <- diff(x)
+  pos <- sort(gaps[gaps > 0])
+  if (!length(pos)) return(NaN)
+  m <- length(pos) %/% 2
+  med <- if (length(pos) %% 2) pos[m + 1] else (pos[m] + pos[m + 1]) / 2
+  near <- gaps[abs(gaps - med) <= 0.1 * med]
+  if (!length(near)) return(med)
+  total <- 0
+  for (gp in near) total <- total + gp
+  total / length(near)
+}
+
+# periodogram.js approxGcd: Euclid with a remainder within 1% of the divisor counted as zero.
+.approx_gcd <- function(a, b) {
+  hi <- max(a, b); lo <- min(a, b)
+  fl <- 0.01 * lo
+  i <- 0
+  while (i < 64 && lo >= fl) {
+    r <- hi %% lo
+    if (r < 0.01 * lo || lo - r < 0.01 * lo) return(lo)
+    hi <- lo; lo <- r
+    i <- i + 1
+  }
+  NaN
+}
+
+# periodogram.js binOrigin. Regular data (>= 90% of samples within 5% of a step of
+# min + k * dt, dt = mean of the gaps within 10% of the median gap): min - g / 2 with
+# g = approx gcd(dt, bin_size), so no bin edge sits on a sample (rounded stored times on edges
+# used to double some bins and empty others). Irregular data keeps the bin_size grid:
+# floor(min / bin_size) * bin_size, one bin_size lower when that rounds above min.
 bin_origin <- function(xs, bin_size) {
   x <- suppressWarnings(as.numeric(unlist(xs, use.names = FALSE)))
   x <- x[is.finite(x)]
   if (!length(x) || !is.finite(bin_size) || !(bin_size > 0)) return(0)
   mn <- min(x)
-  o <- floor(mn / bin_size) * bin_size
-  if (o > mn) o <- o - bin_size
-  o
+  grid_origin <- function() {
+    o <- floor(mn / bin_size) * bin_size
+    if (o > mn) o <- o - bin_size
+    o
+  }
+  x <- sort(x)
+  dt <- sampling_step(x)
+  if (!is.finite(dt) || !(dt > 0)) return(grid_origin())
+  g <- .approx_gcd(dt, bin_size)
+  if (!is.finite(g) || !(g > 0)) return(grid_origin())
+  k <- (x - mn) / dt
+  if (sum(abs(k - floor(k + 0.5)) <= 0.05) < 0.9 * length(x)) return(grid_origin())
+  mn - g / 2
 }
 
 .pgram_pairs <- function(t, y) {
@@ -5957,8 +6028,12 @@ js_upper_median <- function(d) sort(d)[length(d) %/% 2 + 1]
 # exactly 1 on both paths; slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt,
 # so a pair on a boundary counts once (in the upper lag); distinct pairs closer than half a
 # step are not used at any lag; the default lag window is half the recording span in hours.
+# normalization (correlogram.js ACF_NORMALIZATIONS): "pairs" (default) divides each lag's sum
+# by its pair count, "biased" by N (the standard sample ACF, as acf() reports). With no bin
+# size the median step is refined to sampling_step when they agree within 1%.
 compute_autocorrelation <- function(times, values, bin_size = NULL,
-                                    max_lag = NULL, min_lag = 0) {
+                                    max_lag = NULL, min_lag = 0, normalization = "pairs") {
+  biased <- identical(normalization, "biased")
   empty <- function(dt) list(lags = numeric(0), correlations = numeric(0), dt = dt,
                              peakLag = NA_real_, peakCorrelation = NA_real_)
   t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
@@ -5970,6 +6045,10 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
   if (n < 2) return(empty(1))
   diffs <- diff(t)
   dt <- if (!is.null(bin_size)) as.numeric(bin_size) else js_upper_median(diffs)
+  if (is.null(bin_size)) {
+    st <- sampling_step(t)
+    if (is.finite(st) && st > 0 && is.finite(dt) && abs(st - dt) <= 0.1 * dt) dt <- st
+  }
   if (!is.finite(dt) || dt <= 0) return(empty(1))
   timespan <- t[length(t)] - t[1]
   # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
@@ -5982,8 +6061,9 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
   min_lag_t <- if (!is.null(min_lag) && is.finite(min_lag) && min_lag > 0) as.numeric(min_lag)
                else 0
   if (min_lag_t >= max_lag_t) return(empty(dt))
-  n_lags <- min(floor(max_lag_t / dt), floor(timespan / dt))
-  start_idx <- ceiling(min_lag_t / dt)
+  # Snapped by 5% of a step, as correlogram.js (dt is measured from rounded times).
+  n_lags <- min(floor(max_lag_t / dt + 0.05), floor(timespan / dt + 0.05))
+  start_idx <- ceiling(min_lag_t / dt - 0.05)
   ymean <- mean(y)
   yvar <- sum((y - ymean)^2) / n
   if (yvar == 0) return(list(lags = numeric(0), correlations = numeric(0), dt = dt,
@@ -6007,7 +6087,8 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
       if (lag == 0) { corrs <- c(corrs, 1); lags <- c(lags, 0); next }
       a <- ydem[seq_len(n - lag)]; b <- ydem[(lag + 1):n]
       # A lag with no pairs is missing (NaN), not r = 0 (correlogram.js rule 4).
-      corrs <- c(corrs, if (length(a) > 0) sum(a * b) / (length(a) * yvar) else NaN)
+      corrs <- c(corrs, if (length(a) > 0) sum(a * b) / ((if (biased) n else length(a)) * yvar)
+                        else NaN)
       lags <- c(lags, lag * dt)
     }
   } else {
@@ -6027,7 +6108,7 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
       }
       # An empty slot is missing (NaN), not r = 0: the slotted estimator is a ratio over the
       # slot's pairs (Rehfeld et al. 2011, NPG 18:389, Eq. 10), undefined with none.
-      corrs <- c(corrs, if (count > 0) s / (count * yvar) else NaN)
+      corrs <- c(corrs, if (count > 0) s / ((if (biased) n else count) * yvar) else NaN)
       lags <- c(lags, target)
     }
   }
@@ -6136,7 +6217,8 @@ tp_rhythmicityanalysis <- function(args, env) {
       ac <- compute_autocorrelation(
         t, y,
         min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
-        max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
+        max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag,
+        normalization = if (isTRUE(args$corrBiased)) "biased" else "pairs")
       per_key <- list(lag = ac$lags, correlation = ac$correlations)
       px <- ac$lags; py <- ac$correlations
     } else {
@@ -6358,7 +6440,8 @@ moving_stat_keys <- function(args) {
     mn <- args$corrMinLag; mx <- args$corrMaxLag
     r <- compute_autocorrelation(tt, yy, NULL,
                                  max_lag = if (is.numeric(mx) && isTRUE(mx > 0)) mx else NULL,
-                                 min_lag = if (is.numeric(mn) && isTRUE(mn > 0)) mn else 0)
+                                 min_lag = if (is.numeric(mn) && isTRUE(mn > 0)) mn else 0,
+                                 normalization = if (isTRUE(args$corrBiased)) "biased" else "pairs")
     if (length(r$lags)) {
       pk <- find_autocorrelation_peak(r$lags, r$correlations)
       if (!is.na(pk$lag)) { st$peak_lag <- pk$lag; st$peak_correlation <- pk$correlation }
@@ -6452,6 +6535,27 @@ compute_moving_windows <- function(t_all, ys, starts, window_size, stat_keys, ar
   })
 }
 
+# movinganalysis.js movingWindowStarts: x_min + i * step while the window fits inside the
+# sampled span (last sample + one sampling_step), with 1% of a step of slack; never a partial
+# window.
+moving_window_starts <- function(valid_x, window_size, step_size) {
+  if (!isTRUE(window_size > 0) || !isTRUE(step_size > 0)) return(c())
+  x <- valid_x[is.finite(valid_x)]
+  if (!length(x)) return(c())
+  x_min <- min(x); x_max <- max(x)
+  dt <- sampling_step(x)
+  st <- if (is.finite(dt) && dt > 0) dt else 0
+  span_end <- x_max + st
+  tol <- 0.5 * st + 1e-9 * max(1, abs(span_end))
+  starts <- c(); i <- 0
+  repeat {
+    s <- x_min + i * step_size
+    if (s + window_size > span_end + tol) break
+    starts <- c(starts, s); i <- i + 1
+  }
+  starts
+}
+
 # Port of MovingAnalysis.svelte movinganalysis over compute_moving_windows (see the Python
 # port tp_movinganalysis).
 tp_movinganalysis <- function(args, env) {
@@ -6468,10 +6572,8 @@ tp_movinganalysis <- function(args, env) {
   origin <- if (is_time) time_origin_ms(x_col, env$cols, env$raw_data) else NULL
   vx <- vapply(Filter(function(v) !.js_invalid(v), as.list(t_all)), .js_number, numeric(1))
   if (length(vx) < 3) return(FALSE)
-  x_min <- min(vx); x_max <- max(vx)
-  if (x_max - x_min < win) return(FALSE)
-  starts <- c(); s <- x_min
-  while (s <= x_max - win + 1e-9) { starts <- c(starts, s); s <- s + step }
+  x_min <- min(vx)
+  starts <- moving_window_starts(vx, win, step)
   if (!length(starts)) return(FALSE)
   lab <- if (is.null(args$binLabel)) "center" else args$binLabel
   off <- if (lab == "start") 0 else if (lab == "end") win else win / 2
@@ -6517,9 +6619,8 @@ moving_windows <- function(times, values, opts = list()) {
   tt <- vapply(as.list(times), function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
   yv <- vapply(as.list(values), function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
   valid <- tt[is.finite(tt)]
-  lo <- min(valid); hi <- max(valid)
-  starts <- c(); s <- lo
-  while (s <= hi - window + 1e-9) { starts <- c(starts, s); s <- s + step }
+  lo <- min(valid)
+  starts <- moving_window_starts(valid, window, step)
   keys <- moving_stat_keys(opts)
   off <- opts$clockOffsetHours
   phase <- list(recordStart = lo,
@@ -6965,6 +7066,19 @@ chi_squared_periodogram <- function(t, y, opts) {
        pvalue = res$pvalue)
 }
 
+# Pure-util parity surface for the bins a binned periodogram (Chi-squared, Enright) folds:
+# the valid pairs binned at binSize from bin_origin. `origin` is the first bin's start, `bins`
+# every bin start, `means` the bin means (NaN when empty), `counts` the samples in each bin.
+periodogram_bins <- function(t, y, opts) {
+  pr <- .pgram_pairs(t, y)
+  bs <- if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize)
+  origin <- bin_origin(pr$t, bs)
+  m <- bin_data(pr$t, pr$y, bs, origin)
+  k <- bin_data(pr$t, pr$y, bs, origin, agg_func = "count")
+  list(origin = origin, bins = m$bins, means = as.numeric(m$y_out),
+       counts = as.numeric(k$y_out))
+}
+
 # Pure-util parity surface for Lomb-Scargle through run_periodogram_calculation.
 lomb_scargle_periodogram <- function(t, y, opts) {
   res <- run_periodogram_calculation(list(
@@ -7089,6 +7203,7 @@ PURE_UTIL_MAP <- list(
   compute_fft    = compute_fft,
   chi_squared_periodogram = chi_squared_periodogram,
   enright_periodogram = enright_periodogram,
+  periodogram_bins = periodogram_bins,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   qq_points      = qq_points,

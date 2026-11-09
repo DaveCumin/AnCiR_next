@@ -159,12 +159,13 @@ describe('the pure rules', () => {
 		expect(SIZE_ENCODING_MODES).not.toContain('category');
 	});
 
-	it('categories in the Boxplot order (numbers numerically), slots claimed by first appearance', () => {
+	it('categories in the Boxplot order (first appearance; all numbers numerically), slots claimed by first appearance', () => {
 		const dom = categoryDomain([
 			['b', null, '10', 'a'],
 			['2', 'b']
 		]);
-		expect(dom.categories).toEqual(['a', 'b', '10', '2'].sort(boxSort));
+		// Mixed text and numbers: first appearance (plots/categoryOrder.js).
+		expect(dom.categories).toEqual(['b', '10', 'a', '2']);
 		expect(dom.firstSeen).toEqual(['b', '10', 'a', '2']);
 		expect(categoryDomain([['10', '9', '100']]).categories).toEqual(['9', '10', '100']);
 		expect(Array.from(categoryIndices(['b', null, 'zz', 'a'], ['a', 'b']))).toEqual([1, -1, -1, 0]);
@@ -190,15 +191,10 @@ describe('the pure rules', () => {
 		// wt claimed slot 0 first, which ko holds: the next free one. No two share a colour.
 		expect(new Set(proposed.values()).size).toBe(3);
 		expect(plot.plot.data[0].colourPalette).toEqual(
-			['het', 'ko', 'wt'].map((l) => colourForCategoryLabel(l))
+			['wt', 'ko', 'het'].map((l) => colourForCategoryLabel(l))
 		);
 	});
 });
-
-function boxSort(a, b) {
-	if (!isNaN(+a) && !isNaN(+b)) return +a - +b;
-	return a.localeCompare(b);
-}
 
 // ---------------------------------------------------------------------------------------------
 describe('the same colours as the Boxplot, for the same column', () => {
@@ -215,7 +211,8 @@ describe('the same colours as the Boxplot, for the same column', () => {
 		const box = boxplotOf(c, y);
 		const boxC = draw(Boxplot, box);
 		flushSync();
-		const fills = boxFills(boxC); // het, ko, wt (key order)
+		// wt, ko, het: both in first-appearance order (plots/categoryOrder.js).
+		const fills = boxFills(boxC);
 		expect(fills).toHaveLength(3);
 		const d = plot.plot.data[0];
 		expect(d.colourPalette).toEqual(fills);
@@ -239,7 +236,7 @@ describe('the same colours as the Boxplot, for the same column', () => {
 		flushSync();
 		const d = plot.plot.data[0];
 		expect(d.colourPalette[d.colourDomain.categories.indexOf('ko')]).toBe('#123456');
-		expect(categoryColourLabels(plot)).toEqual(['het', 'ko', 'wt']);
+		expect(categoryColourLabels(plot)).toEqual(['wt', 'ko', 'het']);
 		const paths = bucketPaths(draw(Scatterplot, plot));
 		expect(paths.find((p) => p.fill === '#123456').count).toBe(3);
 	});
@@ -589,7 +586,7 @@ describe('save, load, facets, paste', () => {
 		for (const p of panels) projectPanel(p);
 		const keys = panels.map((p) => p.plot.colourKey);
 		expect(keys[0].categories).toEqual(keys[1].categories);
-		expect(keys[0].categories.map((k) => k.label)).toEqual(['het', 'ko', 'wt']);
+		expect(keys[0].categories.map((k) => k.label)).toEqual(['wt', 'ko', 'het']);
 		// 'ko' is drawn in one colour in both panels.
 		const ko = (p) => {
 			const d = p.plot.data[0];

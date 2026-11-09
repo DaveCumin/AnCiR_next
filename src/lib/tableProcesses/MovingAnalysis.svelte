@@ -16,6 +16,7 @@
 	import {
 		getStatKeys,
 		computeMovingWindows,
+		movingWindowStarts,
 		windowSkipMessages
 	} from '$lib/utils/movinganalysis.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
@@ -79,6 +80,9 @@
 		// correlogram params
 		['corrMinLag', { val: 0 }], // 0 = no lower bound (includes lag=0 except for peak-pick)
 		['corrMaxLag', { val: 0 }], // 0 = auto (half window)
+		// Correlogram normalisation: false = per-lag pair count (N - k), true = standard biased
+		// ACF (/N, R acf / MATLAB autocorr). utils/correlogram.js ACF_NORMALIZATIONS.
+		['corrBiased', { val: false }],
 		// rectangular-wave fit params
 		['rwFixKappa', { val: false }],
 		['rwFixedKappa', { val: 5 }],
@@ -176,15 +180,11 @@
 		// cell must not coerce to 0 (v72.28).
 		const validX = tAll.filter((v) => !isInvalidValue(v));
 		if (validX.length < 3) return [empty, false];
-		const { min: xMin, max: xMax } = arrayMinMax(validX);
-		if (xMin == null || xMax == null) return [empty, false];
-		if (xMax - xMin < windowSize) return [empty, false];
-
-		// Window starts: xMin, xMin+step, ... up to xMax - windowSize
-		const starts = [];
-		for (let s = xMin; s <= xMax - windowSize + 1e-9; s += stepSize) {
-			starts.push(s);
-		}
+		const { min: xMin } = arrayMinMax(validX);
+		if (xMin == null) return [empty, false];
+		// Every complete window over the sampled span (last sample + one sampling step), see
+		// movingWindowStarts: judging on the last sample time dropped the last full window.
+		const starts = movingWindowStarts(validX, windowSize, stepSize);
 		if (starts.length === 0) return [empty, false];
 
 		const binLabel = argsIN.binLabel ?? 'center';
@@ -397,6 +397,8 @@
 			p.args.corrMinLag +
 			'|' +
 			p.args.corrMaxLag +
+			'|' +
+			p.args.corrBiased +
 			'|' +
 			p.args.rwFixKappa +
 			'|' +
@@ -891,6 +893,11 @@
 			</ControlInput>
 			<ControlInput label={`Max lag (${xUnit}; 0 = half window)`}>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
+			</ControlInput>
+		</div>
+		<div class="control-input-horizontal">
+			<ControlInput label="Standard ACF (÷N, as R acf / MATLAB autocorr)">
+				<input type="checkbox" bind:checked={p.args.corrBiased} />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'rectfit'}

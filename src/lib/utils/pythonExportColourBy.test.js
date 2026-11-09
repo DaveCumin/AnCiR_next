@@ -56,8 +56,9 @@ describe('resolved series colours reach the script', () => {
 		const [plot] = embeddedPlots(file.text);
 		const want = s.seriesColours[s.plots[0].id][0].colourCategories;
 		expect(plot.seriesColours[0].colourCategories).toEqual(want);
-		expect(want.labels).toEqual(['het', 'ko', 'wt']);
-		expect(want.colours[0]).toBe('#7a1f5c');
+		// First appearance, as the Boxplot (plots/categoryOrder.js); 'het' carries the pin.
+		expect(want.labels).toEqual(['wt', 'ko', 'het']);
+		expect(want.colours[2]).toBe('#7a1f5c');
 		const refused = session('categoryRefused');
 		const [rf] = sessionToPythonFiles(refused, PY_RUNTIME);
 		expect(embeddedPlots(rf.text)[0].seriesColours[0].colourCategories).toEqual({

@@ -1,4 +1,5 @@
 <script module>
+	import { autoSeriesColour, pickedColour } from '$lib/plots/autoSeriesColour.js';
 	// @ts-nocheck
 
 	import Column from '$lib/core/Column.svelte';
@@ -9,7 +10,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
@@ -108,7 +109,15 @@
 			return (hss[last] - hss[first]) / (last - first);
 		});
 
-		colour = $state();
+		// The user's pick, or null while automatic (autoSeriesColour.js): read at draw time, so
+		// the column's appearance-map colour applies, and saved as null.
+		#explicitColour = $state(null);
+		get colour() {
+			return autoSeriesColour(this, this.#explicitColour, this.y);
+		}
+		set colour(v) {
+			this.#explicitColour = pickedColour(v);
+		}
 
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
@@ -284,7 +293,7 @@
 			// Only an absent flag defaults to visible: a series the user hid stays hidden
 			// through save and load (the round trip in plotRoundTrip.registry.test.js).
 			this.draw = typeof dataIN?.draw === 'boolean' ? dataIN.draw : true;
-			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
+			this.colour = dataIN?.colour ?? null;
 		}
 
 		// Label shown in the legend/Data tab: the user's explicit label, or the
@@ -381,7 +390,7 @@
 				// `label` used to be omitted here, so a user-typed series label was lost
 				// on save and the legend/tooltip silently reverted to the column name.
 				label: this.label,
-				colour: this.colour,
+				colour: this.#explicitColour,
 				draw: this.draw,
 				phaseMarkers: this.phaseMarkers,
 				...this.ruleJSON()
@@ -697,6 +706,13 @@
 		// $derived: a view override that was never saved and that no undo could reach.
 		startTimeIN = $state(null);
 		startTime = $derived(this.startTimeIN ?? this.autoStartTime);
+		// Whether any series reads the start time: a time or bin x (a numeric x starts its rows
+		// at its own first sample, see `offset`).
+		startTimeApplies = $derived(this.data.some((d) => d.x?.type === 'time' || d.x?.type === 'bin'));
+		// Only numeric x columns are wired, so the start time box would have nothing to set.
+		startTimeIdle = $derived(
+			!this.startTimeApplies && this.data.some((d) => (d.x?.getData?.()?.length ?? 0) > 0)
+		);
 		// The record's first and last valid time (x and y both valid), over every time series.
 		// A filter process replaces filtered rows with null, so no single index (not even the
 		// first valid-y one) can be trusted to have a valid x.
@@ -1297,31 +1313,39 @@
 				<p>Time</p>
 			</div>
 
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Start time</p>
-					<div class="start-time-row">
-						<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js). -->
-						<DateTimeHrs
-							value={theData.startTime}
-							zone={theData.clockZone}
-							onChange={(v) => (theData.startTimeIN = v)}
-							label="Start time"
-						/>
-						{#if theData.startTimeIN != null}
-							<button
-								class="icon"
-								type="button"
-								aria-label="Reset the start time to the first day of data"
-								{@attach attachTooltip('Reset the start time to the first day of data')}
-								onclick={() => (theData.startTimeIN = null)}
-							>
-								<Icon name="reset" width={14} height={14} />
-							</button>
-						{/if}
+			<!-- The start time places a time (or binned time) column's rows. A numeric x is hours
+			     with no date, so the box (a date) has nothing to set: it read 1 Jan 1970. -->
+			{#if theData.startTimeIdle}
+				<p class="time-zone-note" data-testid="actogram-start-numeric">
+					Rows start at the first sample. A start time needs a time column on x.
+				</p>
+			{:else}
+				<div class="control-input-vertical">
+					<div class="control-input">
+						<p>Start time</p>
+						<div class="start-time-row">
+							<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js). -->
+							<DateTimeHrs
+								value={theData.startTime}
+								zone={theData.clockZone}
+								onChange={(v) => (theData.startTimeIN = v)}
+								label="Start time"
+							/>
+							{#if theData.startTimeIN != null}
+								<button
+									class="icon"
+									type="button"
+									aria-label="Reset the start time to the first day of data"
+									{@attach attachTooltip('Reset the start time to the first day of data')}
+									onclick={() => (theData.startTimeIN = null)}
+								>
+									<Icon name="reset" width={14} height={14} />
+								</button>
+							{/if}
+						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Per-column time zone (phase 2): which clock the rows follow, and what a
 			     daylight-saving change or a series in another zone does to them. -->

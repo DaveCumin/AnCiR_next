@@ -42,6 +42,27 @@ export const NULL_AUTO_STROKE_VERSION = Object.freeze([72, 4]);
 /** The first version that saves a fill following its stroke as null. */
 export const NULL_AUTO_FILL_VERSION = Object.freeze([82, 49]);
 
+/**
+ * The first version that saves a Mean +/- SEM series' automatic error-bar colour as null. Before
+ * it the constructor copied the points' colour before the series was wired or placed, so every
+ * series saved palette[0] (or its column's colour) as if it were a pick.
+ */
+export const NULL_AUTO_ERROR_COLOUR_VERSION = Object.freeze([82, 68]);
+
+/**
+ * The first version that saves a series' own automatic colour as null on the plots that used to
+ * copy getPaletteColor(parent.data.length) into it when the series was made (plots/
+ * autoSeriesColour.js): the plot type and the field. The copy was always the palette entry for
+ * the series' place, so that string is released; any other is a pick.
+ */
+export const NULL_AUTO_SERIES_COLOUR_VERSION = Object.freeze([82, 68]);
+export const SERIES_OWN_COLOUR = Object.freeze({
+	actogram: 'colour',
+	circularphase: 'colour',
+	qqplot: 'colour',
+	histogram: 'fillColour'
+});
+
 /** The series slots that hold a LineClass / PointsClass / BoxClass, in every plot type. */
 export const STYLE_SLOTS = Object.freeze([
 	'line',
@@ -89,7 +110,8 @@ function recordColour(record) {
 }
 
 /**
- * Release the automatic colours a pre-v72.4 (stroke) or pre-v82.49 (box fill) session saved.
+ * Release the automatic colours a pre-v72.4 (stroke), pre-v82.49 (box fill) or pre-v82.68 (Mean
+ * +/- SEM error bars; Actogram, CircularPhase, QQPlot and Histogram series colours) session saved.
  * Pure: returns a copy when anything changed, else the session itself.
  * @param {any} json  a parsed session
  * @returns {{ json: any, released: number }}
@@ -98,17 +120,20 @@ export function releaseLegacyAutoColours(json) {
 	if (!json || !Array.isArray(json.plots)) return { json, released: 0 };
 	const strokes = savedBefore(json.version, NULL_AUTO_STROKE_VERSION);
 	const fills = savedBefore(json.version, NULL_AUTO_FILL_VERSION);
-	if (!strokes && !fills) return { json, released: 0 };
+	const errorBars = savedBefore(json.version, NULL_AUTO_ERROR_COLOUR_VERSION);
+	const ownColours = savedBefore(json.version, NULL_AUTO_SERIES_COLOUR_VERSION);
+	if (!strokes && !fills && !errorBars && !ownColours) return { json, released: 0 };
 
 	// What an automatic stroke drew for a column: its record in the session's appearance map.
-	const appearance = fills
-		? migrateAppearanceMaps(
-				json.seriesAppearance,
-				json.seriesColours,
-				json.seriesShapes,
-				json.seriesDashes
-			)
-		: {};
+	const appearance =
+		fills || errorBars
+			? migrateAppearanceMaps(
+					json.seriesAppearance,
+					json.seriesColours,
+					json.seriesShapes,
+					json.seriesDashes
+				)
+			: {};
 
 	let released = 0;
 	const plots = json.plots.map((plot) => {
@@ -118,6 +143,28 @@ export function releaseLegacyAutoColours(json) {
 		const nextData = data.map((series, i) => {
 			if (!series || typeof series !== 'object') return series;
 			let nextSeries = series;
+			// A Mean +/- SEM series' error-bar colour: released when it is what the old copy-at-
+			// construction produced (palette[0] or [i], the points' saved colour, or the column's
+			// appearance colour). Any other string is a pick.
+			if (errorBars && plot?.type === 'meansem' && typeof series.errorColour === 'string') {
+				const ref = series.y?.refId;
+				const followed = [
+					getPaletteColor(0),
+					getPaletteColor(i),
+					series.points?.colour,
+					recordColour(appearance[String(ref)])
+				];
+				if (followed.some((c) => same(series.errorColour, c))) {
+					released += 1;
+					nextSeries = { ...nextSeries, errorColour: null };
+				}
+			}
+			// A series' own colour on the plots that copied the palette entry of its place.
+			const own = ownColours ? SERIES_OWN_COLOUR[plot?.type] : null;
+			if (own && typeof series[own] === 'string' && same(series[own], getPaletteColor(i))) {
+				released += 1;
+				nextSeries = { ...nextSeries, [own]: null };
+			}
 			for (const slot of STYLE_SLOTS) {
 				const style = series[slot];
 				if (!style || typeof style !== 'object') continue;

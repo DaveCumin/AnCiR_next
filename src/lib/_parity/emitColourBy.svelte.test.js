@@ -795,12 +795,13 @@ describe('colour by: the app side of the Python export fixture', () => {
 		const pts = at('categoryPoints');
 		const key = pts.expected[0].key;
 		expect(key.categorical).toBe(true);
-		expect(key.categories.map((k) => k.label)).toEqual(['het', 'ko', 'wt']);
-		expect(key.categories[0].colour).toBe('#7a1f5c');
+		// First appearance (plots/categoryOrder.js); 'het' carries the pinned colour.
+		expect(key.categories.map((k) => k.label)).toEqual(['wt', 'ko', 'het']);
+		expect(key.categories[2].colour).toBe('#7a1f5c');
 		// The export carries the drawn colours for the runtime.
 		const entry = pts.session.seriesColours[pts.session.plots[0].id][0];
 		expect(entry.colourCategories).toEqual({
-			labels: ['het', 'ko', 'wt'],
+			labels: ['wt', 'ko', 'het'],
 			colours: key.categories.map((k) => k.colour)
 		});
 		const refused = at('categoryRefused');

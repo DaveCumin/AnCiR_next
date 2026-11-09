@@ -31,6 +31,17 @@ import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 /** The style objects of a series whose resolved colour the export draws with. */
 const COLOURED_PARTS = ['line', 'points'];
+/**
+ * A series' OWN colour field (no style object) on the plots that have one: the Actogram's,
+ * CircularPhase's and QQPlot's `colour`, the Histogram's `fillColour`. Saved as null while
+ * automatic (plots/autoSeriesColour.js), so the export carries the colour as drawn.
+ */
+const OWN_COLOUR = {
+	actogram: 'colour',
+	circularphase: 'colour',
+	qqplot: 'colour',
+	histogram: 'fillColour'
+};
 
 /**
  * A Category-coloured series' categories and drawn colours, `{ refused: true }`, or null.
@@ -99,7 +110,7 @@ export function boxCategoryEntry(plot) {
 }
 
 /**
- * `{ [plotId]: [{ line?, points?, box?, colourCategories? }, ...] }`, one entry per series in
+ * `{ [plotId]: [{ line?, points?, colour?, fillColour?, box?, colourCategories? }, ...] }`, one entry per series in
  * data order (an empty object for a series with none of them), for every plot whose series
  * have a line, points or boxes.
  * @param {any[]} [plots] the wrapper plots (default: the live session's)
@@ -125,6 +136,19 @@ export function exportSeriesColours(plots = core.plots) {
 				}
 				if (typeof colour === 'string' && colour !== '') {
 					entry[part] = colour;
+					any = true;
+				}
+			}
+			const own = OWN_COLOUR[plot?.type];
+			if (own) {
+				let colour;
+				try {
+					colour = datum?.[own];
+				} catch {
+					colour = undefined;
+				}
+				if (typeof colour === 'string' && colour !== '') {
+					entry[own] = colour;
 					any = true;
 				}
 			}

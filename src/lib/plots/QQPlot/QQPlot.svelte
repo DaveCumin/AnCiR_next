@@ -1,4 +1,5 @@
 <script module>
+	import { autoSeriesColour, pickedColour } from '$lib/plots/autoSeriesColour.js';
 	// @ts-nocheck
 	// Q-Q plot — a SELF-COMPUTING normal quantile-quantile plot.
 	//
@@ -29,7 +30,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { qqPoints } from '$lib/utils/qq.js';
@@ -66,7 +67,15 @@
 		parentPlot = $state();
 		column = $state();
 		label = $state('Series 1');
-		colour = $state(getPaletteColor(0));
+		// The user's pick, or null while automatic (autoSeriesColour.js): read at draw time, so
+		// the column's appearance-map colour applies, and saved as null.
+		#explicitColour = $state(null);
+		get colour() {
+			return autoSeriesColour(this, this.#explicitColour, this.column);
+		}
+		set colour(v) {
+			this.#explicitColour = pickedColour(v);
+		}
 		pointRadius = $state(3);
 		opacity = $state(0.85);
 
@@ -80,7 +89,7 @@
 			}
 			// Blank by default; `displayLabel` falls back to the wired column's name.
 			this.label = dataIN?.label ?? '';
-			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length);
+			this.colour = dataIN?.colour ?? null;
 			this.pointRadius = dataIN?.pointRadius ?? 3;
 			this.opacity = dataIN?.opacity ?? 0.85;
 			// Colour by / Size by: each restored only when it was on (both halves present).
@@ -145,7 +154,7 @@
 			return {
 				column: this.column,
 				label: this.label,
-				colour: this.colour,
+				colour: this.#explicitColour,
 				pointRadius: this.pointRadius,
 				opacity: this.opacity,
 				// Only while Colour by / Size by is on, so a plain series saves exactly as before.

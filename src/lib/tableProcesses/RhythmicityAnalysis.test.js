@@ -241,6 +241,21 @@ describe('rhythmicityanalysis', () => {
 		expect(r.stats.peak_magnitude).toBe(5);
 	});
 
+	it('passes the correlogram normalisation through (default per-lag pairs, opt-in biased ACF)', async () => {
+		const { computeAutocorrelation } = await import('$lib/utils/correlogram.js');
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((ti) => Math.cos((2 * Math.PI * ti) / 24)) };
+		const run = (over) =>
+			rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [2], analysis: 'correlogram', ...over });
+		computeAutocorrelation.mockClear();
+		await run({});
+		expect(computeAutocorrelation.mock.calls[0][5]).toEqual({ normalization: 'pairs' });
+		computeAutocorrelation.mockClear();
+		await run({ corrBiased: true });
+		expect(computeAutocorrelation.mock.calls[0][5]).toEqual({ normalization: 'biased' });
+	});
+
 	it('runs correlogram and picks peak correlation away from lag 0', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));

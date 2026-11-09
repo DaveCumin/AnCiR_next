@@ -54,6 +54,7 @@
 		static descriptors = {
 			maxLag: { label: 'Max lag (h)' },
 			minLag: { label: 'Min lag (h)' },
+			biased: { label: 'Standard ACF (÷N, as R acf / MATLAB autocorr)' },
 			showConfidenceBounds: { label: 'Show confidence bounds' },
 			confidenceLevel: { label: 'Confidence level', input: 'select', options: [0.95, 0.99] },
 			bandMethod: {
@@ -69,6 +70,10 @@
 		y = $state();
 		maxLag = $state(null); // null = auto (half the recording span), otherwise max lag in hours
 		minLag = $state(0); // 0 = include lag from 0 (with lag=0 point); otherwise drop lags below this
+		// The standard (biased) ACF, every lag divided by N as R acf and MATLAB autocorr do,
+		// instead of each lag's own pair count (utils/correlogram.js `normalization`). Off by
+		// default, so a saved correlogram draws exactly what it did.
+		biased = $state(false);
 
 		line = $state();
 		points = $state();
@@ -91,7 +96,9 @@
 			// gap and put every lag slot off the true step (24.456 h against 24.000 h).
 			const binSize = this.x?.binWidth ? this.x.binWidth : null;
 
-			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag);
+			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag, {
+				normalization: this.biased ? 'biased' : 'pairs'
+			});
 		});
 
 		// The significance band at each lag of acfData (utils/correlogram.js correlogramBand):
@@ -107,7 +114,9 @@
 				const times = this.x?.hoursSinceStart ?? [];
 				const values = this.y?.getData() ?? [];
 				const binSize = this.x?.binWidth ? this.x.binWidth : null;
-				full = computeAutocorrelation(times, values, binSize, this.maxLag, 0);
+				full = computeAutocorrelation(times, values, binSize, this.maxLag, 0, {
+					normalization: this.biased ? 'biased' : 'pairs'
+				});
 			}
 			return correlogramBand(this.acfData, {
 				method: this.bandMethod,
@@ -215,6 +224,7 @@
 			this.points = new PointsClass(dataIN?.points, this);
 			this.maxLag = dataIN?.maxLag ?? null;
 			this.minLag = dataIN?.minLag ?? 0;
+			this.biased = dataIN?.biased === true;
 			this.showConfidenceBounds = dataIN?.showConfidenceBounds ?? true;
 			this.confidenceLevel = dataIN?.confidenceLevel ?? 0.95;
 			this.bandMethod = correlogramBandMethodOf(dataIN);
@@ -294,6 +304,7 @@
 				points: this.points.toJSON(),
 				maxLag: this.maxLag,
 				minLag: this.minLag,
+				biased: this.biased,
 				showConfidenceBounds: this.showConfidenceBounds,
 				confidenceLevel: this.confidenceLevel,
 				bandMethod: this.bandMethod
@@ -311,6 +322,7 @@
 				points: PointsClass.fromJSON(json.points),
 				maxLag: json.maxLag,
 				minLag: json.minLag,
+				biased: json.biased,
 				showConfidenceBounds: json.showConfidenceBounds,
 				confidenceLevel: json.confidenceLevel,
 				// Absent on a series saved before the band was a choice: the constructor's
@@ -1035,6 +1047,10 @@
 								/>
 							</p>
 						{/if}
+
+						<ControlInput label="Standard ACF (÷N, as R acf / MATLAB autocorr)">
+							<input type="checkbox" bind:checked={datum.biased} />
+						</ControlInput>
 
 						<Line lineData={datum.line} which="controls" title="Line" />
 						<Points pointsData={datum.points} which="controls" />

@@ -34,7 +34,14 @@ describe('dynamic-output processes auto-seed their out keys', () => {
 		});
 		expect(res.valid).toBe(true);
 		const keys = res.outputs.map((o) => o.key).sort();
-		expect(keys).toEqual(['1_period', '1_power']);
+		// The per-y spectrum plus the peak statistics the node's standalone mode adds.
+		expect(keys).toEqual([
+			'1_period',
+			'1_power',
+			'stat_peak_period',
+			'stat_peak_power',
+			'stat_peak_pvalue'
+		]);
 	});
 
 	it('Split — segment keys from splitTimes, no explicit out', async () => {

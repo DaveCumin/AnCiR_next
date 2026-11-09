@@ -54,6 +54,24 @@ export function paddedDomain(
 }
 
 /**
+ * The data's range rounded outward to round tick values, from the SPAN of the data (d3 `nice`).
+ *
+ * For plots that start from the data's own range (boxplot, Mean +/- SEM). Rounding each end to
+ * its own leading decade did not look at the span: 22.5 .. 23.3 became 20 .. 30, so the boxes
+ * filled a twelfth of the plot. A flat series (min = max) gets a band of 5% of its magnitude
+ * either side first, so it is not a zero-height domain.
+ *
+ * @param {number} min
+ * @param {number} max
+ * @param {number} [count] about how many ticks the axis draws (default 5, AxisClass nticks)
+ * @returns {[number, number]}
+ */
+export function niceDomain(min, max, count = 5) {
+	if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+	return paddedDomain(min, max, { pad: min === max ? 0.05 : 0, nice: count });
+}
+
+/**
  * Min and max over several arrays, skipping null, NaN and infinities.
  *
  * @param {Array<ArrayLike<number>|null|undefined>} arrays

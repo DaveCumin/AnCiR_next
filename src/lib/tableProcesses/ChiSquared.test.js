@@ -515,3 +515,44 @@ describe('chisquared: goodness-of-fit input reading (STAT-13)', () => {
 		expect(res.warnings.join(' ')).toMatch(/"red"/);
 	});
 });
+
+describe('chisquared: two variables per subject left in the default groups format', () => {
+	// Reported: Fisher's exact with the default format and two equal-length category columns
+	// (treatment and outcome, one row per subject) returned no p-value and a message that did
+	// not say what to change ("needs exactly 2 categories in each variable (found 2 and 4)").
+	// Read as two independent groups, the columns share no values, so the "outcomes" are the
+	// four labels of both variables. The message now names the format to use.
+	const fresh = (over) => ({ xIN: 1, yIN: 2, correction: true, out: {}, ...over });
+
+	it("Fisher's exact says to switch to the paired format", () => {
+		const [res] = chisquared(fresh({ testType: 'fisher' }));
+		expect(res.pvalue).toBeNaN();
+		const msg = res.warnings.join(' ');
+		expect(msg).toMatch(/share no values/);
+		expect(msg).toMatch(/Paired \(one row per subject\)/);
+		// Following the advice gives the test.
+		const [paired] = chisquared(fresh({ testType: 'fisher', dataFormat: 'paired' }));
+		expect(Number.isFinite(paired.pvalue)).toBe(true);
+	});
+
+	it('independence warns too (the groups reading tests a meaningless table)', () => {
+		const [res] = chisquared(fresh({ testType: 'independence' }));
+		expect(res.warnings.join(' ')).toMatch(/Paired \(one row per subject\)/);
+	});
+
+	it('real independent groups that share their outcomes get no such warning', () => {
+		mockColumns[70] = { name: 'treated', getData: () => ['yes', 'no', 'yes'] };
+		mockColumns[71] = { name: 'control', getData: () => ['no', 'no', 'yes', 'no'] };
+		const [res] = chisquared(fresh({ testType: 'fisher', xIN: 70, yIN: 71 }));
+		expect(Number.isFinite(res.pvalue)).toBe(true);
+		expect(res.warnings.join(' ')).not.toMatch(/share no values/);
+	});
+
+	it('a Fisher table that is not 2x2 in groups format says what the groups must hold', () => {
+		mockColumns[72] = { name: 'g1', getData: () => ['a', 'b', 'c'] };
+		mockColumns[73] = { name: 'g2', getData: () => ['a', 'b', 'c', 'a'] };
+		const [res] = chisquared(fresh({ testType: 'fisher', xIN: 72, yIN: 73 }));
+		expect(res.pvalue).toBeNaN();
+		expect(res.warnings.join(' ')).toMatch(/outcomes .*exactly 2 distinct values/);
+	});
+});

@@ -244,3 +244,18 @@ def test_the_raster_weights_every_pixel_by_the_area_covered(mode):
     assert list(r["cover"].ravel()) == pytest.approx(want["cover"], rel=1e-6, abs=1e-6)
     if mode == "heatmap":
         assert list(r["rgb"].ravel()) == pytest.approx(want["rgb"], rel=1e-6, abs=1e-5)
+
+
+def test_an_automatic_series_colour_is_resolved():
+    """Since 82.68 an Actogram series saves its automatic colour as null (plots/
+    autoSeriesColour.js): the export draws the colour the app resolved (seriesColours), else
+    the palette entry of the series' place; a saved pick wins."""
+    from ancir_runtime import with_series_colours, APP_PALETTE
+    plot = {'type': 'actogram', 'plot': {'data': [{'colour': None}, {'colour': None},
+                                                  {'colour': '#123456'}]},
+            'seriesColours': [{'colour': '#abcdef'}]}
+    got = [s['colour'] for s in with_series_colours(plot)['plot']['data']]
+    assert got == ['#abcdef', APP_PALETTE[1], '#123456']
+    hist = {'plot': {'data': [{'fillColour': None}]}}
+    assert with_series_colours(hist, 'fillColour')['plot']['data'][0]['fillColour'] == \
+        APP_PALETTE[0]

@@ -4,7 +4,7 @@
 	// @ts-nocheck
 	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { columnDisplayName } from '$lib/core/columnLabels.js';
+	import { columnDisplayName, columnNamer } from '$lib/core/columnLabels.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { isMissingCategory } from '$lib/utils/chisquare.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -23,8 +23,10 @@
 	/**
 	 * The name a column is SHOWN by (a node output's label, e.g. Join Data's "amplitude", not its
 	 * stored `joined_21_3`), for the stats table, the warnings and the export.
+	 * `namer`: one columnNamer() shared by every series of a run (a namer indexes every column
+	 * owner in the session, so one per series made n y columns cost O(n^2)).
 	 */
-	const shownName = (col) => columnDisplayName(col) || col.name;
+	const shownName = (col, namer) => columnDisplayName(col, namer) || col.name;
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
@@ -103,6 +105,8 @@
 
 	function buildGroupsFromYColumns(yINs) {
 		const groups = [];
+		// One namer for every group name, built on first use (see shownName).
+		let namer = null;
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
 			const yCol = getColumnById(yId);
@@ -110,7 +114,7 @@
 			const values = presentNumbers(yCol.getData());
 			if (!values.length) continue;
 			groups.push({
-				name: shownName(yCol) || String(yId),
+				name: shownName(yCol, (namer ??= columnNamer())) || String(yId),
 				values,
 				n: values.length,
 				mean: mean(values),
@@ -678,6 +682,9 @@
 			warnings: []
 		};
 		let anyValid = false;
+		// One namer for every series label below, built on first use (see shownName).
+		let namer = null;
+		const nameOf = (col) => shownName(col, (namer ??= columnNamer()));
 
 		const groupCol = xIN != null && xIN !== -1 ? getColumnById(xIN) : null;
 		const mode = argsIN.method ?? 'auto';
@@ -715,7 +722,7 @@
 			if (!chosen) {
 				result.comparisons[yId] = {
 					valid: false,
-					columnName: shownName(yCol),
+					columnName: nameOf(yCol),
 					groups,
 					warnings: [],
 					reason:
@@ -732,14 +739,14 @@
 				result.comparisons[yId] = {
 					valid: tRes.valid,
 					test: 'Welch t-test',
-					columnName: shownName(yCol),
+					columnName: nameOf(yCol),
 					groupCount: groups.length,
 					nTotal: groups[0].n + groups[1].n,
 					groups,
 					warnings,
 					...tRes
 				};
-				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${nameOf(yCol)}: ${w}`));
 				if (tRes.valid) anyValid = true;
 				continue;
 			}
@@ -754,7 +761,7 @@
 				result.comparisons[yId] = {
 					valid: aRes.valid,
 					test: 'One-way ANOVA',
-					columnName: shownName(yCol),
+					columnName: nameOf(yCol),
 					groupCount: groups.length,
 					nTotal: groups.reduce((acc, g) => acc + g.n, 0),
 					groups,
@@ -764,7 +771,7 @@
 						'Tukey-Kramer post-hoc (q statistic; adjusted p from the studentized range)',
 					...aRes
 				};
-				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${nameOf(yCol)}: ${w}`));
 				if (aRes.valid) anyValid = true;
 				continue;
 			}
@@ -775,14 +782,14 @@
 				result.comparisons[yId] = {
 					valid: mRes.valid,
 					test: 'Mann-Whitney U',
-					columnName: shownName(yCol),
+					columnName: nameOf(yCol),
 					groupCount: groups.length,
 					nTotal: groups[0].n + groups[1].n,
 					groups,
 					warnings,
 					...mRes
 				};
-				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${nameOf(yCol)}: ${w}`));
 				if (mRes.valid) anyValid = true;
 				continue;
 			}
@@ -794,7 +801,7 @@
 			result.comparisons[yId] = {
 				valid: kRes.valid,
 				test: 'Kruskal-Wallis',
-				columnName: shownName(yCol),
+				columnName: nameOf(yCol),
 				groupCount: groups.length,
 				nTotal: groups.reduce((acc, g) => acc + g.n, 0),
 				groups,
@@ -803,7 +810,7 @@
 				postHocLabel: 'Pairwise Mann-Whitney (Holm adjusted p-values)',
 				...kRes
 			};
-			result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
+			result.warnings.push(...warnings.map((w) => `${nameOf(yCol)}: ${w}`));
 			if (kRes.valid) anyValid = true;
 		}
 

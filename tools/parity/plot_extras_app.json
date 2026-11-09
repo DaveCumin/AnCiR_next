@@ -8433,6 +8433,7 @@
 							"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
 							"maxLag": null,
 							"minLag": 0,
+							"biased": false,
 							"showConfidenceBounds": true,
 							"confidenceLevel": 0.95,
 							"bandMethod": "bartlett"
@@ -8718,8 +8719,7 @@
 							{ "value": 10, "label": "10", "grid": true },
 							{ "value": 15, "label": "15", "grid": true },
 							{ "value": 20, "label": "20", "grid": true },
-							{ "value": 25, "label": "25", "grid": true },
-							{ "value": 30, "label": "30", "grid": true }
+							{ "value": 25, "label": "25", "grid": true }
 						],
 						"label": "Value"
 					},
@@ -8776,12 +8776,13 @@
 						"rows": 64,
 						"cell": 4,
 						"rle": [
-							678, 74, 36, 74, 36, 74, 36, 74, 36, 74, 36, 74, 73, 37, 73, 37, 73, 37, 73, 37, 73,
-							37, 73, 37, 36, 74, 36, 38, 72, 38, 72, 38, 72, 38, 72, 38, 72, 38, 569, 34, 76, 34,
-							76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 39, 34, 3, 34, 39, 34,
-							3, 34, 39, 34, 3, 34, 39, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34,
-							39, 34, 3, 34, 39, 34, 3, 34, 39, 34, 3, 34, 39, 34, 76, 34, 76, 34, 76, 34, 76, 34,
-							76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 185
+							18, 74, 36, 74, 36, 74, 36, 74, 36, 74, 73, 37, 73, 37, 73, 37, 73, 37, 73, 37, 73,
+							37, 73, 37, 36, 38, 72, 38, 72, 38, 72, 38, 72, 38, 72, 38, 569, 34, 76, 34, 76, 34,
+							76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 39,
+							34, 3, 34, 39, 34, 3, 34, 39, 34, 3, 34, 39, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76,
+							34, 76, 34, 76, 34, 76, 34, 39, 34, 3, 34, 39, 34, 3, 34, 39, 34, 3, 34, 39, 34, 3,
+							34, 39, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34, 76, 34,
+							76, 34, 76, 34, 185
 						]
 					},
 					"auto": { "outside": true, "name": "outsideright", "x": 0, "y": 0, "covered": 0 },
@@ -8964,9 +8965,7 @@
 							{ "value": 100, "label": "100", "grid": true },
 							{ "value": 120, "label": "120", "grid": true },
 							{ "value": 140, "label": "140", "grid": true },
-							{ "value": 160, "label": "160", "grid": true },
-							{ "value": 180, "label": "180", "grid": true },
-							{ "value": 200, "label": "200", "grid": true }
+							{ "value": 160, "label": "160", "grid": true }
 						],
 						"label": "Response"
 					},
@@ -8978,7 +8977,7 @@
 						"label": "Group"
 					}
 				},
-				"plotSize": [440, 255],
+				"plotSize": [250.2, 255],
 				"basePlotWidth": 440,
 				"padding": { "top": 15, "right": 30, "bottom": 30, "left": 50 },
 				"legend": {
@@ -9016,18 +9015,21 @@
 						"rows": 64,
 						"cell": 4,
 						"rle": [
-							2117, 56, 54, 56, 54, 56, 54, 56, 54, 56, 54, 56, 54, 56, 469, 51, 59, 51, 4, 51, 4,
+							577, 56, 54, 56, 54, 56, 54, 56, 54, 56, 54, 56, 469, 51, 59, 51, 59, 51, 4, 51, 4,
 							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
 							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
 							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
 							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
-							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 59, 51, 59, 51, 59, 51, 167
+							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
+							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4,
+							51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 4, 51, 59, 51, 59, 51, 59, 51, 59, 51, 59, 51,
+							167
 						]
 					},
-					"auto": { "outside": false, "name": "topright", "x": 250.2, "y": 10, "covered": 0 },
-					"outsidePosition": null,
-					"reserveW": 0,
-					"drawn": { "x": 300.2, "y": 25, "width": 179.8, "height": 36 }
+					"auto": { "outside": true, "name": "outsideright", "x": 0, "y": 0, "covered": 0 },
+					"outsidePosition": { "x": 260.2, "y": 0 },
+					"reserveW": 189.8,
+					"drawn": { "x": 310.2, "y": 15, "width": 179.8, "height": 36 }
 				}
 			}
 		},
@@ -9204,9 +9206,7 @@
 							{ "value": 100, "label": "100", "grid": true },
 							{ "value": 120, "label": "120", "grid": true },
 							{ "value": 140, "label": "140", "grid": true },
-							{ "value": 160, "label": "160", "grid": true },
-							{ "value": 180, "label": "180", "grid": true },
-							{ "value": 200, "label": "200", "grid": true }
+							{ "value": 160, "label": "160", "grid": true }
 						],
 						"label": "Response"
 					},
@@ -9383,7 +9383,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }, { "colour": "#BE796B" }]
 			},
 			"columnLabels": {
 				"348": "Peak period (x units)",
@@ -9581,7 +9582,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -9740,7 +9742,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -9946,7 +9949,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -10132,7 +10136,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -10456,7 +10461,8 @@
 							]
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": { "64": "Power: activity" },
 			"expected": {
@@ -10813,7 +10819,8 @@
 						}
 					],
 					"nextRuleId": 3
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }, { "colour": "#BE796B" }]
 			},
 			"columnLabels": {
 				"348": "Peak period (x units)",
@@ -11172,7 +11179,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -11433,7 +11441,8 @@
 					],
 					"nextRuleId": 2,
 					"startTimeIN": 1712401200000
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"addedColumns": {
 				"data": [
@@ -12425,7 +12434,8 @@
 						}
 					],
 					"startTimeIN": 1711261800000
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"addedColumns": {
 				"data": [
@@ -13435,7 +13445,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -13913,7 +13924,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }]
 			},
 			"columnLabels": {},
 			"expected": {
@@ -16252,8 +16264,9 @@
 					],
 					"ridgeLine": null,
 					"texts": [
+						{ "text": "1.03", "x": -7, "y": 234, "transform": null, "size": 10, "cls": null },
 						{
-							"text": "2.0",
+							"text": "2",
 							"x": -7,
 							"y": 193.449978824,
 							"transform": null,
@@ -16261,7 +16274,7 @@
 							"cls": null
 						},
 						{
-							"text": "3.0",
+							"text": "3",
 							"x": -7,
 							"y": 168.562483338,
 							"transform": null,
@@ -16269,7 +16282,7 @@
 							"cls": null
 						},
 						{
-							"text": "4.0",
+							"text": "4",
 							"x": -7,
 							"y": 150.904524278,
 							"transform": null,
@@ -16277,7 +16290,7 @@
 							"cls": null
 						},
 						{
-							"text": "6.0",
+							"text": "6",
 							"x": -7,
 							"y": 126.017028793,
 							"transform": null,
@@ -16285,7 +16298,7 @@
 							"cls": null
 						},
 						{
-							"text": "8.0",
+							"text": "8",
 							"x": -7,
 							"y": 108.359069733,
 							"transform": null,
@@ -16337,7 +16350,7 @@
 						{ "text": "240", "x": 194, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "360", "x": 291, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "480", "x": 388, "y": 250, "transform": null, "size": 10, "cls": null },
-						{ "text": "Time", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
+						{ "text": "Time (h)", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
 						{
 							"text": "1770",
 							"x": 15,
@@ -19213,8 +19226,9 @@
 						[386.786235662, 234]
 					],
 					"texts": [
+						{ "text": "1.03", "x": -7, "y": 234, "transform": null, "size": 10, "cls": null },
 						{
-							"text": "2.0",
+							"text": "2",
 							"x": -7,
 							"y": 193.449978824,
 							"transform": null,
@@ -19222,7 +19236,7 @@
 							"cls": null
 						},
 						{
-							"text": "3.0",
+							"text": "3",
 							"x": -7,
 							"y": 168.562483338,
 							"transform": null,
@@ -19230,7 +19244,7 @@
 							"cls": null
 						},
 						{
-							"text": "4.0",
+							"text": "4",
 							"x": -7,
 							"y": 150.904524278,
 							"transform": null,
@@ -19238,7 +19252,7 @@
 							"cls": null
 						},
 						{
-							"text": "6.0",
+							"text": "6",
 							"x": -7,
 							"y": 126.017028793,
 							"transform": null,
@@ -19246,7 +19260,7 @@
 							"cls": null
 						},
 						{
-							"text": "8.0",
+							"text": "8",
 							"x": -7,
 							"y": 108.359069733,
 							"transform": null,
@@ -19298,7 +19312,7 @@
 						{ "text": "240", "x": 194, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "360", "x": 291, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "480", "x": 388, "y": 250, "transform": null, "size": 10, "cls": null },
-						{ "text": "Time", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
+						{ "text": "Time (h)", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
 						{
 							"text": "1770",
 							"x": 15,
@@ -20309,7 +20323,7 @@
 					"ridgeLine": null,
 					"texts": [
 						{
-							"text": "6.0",
+							"text": "6",
 							"x": -7,
 							"y": 215.531428767,
 							"transform": null,
@@ -20317,7 +20331,7 @@
 							"cls": null
 						},
 						{
-							"text": "8.0",
+							"text": "8",
 							"x": -7,
 							"y": 195.755949598,
 							"transform": null,
@@ -20348,6 +20362,7 @@
 							"size": 10,
 							"cls": null
 						},
+						{ "text": "27.8", "x": -7, "y": 0, "transform": null, "size": 10, "cls": null },
 						{
 							"text": "Period (h)",
 							"x": null,
@@ -20361,7 +20376,7 @@
 						{ "text": "240", "x": 194, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "360", "x": 291, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "480", "x": 388, "y": 250, "transform": null, "size": 10, "cls": null },
-						{ "text": "Time", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
+						{ "text": "Time (h)", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
 						{
 							"text": "36800",
 							"x": 15,
@@ -21792,8 +21807,9 @@
 					],
 					"ridgeLine": null,
 					"texts": [
+						{ "text": "1.4", "x": -7, "y": 234, "transform": null, "size": 10, "cls": null },
 						{
-							"text": "2.0",
+							"text": "2",
 							"x": -7,
 							"y": 209.737528792,
 							"transform": null,
@@ -21801,7 +21817,7 @@
 							"cls": null
 						},
 						{
-							"text": "3.0",
+							"text": "3",
 							"x": -7,
 							"y": 182.361283758,
 							"transform": null,
@@ -21809,7 +21825,7 @@
 							"cls": null
 						},
 						{
-							"text": "4.0",
+							"text": "4",
 							"x": -7,
 							"y": 162.937528792,
 							"transform": null,
@@ -21817,7 +21833,7 @@
 							"cls": null
 						},
 						{
-							"text": "6.0",
+							"text": "6",
 							"x": -7,
 							"y": 135.561283758,
 							"transform": null,
@@ -21825,7 +21841,7 @@
 							"cls": null
 						},
 						{
-							"text": "8.0",
+							"text": "8",
 							"x": -7,
 							"y": 116.137528792,
 							"transform": null,
@@ -21877,7 +21893,7 @@
 						{ "text": "240", "x": 194, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "360", "x": 291, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "480", "x": 388, "y": 250, "transform": null, "size": 10, "cls": null },
-						{ "text": "Time", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
+						{ "text": "Time (h)", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null },
 						{
 							"text": "992",
 							"x": 15,
@@ -23289,7 +23305,7 @@
 					"ridgeLine": null,
 					"texts": [
 						{
-							"text": "4.0",
+							"text": "4",
 							"x": -7,
 							"y": 233.367002056,
 							"transform": null,
@@ -23297,7 +23313,7 @@
 							"cls": null
 						},
 						{
-							"text": "6.0",
+							"text": "6",
 							"x": -7,
 							"y": 194.258080579,
 							"transform": null,
@@ -23305,7 +23321,7 @@
 							"cls": null
 						},
 						{
-							"text": "8.0",
+							"text": "8",
 							"x": -7,
 							"y": 166.509859198,
 							"transform": null,
@@ -23344,6 +23360,7 @@
 							"size": 10,
 							"cls": null
 						},
+						{ "text": "45", "x": -7, "y": 0, "transform": null, "size": 10, "cls": null },
 						{
 							"text": "Period (h)",
 							"x": null,
@@ -23357,7 +23374,7 @@
 						{ "text": "240", "x": 194, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "360", "x": 291, "y": 250, "transform": null, "size": 10, "cls": null },
 						{ "text": "480", "x": 388, "y": 250, "transform": null, "size": 10, "cls": null },
-						{ "text": "Time", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null }
+						{ "text": "Time (h)", "x": 194, "y": 268, "transform": null, "size": 11, "cls": null }
 					],
 					"overlayLines": [],
 					"overlayBands": [],
@@ -23484,7 +23501,8 @@
 							"phaseMarkers": []
 						}
 					]
-				}
+				},
+				"seriesColours": [{ "colour": "#234154" }, { "colour": "#bf796b91" }]
 			},
 			"columnLabels": {
 				"18": "Average day: Consolidated1",

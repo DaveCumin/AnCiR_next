@@ -62,8 +62,10 @@ Doc-only facts (not in the prompt, but agents should know):
 ## Column reference / input fields per plot
 
 `add_plot.inputs` field names come from `list_capabilities().plots[].inputs`:
-scatterplot/boxplot → `{x, y}`; actogram/periodogram/correlogram/fft → `{time, values}`;
-histogram → `{column}`; tableplot → an array of column names/ids.
+scatterplot/boxplot/meansem/cwt → `{x, y}`; actogram/periodogram/correlogram/fft/circularphase →
+`{time, values}`; histogram → `{column}`; tableplot → an array of column names/ids.
+A two-input plot takes either pair (`{time, values}` on a cwt is its `{x, y}`); a field the plot
+does not have is refused, naming its inputs.
 The last field (`y`, `values`; `column` on one-input plots) also takes a LIST of columns, one
 series each (x/time is shared); correlationheatmap and pairsplot need two or more, e.g.
 `{ "column": ["a", "b", "c"] }`. A plot that draws one series (cwt) refuses a list.

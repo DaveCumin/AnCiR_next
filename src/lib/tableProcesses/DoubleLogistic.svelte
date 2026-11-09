@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { migrateLegacyYIN, migrateRenamedOutKey } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
@@ -180,6 +180,11 @@
 			warning: outputXWarning
 		} = resolveOutputX(tCol, argsIN, getColumnById);
 		const phaseRef = resolveNodePhaseReference(argsIN, tCol);
+		// The x every curve is written on: the output x when set, else ONE grid shared by every
+		// series (the rows where x is valid), so each curve has the length of the single x
+		// output. A curve at its own series' valid rows made a y with missing values shorter
+		// than the x output (as Cosinor's was, 2026-11-09). The fit still uses its own rows.
+		const curveX = outputXData ?? t.filter((v) => !isInvalidValue(v)).map(Number);
 
 		const y_results = {};
 		let sharedT = null;
@@ -188,6 +193,10 @@
 		const fitEntries = [];
 		// Residual-autocorrelation warnings for the shuffle permutation test (FIT-5).
 		const permWarnings = [];
+		// One namer for every series label, built on first use: a namer indexes every column
+		// owner in the session, so one per label made n y columns cost O(n^2).
+		let namer = null;
+		const nameOf = (col) => displayNameOf(col, (namer ??= columnNamer()));
 
 		for (const yId of yINs) {
 			const yCol = getColumnById(yId);
@@ -218,26 +227,22 @@
 				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
 				: fitDoubleLogistic(tt, yy, dlOpts);
 
-			fitEntries.push({ label: `"${displayNameOf(yCol)}"`, result: fitResult ?? null, t: tt });
+			fitEntries.push({ label: `"${nameOf(yCol)}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
-				const xOutData = outputXData ?? tt;
-				const yOutData = outputXData
-					? evaluateDoubleLogisticAtPoints(fitResult.parameters, true, outputXData)
-					: fitResult.fitted;
+				const xOutData = curveX;
+				const yOutData = evaluateDoubleLogisticAtPoints(fitResult.parameters, true, curveX);
+				const fitted = outputXData ? yOutData : fitResult.fitted;
 
 				const perm = argsIN.permuteTest
 					? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN)
 					: null;
-				y_results[yId] = attachPermutation(
-					{ fitResult, fitted: yOutData, t: tt, xOutData, yOutData },
-					perm
-				);
+				y_results[yId] = attachPermutation({ fitResult, fitted, t: tt, xOutData, yOutData }, perm);
 				permWarnings.push(
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitResult.fitted[i]),
-						`"${displayNameOf(yCol)}"`
+						`"${nameOf(yCol)}"`
 					)
 				);
 			}
@@ -260,7 +265,7 @@
 
 		// Write shared X output (and, when it lands, the per-Y curves under the
 		// same hash).
-		const finalXData = outputXData ?? sharedT;
+		const finalXData = curveX;
 		const processHash = crypto.randomUUID();
 		if (writeXOutput(argsIN.out.dlogx, finalXData, { originTime_ms, processHash })) {
 			// The input ids themselves, not Object.keys(y_results): those are strings, and
@@ -325,7 +330,7 @@
 						yINs
 							.filter((yId) => y_results[yId])
 							.map((yId) => ({
-								label: `"${displayNameOf(getColumnById(yId))}"`,
+								label: `"${nameOf(getColumnById(yId))}"`,
 								result: y_results[yId].fitResult,
 								pValue: y_results[yId].pValue
 							})),
@@ -417,12 +422,16 @@
 	let dlData = $state();
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
-	let permEntries = $derived(
-		Object.entries(dlData?.y_results ?? {}).map(([yId, result]) => ({
-			name: displayNameById(Number(yId), String(yId)),
+	// One namer per render for the per-series rows below (a namer per row is O(n^2)).
+	const labelNamer = $derived(columnNamer());
+
+	let permEntries = $derived.by(() => {
+		const namer = columnNamer();
+		return Object.entries(dlData?.y_results ?? {}).map(([yId, result]) => ({
+			name: displayNameById(Number(yId), String(yId), namer),
 			result
-		}))
-	);
+		}));
+	});
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -643,8 +652,10 @@
 			'k2',
 			dlData.phaseRef?.clock ? 'offset_clock_h' : 'offset'
 		];
+		// One namer for every row (a namer per row is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const rows = validEntries.map(([yId, r]) => {
-			const name = displayNameById(Number(yId), String(yId));
+			const name = displayNameById(Number(yId), String(yId), namer);
 			const fr = r.fitResult;
 			return [
 				name,
@@ -989,7 +1000,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = dlData?.y_results?.[yId]}
-								{@const srcName = displayNameById(Number(yId), yId)}
+								{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
@@ -1004,7 +1015,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = displayNameById(Number(yId), yId)}
+					{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render dlogStats(yResult, srcName, yId)}
@@ -1017,7 +1028,8 @@
 						'x',
 						...yIds.map(
 							(id) =>
-								(dlData.outputXData ? 'predicted ' : 'fitted ') + displayNameById(Number(id), id)
+								(dlData.outputXData ? 'predicted ' : 'fitted ') +
+								displayNameById(Number(id), id, labelNamer)
 						)
 					]}
 					data={[

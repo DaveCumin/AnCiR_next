@@ -7,6 +7,14 @@
 	let _counter = 0;
 	let _linkedGroupCounter = 0;
 
+	// Only for a store that has just been emptied (the headless engine's fresh session,
+	// mcp/src/engine/session.js): ids then restart at 0 so the same build gives the same ids.
+	// Never call it while any column process is still live: it would hand out a held id again.
+	export function resetProcessIdCounters() {
+		_counter = 0;
+		_linkedGroupCounter = 0;
+	}
+
 	export function nextLinkedGroupId() {
 		return _linkedGroupCounter++;
 	}

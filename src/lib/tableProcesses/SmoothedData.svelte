@@ -5,6 +5,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { validPairs } from '$lib/utils/validPairs.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { timeOriginMs } from '$lib/utils/phaseReference.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -75,7 +76,21 @@
 		const originTime_ms = isTimeInput ? timeOriginMs(xInCol) : null;
 
 		const result = { x_out: [], y_results: {}, originTime_ms };
-		// Retained raw y per column (sorted, valid), aligned to x_out — needed for residuals.
+		// ONE x output for every series: the rows where x is valid, in x order (a stable sort,
+		// as each series' own). Each smoothed curve is written on it, null on the rows its y is
+		// missing. The x output used to be the first series' own rows, so a y with missing
+		// values wrote a curve shorter than smoothedx (as Cosinor's was, 2026-11-09), and a
+		// first series with gaps cut the others' rows.
+		const gridRows = [];
+		for (let i = 0; i < (xData ?? []).length; i++) if (!isInvalidValue(xData[i])) gridRows.push(i);
+		gridRows.sort((a, b) => Number(xData[a]) - Number(xData[b])); // Number-ok: valid rows only
+		result.x_out = gridRows.map((i) => Number(xData[i])); // Number-ok: valid rows only
+		/** A series' values (one per valid row, in grid order) spread onto the shared grid. */
+		const onGrid = (indices, values) => {
+			const at = new Map(indices.map((row, k) => [row, values[k]]));
+			return gridRows.map((row) => (at.has(row) ? at.get(row) : null));
+		};
+		// Retained raw y per column on the shared grid (null where missing) — for residuals.
 		const rawByY = {};
 		let anyValid = false;
 
@@ -88,12 +103,13 @@
 			// Missing rows are dropped by the house rule and the rest converted with Number().
 			// `d.y != null && !isNaN(d.y)` let ' ' and '' through (as 0) and kept numeric strings as
 			// strings, which the moving average then concatenated (ROB-8).
-			const { tt, yy } = validPairs(xData, yData);
-			const filteredData = tt.map((x, i) => ({ x: Number(x), y: Number(yy[i]) }));
+			const { indices, tt, yy } = validPairs(xData, yData);
+			const filteredData = tt.map((x, i) => ({ x: Number(x), y: Number(yy[i]), row: indices[i] }));
 
 			if (filteredData.length < 3) continue;
 
 			filteredData.sort((a, b) => a.x - b.x);
+			const rows = filteredData.map((d) => d.row);
 			const xVals = filteredData.map((d) => d.x);
 			const yVals = filteredData.map((d) => d.y);
 
@@ -125,10 +141,8 @@
 				continue;
 			}
 
-			// Use first valid Y's x values as the shared x output
-			if (result.x_out.length === 0) result.x_out = xVals;
-			result.y_results[yId] = smoothedY;
-			rawByY[yId] = yVals;
+			result.y_results[yId] = onGrid(rows, smoothedY);
+			rawByY[yId] = onGrid(rows, yVals);
 			anyValid = true;
 		}
 

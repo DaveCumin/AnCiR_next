@@ -91,3 +91,30 @@ describe('actogram start time', () => {
 		expect(p.plot.startTime).toBe(Date.UTC(2024, 2, 5));
 	});
 });
+
+describe('actogram start time with a numeric x', () => {
+	it('applies to a time x, and is idle (hidden) when every x is numeric hours', () => {
+		expect(actogram().plot.startTimeApplies).toBe(true);
+		expect(core.plots.at(-1).plot.startTimeIdle).toBe(false);
+		const h = new Column({ type: 'number', data: -1 });
+		core.rawData.set(
+			h.id,
+			Array.from({ length: 96 }, (_, i) => 48 + i)
+		);
+		h.data = h.id;
+		core.data.push(h);
+		const v = core.data[1];
+		core.plots.push(
+			new Plot({
+				type: 'actogram',
+				name: 'n',
+				width: 400,
+				height: 300,
+				plot: { data: [{ x: { refId: h.id }, y: { refId: v.id } }] }
+			})
+		);
+		const p = core.plots.at(-1).plot;
+		expect(p.startTimeApplies).toBe(false);
+		expect(p.startTimeIdle).toBe(true);
+	});
+});

@@ -23,6 +23,7 @@
 		viewPadFloorFor
 	} from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
+	import { cwtTimeAxis, exportTimeOf } from './cwtTimeAxis.js';
 	import {
 		colormapRGB,
 		normaliseTo01,
@@ -295,7 +296,8 @@
 		autoScalePadding() {}
 
 		getDownloadData() {
-			return scalogramExport(this.transform);
+			// Times in the record's own time, as the axis shows them (cwtTimeAxis.js).
+			return scalogramExport(this.transform, CWT_EXPORT_MAX_ROWS, exportTimeOf(this.data[0]?.x));
 		}
 
 		toJSON() {
@@ -365,8 +367,11 @@
 	 * samples, each row's time the mean time of its bin) to the most time points that fit;
 	 * every period is kept. The result then carries a `note` saying so, which the CSV
 	 * download shows to the user.
+	 *
+	 * `toTime` turns the transform's hours since the first sample into the record's own time
+	 * (exportTimeOf); the default leaves them as they are.
 	 */
-	export function scalogramExport(tr, maxRows = CWT_EXPORT_MAX_ROWS) {
+	export function scalogramExport(tr, maxRows = CWT_EXPORT_MAX_ROWS, toTime = (h) => h) {
 		const headers = ['time', 'period', 'power'];
 		if (!tr?.valid) return { headers, rows: [] };
 		const nP = tr.periods.length;
@@ -387,7 +392,9 @@
 		}
 		const rows = [];
 		for (let j = 0; j < nP; j++) {
-			for (let i = 0; i < times.length; i++) rows.push([times[i], tr.periods[j], power[j][i]]);
+			for (let i = 0; i < times.length; i++) {
+				rows.push([toTime(times[i]), tr.periods[j], power[j][i]]);
+			}
 		}
 		return note ? { headers, rows, note } : { headers, rows };
 	}
@@ -548,6 +555,44 @@
 		const m = /rgb\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(String(s));
 		return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0];
 	}
+
+	// An end of the period axis gets its own labelled tick when the nearest readable period is
+	// at least this fraction of the axis away: the axis starts at the shortest period the data
+	// allow (about 1.03 h at 30 min sampling), so "1" falls just outside it and the bottom of
+	// the axis was left unlabelled below "2".
+	const END_TICK_GAP = 0.08;
+
+	/**
+	 * The labelled periods: the readable ones inside the range, plus an end of the range when
+	 * the nearest readable period is far from it; else the ends and their geometric mean.
+	 * @param {number[]} periods  ascending
+	 * @param {boolean} [logScale]
+	 * @returns {number[]}
+	 */
+	export function periodTicks(periods, logScale = true) {
+		if (periods.length < 2) return [];
+		const lo = periods[0];
+		const hi = periods[periods.length - 1];
+		const candidates = [0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 36, 48, 72, 96, 168, 336];
+		const inside = candidates.filter((c) => c >= lo && c <= hi);
+		if (inside.length < 2) return [lo, Math.sqrt(lo * hi), hi];
+		const at = (v) => 1 - periodToY(v, periods, 1, logScale);
+		const out = [...inside];
+		if (at(inside[0]) - at(lo) >= END_TICK_GAP) out.unshift(lo);
+		if (at(hi) - at(inside[inside.length - 1]) >= END_TICK_GAP) out.push(hi);
+		return out;
+	}
+
+	/**
+	 * A period label: a whole number as it is ("2", "12"), anything else to 3 significant
+	 * figures ("0.5", "1.03"). It used to be one decimal below 10 and none above, so the axis
+	 * read "2.0, 3.0, ... 12, 16".
+	 * @param {number} v
+	 */
+	export function fmtPeriod(v) {
+		if (Number.isInteger(v)) return String(v);
+		return String(Number(v.toPrecision(3)));
+	}
 </script>
 
 <script>
@@ -567,16 +612,6 @@
 	const colormapLabelList = colormapOptions.map((k) => COLORMAP_LABELS[k]);
 
 	/** A handful of readable period ticks inside the rendered range. */
-	function periodTicks(periods) {
-		if (periods.length < 2) return [];
-		const lo = periods[0];
-		const hi = periods[periods.length - 1];
-		const candidates = [0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 36, 48, 72, 96, 168, 336];
-		const inside = candidates.filter((c) => c >= lo && c <= hi);
-		return inside.length >= 2 ? inside : [lo, Math.sqrt(lo * hi), hi];
-	}
-
-	const fmtPeriod = (v) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
 </script>
 
 {#snippet plot(theData)}
@@ -614,7 +649,8 @@
 			)}
 			{@const t0 = tr.times[0]}
 			{@const t1 = tr.times[tr.times.length - 1]}
-			{@const ticks = periodTicks(tr.periods)}
+			{@const ticks = periodTicks(tr.periods, plot.logScale)}
+			{@const timeAxis = cwtTimeAxis({ t0, t1, width: W, xCol: plot.data[0]?.x })}
 			<g transform="translate({plot.padding.left}, {plot.padding.top})">
 				<!-- The whole power field as ONE element (see the module comment). -->
 				{#if uri}
@@ -680,7 +716,7 @@
 				<!-- period axis -->
 				{#each ticks as p (p)}
 					{@const y = periodToY(p, tr.periods, H, plot.logScale)}
-					<line x1="-4" y1={y} x2="0" y2={y} stroke="var(--color-lightness-50)" />
+					<line class="tick" x1="-4" y1={y} x2="0" y2={y} stroke="var(--color-lightness-50)" />
 					<text
 						x={-(4 + 3 * fs)}
 						{y}
@@ -697,16 +733,22 @@
 					fill="var(--color-lightness-25)">Period (h)</text
 				>
 
-				<!-- time axis -->
-				{#each [0, 0.25, 0.5, 0.75, 1] as f (f)}
-					{@const x = f * W}
-					<line x1={x} y1={H} x2={x} y2={H + 4} stroke="var(--color-lightness-50)" />
+				<!-- time axis, in the column's own time (cwtTimeAxis.js) -->
+				{#each timeAxis.ticks as tick, ti (ti)}
+					<line
+						class="tick"
+						x1={tick.x}
+						y1={H}
+						x2={tick.x}
+						y2={H + 4}
+						stroke="var(--color-lightness-50)"
+					/>
 					<text
-						{x}
+						x={tick.x}
 						y={H + 4 + 12 * fs}
 						text-anchor="middle"
 						font-size={10 * fs}
-						fill="var(--color-lightness-25)">{(t0 + f * (t1 - t0)).toFixed(0)}</text
+						fill="var(--color-lightness-25)">{tick.label}</text
 					>
 				{/each}
 				<text
@@ -714,7 +756,7 @@
 					y={H + 4 + 30 * fs}
 					text-anchor="middle"
 					font-size={11 * fs}
-					fill="var(--color-lightness-25)">Time</text
+					fill="var(--color-lightness-25)">{timeAxis.title}</text
 				>
 			</g>
 

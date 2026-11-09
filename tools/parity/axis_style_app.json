@@ -2980,8 +2980,7 @@
 							{ "value": 10, "label": "10", "grid": true },
 							{ "value": 15, "label": "15", "grid": true },
 							{ "value": 20, "label": "20", "grid": true },
-							{ "value": 25, "label": "25", "grid": true },
-							{ "value": 30, "label": "30", "grid": true }
+							{ "value": 25, "label": "25", "grid": true }
 						],
 						"tickPx": 15,
 						"fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
@@ -3000,7 +2999,7 @@
 						"labelPx": 16
 					}
 				},
-				"domains": { "overlayXScale": [-0.5, 2.5], "overlayYScale": [-0.478087649, 30] },
+				"domains": { "overlayXScale": [-0.5, 2.5], "overlayYScale": [-0.398406375, 25] },
 				"plotSize": [440, 255],
 				"sizes": {
 					"axisLabel": 16,

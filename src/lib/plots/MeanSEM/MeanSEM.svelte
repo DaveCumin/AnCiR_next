@@ -1,4 +1,5 @@
 <script module>
+	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import {
@@ -14,7 +15,8 @@
 	import { commitAxisEdit } from '$lib/plots/axisEdits.js';
 	import { scaleLinear } from 'd3-scale';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
-	import { clearEnds } from '$lib/plots/axisDomain.js';
+	import { clearEnds, niceDomain } from '$lib/plots/axisDomain.js';
+	import { orderCategories, orderGroupStats } from '$lib/plots/categoryOrder.js';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import { meanSemByGroup } from '$lib/utils/meanSem.js';
@@ -35,25 +37,6 @@
 	import { encodedCsvCell } from '$lib/components/plotbits/encodingHost.js';
 	import { isCyclicMode, isCategoryMode } from '$lib/components/plotbits/encodings.js';
 
-	/**
-	 * Round a value outward to a "nice" axis limit (shared with Boxplot).
-	 * @param {number} value
-	 * @param {'floor'|'ceil'} direction
-	 * @returns {number}
-	 */
-	export function niceAxisLimit(value, direction) {
-		if (!isFinite(value)) return value;
-		if (value === 0) return 0;
-		const abs = Math.abs(value);
-		const step = Math.pow(10, Math.floor(Math.log10(abs)));
-		if (direction === 'floor') {
-			return value < 0
-				? -Math.ceil(Math.abs(value) / step) * step
-				: Math.floor(value / step) * step;
-		}
-		return value < 0 ? -Math.floor(Math.abs(value) / step) * step : Math.ceil(value / step) * step;
-	}
-
 	export const MeanSEM_defaultDataInputs = ['x', 'y'];
 	export const MeanSEM_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
@@ -72,7 +55,16 @@
 		label = $state('Mean ± SEM');
 		points = $state();
 		line = $state();
-		errorColour = $state('#000000');
+		// The error bars' colour: a user's pick, else (null) the series' own point colour, read at
+		// draw time. It used to be copied from the points in the constructor, before the series
+		// was wired or placed in its plot, so every series' bars took palette slot 0.
+		#explicitErrorColour = $state(null);
+		get errorColour() {
+			return this.#explicitErrorColour ?? this.points?.colour ?? '#000000';
+		}
+		set errorColour(v) {
+			this.#explicitErrorColour = typeof v === 'string' && v !== '' ? v : null;
+		}
 		errorWidth = $state(1.5);
 		errorCapWidth = $state(6);
 		showError = $state(true);
@@ -101,7 +93,7 @@
 			// Connecting line is off by default; the points + error bars carry the plot.
 			if (dataIN?.line === undefined) this.line.draw = false;
 
-			this.errorColour = dataIN?.errorColour ?? this.points.colour;
+			this.errorColour = dataIN?.errorColour ?? null;
 			this.errorWidth = dataIN?.errorWidth ?? 1.5;
 			this.errorCapWidth = dataIN?.errorCapWidth ?? 6;
 			this.showError = dataIN?.showError ?? true;
@@ -120,7 +112,9 @@
 			// No category column → treat the whole series as one group named by label.
 			const xData = xRaw.length > 0 ? xRaw : yData.map(() => this.displayLabel);
 			// `rows`: the rows each mean used, so Colour by summarises exactly those (plan 3.12).
-			return meanSemByGroup(xData, yData, { rows: true });
+			// In the plot's group order (first appearance; plots/categoryOrder.js), so the
+			// connecting line and Colour by follow the groups as drawn, not alphabetically.
+			return orderGroupStats(meanSemByGroup(xData, yData, { rows: true }));
 		});
 
 		// ---- Encoding hooks (EncodedSeries: Colour by and Size by) ----
@@ -192,7 +186,8 @@
 				label: this.label,
 				points: this.points.toJSON(),
 				line: this.line.toJSON(),
-				errorColour: this.errorColour,
+				// null while the bars follow the points (a string is a pick).
+				errorColour: this.#explicitErrorColour,
 				errorWidth: this.errorWidth,
 				errorCapWidth: this.errorCapWidth,
 				showError: this.showError,
@@ -352,21 +347,20 @@
 		ylimsIN = $state([null, null]);
 
 		xAxis = $state();
+		// The titles drawn while an axis label is empty: the wired column's name (plots/axisLabels.js).
+		defaultXLabel = $derived(defaultAxisLabel(this.data.map((d) => d.x)));
+		defaultYLabel = $derived(defaultAxisLabel(this.data.map((d) => d.y)));
 		yAxis = $state();
 
-		// Union of group keys across all series, numeric-aware sorted (matches Boxplot).
+		// Union of group keys across all series, in Boxplot's order (plots/categoryOrder.js).
 		uniqueXValues = $derived.by(() => {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 			const all = new Set();
 			this.data.forEach((d) => {
 				d.stats.forEach((s) => all.add(s.x));
 			});
-			return Array.from(all).sort((a, b) => {
-				const sa = String(a);
-				const sb = String(b);
-				if (!isNaN(+sa) && !isNaN(+sb)) return +sa - +sb;
-				return sa.localeCompare(sb);
-			});
+			// First appearance for text groups, numeric order when every group is a number.
+			return orderCategories(all);
 		});
 
 		ylims = $derived.by(() => {
@@ -391,8 +385,10 @@
 			}
 			if (ymin === Infinity || ymax === -Infinity) return [0, 10];
 
-			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : niceAxisLimit(ymin, 'floor');
-			const yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : niceAxisLimit(ymax, 'ceil');
+			// Round from the span (niceDomain), not each end to its own decade (20 .. 30 for 22.5 .. 23.3).
+			const nice = niceDomain(ymin, ymax, this.yAxis?.nticks ?? 5);
+			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : nice[0];
+			const yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : nice[1];
 			// An error-bar cap at the extreme must not be drawn on the axis line.
 			return clearEnds([yBot, yTop], ymin, ymax, 4, this.plotheight, {
 				autoLo: this.ylimsIN[0] == null,
@@ -793,7 +789,12 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
+		<Axis
+			axisData={theData.yAxis}
+			which="controls"
+			title="Y-axis"
+			defaultLabel={theData.defaultYLabel}
+		>
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
@@ -833,7 +834,7 @@
 			</div>
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
-					<AxisLabelInput axisData={theData.xAxis} />
+					<AxisLabelInput axisData={theData.xAxis} placeholder={theData.defaultXLabel} />
 				</ControlInput>
 				<!-- The same Grid switch as every other axis (Axis.svelte): one vertical line at
 				     each category's centre. -->
@@ -956,6 +957,7 @@
 			position="left"
 			plotPadding={plot.padding}
 			axisData={plot.yAxis}
+			defaultLabel={plot.defaultYLabel}
 			which="plot"
 		/>
 
@@ -968,6 +970,7 @@
 			plotPadding={plot.padding}
 			axisData={getXAxisForManualCategories(plot.xAxis, plot.uniqueXValues)}
 			tickFormat={(d) => formatCategoryTick(d, plot.uniqueXValues)}
+			defaultLabel={plot.defaultXLabel}
 			which="plot"
 		/>
 

@@ -40,6 +40,7 @@ import { z } from 'zod';
 import { ensureDom } from './engine/bootstrapDom.js';
 import { createWarmup, isColdStart, WARMING_MESSAGE } from './warmup.js';
 import { staticToolFacts } from './toolFacts.js';
+import { createSerialQueue } from './serial.js';
 
 // AnCiR's TableProcess constructor also runs the process fire-and-forget, so a
 // bad-args failure can surface as an unhandled rejection. Keep the server alive
@@ -81,6 +82,7 @@ let engine = null;
 // One process = one active session (AnCiR's core is a singleton). Created lazily and
 // shared across transports/requests.
 let session = null;
+const engineQueue = createSerialQueue();
 function requireSession() {
 	if (!session) throw new Error('No active session. Call create_session first.');
 	return session;
@@ -163,7 +165,7 @@ function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS
 
 	return {
 		add_plot: {
-			description: `Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; correlationheatmap/pairsplot → {column:[a,b,…]}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
+			description: `Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot/meansem/cwt → {x,y}; actogram/periodogram/correlogram/fft/circularphase → {time,values}, and every two-input plot takes either pair; histogram → {column}; correlationheatmap/pairsplot → {column:[a,b,…]}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field); ${ENC.colourHosts.join(', ')} also \`colourBy\` / \`sizeBy\` (colour or size the marks by a column).`,
 			params: {
 				type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
 				inputs: plotInputsSchema,
@@ -195,7 +197,10 @@ function plotToolDefs({ overlayHosts: OVERLAY_HOSTS, overlayForms: OVERLAY_FORMS
 
 /** Register every AnCiR tool on a fresh McpServer (one per stdio process / HTTP request). */
 function registerTools(server) {
-	const gate = warmup.gate;
+	// Every tool call waits for the engine, then runs alone (src/serial.js): the queue is shared
+	// by all transports and requests, so create_session never empties the store under a call
+	// that is still running.
+	const gate = (handler) => warmup.gate((args, extra) => engineQueue(() => handler(args, extra)));
 	server.tool(
 		'list_capabilities',
 		'Discover AnCiR analyses (table processes), column transforms, and plot types, live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, and what each input and output port expects or produces (`ports`), pass detail:"full" or name:"Cosinor"; narrow with family.',

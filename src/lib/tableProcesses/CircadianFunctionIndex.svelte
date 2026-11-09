@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import {
 		normalizeYInputs,
 		migrateLegacyYIN,
@@ -85,6 +85,9 @@
 		const perY = {};
 		const warnings = [];
 		let anyValid = false;
+		// One namer for every series label, built on first use: a namer indexes every column
+		// owner in the session, so one per y made n y columns cost O(n^2).
+		let namer = null;
 		if (t && t.length) {
 			for (const yId of yINs) {
 				const yCol = yId >= 0 ? getColumnById(yId) : null;
@@ -104,7 +107,7 @@
 				anyValid = true;
 				// FIT-8, as NonparametricRA reports it: CFI folds the same IS and IV, so a
 				// record with many empty epochs carries the same caveat.
-				const name = displayNameOf(yCol) || `column ${yId}`;
+				const name = displayNameOf(yCol, (namer ??= columnNamer())) || `column ${yId}`;
 				const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
 				if (w) warnings.push(w);
 			}
@@ -269,11 +272,12 @@
 
 	let rows = $derived.by(() => {
 		if (!cfiData?.perY) return [];
+		const namer = columnNamer();
 		return (p.args.yIN ?? [])
 			.filter((yId) => cfiData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: displayNameById(Number(yId), String(yId)),
+				name: displayNameById(Number(yId), String(yId), namer),
 				...cfiData.perY[yId]
 			}));
 	});

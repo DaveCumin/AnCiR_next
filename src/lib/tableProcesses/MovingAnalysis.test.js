@@ -131,6 +131,61 @@ describe('movinganalysis', async () => {
 		expect(valid).toBe(false);
 	});
 
+	it('keeps the last full window: 5 days of 1-min data, 24 h windows every 24 h = 5 windows', async () => {
+		// Last sample at 119.983 h; the record covers [0, 120) h, so the window [96, 120) is
+		// complete. Judging windows on the last sample time dropped it (4 windows).
+		const t = Array.from({ length: 5 * 1440 }, (_, i) => Math.round((i / 60) * 1e4) / 1e4);
+		const y = t.map((ti) => 5 + Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result, valid] = await movinganalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 24,
+			stepSize: 24,
+			binLabel: 'start',
+			analysis: 'summary'
+		});
+		expect(valid).toBe(true);
+		expect(result.bins).toEqual([0, 24, 48, 72, 96]);
+		expect(result.y_results[2].mean).toHaveLength(5);
+		for (const m of result.y_results[2].mean) expect(m).toBeCloseTo(5, 6);
+	});
+
+	it('never creates a partial window: one sample short of 5 days gives 4 windows', async () => {
+		const t = Array.from({ length: 5 * 1440 - 1 }, (_, i) => i / 60);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map(() => 1) };
+		const [result] = await movinganalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 24,
+			stepSize: 24,
+			binLabel: 'start',
+			analysis: 'summary'
+		});
+		expect(result.bins).toEqual([0, 24, 48, 72]);
+	});
+
+	it('window starts are exact multiples of the step (no accumulated rounding)', async () => {
+		const t = Array.from({ length: 1000 }, (_, i) => i * 0.1);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((v) => Math.sin(v)) };
+		const [result] = await movinganalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 1,
+			stepSize: 0.1,
+			binLabel: 'start',
+			analysis: 'summary'
+		});
+		expect(result.bins.length).toBe(991);
+		result.bins.forEach((b, i) => expect(b).toBe(i * 0.1));
+	});
+
 	it('returns invalid when data span is shorter than the window', async () => {
 		const t = [0, 1, 2, 3, 4]; // 4 hrs total
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
@@ -162,12 +217,13 @@ describe('movinganalysis', async () => {
 			analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
-		// t ranges 0..239 (xMax=239); starts ≤ 239-48=191 with step 24 → 0,24,…,168 = 8 bins
-		expect(result.bins.length).toBe(8);
+		// t ranges 0..239 hourly, so the record covers [0, 240) h: the last full 48 h window
+		// starts at 192 (ends at 240) → 0,24,…,192 = 9 bins.
+		expect(result.bins.length).toBe(9);
 		expect(result.bins[0]).toBeCloseTo(24, 6); // center of first window (0..48)
 		// Peak period should be close to 24 for every window
 		const peakPeriods = result.y_results[2].peak_period;
-		expect(peakPeriods.length).toBe(8);
+		expect(peakPeriods.length).toBe(9);
 		for (const p of peakPeriods) expect(p).toBeCloseTo(24, 1);
 	});
 
@@ -473,7 +529,7 @@ describe('movinganalysis', async () => {
 	describe('skipped-window warnings', () => {
 		it('reports how many windows the logarithmic trend model skipped, and why', async () => {
 			// Window [0,10) contains t = 0, which ln() cannot take → skipped.
-			// Window [10,20) is clean → fitted. The user must be TOLD about the
+			// Windows [10,20) and [20,30) are clean → fitted (t = 0..29 hourly covers [0, 30)). The user must be TOLD about the
 			// blank window rather than left to guess.
 			const t = Array.from({ length: 30 }, (_, i) => i);
 			const y = t.map((ti) => 3 + 2 * Math.log(ti + 1));
@@ -490,13 +546,14 @@ describe('movinganalysis', async () => {
 			});
 			expect(valid).toBe(true);
 			expect(result.warnings).toHaveLength(1);
-			expect(result.warnings[0]).toContain('1 of 2 windows');
+			expect(result.warnings[0]).toContain('1 of 3 windows');
 			expect(result.warnings[0]).toContain('logarithmic');
 			expect(result.warnings[0]).toContain('greater than 0');
 			// The clean window still produced a fit; the skipped one is blank.
 			const per = result.y_results[2];
 			expect(Number.isNaN(per.a[0])).toBe(true);
 			expect(Number.isFinite(per.a[1])).toBe(true);
+			expect(Number.isFinite(per.a[2])).toBe(true);
 		});
 
 		it('names the series when several y inputs are wired', async () => {

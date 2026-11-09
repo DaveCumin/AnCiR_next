@@ -100,7 +100,8 @@ def test_every_point_and_segment_has_the_apps_category_colour(name, plot_index):
 
 def test_a_colour_the_user_pinned_is_exported():
     _fig, ax, _plot, exp, _s = render("categoryPoints")
-    assert exp["key"]["categories"][0] == {"label": "het", "colour": "#7a1f5c"}
+    # First appearance (plots/categoryOrder.js): wt, ko, het; het carries the pin.
+    assert exp["key"]["categories"][2] == {"label": "het", "colour": "#7a1f5c"}
     faces = {rgb255(f) for f in artist(ax, "series-0-points").get_facecolors()}
     assert rgb255("#7a1f5c") in faces
 

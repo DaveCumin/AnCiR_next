@@ -25,6 +25,7 @@ import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import {
+	NULL_AUTO_ERROR_COLOUR_VERSION,
 	releaseLegacyAutoColours,
 	savedBefore,
 	versionParts,
@@ -239,5 +240,112 @@ describe('the style objects keep what they were given', () => {
 		// BoxClass.fromJSON then the constructor (an instance passed in) keeps both explicit.
 		const again = new BoxClass(BoxClass.fromJSON({ colour: null, fillColour: null }));
 		expect(again.toJSON()).toMatchObject({ colour: null, fillColour: null });
+	});
+});
+
+describe('releaseLegacyAutoColours: Mean +/- SEM error bars', () => {
+	const P = (i) => getPaletteColor(i);
+	const meansem = (data) => ({ id: 1, type: 'meansem', plot: { data } });
+
+	it('releases the colour the old constructor copied (palette 0, or the points’ own)', () => {
+		const json = {
+			version: 'β.82.67',
+			plots: [
+				meansem([
+					{ y: { refId: 1 }, errorColour: P(0), points: { colour: null } },
+					{ y: { refId: 2 }, errorColour: P(0), points: { colour: null } },
+					{ y: { refId: 3 }, errorColour: '#123456', points: { colour: '#123456' } }
+				])
+			]
+		};
+		const { json: out, released } = releaseLegacyAutoColours(json);
+		expect(released).toBe(3);
+		expect(out.plots[0].plot.data.map((s) => s.errorColour)).toEqual([null, null, null]);
+	});
+
+	it('keeps a real pick, and anything saved from the fixed version on', () => {
+		const pick = { y: { refId: 1 }, errorColour: '#ff0000', points: { colour: null } };
+		expect(
+			releaseLegacyAutoColours({ version: 'β.82.67', plots: [meansem([pick])] }).released
+		).toBe(0);
+		const auto = { y: { refId: 1 }, errorColour: P(0), points: { colour: null } };
+		expect(
+			releaseLegacyAutoColours({ version: 'β.82.68', plots: [meansem([auto])] }).released
+		).toBe(0);
+	});
+});
+
+describe('Mean +/- SEM error-bar release is bounded by the fixing version (β.82.68)', () => {
+	const P = (i) => getPaletteColor(i);
+	// A deliberate pick that equals palette[0], on the SECOND series (i = 1): exactly what the old
+	// copy-at-construction wrote, so only the version can tell them apart.
+	const session = (version) => ({
+		version,
+		plots: [
+			{
+				id: 1,
+				type: 'meansem',
+				plot: {
+					data: [
+						{ y: { refId: 1 }, errorColour: null, points: { colour: null } },
+						{ y: { refId: 2 }, errorColour: P(0), points: { colour: null } }
+					]
+				}
+			}
+		]
+	});
+
+	it('pins the threshold the fix shipped in', () => {
+		expect(NULL_AUTO_ERROR_COLOUR_VERSION).toEqual([82, 68]);
+	});
+
+	it.each(['β.82.68', 'β.82.69', 'β.82.100', 'β.83.0', 'v90.1'])(
+		'a session saved by %s keeps the pick',
+		(version) => {
+			const { json, released } = releaseLegacyAutoColours(session(version));
+			expect(released).toBe(0);
+			expect(json.plots[0].plot.data[1].errorColour).toBe(P(0));
+		}
+	);
+
+	it.each(['β.82.67', 'β.82.6', 'β.81.99', 'v72.4'])(
+		'a session saved by %s releases it (the old automatic colour)',
+		(version) => {
+			const { json, released } = releaseLegacyAutoColours(session(version));
+			expect(released).toBe(1);
+			expect(json.plots[0].plot.data[1].errorColour).toBeNull();
+		}
+	);
+});
+
+describe('releaseLegacyAutoColours: series colours copied from the palette', () => {
+	const P = (i) => getPaletteColor(i);
+	const plotOf = (type, data) => ({ id: 1, type, plot: { data } });
+
+	it('releases the palette entry of the series’ place, for each plot that copied it', () => {
+		for (const [type, field] of [
+			['actogram', 'colour'],
+			['circularphase', 'colour'],
+			['qqplot', 'colour'],
+			['histogram', 'fillColour']
+		]) {
+			const json = {
+				version: 'β.82.67',
+				plots: [plotOf(type, [{ [field]: P(0) }, { [field]: P(1) }, { [field]: '#123456' }])]
+			};
+			const { json: out, released } = releaseLegacyAutoColours(json);
+			expect(released, type).toBe(2);
+			expect(
+				out.plots[0].plot.data.map((s) => s[field]),
+				type
+			).toEqual([null, null, '#123456']);
+		}
+	});
+
+	it('keeps a colour that is not its own place’s, and anything saved from 82.68 on', () => {
+		const shifted = plotOf('actogram', [{ colour: P(1) }]);
+		expect(releaseLegacyAutoColours({ version: 'β.82.67', plots: [shifted] }).released).toBe(0);
+		const auto = plotOf('qqplot', [{ colour: P(0) }]);
+		expect(releaseLegacyAutoColours({ version: 'β.82.68', plots: [auto] }).released).toBe(0);
 	});
 });

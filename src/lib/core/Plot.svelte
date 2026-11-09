@@ -23,6 +23,12 @@
 	// migration, which must stay free of this module); re-exported so existing importers work.
 	export const FACETABLE_PLOT_TYPES = SHARED_FACETABLE_PLOT_TYPES;
 	let _counter = 0;
+	// Only for a store that has just been emptied (the headless engine's fresh session,
+	// mcp/src/engine/session.js): ids then restart at 0 so the same build gives the same ids.
+	// Never call it while any plot is still live: it would hand out a held id again.
+	export function resetPlotIdCounter() {
+		_counter = 0;
+	}
 	function getNextId() {
 		let id = _counter++;
 		// Never hand out an id a live plot already holds. Reservation below covers the plots a

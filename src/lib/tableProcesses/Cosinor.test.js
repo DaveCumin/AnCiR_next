@@ -15,7 +15,7 @@ vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
 		rmse: 0.1,
 		rSquared: 0.99
 	})),
-	evaluateCosinorAtPoints: vi.fn((pts) => pts.map(() => 1)),
+	evaluateCosinorAtPoints: vi.fn((_params, pts) => pts.map(() => 1)),
 	fitCosinorFixed: vi.fn(() => ({
 		fitted: [1, 2, 3],
 		M: 0,

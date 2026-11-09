@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { paddedDomain, finiteExtent, markerPaddedDomain, clearEnds } from './axisDomain.js';
+import {
+	paddedDomain,
+	finiteExtent,
+	markerPaddedDomain,
+	clearEnds,
+	niceDomain
+} from './axisDomain.js';
 import { Periodogramclass } from './Periodogram/Periodogram.svelte';
 
 describe('paddedDomain', () => {
@@ -99,5 +105,20 @@ describe('clearEnds', () => {
 	it('leaves a domain with room alone, and never moves a user-set end', () => {
 		expect(clearEnds([0, 100], 5, 95, 4, 300)).toEqual([0, 100]);
 		expect(clearEnds([-10, 100], -10, 95, 4, 300, { autoLo: false })).toEqual([-10, 100]);
+	});
+});
+
+describe('niceDomain', () => {
+	it('rounds out from the span (22.5 .. 23.3 is not 20 .. 30)', () => {
+		const [lo, hi] = niceDomain(22.5, 23.3, 5);
+		expect(lo).toBeCloseTo(22.4, 9);
+		expect(hi).toBeCloseTo(23.4, 9);
+		expect(niceDomain(0, 37, 5)).toEqual([0, 40]);
+	});
+	it('gives a flat series a band, and non-finite input [0, 1]', () => {
+		const [lo, hi] = niceDomain(50, 50, 5);
+		expect(lo).toBeLessThan(50);
+		expect(hi).toBeGreaterThan(50);
+		expect(niceDomain(NaN, 1)).toEqual([0, 1]);
 	});
 });

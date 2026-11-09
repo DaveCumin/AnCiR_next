@@ -545,3 +545,26 @@ describe('rolling NPCRA: full days only (decision 2026-11-01)', () => {
 		expect(run(undefined).IS).toEqual(off.IS);
 	});
 });
+
+describe('computeMovingWindows: correlogram normalisation (corrBiased)', () => {
+	it('the standard biased ACF peak is the per-lag one times (N - k) / N', () => {
+		const t = Array.from({ length: 96 }, (_, i) => i);
+		const y = t.map((h) => Math.cos((2 * Math.PI * h) / 24) + 0.2 * Math.sin(h * 1.7));
+		const base = { analysis: 'correlogram' };
+		const keys = getStatKeys(base);
+		const run = (args) =>
+			computeMovingWindows({
+				tAll: t,
+				ys: [y],
+				starts: [0],
+				windowSize: 96,
+				statKeys: keys,
+				args
+			})[0];
+		const pairs = run(base);
+		const biased = run({ ...base, corrBiased: true });
+		expect(biased.peak_lag[0]).toBe(pairs.peak_lag[0]);
+		const k = pairs.peak_lag[0];
+		expect(biased.peak_correlation[0]).toBeCloseTo((pairs.peak_correlation[0] * (96 - k)) / 96, 12);
+	});
+});

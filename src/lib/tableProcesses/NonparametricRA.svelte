@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById } from '$lib/core/columnLabels.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -193,8 +193,11 @@
 
 		// FIT-8: many empty epochs thin the record IS and IV rest on (IV is now divided by
 		// the valid successive pairs, so it is not biased, but it is noisier).
+		// One namer for every series, built on first use: a namer indexes every column owner in
+		// the session, so one per y made n y columns cost O(n^2).
+		let namer = null;
 		for (const [yId, res] of Object.entries(perY)) {
-			const name = displayNameById(Number(yId), `column ${yId}`);
+			const name = displayNameById(Number(yId), `column ${yId}`, (namer ??= columnNamer()));
 			const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
 			if (w) warnings.push(w);
 		}
@@ -411,11 +414,12 @@
 	// Per-Y metrics for the results table (read straight off the computed result).
 	let rows = $derived.by(() => {
 		if (!npcraData?.perY) return [];
+		const namer = columnNamer();
 		return (p.args.yIN ?? [])
 			.filter((yId) => npcraData.perY[yId])
 			.map((yId) => ({
 				yId,
-				name: displayNameById(Number(yId), String(yId)),
+				name: displayNameById(Number(yId), String(yId), namer),
 				...npcraData.perY[yId]
 			}));
 	});

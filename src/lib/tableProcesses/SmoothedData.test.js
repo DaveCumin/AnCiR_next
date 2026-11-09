@@ -83,12 +83,15 @@ describe('smootheddata with blank and numeric-string cells (ROB-8)', () => {
 				out: preview
 			});
 			expect(valid).toBe(true);
-			expect(result.x_out).toEqual([0, 1, 3, 4, 6, 7, 8, 9, 10, 11]);
-			expect(result.y_results[2]).toHaveLength(10);
-			for (const v of result.y_results[2]) {
+			// The x output is every row with a valid x, shared by every series; the curve is
+			// missing (null) on the blank rows, which were dropped from the smoothing.
+			expect(result.x_out).toEqual(x);
+			expect(result.y_results[2]).toHaveLength(12);
+			result.y_results[2].forEach((v, i) => {
+				if (i === 2 || i === 5) return expect(v, `row ${i}`).toBeNull();
 				expect(typeof v).toBe('number');
 				expect(v).toBeCloseTo(10, 6);
-			}
+			});
 		});
 
 		it(`${smootherType}: numeric strings are smoothed as numbers`, async () => {

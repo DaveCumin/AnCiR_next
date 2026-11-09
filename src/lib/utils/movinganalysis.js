@@ -24,6 +24,52 @@ import { applyPhaseReference, nearestPhaseInstant } from './phaseReference.js';
 import { mean as sampleMean, sampleStd, quantileType7 } from './sampleStats.js';
 // House missing-value rule (v72.28): blank strings are missing data, not zeros.
 import { isInvalidValue } from './stats.js';
+import { samplingStep } from './samplingInterval.js';
+
+/**
+ * The start of every complete window: xMin + i * stepSize while the window
+ * [start, start + windowSize) fits inside the SAMPLED SPAN, which runs from the first
+ * sample to one sampling step past the last (each sample stands for the interval it
+ * opens). Judging the window on the last sample time instead dropped the last full window:
+ * 5 days of 1-min data (last x = 119.983 h) with 24 h windows every 24 h gave 4 windows,
+ * not 5, because 96 + 24 > 119.983. A window that would reach past the sampled span is
+ * never created, so there are no partial windows. The step is samplingStep (the mean of the
+ * gaps near the median, exact for rounded stored times) and a window may end up to 1% of a
+ * step past the span (floating point and rounding of the stored times). Starts are
+ * xMin + i * stepSize, not a running sum, so they do not accumulate rounding.
+ * Mirrored in tools/ancir_runtime.py and tools/ancir_runtime.R (moving_window_starts).
+ *
+ * @param {number[]} validX  the valid x values (numbers, any order)
+ * @param {number} windowSize
+ * @param {number} stepSize
+ * @returns {number[]}
+ */
+export function movingWindowStarts(validX, windowSize, stepSize) {
+	if (!(windowSize > 0) || !(stepSize > 0)) return [];
+	let xMin = Infinity;
+	let xMax = -Infinity;
+	for (const v of validX) {
+		const x = Number(v); // Number-ok: callers pass valid (house-rule) values
+		if (!Number.isFinite(x)) continue;
+		if (x < xMin) xMin = x;
+		if (x > xMax) xMax = x;
+	}
+	if (!Number.isFinite(xMin)) return [];
+	const dt = samplingStep(validX);
+	const step = dt > 0 ? dt : 0;
+	const spanEnd = xMax + step;
+	// Half a step of slack: stored times are usually rounded (1-min data written to 3 dp is off
+	// by up to 3% of a step), and a window that ends within half a step of the span holds every
+	// sample a full window does. 1% of a step dropped the last full window of rounded data.
+	const tol = 0.5 * step + 1e-9 * Math.max(1, Math.abs(spanEnd));
+	const starts = [];
+	for (let i = 0; ; i++) {
+		const s = xMin + i * stepSize;
+		if (s + windowSize > spanEnd + tol) break;
+		starts.push(s);
+	}
+	return starts;
+}
 
 export function getStatKeys(args) {
 	if (args.analysis === 'periodogram') {
@@ -278,7 +324,9 @@ function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
 	if (args.analysis === 'correlogram') {
 		const minLag = args.corrMinLag > 0 ? args.corrMinLag : 0;
 		const maxLag = args.corrMaxLag > 0 ? args.corrMaxLag : null;
-		const r = computeAutocorrelation(tt, yy, null, maxLag, minLag);
+		const r = computeAutocorrelation(tt, yy, null, maxLag, minLag, {
+			normalization: args.corrBiased ? 'biased' : 'pairs'
+		});
 		if (!r.lags?.length) return stats;
 		// Dominant period, not lag 0 and not the largest |r|. See findAutocorrelationPeak.
 		const peak = findAutocorrelationPeak(r.lags, r.correlations);

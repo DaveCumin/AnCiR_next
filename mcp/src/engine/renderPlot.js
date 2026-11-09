@@ -34,8 +34,9 @@ export function drawnKind() {
  *   plot:{type:string, inputs:object|number[]}, width:number, height:number}} payload
  * @param {{outBase:string}} opts  outBase: absolute path prefix; `.png`/`.svg` appended.
  * @returns {Promise<{png:string, svg:string|null, pngBytes:number, svgBytes?:number,
- *   width:number, height:number, note?:string}>}  svg is null for a plot that draws HTML
- *   (tableplot): it has no svg to export, so the PNG is a screenshot of the element.
+ *   width:number, height:number, note?:string, warnings?:string[]}>}  svg is null for a plot
+ *   that draws HTML (tableplot): it has no svg to export, so the PNG is a screenshot of it.
+ *   `warnings`: what the plot warns about in its own controls, when anything.
  */
 export async function renderPlot(payload, { outBase }) {
 	const { createServer } = await import('vite');
@@ -91,6 +92,10 @@ export async function renderPlot(payload, { outBase }) {
 			});
 		const drawn = await handle.jsonValue();
 
+		// What the plot warns about in its controls (render/payloadColumn.js plotWarnings).
+		const warnings = (await page.evaluate(() => window.__ancirWarnings)) ?? [];
+		const warned = warnings.length ? { warnings } : {};
+
 		const png = `${outBase}.png`;
 		const svgPath = `${outBase}.svg`;
 		const { statSync } = await import('node:fs');
@@ -116,7 +121,8 @@ export async function renderPlot(payload, { outBase }) {
 				pngBytes: statSync(png).size,
 				width: payload.width,
 				height: payload.height,
-				note: `${payload.plot.type} draws HTML, not svg: PNG only.`
+				note: `${payload.plot.type} draws HTML, not svg: PNG only.`,
+				...warned
 			};
 		}
 
@@ -139,7 +145,8 @@ export async function renderPlot(payload, { outBase }) {
 			pngBytes: statSync(png).size,
 			svgBytes: statSync(svgPath).size,
 			width: payload.width,
-			height: payload.height
+			height: payload.height,
+			...warned
 		};
 	} finally {
 		await browser.close();

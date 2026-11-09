@@ -155,8 +155,9 @@ describe('MovingAnalysis: each window uses its own offset (decision 6)', () => {
 		setTime(MS, { zone: NZ, wall: false });
 		const [res] = await movinganalysis(movingArgs);
 		const acro = res.y_results[2].H1_acrophase;
-		// Window centres: 24, 48, ... h after 3 Apr 07:00 UTC; the change is at 79 h.
-		expect(acro.length).toBe(6);
+		// Window centres: 24, 48, ... h after 3 Apr 07:00 UTC; the change is at 79 h. Seven
+		// windows: the last complete 48 h window ends one sample after the last sample.
+		expect(acro.length).toBe(7);
 		for (const v of acro.slice(0, 3)) expect(v).toBeCloseTo(15, 1);
 		for (const v of acro.slice(3)) expect(v).toBeCloseTo(14, 1);
 		expect(res.warnings).toContain(

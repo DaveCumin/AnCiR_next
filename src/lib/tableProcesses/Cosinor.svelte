@@ -1,5 +1,5 @@
 <script module>
-	import { displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
+	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { fitTooFewPointsWarning } from '$lib/utils/fitMinPoints.js';
@@ -347,6 +347,17 @@
 		// Test-validity warnings per series (review FIT-5): the F-test and the shuffle
 		// permutation test assume independent observations.
 		result.validityWarnings = [];
+		// One namer for the whole evaluation, built on first use: a namer indexes every column
+		// owner in the session, and building one per y (displayNameOf with no namer) made a
+		// node with n y columns cost O(n^2) (9471 columns took ~17 min).
+		let namer = null;
+		// The x every curve is written on. With an output x set, that grid; otherwise ONE grid
+		// shared by every series, the rows where x is valid. Each curve used to be its fit at
+		// its own valid rows while the node writes a single x output, so a y with missing
+		// values gave a curve shorter than the x (96 x rows, 76 curve rows) that could not be
+		// plotted against it. The fit itself still uses each series' own rows.
+		const curveX = outputXData ?? t.filter((v) => !isInvalidValue(v)).map(Number);
+		const seriesLabel = (yCol, yId) => `"${displayNameOf(yCol, (namer ??= columnNamer())) || yId}"`;
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -372,7 +383,7 @@
 				useFixedPeriod,
 				nHarmonics,
 				Ncurves,
-				label: `"${displayNameOf(yCol) || yId}"`
+				label: seriesLabel(yCol, yId)
 			});
 			if (tooFew) {
 				result.validityWarnings.push(tooFew);
@@ -392,16 +403,14 @@
 				const fixedResult = await fitOne(tt, yy);
 				if (fixedResult) {
 					const omega = (2 * Math.PI) / fixedPeriod;
-					const xOutData = outputXData ?? tt;
-					const yOutData = outputXData
-						? outputXData.map((ti) => {
-								let val = fixedResult.M;
-								for (const h of fixedResult.harmonics) {
-									val += h.beta * Math.cos(h.k * omega * ti) + h.gamma * Math.sin(h.k * omega * ti);
-								}
-								return val;
-							})
-						: fixedResult.fitted;
+					const xOutData = curveX;
+					const yOutData = curveX.map((ti) => {
+						let val = fixedResult.M;
+						for (const h of fixedResult.harmonics) {
+							val += h.beta * Math.cos(h.k * omega * ti) + h.gamma * Math.sin(h.k * omega * ti);
+						}
+						return val;
+					});
 
 					yResult = {
 						fittedData: {
@@ -440,8 +449,8 @@
 						fixedStats: null,
 						predicted,
 						t: tt,
-						xOutData: outputXData ?? tt,
-						yOutData: predicted ?? fittedData.fitted
+						xOutData: curveX,
+						yOutData: predicted ?? evaluateCosinorAtPoints(fittedData.parameters, curveX)
 					};
 					if (fittedData.fitted.length > 0) anyValid = true;
 				}
@@ -460,7 +469,7 @@
 					...permutationValidityWarnings(
 						perm,
 						yy.map((v, i) => v - fitted[i]),
-						`"${displayNameOf(yCol) || yId}"`,
+						seriesLabel(yCol, yId),
 						// The F-test p exists only for the fixed-period fit.
 						{ fTest: useFixedPeriod && !!yResult.fixedStats }
 					)
@@ -759,7 +768,7 @@
 	 * fitted period gets no sampling warning (its failure is reported by the fit warnings).
 	 * The free fit is one cosine per curve, so `nHarmonics` (a fixed-period setting) is 1 there.
 	 */
-	function cosinorSampleWarnings(t, argsIN, nHarmonics, unit = 'h', result = null) {
+	function cosinorSampleWarnings(t, argsIN, nHarmonics, unit = 'h', result = null, nameOf = null) {
 		const warnings = [];
 		const { finite, span } = finiteSpan(t);
 		if (finite.length < 2) return warnings;
@@ -784,7 +793,8 @@
 			for (const { yId, yr, period } of fitted) {
 				const own = finiteSpan(yr.t);
 				if (own.finite.length < 2) continue;
-				const label = fitted.length > 1 ? ` for "${displayNameById(Number(yId), yId)}"` : '';
+				const name = nameOf ? nameOf(yId) : displayNameById(Number(yId), yId);
+				const label = fitted.length > 1 ? ` for "${name}"` : '';
 				const sparse = sparseSamplingWarning(own.finite.length, own.span, period, 1, unit, label);
 				if (sparse) warnings.push(sparse);
 			}
@@ -802,6 +812,9 @@
 
 	export async function cosinor(argsIN) {
 		const [result, anyValid] = await evaluateCosinor(argsIN);
+		// One namer for every series label below, built on first use (see evaluateCosinor).
+		let namer = null;
+		const nameOf = (yId) => displayNameById(Number(yId), yId, (namer ??= columnNamer()));
 		if (anyValid && argsIN?.out?.cosinorx !== -1) {
 			writeCosinorOutputs(argsIN, result);
 		}
@@ -816,7 +829,7 @@
 		// design matrix was singular) has no convergence flag to read, so the non-finite
 		// R²/RMSE is the observable symptom — and worth a sentence rather than dashes.
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
-			label: `"${displayNameById(Number(yId), yId)}"`,
+			label: `"${nameOf(yId)}"`,
 			result: yr?.fittedData ?? null,
 			t: yr?.t
 		}));
@@ -835,7 +848,8 @@
 				argsIN,
 				Math.max(1, Number(argsIN.nHarmonics) || 1),
 				unit,
-				result
+				result,
+				nameOf
 			),
 			...(result?.outputXWarning ? [result.outputXWarning] : [])
 		];
@@ -852,6 +866,8 @@
 	export function cosinorStatsTable(cosinorData, args) {
 		if (!cosinorData?.y_results) return { headers: [], rows: [] };
 		const useFixed = args.useFixedPeriod ?? false;
+		// One namer for every row (a namer per row is O(n^2) in the number of series).
+		const namer = columnNamer();
 		const phaseRef = cosinorData.phaseRef;
 		const unit = phaseRef?.clock ? 'clock_h' : 'peak_h';
 		const ref = (h, period) => (h == null ? null : applyPhaseReference(h, phaseRef, period));
@@ -897,7 +913,7 @@
 				);
 			}
 			const rows = validEntries.map(([yId, r]) => {
-				const name = displayNameById(Number(yId), String(yId));
+				const name = displayNameById(Number(yId), String(yId), namer);
 				const s = r.fixedStats;
 				const row = [
 					name,
@@ -957,7 +973,7 @@
 				);
 			}
 			const rows = validEntries.map(([yId, r]) => {
-				const name = displayNameById(Number(yId), String(yId));
+				const name = displayNameById(Number(yId), String(yId), namer);
 				const row = [name, r.fittedData.rmse, r.fittedData.rSquared, ...permCell(r)];
 				for (let c = 0; c < maxC; c++) {
 					const cd = r.fittedData.parameters?.cosines?.[c];
@@ -1028,12 +1044,16 @@
 	let calcError = $state(null);
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
-	let permEntries = $derived(
-		Object.entries(cosinorData?.y_results ?? {}).map(([yId, result]) => ({
-			name: displayNameById(Number(yId), String(yId)),
+	// One namer per render for the per-series rows below (a namer per row is O(n^2)).
+	const labelNamer = $derived(columnNamer());
+
+	let permEntries = $derived.by(() => {
+		const namer = columnNamer();
+		return Object.entries(cosinorData?.y_results ?? {}).map(([yId, result]) => ({
+			name: displayNameById(Number(yId), String(yId), namer),
 			result
-		}))
-	);
+		}));
+	});
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'cosinory_', 'cosinor_');
 	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
@@ -1789,7 +1809,7 @@
 							{@const yout = getColumnById(yOutId)}
 							{#if yout}
 								{@const yResult = cosinorData?.y_results?.[yId]}
-								{@const srcName = displayNameById(Number(yId), yId)}
+								{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 								<div class="tp-output-row">
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
@@ -1804,7 +1824,7 @@
 			{:else if p.args.valid}
 				<p>Preview:</p>
 				{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult] (yId)}
-					{@const srcName = displayNameById(Number(yId), yId)}
+					{@const srcName = displayNameById(Number(yId), yId, labelNamer)}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
 					{@render cosinorStats(yResult, srcName, yId)}
@@ -1818,7 +1838,7 @@
 						...yIds.map(
 							(id) =>
 								(cosinorData.outputXData ? 'predicted ' : 'fitted ') +
-								displayNameById(Number(id), id)
+								displayNameById(Number(id), id, labelNamer)
 						)
 					]}
 					data={[
