@@ -916,7 +916,6 @@ function applySeriesEncodingChange(inner, plot, c, resolve, errors) {
 	}
 }
 
-
 // Args a NEW node reads from its data until the user sets them, and the flag that says it is
 // still doing so (unitAuto.svelte.js, binSizeAuto.svelte.js, periodRangeAuto.svelte.js).
 const FOLLOWING_FLAG_OF = {
