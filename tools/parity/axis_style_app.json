@@ -2795,6 +2795,7 @@
 							"points": { "colour": null, "radius": 4, "shape": "circle", "draw": true },
 							"maxLag": null,
 							"minLag": 0,
+							"biased": false,
 							"showConfidenceBounds": true,
 							"confidenceLevel": 0.95,
 							"bandMethod": "bartlett"
@@ -3103,7 +3104,7 @@
 								"processes": []
 							},
 							"label": "",
-							"colour": "#234154",
+							"colour": null,
 							"draw": true,
 							"phaseMarkers": []
 						}
@@ -3231,7 +3232,7 @@
 								"processes": []
 							},
 							"label": "",
-							"colour": "#234154",
+							"colour": null,
 							"draw": true,
 							"phaseMarkers": []
 						}
@@ -4675,7 +4676,7 @@
 							"x": { "refId": 497 },
 							"y": { "refId": 498 },
 							"label": "",
-							"colour": "#234154",
+							"colour": null,
 							"draw": true,
 							"phaseMarkers": []
 						}
@@ -4981,7 +4982,7 @@
 								"processes": []
 							},
 							"label": "",
-							"colour": "#234154",
+							"colour": null,
 							"draw": true,
 							"phaseMarkers": []
 						}
