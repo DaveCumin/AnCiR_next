@@ -24,6 +24,8 @@
 	import '$lib/utils/movinganalysis.worker-task.js';
 	import { rollingDoubleLogisticWarning } from '$lib/utils/doublelogisticReliability.js';
 	import { chiSquaredShortRecordWarning } from '$lib/utils/chiSquaredShortRecord.js';
+	import { epochFinerWarning } from '$lib/utils/npcra.js';
+	import { samplingStep } from '$lib/utils/samplingInterval.js';
 	import { PHASE_REFERENCE_START, timeOriginMs } from '$lib/utils/phaseReference.js';
 	import {
 		resolveNodePhaseReference,
@@ -268,6 +270,12 @@
 				perWindow: true
 			});
 			if (short) warnings.push(short);
+		}
+
+		// An NPCRA epoch shorter than the sampling interval (same text as NonparametricRA).
+		if (argsIN.analysis === 'npcra') {
+			const finer = epochFinerWarning(argsIN.npcraEpochHours ?? 1, samplingStep(validX));
+			if (finer) warnings.push(finer);
 		}
 
 		// Apply pre-processes to each stat array before writing
@@ -701,14 +709,12 @@
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Input</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
-			<div class="control-input">
-				<p>Y columns</p>
+			</ControlInput>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}
@@ -723,14 +729,13 @@
 		<ControlInput label={`Step size (${xUnit})`}>
 			<NumberWithUnits bind:value={p.args.stepSize} min="0.1" step="0.5" />
 		</ControlInput>
-		<div class="control-input">
-			<p>Bin label</p>
+		<ControlInput label="Bin label">
 			<AttributeSelect
 				bind:value={p.args.binLabel}
 				options={['start', 'center', 'end']}
 				optionsDisplay={['Window start', 'Window center', 'Window end']}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 </div>
 
@@ -738,8 +743,7 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Analysis</span></div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Analysis</p>
+		<ControlInput label="Analysis">
 			<AttributeSelect
 				bind:value={p.args.analysis}
 				options={[
@@ -765,7 +769,7 @@
 					'Trend fit'
 				]}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 	{#if ['npcra', 'cosinor', 'rectfit', 'doublelogistic'].includes(p.args.analysis)}
 		<!-- Only the analyses with phase outputs (onsets, acrophases) use it. -->
@@ -787,14 +791,13 @@
 		</div>
 	{:else if p.args.analysis === 'periodogram'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Method</p>
+			<ControlInput label="Method">
 				<AttributeSelect
 					bind:value={p.args.pgMethod}
 					options={['Lomb-Scargle', 'Chi-squared', 'Enright']}
 					optionsDisplay={['Lomb-Scargle', 'Chi-squared', 'Enright']}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
 			<ControlGroup label={`Period range (${xUnit})`}>
@@ -990,14 +993,13 @@
 		</div>
 	{:else if p.args.analysis === 'trend'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Model</p>
+			<ControlInput label="Model">
 				<AttributeSelect
 					bind:value={p.args.trendModel}
 					options={['linear', 'exponential', 'logarithmic', 'polynomial']}
 					optionsDisplay={['Linear', 'Exponential', 'Logarithmic', 'Polynomial']}
 				/>
-			</div>
+			</ControlInput>
 			{#if p.args.trendModel === 'polynomial'}
 				<ControlInput label="Degree">
 					<NumberWithUnits bind:value={p.args.trendPolyDegree} min="1" step="1" />

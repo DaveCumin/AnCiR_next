@@ -41,7 +41,8 @@ describe('a plot that throws while rendering', () => {
 		expect(() => render(EmbeddedPlot, { props: { plot, size: { w: 200, h: 150 } } })).not.toThrow();
 
 		// Told in place, on the node that broke...
-		const failed = screen.getByRole('alert');
+		// (The node's own alert, not the app's live region on <body> that reads the toast.)
+		const failed = screen.getAllByRole('alert').find((el) => el.id !== 'app-alerts');
 		expect(failed.textContent).toMatch(/couldn't be drawn/);
 		// ...and told what to do about it, since undo is the way back.
 		expect(failed.textContent).toMatch(/undo reverses/i);

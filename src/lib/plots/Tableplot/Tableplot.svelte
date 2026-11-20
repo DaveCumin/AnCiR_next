@@ -291,6 +291,8 @@
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
+	import { plotEditState, recordPlotGesture } from '$lib/plots/plotEdits.js';
+	import { separatorKeyValue } from '$lib/utils/separatorKeys.js';
 	import { allPanels } from '$lib/core/facetPanels.svelte.js';
 	import { plotColumnIds } from '$lib/core/seriesChannelRefs.js';
 	import {
@@ -515,24 +517,51 @@
 	// release the window listeners the drag installed.
 	let releaseColResize = null;
 
+	// The widest a column may be made by hand. A drag had no ceiling, but a splitter states its
+	// range (aria-valuemax) and End goes to it, so both share this one.
+	const MAX_COL_W = 1200;
+	const clampColW = (w) => Math.min(MAX_COL_W, Math.max(MIN_COL_W, Math.round(w)));
+
+	// A column resize, by drag or by key, is one undo step: the plot's state before it is
+	// recorded against its state after (plots/plotEdits.js), and a quick run of key presses on
+	// one column coalesces into one step, as a drag is one gesture.
+	const colWidthKey = (colId) => `tableplot-col-width:${theData?.id}:${colId}`;
+	function setColWidth(colId, w) {
+		theData.plot.colWidths = { ...theData.plot.colWidths, [colId]: w };
+	}
+
 	// Drag a column header's right edge to resize that column.
 	function startColResize(e, colId) {
 		e.preventDefault();
 		e.stopPropagation();
 		const startX = e.clientX;
 		const startW = widthFor(colId);
-		const onMove = (ev) => {
-			const w = Math.max(MIN_COL_W, Math.round(startW + (ev.clientX - startX)));
-			theData.plot.colWidths = { ...theData.plot.colWidths, [colId]: w };
-		};
+		const before = plotEditState(theData);
+		const onMove = (ev) => setColWidth(colId, clampColW(startW + (ev.clientX - startX)));
 		const onUp = () => {
 			window.removeEventListener('pointermove', onMove);
 			window.removeEventListener('pointerup', onUp);
 			releaseColResize = null;
+			recordPlotGesture(theData, before, { coalesceKey: colWidthKey(colId) });
 		};
 		window.addEventListener('pointermove', onMove);
 		window.addEventListener('pointerup', onUp);
 		releaseColResize = onUp;
+	}
+
+	// The same edge from the keyboard (separatorKeys.js): arrows step, Home/End go to the ends.
+	function onColResizeKeydown(e, colId) {
+		const next = separatorKeyValue(e, {
+			value: widthFor(colId),
+			min: MIN_COL_W,
+			max: MAX_COL_W
+		});
+		if (next == null) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const before = plotEditState(theData);
+		setColWidth(colId, next);
+		recordPlotGesture(theData, before, { coalesceKey: colWidthKey(colId) });
 	}
 
 	// Drop any dangling drag listeners if this unmounts mid-gesture.
@@ -1022,12 +1051,19 @@
 						{#each roKeys as key, c (key)}
 							<div class="tp-th" title={String(roHeaders[c] ?? '')}>
 								<span class="tp-th-text">{roHeaders[c]}</span>
+								<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 								<div
 									class="tp-resize"
 									role="separator"
+									tabindex="0"
 									aria-orientation="vertical"
+									aria-label={`Resize column ${roHeaders[c] ?? ''}`}
+									aria-valuenow={widthFor(key)}
+									aria-valuemin={MIN_COL_W}
+									aria-valuemax={MAX_COL_W}
 									title="Drag to resize column"
 									onpointerdown={(e) => startColResize(e, key)}
+									onkeydown={(e) => onColResizeKeydown(e, key)}
 								></div>
 							</div>
 						{/each}
@@ -1088,13 +1124,22 @@
 									value={headerText}
 									onCommit={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
 								/>
-								<!-- Drag the right edge to resize this column. -->
+								<!-- Drag the right edge to resize this column, or focus it and use the arrow
+								     keys (a WAI-ARIA window splitter; Svelte counts every separator as
+								     static, hence the ignore, see svelteWarnings.guard.test.js). -->
+								<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 								<div
 									class="tp-resize"
 									role="separator"
+									tabindex="0"
 									aria-orientation="vertical"
+									aria-label={`Resize column ${headerText}`}
+									aria-valuenow={widthFor(vc.colId)}
+									aria-valuemin={MIN_COL_W}
+									aria-valuemax={MAX_COL_W}
 									title="Drag to resize column"
 									onpointerdown={(e) => startColResize(e, vc.colId)}
+									onkeydown={(e) => onColResizeKeydown(e, vc.colId)}
 								></div>
 							</div>
 						{/each}
@@ -1240,6 +1285,12 @@
 	}
 	.tp-resize:hover {
 		background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+	}
+	/* Keyboard focus only: the ring sits inside the 7px handle, since the header cell clips
+	   anything past its edge. */
+	.tp-resize:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
 	}
 
 	/* Truncate over-long cell/header text with an ellipsis (the values are

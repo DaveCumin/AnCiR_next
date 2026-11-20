@@ -2,9 +2,11 @@
 	import { untrack } from 'svelte';
 	import { getClockZone, zonedDayjs, parseShownTime } from '$lib/utils/time/displayTime.js';
 	import { wallClockDayjs, parseInZone } from '$lib/utils/time/zones.js';
+	import { controlLabel } from './controlLabel.js';
 
 	// `label` names the two fields for assistive tech ("Start time (date)", "Start time (time)").
 	// The widget is two inputs, so one wrapping <label> cannot name it; each field gets its own.
+	// Without `label`, the enclosing <ControlInput associate={false}>'s label is used.
 	// `frame`: the column (or its time frame) the value is a time of. Given, the fields read and
 	// write the time as that column's times are SHOWN (its zone, or "Show times in"), so an
 	// axis limit reads like the axis. `zone`: a CLOCK zone ('utc', a fixed offset or an IANA
@@ -18,6 +20,9 @@
 		onChange = () => {},
 		label = ''
 	} = $props();
+
+	const ownLabel = controlLabel();
+	const name = $derived(label || ownLabel?.label || '');
 
 	let effectiveZone = $derived(zone ?? getClockZone());
 	let shown = $derived(zone == null && frame != null);
@@ -80,7 +85,7 @@
 <div class="datetime-container">
 	<input
 		type="date"
-		aria-label={label ? `${label} (date)` : 'Date'}
+		aria-label={name ? `${name} (date)` : 'Date'}
 		bind:value={editingDate}
 		onchange={updateValue}
 		onfocus={() => (dateFocused = true)}
@@ -89,7 +94,7 @@
 
 	<input
 		type="time"
-		aria-label={label ? `${label} (time)` : 'Time'}
+		aria-label={name ? `${name} (time)` : 'Time'}
 		bind:value={editingTime}
 		onchange={updateValue}
 		onfocus={() => (timeFocused = true)}

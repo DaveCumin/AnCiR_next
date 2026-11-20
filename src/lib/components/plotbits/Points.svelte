@@ -314,7 +314,9 @@
 		{#if pointsData.draw}
 			<div class="control-input-horizontal">
 				<div class="control-input control-input-swatch">
-					<p style="color:white;">Col</p>
+					<!-- An invisible spacer that sizes the swatch column, not a label: the swatch is
+					     named "Choose colour". -->
+					<span class="ci-label" aria-hidden="true" style="color:white;">Col</span>
 
 					<ColourPicker bind:value={pointsData.colour} />
 				</div>
@@ -323,14 +325,13 @@
 				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Shape</p>
+				<ControlInput label="Shape">
 					<AttributeSelect
 						bind:value={pointsData.shape}
 						options={POINT_SHAPES}
 						optionsDisplay={POINT_SHAPE_LABELS}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	</div>

@@ -28,6 +28,7 @@ import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { applyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 import { applyAutoBinSize } from '$lib/tableProcesses/binSizeAuto.svelte.js';
+import { applyAutoUnit } from '$lib/tableProcesses/unitAuto.svelte.js';
 import { joinOutKeys } from '$lib/utils/joinPairing.js';
 import { timeZoneSource, readsWallClockText } from '$lib/core/columnTimeZone.js';
 import { columnRefParamsOf } from '$lib/core/columnRefParams.js';
@@ -46,6 +47,7 @@ import {
 } from './plotInputs.js';
 import { manifestPortDescription, PLOT_PORT_DESCRIPTIONS } from '$lib/core/portDescriptions.js';
 import { loadSelectOptions, assertSelectOptions } from './paramOptions.js';
+import { refusesInputType, inputTypeRefusal } from '$lib/core/processInputRules.js';
 import { plotWarnings } from '../render/payloadColumn.js';
 import {
 	normalizeOverlaySpecs,
@@ -545,9 +547,13 @@ export function discardTableProcess(tp) {
  *
  * @param {import('$lib/core/TableProcess.svelte').TableProcess} tp
  * @param {string} name
- * @param {{fit?:any, stats?:any}} [extra]
+ * @param {{fit?:any, stats?:any, warnings?:string[]}} [extra]
  */
-export function finalizeTableProcessOutputs(tp, name, { fit = null, stats = null } = {}) {
+export function finalizeTableProcessOutputs(
+	tp,
+	name,
+	{ fit = null, stats = null, warnings = [] } = {}
+) {
 	const failed = [];
 	const failure = () => {
 		discardTableProcess(tp);
@@ -608,6 +614,7 @@ export function finalizeTableProcessOutputs(tp, name, { fit = null, stats = null
 
 	const result = { name, tableProcessId: tp.id, valid: true, outputs };
 	if (fit) result.fit = fit;
+	if (warnings.length) result.warnings = warnings;
 	// Statistics: GroupComparison exposes them as `comparisons` (alongside its statistic/pvalue
 	// output columns), so surface them regardless of columns; other column-less processes only
 	// when they produced no columns.
@@ -643,10 +650,12 @@ function columnZoneInfo(col) {
  * palette or its in-app AI edit adds a node (utils/aiEdit.js: `{ ...buildTableProcessDefaults
  * (entry, params), ...params, ...inputs }`): the registry defaults (unwrapped, objects deep
  * copied), plus the definition's `newNodeArgs` (the free-period fits' `periodRangeAuto`, the
- * binned periodograms' `pgBinSizeAuto`). The node's component then resolves those from its x
- * when it mounts (periodRangeAuto.svelte.js, binSizeAuto.svelte.js); headless nothing mounts,
- * so the same functions run here once the inputs are resolved: a time x gets 1 to 30 h, a
- * number x the Nyquist period to the record span, and the bin size the median sampling interval.
+ * binned periodograms' `pgBinSizeAuto`, the Rayleigh test's `unitAuto`). The node's component
+ * then resolves those from its inputs when it mounts (periodRangeAuto.svelte.js,
+ * binSizeAuto.svelte.js, unitAuto.svelte.js); headless nothing mounts, so the same functions
+ * run here once the inputs are resolved: a time x gets 1 to 30 h, a number x the Nyquist period
+ * to the record span, the bin size the median sampling interval, and a Rayleigh test called
+ * without a `unit` the unit its angle columns are most likely in (utils/angleUnit.js).
  *
  * A supplied value always wins. An explicit `null` counts as omitted, as in the Worker's draft
  * normalizer (src/emit/normalizer.js), so `binStart: null` gets the default rather than a node
@@ -668,6 +677,14 @@ export function fillOmittedArgs(entry, args) {
 	if (xCol) {
 		applyAutoPeriodRange(args, xCol);
 		applyAutoBinSize(args, xCol);
+	}
+	if (args.unitAuto) {
+		const yCols = (Array.isArray(args.yIN) ? args.yIN : [args.yIN])
+			.filter((id) => Number.isInteger(id) && id >= 0)
+			.map((id) => getColumnById(id))
+			.filter(Boolean);
+		const timed = Number.isInteger(args.timeIN) && args.timeIN >= 0 && !!getColumnById(args.timeIN);
+		applyAutoUnit(args, yCols, timed);
 	}
 	return args;
 }
@@ -1027,11 +1044,17 @@ export class AncirSession {
 		let valid = true;
 		let stats = null;
 		let fit = null;
+		let warnings = [];
 		if (Array.isArray(res)) {
 			const bools = res.filter((v) => typeof v === 'boolean');
 			if (bools.length) valid = bools[bools.length - 1];
 			const r0 = res[0];
 			if (r0 && typeof r0 === 'object' && !Array.isArray(r0)) {
+				// The notices the node shows beside a result it stands by (a Rayleigh test whose
+				// values do not fit its unit, an NPCRA epoch finer than the data), so a headless
+				// caller reads what a user of the app would.
+				if (Array.isArray(r0.warnings))
+					warnings = r0.warnings.filter((w) => typeof w === 'string' && w);
 				if (r0.y_results) {
 					// Cosinor / FitFunction: surface the RECOVERED parameters per Y
 					// (MESOR, amplitude, acrophase, R², RMSE) — otherwise the caller only
@@ -1077,7 +1100,7 @@ export class AncirSession {
 		// Prune empty (pre-allocated collected-mode) output columns and serialise the rest. A
 		// column whose getData() THROWS is surfaced as valid:false with the failed key + error,
 		// rather than being silently treated as empty (which hid broken chains from the agent).
-		return finalizeTableProcessOutputs(tp, name, { fit, stats });
+		return finalizeTableProcessOutputs(tp, name, { fit, stats, warnings });
 	}
 
 	/**
@@ -1104,6 +1127,11 @@ export class AncirSession {
 			);
 		}
 
+		// The input rules the canvas enforces (core/processInputRules.js): a transform that
+		// refuses this column's type (Multiply on a time column) is not attached.
+		if (refusesInputType(entry, col.type)) {
+			throw new Error(inputTypeRefusal(entry, entry.displayName ?? name, col.type));
+		}
 		assertSelectOptions('process', name, args, entry.defaults);
 		const processId = col.addProcess(name);
 		const proc = col.processes.find((p) => p.id === processId);

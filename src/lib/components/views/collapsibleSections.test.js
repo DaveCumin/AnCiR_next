@@ -123,14 +123,35 @@ describe('surviving a re-render', () => {
 });
 
 describe('accessibility and teardown', () => {
-	it('marks titles as buttons and reports their state', () => {
+	it("marks each title's name as its button and reports its state", () => {
 		root = panel('Padding');
 		handle = collapsibleSections(root);
-		expect(titleOf(root).getAttribute('role')).toBe('button');
-		expect(titleOf(root).getAttribute('tabindex')).toBe('0');
-		expect(titleOf(root).getAttribute('aria-expanded')).toBe('true');
-		click(titleOf(root).querySelector('p'));
-		expect(titleOf(root).getAttribute('aria-expanded')).toBe('false');
+		const name = titleOf(root).querySelector('p');
+		expect(name.getAttribute('role')).toBe('button');
+		expect(name.getAttribute('tabindex')).toBe('0');
+		expect(name.getAttribute('aria-expanded')).toBe('true');
+		click(name);
+		expect(name.getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('never makes the whole title a button, since titles hold other controls', () => {
+		// A button holding buttons is announced as one control whose contents a screen reader
+		// cannot reach (axe nested-interactive); the title is only marked for styling.
+		root = panel('Padding');
+		handle = collapsibleSections(root);
+		expect(titleOf(root).hasAttribute('role')).toBe(false);
+		expect(titleOf(root).hasAttribute('tabindex')).toBe(false);
+		expect(titleOf(root).getAttribute('data-collapsible')).toBe('true');
+		expect(titleOf(root).querySelector('button').closest('[role="button"]')).toBeNull();
+	});
+
+	it('the keyboard toggles a section from its name', () => {
+		root = panel('Padding');
+		handle = collapsibleSections(root);
+		const name = titleOf(root).querySelector('p');
+		name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		expect(sectionOf(root).getAttribute('data-collapsed')).toBe('true');
+		expect(name.getAttribute('aria-expanded')).toBe('false');
 	});
 
 	it('stops responding once destroyed', () => {

@@ -43,6 +43,12 @@
 	const resetDrag = () => {
 		drag = { inner: null, from: null, over: null };
 	};
+
+	// The grips of one plot's series are ONE Tab stop (a roving tabindex): the grip of the
+	// last series used is in the Tab order, the others are reached with Up/Down (Home/End),
+	// so tabbing through a plot's Data tab stops on one grip, not one per series. Keyed by
+	// list (the plot), holding that list's active series index.
+	const rovingIndex = $state({});
 </script>
 
 <script>
@@ -53,6 +59,7 @@
 	import { removeSeriesWithUndo } from '$lib/plots/seriesDelete.js';
 	import { reorderSeriesWithUndo, moveSeriesWithUndo } from '$lib/plots/seriesReorder.js';
 	import { seriesComputeWarning } from '$lib/plots/seriesHealth.js';
+	import { announce } from '$lib/utils/announce.js';
 
 	let {
 		/** the plot's inner data object (`theData`) — carries parentBox + removeData */
@@ -72,6 +79,15 @@
 		/** per-plot buttons (show/hide first), rendered before the colour and delete */
 		icons = null
 	} = $props();
+
+	// The grip's hint (aria-describedby), unique per header.
+	const uid = $props.id();
+	const hintId = `series-reorder-hint-${uid}`;
+	// Which grips belong together (one plot's series): the roving tabindex's list.
+	const listKey = $derived(`series-${inner?.parentBox?.id ?? uid}`);
+	const activeIndex = $derived(
+		Math.max(0, Math.min(rovingIndex[listKey] ?? 0, (inner?.data?.length ?? 1) - 1))
+	);
 
 	const positional = $derived(fallback ?? `Data ${index + 1}`);
 	// The one shared title-string helper: user label → wired column name → positional.
@@ -121,11 +137,39 @@
 		}
 	}
 
+	// Up/Down (Home/End) go to another grip of the same plot. By DOM, since each grip belongs
+	// to its own header component; document order is the series order.
+	function moveFocus(e) {
+		const grips = [
+			...document.querySelectorAll(`.series-drag-handle[data-series-list="${listKey}"]`)
+		];
+		const i = grips.indexOf(e.currentTarget);
+		if (i < 0) return false;
+		const to = { ArrowUp: i - 1, ArrowDown: i + 1, Home: 0, End: grips.length - 1 }[e.key];
+		if (to === undefined) return false;
+		e.preventDefault();
+		const target = grips[Math.max(0, Math.min(to, grips.length - 1))];
+		if (target && target !== e.currentTarget) target.focus();
+		return true;
+	}
+
 	async function onHandleKeydown(e) {
+		if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && moveFocus(e)) return;
 		if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
 		e.preventDefault();
 		e.stopPropagation();
-		if (moveSeriesWithUndo(inner, index, e.key === 'ArrowUp' ? -1 : +1) == null) return;
+		const delta = e.key === 'ArrowUp' ? -1 : +1;
+		const title = columnTitle;
+		const n = inner?.data?.length ?? 0;
+		const moved = moveSeriesWithUndo(inner, index, delta);
+		if (moved == null) {
+			announce(`${title} is already ${delta < 0 ? 'first' : 'last'}.`);
+			return;
+		}
+		announce(`Moved ${title} to position ${moved + 1} of ${n}.`);
+		// The moved grip stays the list's Tab stop (no focus event fires if the browser kept
+		// focus on it through the move).
+		rovingIndex[listKey] = moved;
 		// The {#each} in every consumer is keyed on column ids, which survive the
 		// setPlotInner round trip, so the moved block keeps its DOM node; but the
 		// browser blurs a focused element when it is re-inserted at its new
@@ -194,13 +238,22 @@
 				type="button"
 				draggable="true"
 				aria-label="Drag to reorder this series (Alt+Up/Down moves it)"
-				title="Drag to reorder (changes legend and draw order)"
+				aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+				aria-describedby={hintId}
+				title="Drag to reorder (changes legend and draw order), or press Alt+Up/Down"
+				tabindex={index === activeIndex ? 0 : -1}
+				data-series-list={listKey}
 				ondragstart={onDragStart}
 				ondragend={resetDrag}
 				onkeydown={onHandleKeydown}
+				onfocus={() => (rovingIndex[listKey] = index)}
 			>
 				⠇
 			</button>
+			<span id={hintId} class="sr-only"
+				>{columnTitle}: moving it changes the legend and draw order. Up and Down go to the other
+				series.</span
+			>
 		{/if}
 		<p class="series-title" title={columnTitle}>
 			{#if editable}

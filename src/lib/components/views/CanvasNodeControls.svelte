@@ -27,6 +27,9 @@
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { unknownAnalysisText } from '$lib/core/unknownNode.js';
 
+	// Prefix for the ids that tie a visible label to its picker.
+	const uid = $props.id();
+
 	// The current input column ids of a free process node (inIN is a list).
 	function processInputIds(proc) {
 		const raw = proc?.args?.inIN;
@@ -182,8 +185,11 @@
 		     operation's settings, and see its output columns. -->
 		<div class="control-component">
 			<div class="control-input vertical">
-				<p>Input column{inIN.length === 1 ? '' : 's'}</p>
+				<!-- Not a wrapping <label> (it would hijack the picker's clicks): the picker
+				     is named by this span instead. -->
+				<span class="ci-label" id="{uid}-inputs">Input column{inIN.length === 1 ? '' : 's'}</span>
 				<ColumnSelector
+					labelledby="{uid}-inputs"
 					multiple
 					value={inIN}
 					excludeColIds={producerCols.map((c) => c.id)}
@@ -310,8 +316,8 @@
 		</div>
 	{:else if node.type === 'note' && node.noteObj}
 		<div class="control-component">
-			<div class="control-input vertical">
-				<p>Note text</p>
+			<label class="control-input vertical">
+				<span class="ci-label">Note text</span>
 				<textarea
 					class="note-textarea"
 					rows="6"
@@ -319,13 +325,13 @@
 					oninput={(e) => (node.noteObj.text = e.currentTarget.value)}
 					placeholder="Write a note"
 				></textarea>
-			</div>
+			</label>
 		</div>
 	{/if}
 
 	<div class="control-component">
-		<div class="control-input vertical">
-			<p>Node note</p>
+		<label class="control-input vertical">
+			<span class="ci-label">Node note</span>
 			<textarea
 				class="node-note-textarea"
 				rows="4"
@@ -333,7 +339,7 @@
 				oninput={(e) => setNoteText(e.currentTarget.value)}
 				placeholder="Add context, reminders, or interpretation notes"
 			></textarea>
-		</div>
+		</label>
 	</div>
 {/if}
 
@@ -384,10 +390,13 @@
 		flex-direction: column;
 		align-items: stretch;
 	}
-	.control-input p {
+	.control-input p,
+	.control-input > .ci-label {
 		font-size: 0.85rem;
 		font-weight: 600;
-		opacity: 0.8;
+		/* Was opacity 0.8 over the panel's text colour: about 4:1 on white, under WCAG AA's
+		   4.5:1. The muted text token reads the same and passes (5.7:1). */
+		color: var(--color-text-muted);
 		margin: 0;
 	}
 	.muted {
@@ -395,7 +404,7 @@
 		font-size: 0.85rem;
 	}
 	.multi-hint {
-		opacity: 0.75;
+		color: var(--color-text-muted);
 		font-size: 0.85rem;
 		line-height: 1.35;
 		margin: 0 0 var(--space-4);

@@ -767,6 +767,8 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 	// Every stored-value button here is one entry per plot, however many copies are
 	// mounted: see storedValueClaims.js.
 	provideStoredValueOwner('plot', () => theData?.parentBox?.id);
@@ -954,13 +956,15 @@
 						<SeriesBlockHeader inner={theData} {datum} index={i} editable={false} />
 
 						<div class="control-data">
-							<ControlInput label="x (time)"></ControlInput>
-							<Column col={datum.x} canChange={true} />
+							<ControlInput label="Time (x)" associate={false} id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y (values)"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 
 						<!--

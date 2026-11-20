@@ -39,6 +39,20 @@ describe('add_column_process (transforms)', () => {
 		expect(res.preview[0]).toBeLessThan(0);
 	});
 
+	it('refuses a transform that does not take time columns, as the canvas does', () => {
+		const s = new AncirSession('tx-time');
+		s.importColumns([
+			{ name: 't', type: 'time', values: ['2024-04-01 12:00', '2024-04-01 13:00'] },
+			{ name: 'v', values: [1, 2] }
+		]);
+		for (const name of ['Multiply', 'normalize', 'OutlierRemoval', 'FrequencyFilter', 'Sub'])
+			expect(() => s.addColumnProcess('t', name, {}), name).toThrow(
+				/doesn't support time columns yet/
+			);
+		// Add takes a time column (the value is then a duration).
+		expect(s.addColumnProcess('t', 'Add', { value: 1 }).length).toBe(2);
+	});
+
 	it('rejects an unknown process name', () => {
 		const s = new AncirSession('tx-bad');
 		s.importColumns([{ name: 'v', values: [1, 2, 3] }]);

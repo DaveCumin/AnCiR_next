@@ -904,6 +904,8 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 	// Every stored-value button here is one entry per plot, however many copies are
 	// mounted: see storedValueClaims.js.
 	provideStoredValueOwner('plot', () => theData?.parentBox?.id);
@@ -1139,11 +1141,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>
-						{theData.showPeriod ? `Min (${theData.minPeriod.toFixed(3)})` : 'Min'}
-					</p>
-
+				<ControlInput label={theData.showPeriod ? `Min (${theData.minPeriod.toFixed(3)})` : 'Min'}>
 					<NumberWithUnits
 						min={theData.showPeriod ? theData.minPeriod : 0}
 						step="0.1"
@@ -1153,13 +1151,11 @@
 							theData.xlimsIN[0] = numberOrNull(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>
-						{theData.showPeriod ? 'Max' : `Max (${theData.maxFrequency.toFixed(3)})`}
-					</p>
-
+				<ControlInput
+					label={theData.showPeriod ? 'Max' : `Max (${theData.maxFrequency.toFixed(3)})`}
+				>
 					<NumberWithUnits
 						max={theData.showPeriod ? 1000 : theData.maxFrequency}
 						step={theData.showPeriod ? '1' : '0.01'}
@@ -1169,7 +1165,7 @@
 							theData.xlimsIN[1] = numberOrNull(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</Axis>
 	{:else if appState.currentControlTab === 'overlays'}
@@ -1199,13 +1195,15 @@
 						<SeriesBlockHeader inner={theData} {datum} index={i} editable={false} />
 
 						<div class="control-data">
-							<ControlInput label="x (time)"></ControlInput>
-							<Column col={datum.x} canChange={true} />
+							<ControlInput label="Time (x)" associate={false} id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y (values)"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 
 						<div class="control-input-vertical">
@@ -1215,8 +1213,8 @@
 							</label>
 						</div>
 
-						<div class="control-input">
-							<p>Frequency step</p>
+						<!-- Not a wrapping label: the note below would be read as part of the name. -->
+						<ControlInput label="Frequency step" associate={false}>
 							<div style="display: flex; align-items: center; gap: 8px;">
 								<NumberWithUnits
 									nullable
@@ -1250,7 +1248,7 @@
 									a finer step interpolates between independent bins.
 								{/if}
 							</p>
-						</div>
+						</ControlInput>
 
 						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">

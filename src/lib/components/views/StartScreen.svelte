@@ -8,7 +8,8 @@
 	//   1. Two primary cards (import / load) carry the weight — they're what a returning user wants.
 	//   2. A row of outlined chips (simulate / AI / blank canvas) reads as pressable but stays
 	//      visibly tertiary, so it can't compete with the two primaries.
-	//   3. Tour and Examples each sit under a quiet section label.
+	//   3. Unsaved work (above the actions), Recent files, Tour and Examples each sit under a
+	//      quiet section label; the first two only when there is something in them.
 	//   4. The tour band is the only high-contrast element.
 	//
 	// The whole overlay is a drop target for import — dropping anywhere starts an import — using the
@@ -31,6 +32,25 @@
 	} from '$lib/start/startActions.js';
 	import { AppAssetUnavailableError, describeAssetError, HOSTED_URL } from '$lib/start/offline.js';
 	import { focusTrap } from '$lib/utils/focusTrap.js';
+	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { confirmDiscard, confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { formatSavedAt } from '$lib/core/crashRecovery.js';
+	import {
+		autosave,
+		describeSummary,
+		discardAutosave,
+		restoreAutosave
+	} from '$lib/core/autosave.svelte.js';
+	import {
+		recents,
+		loadRecents,
+		openRecent,
+		removeRecent,
+		clearRecents,
+		relativeTime
+	} from '$lib/start/recentSessions.svelte.js';
+	import { onMount } from 'svelte';
 
 	// `summoned` = reopened from Help → "Welcome screen" OVER existing work (the TODO
 	// note's summoned-over-work case). Same overlay — it already has the full modal
@@ -165,6 +185,122 @@
 		}
 	}
 
+	// --- recent files (recentSessions.svelte.js) -----------------------------------------------
+	// Session files saved or opened here through a file handle (Chromium browsers), so each
+	// reopens in one click. Absent when there are none: a first-time visitor gets no section
+	// explaining a list they have not got.
+	onMount(() => {
+		loadRecents();
+	});
+
+	/** Rows whose file could not be found when clicked: they offer Find it / Remove instead. */
+	let missingIds = $state([]);
+
+	const recentWhen = (entry) =>
+		`${entry.action === 'saved' ? 'Saved' : 'Opened'} ${relativeTime(entry.ts)}`;
+	/** "Saved 2 hours ago · 12 columns · 3 plots": one string, so the separators keep their spaces. */
+	const recentDetail = (entry) => [recentWhen(entry), entry.meta].filter(Boolean).join(' · ');
+
+	async function reopenRecent(entry) {
+		busyId = `recent:${entry.id}`;
+		try {
+			// Asks for permission to read the file again when the browser needs to (this click is the
+			// user gesture that request needs).
+			const res = await openRecent(entry.id);
+			if (res.status === 'ok') {
+				if (await openSessionFile(res.file, res.handle)) onDismiss?.();
+			} else if (res.status === 'missing' || res.status === 'no-handle') {
+				missingIds = [...missingIds, entry.id];
+			} else if (res.status === 'denied') {
+				addNotification(
+					`AnCiR was not given permission to open "${entry.fileName}". Click it again to be ` +
+						'asked again, or use Load session.',
+					'warning',
+					10000
+				);
+			} else {
+				notifyFailure('Could not open that session file.', res.error);
+			}
+		} catch (e) {
+			notifyFailure('Could not open that session file.', e);
+		} finally {
+			busyId = null;
+		}
+	}
+
+	/** A missing file's row: pick the file where it is now; the stale row goes once one is picked. */
+	async function findRecent(entry) {
+		const res = await pickSessionFile();
+		if (res.status === 'cancelled') return;
+		if (res.status === 'unsupported') {
+			loadMode = 'file';
+			showLoadSession = true;
+			return;
+		}
+		busyId = `recent:${entry.id}`;
+		try {
+			await forgetRecent(entry);
+			if (await openSessionFile(res.file, res.handle)) onDismiss?.();
+		} catch (e) {
+			notifyFailure('Could not open that session file.', e);
+		} finally {
+			busyId = null;
+		}
+	}
+
+	async function forgetRecent(entry) {
+		missingIds = missingIds.filter((id) => id !== entry.id);
+		await removeRecent(entry.id);
+	}
+
+	async function clearRecentFiles() {
+		const ok = await confirmDiscard(
+			'Clear the list of recent files? The files themselves are not touched.',
+			'Clear list'
+		);
+		if (!ok) return;
+		missingIds = [];
+		await clearRecents();
+		addNotification('Cleared the list of recent files.', 'info');
+	}
+
+	// --- unsaved work (autosave.svelte.js) -----------------------------------------------------
+	// Copies of sessions that were never saved to a file, left by tabs that are no longer open.
+	// They lead the screen, above the four actions: picking up lost work is the most urgent
+	// thing anyone arriving here could want, and the section is absent when there is none.
+
+	const savedAtLabel = (ms) => formatSavedAt(new Date(ms).toISOString());
+
+	async function restoreCopy(copy) {
+		busyId = `restore:${copy.slot}`;
+		try {
+			const restored = await restoreAutosave(copy.slot, {
+				load: (session) => importJson(session),
+				confirmReplace: confirmReplaceSession
+			});
+			if (!restored) return;
+			addNotification(
+				`Restored "${copy.name}" from its autosaved copy. Save it to a file to keep it.`,
+				'info',
+				8000
+			);
+			onDismiss?.();
+		} catch (e) {
+			notifyFailure('Could not restore that autosaved session.', e);
+		} finally {
+			busyId = null;
+		}
+	}
+
+	async function discardCopy(copy) {
+		const ok = await confirmDiscard(
+			`Discard the autosaved copy of "${copy.name}"? It was never saved to a file, so it ` +
+				'cannot be recovered afterwards.',
+			'Discard'
+		);
+		if (ok) await discardAutosave(copy.slot);
+	}
+
 	/**
 	 * Focus in, the Tab trap and focus restore are focusTrap's (attached below); Escape stays here
 	 * because it has more to decide than "close".
@@ -217,6 +353,49 @@
 			{/if}
 		</header>
 
+		<!-- 0. Unsaved work: only when a closed tab left an autosaved copy ------------ -->
+		{#if autosave.offers.length > 0}
+			<section class="start-section" aria-labelledby="recover-heading" data-testid="start-recover">
+				<h2 class="section-label" id="recover-heading">Unsaved work</h2>
+				<ul class="recover-list">
+					{#each autosave.offers as copy (copy.slot)}
+						<li class="recover-row" class:busy={busyId === `restore:${copy.slot}`}>
+							<span class="recover-icon"><Icon name="clock" width={20} height={20} /></span>
+							<span class="recover-text">
+								<span class="recover-name">{copy.name}</span>
+								<span class="recover-sub">
+									Autosaved {savedAtLabel(copy.savedAt)}
+									<span aria-hidden="true">·</span>
+									{describeSummary(copy.summary)}
+								</span>
+							</span>
+							<span class="recover-actions">
+								<button
+									type="button"
+									class="recover-btn primary"
+									disabled={busyId != null}
+									aria-label={`Restore ${copy.name}, autosaved ${savedAtLabel(copy.savedAt)}`}
+									onclick={() => restoreCopy(copy)}>Restore</button
+								>
+								<button
+									type="button"
+									class="recover-btn"
+									disabled={busyId != null}
+									aria-label={`Discard the autosaved copy of ${copy.name}`}
+									onclick={() => discardCopy(copy)}>Discard</button
+								>
+							</span>
+						</li>
+					{/each}
+				</ul>
+				<p class="recover-hint">
+					{autosave.offers.length === 1
+						? 'Kept in this browser because it was never saved to a file. Restore opens it here; then save it to keep it.'
+						: 'Kept in this browser because they were never saved to a file. Restore opens one here; then save it to keep it.'}
+				</p>
+			</section>
+		{/if}
+
 		<!-- 1. Actions: four cards of equal weight ------------------------------ -->
 		<div class="primary-row">
 			<button
@@ -264,7 +443,84 @@
 			</button>
 		</div>
 
-		<!-- 2. Tour: above the gallery, so the call to action stays above the fold. -->
+		<!-- 2. Recent files: only when there are some ------------------------------ -->
+		{#if recents.items.length > 0}
+			<section class="start-section" aria-labelledby="recent-heading" data-testid="start-recent">
+				<div class="section-head">
+					<h2 class="section-label" id="recent-heading">Recent files</h2>
+					<button
+						type="button"
+						class="browse-link"
+						data-testid="start-recent-clear"
+						onclick={clearRecentFiles}>Clear recent files</button
+					>
+				</div>
+				<ul class="recent-list">
+					{#each recents.items as entry (entry.id)}
+						{@const missing = missingIds.includes(entry.id)}
+						<li
+							class="recent-row"
+							class:busy={busyId === `recent:${entry.id}`}
+							class:missing
+							data-testid="start-recent-row"
+						>
+							<button
+								type="button"
+								class="recent-open"
+								title={entry.fileName}
+								disabled={busyId != null}
+								aria-label={missing
+									? `${entry.name} could not be found`
+									: `Open ${entry.fileName}, ${recentWhen(entry).toLowerCase()}`}
+								onclick={() => reopenRecent(entry)}
+							>
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -- the thumb is an SVG string built in $lib/start/thumbnails.js from a seeded PRNG over the file's name; no file content reaches it -->
+								<span class="thumb thumb-sm">{@html entry.thumb}</span>
+								<span class="recent-text">
+									<span class="recent-name">{entry.name}</span>
+									{#if missing}
+										<span class="recent-sub recent-warn">
+											Not found: it may have been moved, renamed or deleted.
+										</span>
+									{:else}
+										<span class="recent-sub">{recentDetail(entry)}</span>
+									{/if}
+								</span>
+							</button>
+							{#if missing}
+								<span class="recent-fix">
+									<button
+										type="button"
+										class="recover-btn"
+										disabled={busyId != null}
+										onclick={() => findRecent(entry)}>Find it…</button
+									>
+									<button
+										type="button"
+										class="recover-btn"
+										disabled={busyId != null}
+										onclick={() => forgetRecent(entry)}>Remove</button
+									>
+								</span>
+							{:else}
+								<button
+									type="button"
+									class="recent-remove"
+									disabled={busyId != null}
+									aria-label={`Remove ${entry.fileName} from recent files`}
+									title="Remove from recent files"
+									onclick={() => forgetRecent(entry)}
+								>
+									<Icon name="close" width={14} height={14} />
+								</button>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
+		<!-- 3. Tour: above the gallery, so the call to action stays above the fold. -->
 		<section class="start-section">
 			<h2 class="section-label">New here?</h2>
 			<div class="tour-band">
@@ -285,7 +541,7 @@
 			</div>
 		</section>
 
-		<!-- 3. Example sessions -------------------------------------------------- -->
+		<!-- 4. Example sessions -------------------------------------------------- -->
 		<section class="start-section">
 			<div class="section-head">
 				<h2 class="section-label">Example sessions</h2>
@@ -365,7 +621,7 @@
 							{#if col.hidden > 0}
 								<button
 									type="button"
-									class="more-link"
+									class="more-link hit-target"
 									onclick={() => (showAll = true)}
 									aria-label={`Show ${col.hidden} more example${col.hidden === 1 ? '' : 's'} in ${col.label}`}
 								>
@@ -472,6 +728,209 @@
 		margin: 0;
 		font-size: var(--font-lg);
 		color: var(--color-text-muted);
+	}
+
+	/* --- unsaved work ------------------------------------------------------- */
+	/* Rows in the example rows' vocabulary (icon, name, one-line detail), but in a bordered
+	   list with their own actions: these are the user's own sessions, and the one section that
+	   asks for a decision. */
+	.recover-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+	}
+	.recover-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		padding: var(--space-4) var(--space-5);
+		background: var(--surface-card);
+	}
+	.recover-row + .recover-row {
+		border-top: 1px solid var(--color-lightness-90);
+	}
+	.recover-row.busy {
+		opacity: 0.6;
+	}
+	.recover-icon {
+		flex: 0 0 auto;
+		display: inline-flex;
+		color: var(--color-accent-text);
+	}
+	.recover-text {
+		flex: 1 1 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+	.recover-name,
+	.recover-sub {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.recover-name {
+		font-size: var(--font-md);
+		font-weight: 600;
+		color: var(--color-lightness-20);
+	}
+	.recover-sub {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.recover-actions {
+		flex: 0 0 auto;
+		display: flex;
+		gap: var(--space-3);
+	}
+	.recover-btn {
+		padding: var(--space-2) var(--space-5);
+		font: inherit;
+		font-size: var(--font-sm);
+		font-weight: 600;
+		color: var(--color-lightness-25);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-md);
+		cursor: pointer;
+	}
+	.recover-btn:hover:not(:disabled),
+	.recover-btn:focus-visible {
+		border-color: var(--color-lightness-35);
+	}
+	/* Filled primary with a white label: --color-accent-fill is 5.28:1 (see .tour-cta). */
+	.recover-btn.primary {
+		color: white;
+		background: var(--color-accent-fill);
+		border-color: var(--color-accent-fill);
+	}
+	.recover-btn.primary:hover:not(:disabled),
+	.recover-btn.primary:focus-visible {
+		background: color-mix(in srgb, var(--color-accent-fill) 88%, black);
+		border-color: color-mix(in srgb, var(--color-accent-fill) 88%, black);
+	}
+	.recover-btn:disabled {
+		cursor: default;
+		opacity: 0.6;
+	}
+	.recover-hint {
+		margin: 0;
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+	}
+
+	/* --- recent files ------------------------------------------------------- */
+	/* The example rows' vocabulary (small thumbnail, name, one-line detail), two to a line where
+	   there is room (a full-width panel), one on a narrow screen; each with its own remove button. */
+	.recent-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+		gap: var(--space-1) var(--space-6);
+		/* A row showing "Not found" grows; its neighbour keeps its own height. */
+		align-items: start;
+	}
+	.recent-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		min-width: 0;
+		border-radius: var(--radius-md);
+	}
+	.recent-row:hover {
+		background: var(--color-lightness-96);
+	}
+	.recent-row:hover .recent-name,
+	.recent-open:focus-visible .recent-name {
+		color: var(--color-accent-text);
+	}
+	.recent-row.busy {
+		opacity: 0.6;
+	}
+	.recent-open {
+		flex: 1 1 0;
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		min-width: 0;
+		padding: var(--space-3);
+		background: none;
+		border: none;
+		border-radius: var(--radius-md);
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+	.recent-open:disabled {
+		cursor: default;
+	}
+	.recent-open:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
+	}
+	.recent-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.recent-name,
+	.recent-sub {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.recent-name {
+		font-size: var(--font-md);
+		color: var(--color-lightness-20);
+	}
+	.recent-sub {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	/* The one line on this screen that reports a problem: it wraps rather than hiding the end. */
+	.recent-warn {
+		white-space: normal;
+		color: var(--color-warning-text);
+	}
+	.recent-remove {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		margin-right: var(--space-2);
+		padding: 0;
+		background: none;
+		border: none;
+		border-radius: var(--radius-md);
+		color: var(--color-lightness-45);
+		cursor: pointer;
+	}
+	.recent-remove:hover:not(:disabled),
+	.recent-remove:focus-visible {
+		background: var(--color-lightness-90);
+		color: var(--color-lightness-20);
+	}
+	.recent-remove:disabled {
+		cursor: default;
+	}
+	/* Find it / Remove sit under the message, lined up with the text rather than the thumbnail. */
+	.recent-fix {
+		flex: 1 0 100%;
+		display: flex;
+		gap: var(--space-3);
+		padding: 0 var(--space-3) var(--space-3) calc(var(--space-3) + 40px + var(--space-4));
 	}
 
 	/* --- primary ---------------------------------------------------------- */
@@ -633,7 +1092,7 @@
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--color-lightness-55);
+		color: var(--color-text-muted);
 	}
 	.example-list {
 		list-style: none;
@@ -810,6 +1269,16 @@
 		.tour-band {
 			flex-direction: column;
 			align-items: stretch;
+		}
+		/* The actions drop below the name rather than squeezing it to nothing. */
+		.recover-row {
+			flex-wrap: wrap;
+		}
+		.recover-text {
+			flex-basis: calc(100% - 20px - var(--space-4));
+		}
+		.recover-actions {
+			margin-left: calc(20px + var(--space-4));
 		}
 		/* The summary is the first thing to go when a row runs out of width. */
 		.example-sub {

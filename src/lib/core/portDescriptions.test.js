@@ -272,7 +272,7 @@ describe('descriptions follow the node settings', () => {
 	it('inputs say what fits and what happens when left empty', () => {
 		expect(inputDescription('Cosinor', 'xIN', {})).toMatch(/time column.*Required/);
 		expect(inputDescription('RayleighTest', 'timeIN', {})).toMatch(/Optional.*Empty/);
-		expect(inputDescription('GroupComparison', 'xIN', {})).toMatch(/Empty: each y column/);
+		expect(inputDescription('GroupComparison', 'xIN', {})).toMatch(/Empty: two or more y columns/);
 	});
 });
 
@@ -328,7 +328,9 @@ describe('describeNodePort: one resolver for every node card', () => {
 
 	it('column transforms, groups, data nodes and composites', () => {
 		const proc = { type: 'process', processName: 'Multiply' };
-		expect(describeNodePort(proc, { name: 'input' }, 'in', env)).toBe('A number column.');
+		expect(describeNodePort(proc, { name: 'input' }, 'in', env)).toBe(
+			'A number column; a time column is refused.'
+		);
 		expect(describeNodePort(proc, { name: 'out_7' }, 'out', env)).toMatch(/times the value/);
 		expect(describeNodePort({ type: 'group' }, { name: 'col_3' }, 'out', env)).toMatch(
 			/time column/

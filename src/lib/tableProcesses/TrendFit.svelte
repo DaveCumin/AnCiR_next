@@ -926,21 +926,19 @@
 		</div>
 
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
+			</ControlInput>
 
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Y columns</p>
+				<ControlInput label="Values (y)" associate={false}>
 					<ColumnSelector
 						bind:value={p.args.yIN}
 						excludeColIds={yExcludeIds}
 						multiple={true}
 						onChange={onYSelectionChange}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 	</div>
@@ -953,15 +951,14 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Model</p>
+		<ControlInput label="Model">
 			<AttributeSelect
 				bind:value={p.args.model}
 				options={['linear', 'exponential', 'logarithmic', 'polynomial']}
 				optionsDisplay={['Linear', 'Exponential', 'Logarithmic', 'Polynomial']}
 				onChange={() => getTrend()}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 
 	{#if p.args.model === 'polynomial'}
@@ -1015,15 +1012,14 @@
 				</ControlInput>
 			{/if}
 
-			<div class="control-input">
-				<p>Statistic</p>
+			<ControlInput label="Statistic">
 				<AttributeSelect
 					bind:value={p.args.permutationStatistic}
 					options={['rSquared', 'rmse']}
 					optionsDisplay={['R²', 'RMSE']}
 					disabled={permutationInProgress}
 				/>
-			</div>
+			</ControlInput>
 
 			<ControlInput label="Seed (for reproducibility)">
 				<NumberWithUnits

@@ -122,6 +122,14 @@
 		]
 	},
 	"demo-tp-describedata.json": {
+		"DescribeData.ciHigh": [
+			56.684966909,
+			58.285690965
+		],
+		"DescribeData.ciLow": [
+			40.169551769,
+			41.714309035
+		],
 		"DescribeData.iqr": [
 			56.568542495,
 			49
@@ -165,6 +173,10 @@
 		"DescribeData.sd": [
 			29.056294644,
 			29.154759474
+		],
+		"DescribeData.sem": [
+			4.109180596,
+			4.123105626
 		],
 		"DescribeData.skewness": [
 			0.063871916,
@@ -286,9 +298,11 @@
 			24,
 			24,
 			24,
+			24,
 			24
 		],
 		"MovingAnalysis.y0_peak_power": [
+			83.5,
 			83.5,
 			83.5,
 			83.5,
@@ -304,7 +318,8 @@
 			156,
 			180,
 			204,
-			228
+			228,
+			252
 		]
 	},
 	"demo-tp-nonparametricra.json": {

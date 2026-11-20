@@ -1,4 +1,5 @@
 <script>
+	import { controlLabel } from './controlLabel.js';
 	let {
 		value = $bindable(),
 		onChange = () => {},
@@ -10,6 +11,9 @@
 		buttonColour = 'var(--color-lightness-98)'
 	} = $props();
 	let checked = $state(false);
+	// The switch's own <label> holds only the slider, so the checkbox takes its name from
+	// the enclosing <ControlInput associate={false}> (a wrapping label would nest labels).
+	const ownLabel = controlLabel();
 	function change(v) {
 		onChange(v);
 	}
@@ -22,7 +26,12 @@
 		style="--active-color: {activeColor}; --inactive-color: {inactiveColor}">{Labels[0]}</span
 	>
 	<label class="toggle-switch">
-		<input type="checkbox" bind:checked onchange={(v) => change(v.target.checked)} />
+		<input
+			type="checkbox"
+			aria-labelledby={ownLabel?.id ?? undefined}
+			bind:checked
+			onchange={(v) => change(v.target.checked)}
+		/>
 		<span
 			class="slider"
 			style="--toggleColour-color: {toggleColour}; --untoggleColour-color:{untoggleColour}; --buttonColour-color:{buttonColour};"

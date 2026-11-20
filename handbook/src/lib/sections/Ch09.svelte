@@ -29,7 +29,7 @@
 		[
 			'Intradaily Variability (IV)',
 			'Mean squared difference between consecutive time points relative to overall variance, a measure of within-day fragmentation',
-			'0 (smooth) to a theoretical max of 4; IV ≈ 2 is the value expected from uncorrelated noise'
+			'0 (smooth) to about 4 (a record that alternates high and low at every epoch); IV ≈ 2 is the value expected from uncorrelated noise'
 		],
 		[
 			'M10 / L5',

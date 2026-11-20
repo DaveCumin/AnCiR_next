@@ -124,7 +124,13 @@ def _build_cols(js):
 # --- runners ----------------------------------------------------------------
 
 def run_column_process(fx, js):
-    out = rt.run_column_process(fx["pyFunc"], list(js["input"]), fx.get("args", {}), {})
+    # `columns` fixtures: other columns the process reads by id (Remove Trend's x column),
+    # recorded by the emitter as `inputs` and named in args as "@ref".
+    cols, args = {}, fx.get("args", {})
+    if js.get("inputs"):
+        _raw, cols, id_map, _next = _build_cols(js)
+        args = resolve_tokens(args, id_map)
+    out = rt.run_column_process(fx["pyFunc"], list(js["input"]), args, cols)
     return {"value": list(out)}
 
 

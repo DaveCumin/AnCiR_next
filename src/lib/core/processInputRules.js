@@ -20,9 +20,14 @@
  * is safe until its author decides a mix is meaningful.
  *
  * Enforced by every path that wires a column into a free process: the canvas
- * (WorkflowEditor.connectColumnToInput) and the side panel's input picker
- * (CanvasNodeControls.setProcessInputs). Inline (chained) processes and the MCP
- * add_column_process tool attach to ONE column, so they have nothing to compare.
+ * (WorkflowEditor.connectColumnToInput, and a splice onto a wire) and the side panel's
+ * input picker (CanvasNodeControls.setProcessInputs). The MCP add_column_process tool
+ * attaches to ONE column, so only `disallowTypes` applies there (mcp/src/engine/session.js).
+ *
+ * A column wired before its type was refused (a saved session) still loads: the process
+ * passes that input through unchanged (Process.doProcess, `refusesInputType`) and the node
+ * shows the refusal as a warning (`refusedInputWarnings`, through processWarnings.js), rather
+ * than computing on a time column's raw epoch milliseconds.
  */
 import { core, appConsts } from '$lib/core/core.svelte.js';
 
@@ -78,4 +83,40 @@ export function processInputRefusal(proc, colId, currentIds = []) {
 	const typeOf = (id) => (core.data ?? []).find((c) => c.id === id)?.type;
 	const existing = currentIds.filter((id) => id !== colId).map(typeOf);
 	return inputTypeRefusal(entry, label, typeOf(colId), existing);
+}
+
+/** True when `entry` (a registry entry) refuses columns of `type` (declared `disallowTypes`). */
+export function refusesInputType(entry, type) {
+	return type != null && disallowedInputTypes(entry).includes(type);
+}
+
+/**
+ * Warnings for a process whose input already holds a column of a type it refuses (wired
+ * before the rule existed, in a saved session): the standard refusal, and that the input
+ * passes through unchanged. [] when nothing refused is wired. Reads the live registry.
+ */
+export function refusedInputWarnings(proc) {
+	if (!proc?.name) return [];
+	const entry = appConsts?.processMap?.get(proc.name);
+	if (!disallowedInputTypes(entry).length) return [];
+	const label = proc.displayName || entry?.displayName || proc.name;
+	let cols;
+	if (proc.parentCol) cols = [proc.parentCol];
+	else {
+		const raw = proc.args?.inIN;
+		const ids = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+		cols = ids.map((id) => (core?.data ?? []).find((c) => c.id === id)).filter(Boolean);
+	}
+	const out = [];
+	for (const type of new Set(cols.map((c) => c.type))) {
+		if (!refusesInputType(entry, type)) continue;
+		const n = cols.filter((c) => c.type === type).length;
+		out.push(
+			`${inputTypeRefusal(entry, label, type)} ` +
+				(n === 1
+					? `Its ${type} input passes through unchanged.`
+					: `Its ${type} inputs pass through unchanged.`)
+		);
+	}
+	return out;
 }

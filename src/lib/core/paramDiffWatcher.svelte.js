@@ -145,6 +145,20 @@ export const paramDiffWatcher = {
 	},
 
 	/**
+	 * A node wrote one of its own args from its data, not the user (unitAuto.svelte.js: a new
+	 * Rayleigh test's unit read from the wired values). Take that one value into the baseline,
+	 * so it is not an undo step of its own: undoing it would leave the node on the unit the
+	 * data had just ruled out. Only this key moves; any other pending difference still reaches
+	 * the history.
+	 */
+	followOwnWrite(tpId, key) {
+		const tp = core.tableProcesses?.find((t) => t.id === tpId);
+		const base = prev[`freetp:`]?.[String(tpId)];
+		if (!tp || !base || !(key in (tp.args ?? {}))) return;
+		base[key] = JSON.parse(JSON.stringify(tp.args[key]));
+	},
+
+	/**
 	 * Drain pending diffs and emit ops for them. Always returns a resolved
 	 * Promise so consumers can `await watcher.flush()` regardless of whether
 	 * micro-task scheduling is involved.

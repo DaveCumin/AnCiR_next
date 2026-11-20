@@ -6,10 +6,15 @@
 	import { fly, fade } from 'svelte/transition';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { separatorKeyValue } from '$lib/utils/separatorKeys.js';
 
 	let container = $state();
 	const minWidth = 200;
 	const maxWidth = 500;
+
+	// The width a fresh session opens with (appState in core.svelte.js); Enter on the
+	// splitter puts it back.
+	const defaultWidth = 250;
 
 	let resizeSide = 'left';
 	let resizing = false;
@@ -46,6 +51,22 @@
 	// Drop any dangling drag listeners if this unmounts mid-gesture.
 	$effect(() => stopResize);
 
+	// The splitter from the keyboard (WAI-ARIA window splitter): arrows step, Home/End go to
+	// the ends, Enter restores the default width. The control panel sits right of its edge,
+	// so it grows to the left.
+	function onResizeKeydown(e) {
+		const next = separatorKeyValue(e, {
+			value: appState.widthControlPanel,
+			min: minWidth,
+			max: maxWidth,
+			grow: 'left',
+			defaultValue: defaultWidth
+		});
+		if (next == null) return;
+		e.preventDefault();
+		appState.widthControlPanel = next;
+	}
+
 	function startResize() {
 		resizing = true;
 		document.body.style.userSelect = 'none';
@@ -57,8 +78,10 @@
 </script>
 
 {#if appState.showControlPanel}
-	<div
+	<aside
 		bind:this={container}
+		aria-label="Control panel"
+		id="control-panel"
 		class="view-container {resizeSide}"
 		style="width: {appState.widthControlPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
 		in:fly={{ x: appState.widthControlPanel, duration: 600 }}
@@ -79,12 +102,23 @@
 			</button>
 		</div>
 		<ControlDisplay />
-	</div>
+	</aside>
+	<!-- A focusable separator is a widget in WAI-ARIA (the window splitter); Svelte counts
+	     every separator as static, hence the ignore (see svelteWarnings.guard.test.js). -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<div
 		class="resizer-overlay {resizeSide}"
 		style="right: {appState.widthControlPanel + (resizeSide === 'left' ? 0 : 6)}px;"
-		role="presentation"
+		role="separator"
+		tabindex="0"
+		aria-orientation="vertical"
+		aria-label="Resize the control panel"
+		aria-controls="control-panel"
+		aria-valuenow={Math.round(appState.widthControlPanel)}
+		aria-valuemin={minWidth}
+		aria-valuemax={maxWidth}
 		onmousedown={startResize}
+		onkeydown={onResizeKeydown}
 	></div>
 {:else}
 	<!-- TODO: reconsider this ux wise -->
@@ -212,5 +246,11 @@
 		cursor: ew-resize;
 		background-color: transparent;
 		z-index: 1001;
+	}
+	/* Keyboard focus only (mouse users see no change): the ring is drawn inside the strip so
+	   none of it falls off the top or bottom of the window. */
+	.resizer-overlay:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
 	}
 </style>

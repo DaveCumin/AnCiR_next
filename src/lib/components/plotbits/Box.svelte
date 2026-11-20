@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import { colourForCategory, colourForCategoryLabel } from '$lib/plots/seriesColour.js';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
@@ -390,6 +391,9 @@
 		<div class="control-component-title">
 			<p>{title}</p>
 			<button
+				type="button"
+				{@attach tooltip('Show this box')}
+				aria-pressed={!!boxPlotData.draw}
 				class="icon"
 				onclick={(e) => {
 					e.stopPropagation();
@@ -410,14 +414,12 @@
 				<!-- Plain columns, not .control-input-swatch: each swatch heads one of the panel's
 				     two columns, so it lines up with the rows below. -->
 				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Stroke</p>
+					<ControlInput label="Stroke" associate={false}>
 						<ColourPicker bind:value={boxPlotData.colour} />
-					</div>
-					<div class="control-input">
-						<p>Fill</p>
+					</ControlInput>
+					<ControlInput label="Fill" associate={false}>
 						<ColourPicker bind:value={boxPlotData.fillColour} />
-					</div>
+					</ControlInput>
 				</div>
 			{/if}
 			<!-- Outside the per-category branch: category colours replace the fill COLOUR, but the
@@ -431,8 +433,7 @@
 				<ControlInput label="Stroke width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.strokeWidth} />
 				</ControlInput>
-				<div class="control-input">
-					<p>Stroke style</p>
+				<ControlInput label="Stroke style">
 					<div class="stroke-field" class:invalid={boxPlotData.stroke === -1}>
 						<AttributeSelect
 							value={boxPlotData.stroke}
@@ -455,7 +456,7 @@
 							Invalid pattern
 						</span>
 					{/if}
-				</div>
+				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
 				<ControlInput label="Box width">
@@ -466,23 +467,21 @@
 				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Median colour</p>
+				<ControlInput label="Median colour" associate={false}>
 					<ColourPicker bind:value={boxPlotData.medianColour} />
-				</div>
+				</ControlInput>
 				<ControlInput label="Median width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.medianWidth} />
 				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Outlier method</p>
+				<ControlInput label="Outlier method">
 					<AttributeSelect
 						bind:value={boxPlotData.outlierMethod}
 						options={boxplotOutlierMethodOptions}
 						optionsDisplay={boxplotOutlierMethodDisplay}
 					/>
-				</div>
+				</ControlInput>
 				{#if boxPlotData.outlierMethod === 'iqr'}
 					<ControlInput label="IQR multiplier">
 						<NumberWithUnits step="0.1" min={0.1} max={5} bind:value={boxPlotData.iqrMultiplier} />

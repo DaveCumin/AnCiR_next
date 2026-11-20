@@ -136,10 +136,27 @@ describe('inputTypeRefusal', () => {
 
 	it('refuses a mix for every process that keeps the rule, naming the type already there', () => {
 		for (const [key, same] of Object.entries(EXPECTED_SAME_TYPE)) {
-			if (!same || key === 'Sub') continue;
-			const msg = inputTypeRefusal(entryOf(key), key, 'time', ['number']);
+			if (!same) continue;
+			// A process that refuses time outright says that instead (next tests); a category
+			// beside numbers still meets the mix rule on every one.
+			const refusesTime = disallowedInputTypes(entryOf(key)).includes('time');
+			const msg = refusesTime
+				? inputTypeRefusal(entryOf(key), key, 'category', ['number'])
+				: inputTypeRefusal(entryOf(key), key, 'time', ['number']);
 			expect(msg, key).toMatch(/inputs must all be the same type \(already number\)/);
 		}
+	});
+
+	it('Multiply, Normalize, Remove outliers and Frequency filter refuse time like Substitute', () => {
+		const refusing = Object.keys(EXPECTED_SAME_TYPE).filter((k) =>
+			disallowedInputTypes(entryOf(k)).includes('time')
+		);
+		expect(refusing.sort()).toEqual(
+			['FrequencyFilter', 'Multiply', 'OutlierRemoval', 'Sub', 'normalize'].sort()
+		);
+		expect(inputTypeRefusal(entryOf('Multiply'), 'Multiply', 'time', [])).toBe(
+			"Multiply doesn't support time columns yet."
+		);
 	});
 
 	it('accepts a mix for Filter, and the same type for everyone', () => {

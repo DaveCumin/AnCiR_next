@@ -1,11 +1,16 @@
 // @ts-nocheck
 // "Does closing this tab lose anything?" and the beforeunload guard that asks (ROB-5).
 //
-// AnCiR has no autosave, so closing or reloading the tab with work open lost it without a
-// word. The browser's own "Leave site? Changes you made may not be saved." prompt is the one
-// reliable last chance, and it only makes sense when there IS something unsaved: a prompt on
-// every close (an untouched demo, a session just opened or just saved) teaches people to
-// click through it.
+// Closing or reloading the tab with work open used to lose it without a word. The browser's
+// own "Leave site? Changes you made may not be saved." prompt is the one reliable last chance,
+// and it only makes sense when there IS something unsaved: a prompt on every close (an
+// untouched demo, a session just opened or just saved) teaches people to click through it.
+// Autosave (autosave.svelte.js) does not replace the prompt: it is off in ephemeral mode,
+// when turned off, and when a session is too big for browser storage, and a copy in the
+// browser is not a file the user has.
+//
+// The same definition of "unsaved" drives autosave: a copy is kept exactly while the
+// session has unsaved changes, and removed once it is saved or replaced.
 //
 // WHAT COUNTS AS UNSAVED
 //
@@ -41,6 +46,20 @@ let revision = 0;
 let savedRevision = 0;
 let savedShape = null;
 let installed = false;
+/** Called after every counted change (see onSessionChange). */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- listener registry, never rendered
+const changeListeners = new Set();
+
+function bump() {
+	revision++;
+	for (const fn of changeListeners) {
+		try {
+			fn();
+		} catch (err) {
+			console.error('A session-change listener failed:', err);
+		}
+	}
+}
 
 /** A cheap fingerprint of the session's structure. */
 export function sessionShape() {
@@ -62,16 +81,46 @@ export function sessionShape() {
 export function initUnsavedChanges() {
 	if (installed) return;
 	installed = true;
-	addStateChangeHook(() => {
-		revision++;
-	});
+	addStateChangeHook(bump);
 	markSessionSaved();
 }
 
-/** The open session now matches what was last saved or loaded. */
-export function markSessionSaved() {
-	savedRevision = revision;
-	savedShape = sessionShape();
+/**
+ * Where the session is now, to be passed to markSessionSaved once a save that started now has
+ * finished. A save to a file is asynchronous (the browser's save dialog, then the write), and
+ * an edit made while it runs is not in the file, so it must still count as unsaved.
+ * @returns {{ revision: number, shape: string }}
+ */
+export function sessionSavePoint() {
+	return { revision, shape: sessionShape() };
+}
+
+/**
+ * The open session now matches what was last saved or loaded.
+ * @param {{ revision: number, shape: string }} [point]  from sessionSavePoint(), when the save
+ *   started earlier than now; omitted means "as it is now".
+ */
+export function markSessionSaved(point) {
+	savedRevision = point ? point.revision : revision;
+	savedShape = point ? point.shape : sessionShape();
+}
+
+/**
+ * A cheap fingerprint of "what has changed": the revision counter and the session's shape.
+ * Autosave compares it with the one it last wrote, so it rewrites only when something did.
+ */
+export function sessionChangeFingerprint() {
+	return `${revision}#${sessionShape()}`;
+}
+
+/**
+ * Run `fn` after every recorded change (operations, undo/redo and markSessionEdited). Changes of
+ * shape alone (an import) are not announced; a caller that needs them polls
+ * sessionChangeFingerprint(). Returns the remover.
+ */
+export function onSessionChange(fn) {
+	changeListeners.add(fn);
+	return () => changeListeners.delete(fn);
 }
 
 /**
@@ -79,7 +128,7 @@ export function markSessionSaved() {
  * moved, resized or collapsed). Call it once, when the gesture ends; see point 3 above.
  */
 export function markSessionEdited() {
-	revision++;
+	bump();
 }
 
 /**
@@ -89,6 +138,8 @@ export function markSessionEdited() {
  */
 export function markSessionUnsaved() {
 	savedShape = null;
+	// Announced like an edit, so autosave keeps the only copy promptly.
+	bump();
 }
 
 /** True when closing the tab now would lose work. */
@@ -119,5 +170,5 @@ export function installUnloadGuard(target = typeof window !== 'undefined' ? wind
 
 /** Test seam. */
 export function _bumpRevisionForTest() {
-	revision++;
+	bump();
 }

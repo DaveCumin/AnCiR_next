@@ -16,7 +16,7 @@
 	} from './nodeGeometry.js';
 	import { NODE_CARD_BORDER, PORT_DOT, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
-	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { PORT_KEYS_HELP_ID, NODE_KEYS_HELP_ID } from './keyboardWiring.js';
 	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 	import { getNodeName } from '$lib/core/nodeNaming.js';
 
@@ -114,14 +114,17 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class="compact-node"
 	class:selected
 	class:has-warning={hasWarning}
 	style="{NODE_ROW_CSS_VARS} width:{COMPACT_W}px; height:{height}px;"
-	role="button"
+	role="group"
+	aria-roledescription="node"
 	tabindex="0"
 	aria-label={nodeName}
+	aria-describedby={NODE_KEYS_HELP_ID}
 	{@attach tooltip(
 		hasWarning ? `${node.label ?? ''}\n⚠ ${warnings.join('\n')}` : (node.label ?? '')
 	)}

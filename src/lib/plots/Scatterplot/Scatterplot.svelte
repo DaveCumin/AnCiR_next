@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -1109,6 +1110,8 @@
 	// the selection toolbar; only then do brush + plain-wheel zoom engage, so plain
 	// scroll keeps panning the canvas otherwise. Shift+wheel always zooms.
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	/**
 	 * An x tick label for a TIME x axis.
@@ -1350,7 +1353,12 @@
 
 					{#if theData.ylimsLeftIN[0] != null || theData.ylimsLeftIN[1] != null}
 						<div class="control-component-input-icons">
-							<button class="icon" onclick={() => (theData.ylimsLeftIN = [null, null])}>
+							<button
+								type="button"
+								{@attach attachTooltip('Reset the left y limits to automatic')}
+								class="icon"
+								onclick={() => (theData.ylimsLeftIN = [null, null])}
+							>
 								<Icon
 									name="reset"
 									width={14}
@@ -1405,7 +1413,12 @@
 
 					{#if theData.ylimsRightIN[0] != null || theData.ylimsRightIN[1] != null}
 						<div class="control-component-input-icons">
-							<button class="icon" onclick={() => (theData.ylimsRightIN = [null, null])}>
+							<button
+								type="button"
+								{@attach attachTooltip('Reset the right y limits to automatic')}
+								class="icon"
+								onclick={() => (theData.ylimsRightIN = [null, null])}
+							>
 								<Icon
 									name="reset"
 									width={14}
@@ -1437,8 +1450,7 @@
 		>
 			<div class="control-input-horizontal">
 				{#if theData.anyXdataTime}
-					<div class="control-input">
-						<p>Min</p>
+					<ControlInput label="Min" associate={false}>
 						<DateTimeHrs
 							label="X-axis minimum"
 							frame={theData.xTimeFrame}
@@ -1450,10 +1462,9 @@
 								theData.xlimsIN[0] = val ? Number(new Date(new Date(val).toUTCString())) : null;
 							}}
 						/>
-					</div>
+					</ControlInput>
 
-					<div class="control-input">
-						<p>Max</p>
+					<ControlInput label="Max" associate={false}>
 						<DateTimeHrs
 							label="X-axis maximum"
 							frame={theData.xTimeFrame}
@@ -1465,7 +1476,7 @@
 								theData.xlimsIN[1] = val ? Number(new Date(new Date(val).toUTCString())) : null;
 							}}
 						/>
-					</div>
+					</ControlInput>
 				{:else}
 					<ControlInput label="Min">
 						<NumberWithUnits
@@ -1491,7 +1502,12 @@
 				{/if}
 				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
 					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
+						<button
+							type="button"
+							{@attach attachTooltip('Reset the x limits to automatic')}
+							class="icon"
+							onclick={() => (theData.xlimsIN = [null, null])}
+						>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
 						</button>
 					</div>
@@ -1556,23 +1572,24 @@
 
 					<div class="data-wrapper">
 						<div class="x-select">
-							<ControlInput label="x"></ControlInput>
+							<ControlInput label="X values (x)" associate={false} id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
 
-							<Column col={datum.x} canChange={true} />
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 						</div>
 						<div class="y-select">
-							<ControlInput label="y"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Y values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 
 						<div class="control-input-vertical">
-							<div class="control-input">
-								<p>Y-axis</p>
+							<ControlInput label="Y-axis" associate={false}>
 								<Toggle
 									Labels={['Left', 'Right']}
 									onChange={(v) => (datum.yAxis = v ? 'right' : 'left')}
 								/>
-							</div>
+							</ControlInput>
 						</div>
 
 						<Points pointsData={datum.points} which="controls" />

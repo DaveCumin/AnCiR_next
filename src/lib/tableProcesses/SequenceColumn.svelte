@@ -231,10 +231,9 @@
 		</div>
 	{:else}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Start time</p>
+			<ControlInput label="Start time" associate={false}>
 				<DateTimeHrs bind:value={p.args.startTime} onChange={changedStartTime} />
-			</div>
+			</ControlInput>
 			<ControlInput label="Step">
 				<div style="display:flex;">
 					<NumberWithUnits
@@ -256,10 +255,9 @@
 			<ControlInput label="Count (N)">
 				<NumberWithUnits bind:value={p.args.count} onInput={changedCountTime} min={1} step={1} />
 			</ControlInput>
-			<div class="control-input">
-				<p>End time</p>
+			<ControlInput label="End time" associate={false}>
 				<DateTimeHrs bind:value={p.args.endTime} onChange={changedEndTime} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 </div>

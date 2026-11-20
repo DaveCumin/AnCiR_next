@@ -21,7 +21,7 @@ export const SESSIONS = allSessions.filter((s) => s.kind !== 'dataset');
 export const CHAPTER_TITLES = {
 	ch1: 'Introduction to Chronobiology',
 	ch2: 'Data Collection',
-	ch3: 'Simulating Data',
+	ch3: 'Simulating Chronobiological Data',
 	ch4: 'Preprocessing',
 	ch5: 'Actograms',
 	ch6: 'Periodograms',
@@ -29,9 +29,9 @@ export const CHAPTER_TITLES = {
 	ch8: 'Fourier Analysis',
 	ch9: 'Correlograms',
 	ch10: 'Phase Response Curves',
-	ch11: 'Linear & Additive Models',
+	ch11: 'General Linear and Additive Models',
 	ch12: 'Circular Statistics',
-	ch13: 'Best Practices'
+	ch13: 'Best Practices and Reporting'
 };
 
 // Richest-first ordering of node kinds, used as a ranking tie-break.

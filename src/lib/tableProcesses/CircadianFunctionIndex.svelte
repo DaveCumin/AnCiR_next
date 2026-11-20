@@ -12,7 +12,7 @@
 	// (Ortiz-Tudela et al. 2010, PLoS Comput Biol 6(11):e1000996). Reuses
 	// computeNPCRA — the exact IS/IV/RA the Nonparametric RA node reports — then
 	// folds them with circadianFunctionIndex(). One CFI value per y input.
-	import { computeNPCRA, missingEpochWarning } from '$lib/utils/npcra.js';
+	import { computeNPCRA, missingEpochWarning, epochFinerWarning } from '$lib/utils/npcra.js';
 	import { circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 
 	const displayName = 'Circadian Function Index';
@@ -102,16 +102,26 @@
 					IV: res.IV,
 					RA: res.RA,
 					fullDaysKept: res.fullDaysKept,
-					droppedEpochs: res.droppedEpochs
+					droppedEpochs: res.droppedEpochs,
+					samplingInterval: res.samplingInterval
 				};
 				anyValid = true;
 				// FIT-8, as NonparametricRA reports it: CFI folds the same IS and IV, so a
 				// record with many empty epochs carries the same caveat.
 				const name = displayNameOf(yCol, (namer ??= columnNamer())) || `column ${yId}`;
-				const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
+				const w = missingEpochWarning(
+					name,
+					res.missingEpochFraction,
+					opts.epochHours,
+					res.samplingInterval
+				);
 				if (w) warnings.push(w);
 			}
 		}
+		// An epoch shorter than the sampling interval (same text as NonparametricRA). The
+		// interval is the time column's, so it is the same for every series.
+		const finer = epochFinerWarning(opts.epochHours, Object.values(perY)[0]?.samplingInterval);
+		if (finer) warnings.unshift(finer);
 		// Full days only on a record shorter than one period: there is no whole day to keep
 		// (same text as NonparametricRA).
 		if (opts.fullDays && Object.values(perY).some((r) => r.fullDaysKept === 0)) {
@@ -296,14 +306,12 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Time (x)</p>
+		<ControlInput label="Time (x)" associate={false}>
 			<ColumnSelector bind:value={p.args.xIN} excludeColIds={xExcludeIds} />
-		</div>
-		<div class="control-input">
-			<p>Activity (y)</p>
+		</ControlInput>
+		<ControlInput label="Activity (y)" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<div class="control-input-horizontal">
@@ -340,7 +348,10 @@
 {:else if rows.length}
 	<div class="cfi-results">
 		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
-		<div class="cfi-table scroll-fade-x" {@attach scrollFade()}>
+		<div
+			class="cfi-table scroll-fade-x"
+			{@attach scrollFade({ label: 'Circadian function index results' })}
+		>
 			<table>
 				<thead>
 					<tr>

@@ -1,87 +1,142 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+// @ts-nocheck
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
+	recents,
 	loadRecents,
-	recordRecent,
+	recordRecentFile,
 	removeRecent,
 	clearRecents,
 	openRecent,
+	getHandle,
 	relativeTime,
+	sessionCounts,
 	supportsFileHandles,
 	MAX_RECENTS
 } from './recentSessions.svelte.js';
+import { privacy } from '$lib/core/localData.svelte.js';
+import { fakeIndexedDB, fileHandle } from './__fixtures__/fakeHandles.js';
 
-// The index lives in localStorage; handles live in IndexedDB. happy-dom has localStorage but no
-// usable IndexedDB, which is exactly the "degrade, don't die" path we want covered.
+// The index lives in localStorage; handles live in IndexedDB. happy-dom has no usable IndexedDB,
+// and a real implementation (fake-indexeddb) structured-clones what it stores, which a fake
+// handle with methods cannot survive. So a small by-reference fake stands in (__fixtures__).
+
+let savedIdb;
 beforeEach(() => {
+	savedIdb = window.indexedDB;
+	window.indexedDB = fakeIndexedDB();
 	window.localStorage.clear();
+	privacy.ephemeral = false;
 	loadRecents();
 });
+afterEach(() => {
+	window.indexedDB = savedIdb;
+	privacy.ephemeral = false;
+});
 
-const add = (name, over = {}) =>
-	recordRecent({ name, meta: '7 days · 6 subjects', workflow: 'rest-activity', ...over });
+const save = (name, over = {}) =>
+	recordRecentFile(fileHandle(name, over), { action: 'saved', meta: '4 columns · 1 plot' });
 
-describe('recents index', () => {
+describe('recent files index', () => {
 	it('starts empty', () => {
 		expect(loadRecents()).toEqual([]);
 	});
 
-	it('records an entry with a name, timestamp and metadata', async () => {
-		await add('Cohort A');
+	it('records a file with its name, action, time and counts, and keeps its handle', async () => {
+		await save('Cohort A 2026-11-21.ancir');
 		const [e] = loadRecents();
-		expect(e.name).toBe('Cohort A');
-		expect(e.meta).toBe('7 days · 6 subjects');
-		expect(e.workflow).toBe('rest-activity');
+		expect(e.name).toBe('Cohort A 2026-11-21');
+		expect(e.fileName).toBe('Cohort A 2026-11-21.ancir');
+		expect(e.action).toBe('saved');
+		expect(e.meta).toBe('4 columns · 1 plot');
 		expect(typeof e.ts).toBe('number');
+		expect(e.thumb).toContain('<svg');
+		expect((await getHandle(e.id)).name).toBe('Cohort A 2026-11-21.ancir');
+		expect(recents.items).toHaveLength(1);
 	});
 
 	it('is most-recent-first', async () => {
-		await add('first');
-		await add('second');
+		await save('first.ancir');
+		await save('second.ancir');
 		expect(loadRecents().map((e) => e.name)).toEqual(['second', 'first']);
 	});
 
-	it('refreshes an existing entry in place rather than duplicating it', async () => {
-		await add('Cohort A');
-		await add('other');
-		await add('Cohort A'); // reopened
+	it('refreshes the same file in place, and records how it was last used', async () => {
+		await save('Cohort A.ancir');
+		await save('other.ancir');
+		await recordRecentFile(fileHandle('Cohort A.ancir'), { action: 'opened' });
 		const items = loadRecents();
 		expect(items.filter((e) => e.name === 'Cohort A')).toHaveLength(1);
-		expect(items[0].name).toBe('Cohort A'); // moved back to the front
+		expect(items[0].name).toBe('Cohort A');
+		expect(items[0].action).toBe('opened');
 	});
 
-	it(`caps the list at ${MAX_RECENTS}, evicting the oldest`, async () => {
-		for (let i = 0; i < MAX_RECENTS + 4; i++) await add(`s${i}`);
+	it('keeps two different files with the same name (two folders) as two rows', async () => {
+		await save('study.ancir', { key: 'folder-1/study.ancir' });
+		await save('study.ancir', { key: 'folder-2/study.ancir' });
+		const items = loadRecents();
+		expect(items.map((e) => e.name)).toEqual(['study', 'study']);
+		expect(new Set(items.map((e) => e.id)).size).toBe(2);
+		// The first one saved again refreshes ITS row, not the other.
+		await save('study.ancir', { key: 'folder-1/study.ancir' });
+		expect(loadRecents()).toHaveLength(2);
+	});
+
+	it(`caps the list at ${MAX_RECENTS}, evicting the oldest and its handle`, async () => {
+		for (let i = 0; i < MAX_RECENTS + 2; i++) await save(`s${i}.ancir`);
 		const items = loadRecents();
 		expect(items).toHaveLength(MAX_RECENTS);
-		expect(items[0].name).toBe(`s${MAX_RECENTS + 3}`);
-		expect(items.some((e) => e.name === 's0')).toBe(false); // oldest evicted
+		expect(items[0].name).toBe(`s${MAX_RECENTS + 1}`);
+		expect(items.some((e) => e.name === 's0')).toBe(false);
+		expect(await getHandle('file::s0.ancir')).toBeNull();
+	});
+
+	it('records nothing in ephemeral mode', async () => {
+		privacy.ephemeral = true;
+		expect(await save('secret.ancir')).toBeNull();
+		expect(loadRecents()).toEqual([]);
+	});
+
+	it('records nothing when the handle cannot be stored (no IndexedDB)', async () => {
+		window.indexedDB = undefined;
+		expect(await save('nowhere.ancir')).toBeNull();
+		expect(loadRecents()).toEqual([]);
 	});
 
 	it('keeps the stored index small (a few kB, not a payload store)', async () => {
-		for (let i = 0; i < MAX_RECENTS; i++) {
-			await add(`session ${i}`, {
-				thumb: '<svg viewBox="0 0 120 80"><rect width="120" height="80"/></svg>'
-			});
-		}
+		for (let i = 0; i < MAX_RECENTS; i++) await save(`session ${i}.ancir`);
 		const raw = window.localStorage.getItem('ancir.recents.v1') ?? '';
 		expect(raw.length).toBeLessThan(64 * 1024);
 	});
 
-	it('dismisses a single entry and leaves the rest', async () => {
-		await add('keep-1');
-		await add('drop');
-		await add('keep-2');
-		const target = loadRecents().find((e) => e.name === 'drop');
-		await removeRecent(target.id);
+	it('removes a single entry and its handle, leaving the rest', async () => {
+		await save('keep-1.ancir');
+		await save('drop.ancir');
+		await save('keep-2.ancir');
+		await removeRecent('file::drop.ancir');
 		expect(loadRecents().map((e) => e.name)).toEqual(['keep-2', 'keep-1']);
+		expect(await getHandle('file::drop.ancir')).toBeNull();
 	});
 
-	it('clears the whole list', async () => {
-		await add('a');
-		await add('b');
+	it('clears the whole list and every handle', async () => {
+		await save('a.ancir');
+		await save('b.ancir');
 		await clearRecents();
 		expect(loadRecents()).toEqual([]);
 		expect(window.localStorage.getItem('ancir.recents.v1')).toBeNull();
+		expect(await getHandle('file::a.ancir')).toBeNull();
+	});
+
+	it('drops what older versions recorded (examples, files without a handle)', () => {
+		window.localStorage.setItem(
+			'ancir.recents.v1',
+			JSON.stringify([
+				{ id: 'example::stats-anova', name: 'ANOVA', ts: 3, url: 'x.json' },
+				{ id: 'file::old.json', name: 'old', ts: 2 },
+				{ id: 'file::kept.ancir', name: 'kept', ts: 1, hasHandle: true }
+			])
+		);
+		expect(loadRecents().map((e) => e.id)).toEqual(['file::kept.ancir']);
+		expect(JSON.parse(window.localStorage.getItem('ancir.recents.v1'))).toHaveLength(1);
 	});
 
 	it('survives a corrupt index without throwing', () => {
@@ -89,27 +144,50 @@ describe('recents index', () => {
 		expect(() => loadRecents()).not.toThrow();
 		expect(loadRecents()).toEqual([]);
 	});
-
-	it('drops malformed entries', () => {
-		window.localStorage.setItem(
-			'ancir.recents.v1',
-			JSON.stringify([{ name: 'no id' }, { id: 'ok', name: 'fine', ts: 1 }])
-		);
-		expect(loadRecents().map((e) => e.id)).toEqual(['ok']);
-	});
 });
 
 describe('reopening', () => {
-	it('asks the caller to re-select when there is no stored handle', async () => {
-		await add('Cohort A');
-		const [e] = loadRecents();
-		const res = await openRecent(e.id);
-		expect(res.status).toBe('reselect');
-		expect(res.reason).toBe('no-handle');
+	it('reopens a stored file in one click, handing back the file and its handle', async () => {
+		await save('Cohort C.ancir');
+		const res = await openRecent('file::Cohort C.ancir');
+		expect(res.status).toBe('ok');
+		expect(res.file.name).toBe('Cohort C.ancir');
+		expect(res.handle.name).toBe('Cohort C.ancir');
+	});
+
+	it('asks for permission again when it has lapsed', async () => {
+		await save('lapsed.ancir', { perm: 'prompt', request: 'granted' });
+		expect((await openRecent('file::lapsed.ancir')).status).toBe('ok');
+	});
+
+	it('reports a refusal', async () => {
+		await save('refused.ancir', { perm: 'prompt', request: 'denied' });
+		expect((await openRecent('file::refused.ancir')).status).toBe('denied');
+	});
+
+	it('reports a file that was moved, renamed or deleted as missing', async () => {
+		const gone = Object.assign(new Error('gone'), { name: 'NotFoundError' });
+		await save('moved.ancir', {
+			getFile: async () => {
+				throw gone;
+			}
+		});
+		expect((await openRecent('file::moved.ancir')).status).toBe('missing');
+	});
+
+	it('reports a row with no stored handle', async () => {
+		expect((await openRecent('file::never.ancir')).status).toBe('no-handle');
 	});
 
 	it('reports handle support by feature detection', () => {
 		expect(typeof supportsFileHandles()).toBe('boolean');
+	});
+});
+
+describe('sessionCounts', () => {
+	it('counts columns and plots, singular and plural', () => {
+		expect(sessionCounts({ data: [1], plots: [] })).toBe('1 column · 0 plots');
+		expect(sessionCounts({ data: [1, 2], plots: [1] })).toBe('2 columns · 1 plot');
 	});
 });
 
@@ -124,72 +202,5 @@ describe('relativeTime', () => {
 	it('singularises', () => {
 		expect(relativeTime(now - 60_000, now)).toBe('1 minute ago');
 		expect(relativeTime(now - 86400_000, now)).toBe('1 day ago');
-	});
-});
-
-// A minimal in-memory IndexedDB, just enough for the handle store (open / put / get / delete), so
-// the one-click reopen path can run here. Each request resolves on a microtask, like the real one.
-function fakeIndexedDB() {
-	const stores = new Map();
-	const later = (fn) => queueMicrotask(fn);
-	const request = (compute) => {
-		const req = {};
-		later(() => {
-			req.result = compute();
-			req.onsuccess?.();
-		});
-		return req;
-	};
-	const db = {
-		objectStoreNames: { contains: (n) => stores.has(n) },
-		createObjectStore: (n) => stores.set(n, new Map()),
-		close() {},
-		transaction(name) {
-			const map = stores.get(name);
-			const t = {};
-			const done = (v) => {
-				later(() => later(() => t.oncomplete?.()));
-				return v;
-			};
-			t.objectStore = () => ({
-				put: (v, k) => done(request(() => map.set(k, v) && k)),
-				get: (k) => done(request(() => map.get(k))),
-				delete: (k) => done(request(() => map.delete(k))),
-				clear: () => done(request(() => map.clear()))
-			});
-			return t;
-		}
-	};
-	return {
-		open() {
-			const req = {};
-			later(() => {
-				req.result = db;
-				req.onupgradeneeded?.();
-				req.onsuccess?.();
-			});
-			return req;
-		}
-	};
-}
-
-describe('reopening a .ancir session file', () => {
-	it('a stored handle to a .ancir file reopens in one click, like a .json one', async () => {
-		const saved = window.indexedDB;
-		window.indexedDB = fakeIndexedDB();
-		try {
-			const file = { name: 'Cohort C.ancir', text: async () => '{"data":[]}' };
-			const handle = {
-				queryPermission: async () => 'granted',
-				getFile: async () => file
-			};
-			await recordRecent({ id: 'file::Cohort C.ancir', name: 'Cohort C', handle });
-			const res = await openRecent('file::Cohort C.ancir');
-			expect(res.status).toBe('ok');
-			expect(res.file.name).toBe('Cohort C.ancir');
-			expect(res.handle).toBe(handle);
-		} finally {
-			window.indexedDB = saved;
-		}
 	});
 });

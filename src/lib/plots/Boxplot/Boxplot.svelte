@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import {
@@ -1148,6 +1149,8 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
 	const handleTooltip = bindAltTooltipToggle(
@@ -1274,7 +1277,12 @@
 
 				{#if theData.ylimsIN[0] != null || theData.ylimsIN[1] != null}
 					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<button
+							type="button"
+							{@attach attachTooltip('Reset the y limits to automatic')}
+							class="icon"
+							onclick={() => (theData.ylimsIN = [null, null])}
+						>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
 						</button>
 					</div>
@@ -1340,7 +1348,7 @@
 						     icon (same pattern as the axis-limit overrides above) restores
 						     auto. Function binding so the picker can show a neutral colour
 						     while the field is null without writing to it. -->
-						<ControlInput label="Colour">
+						<ControlInput label="Colour" associate={false}>
 							<ColourPicker
 								bind:value={
 									() => theData.pointColour ?? neutralPointSwatch(),
@@ -1349,7 +1357,12 @@
 							/>
 							{#if theData.pointColour != null}
 								<div class="control-component-input-icons">
-									<button class="icon" onclick={() => (theData.pointColour = null)}>
+									<button
+										type="button"
+										{@attach attachTooltip('Reset the point colour to automatic')}
+										class="icon"
+										onclick={() => (theData.pointColour = null)}
+									>
 										<Icon
 											name="reset"
 											width={14}
@@ -1451,10 +1464,9 @@
 						<input type="checkbox" bind:checked={theData.showNs} />
 					</ControlInput>
 					<div class="control-input-horizontal">
-						<div class="control-input control-input-swatch">
-							<p>Bar colour</p>
+						<ControlInput label="Bar colour" class="control-input-swatch" associate={false}>
 							<ColourPicker bind:value={theData.sigBarColor} />
-						</div>
+						</ControlInput>
 						<ControlInput label="Thickness">
 							<NumberWithUnits bind:value={theData.sigBarThickness} step={0.1} min={0.1} />
 						</ControlInput>
@@ -1541,10 +1553,15 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="x (categories, optional)"></ControlInput>
-							<Column col={datum.x} canChange={true} />
+							<ControlInput
+								label="Categories (x, optional)"
+								associate={false}
+								id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
+									{@attach attachTooltip('Clear the category column')}
 									type="button"
 									class="icon"
 									onclick={() => {
@@ -1563,8 +1580,9 @@
 							</div>
 						{/if}
 						<div class="y-select">
-							<ControlInput label="y (values)"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 
 						<Box

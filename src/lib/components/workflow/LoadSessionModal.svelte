@@ -9,6 +9,8 @@
 
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { setSessionLabel } from '$lib/core/saveTarget.svelte.js';
+	import { displayName } from '$lib/start/startActions.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import {
 		confirmReplaceSession,
@@ -170,6 +172,8 @@
 				progressDetail = detail;
 				appState.loadingState.loadingMsg = detail;
 			});
+			// What an autosaved copy of it is called (core/saveTarget.svelte.js).
+			setSessionLabel(displayName(label));
 			showModal = false;
 		} catch (err) {
 			// importJson either loads the whole session or leaves the open one untouched.

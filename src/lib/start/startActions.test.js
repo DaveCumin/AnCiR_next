@@ -16,10 +16,17 @@ const {
 	loadExampleManifest
 } = await import('./startActions.js');
 const { loadRecents } = await import('./recentSessions.svelte.js');
+const { fakeIndexedDB, fileHandle } = await import('./__fixtures__/fakeHandles.js');
 
 const fileOf = (name, json) => ({ name, text: async () => JSON.stringify(json) });
+/** A file as the picker hands it over: the File and its handle. */
+const picked = (name, json) => {
+	const file = fileOf(name, json);
+	return { file, handle: fileHandle(name, { getFile: async () => file }) };
+};
 
 beforeEach(() => {
+	window.indexedDB = fakeIndexedDB();
 	window.localStorage.clear();
 	loadRecents();
 	importJson.mockClear();
@@ -41,19 +48,29 @@ describe('displayName', () => {
 });
 
 describe('openSessionFile', () => {
-	it('parses, loads, and records the session as a recent', async () => {
-		await openSessionFile(fileOf('Cohort A.json', { data: [] }));
+	it('parses, loads, and records a file opened through a handle as a recent file', async () => {
+		const { file, handle } = picked('Cohort A.json', { data: [] });
+		await openSessionFile(file, handle);
 		expect(importJson).toHaveBeenCalledOnce();
 		const [entry] = loadRecents();
 		expect(entry.name).toBe('Cohort A'); // .json stripped for display
 		expect(entry.id).toBe('file::Cohort A.json');
+		expect(entry.action).toBe('opened');
 		expect(entry.thumb).toContain('<svg'); // procedural fallback for an unknown id
 	});
 
+	it('does not list a file opened without a handle: nothing could reopen it', async () => {
+		await openSessionFile(fileOf('Cohort A.json', { data: [] }));
+		expect(importJson).toHaveBeenCalledOnce();
+		expect(loadRecents()).toEqual([]);
+	});
+
 	it('reopening the same file refreshes the row instead of duplicating it', async () => {
-		await openSessionFile(fileOf('Cohort A.json', { data: [] }));
-		await openSessionFile(fileOf('other.json', { data: [] }));
-		await openSessionFile(fileOf('Cohort A.json', { data: [] }));
+		const a = picked('Cohort A.json', { data: [] });
+		await openSessionFile(a.file, a.handle);
+		const o = picked('other.json', { data: [] });
+		await openSessionFile(o.file, o.handle);
+		await openSessionFile(a.file, a.handle);
 		const items = loadRecents();
 		expect(items.filter((e) => e.id === 'file::Cohort A.json')).toHaveLength(1);
 		expect(items[0].name).toBe('Cohort A');
@@ -69,7 +86,8 @@ describe('openSessionFile', () => {
 
 describe('openSessionFile with a .ancir file', () => {
 	it('opens a .ancir session exactly like a .json one, and records it without the extension', async () => {
-		await openSessionFile(fileOf('Cohort B.ancir', { data: [] }));
+		const { file, handle } = picked('Cohort B.ancir', { data: [] });
+		await openSessionFile(file, handle);
 		expect(importJson).toHaveBeenCalledOnce();
 		expect(importJson.mock.calls[0][0]).toEqual({ data: [] });
 		const [entry] = loadRecents();
@@ -86,13 +104,11 @@ describe('openSessionFile with a .ancir file', () => {
 });
 
 describe('openExample', () => {
-	it('records an example with its url so the row can reopen without a picker', async () => {
+	it('loads an example without adding it to the recent files (it is on the start screen already)', async () => {
 		global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) }));
 		await openExample({ id: 'stats-anova', name: 'One-way ANOVA', url: 'sessions/demos/a.json' });
-		const [entry] = loadRecents();
-		expect(entry.url).toBe('sessions/demos/a.json');
-		expect(entry.workflow).toBe('stats-anova');
-		expect(entry.thumb).toContain('<svg');
+		expect(importJson).toHaveBeenCalledOnce();
+		expect(loadRecents()).toEqual([]);
 	});
 
 	it('propagates a failed fetch rather than recording a session that never loaded', async () => {
@@ -203,7 +219,8 @@ describe('confirm before replacing open work', () => {
 
 	it('a session file the user confirms loads and is recorded', async () => {
 		withOpenWork();
-		const pending = openSessionFile(fileOf('mine.json', { data: [] }));
+		const { file, handle } = picked('mine.json', { data: [] });
+		const pending = openSessionFile(file, handle);
 		await vi.waitFor(() => expect(appState.showAYSModal).toBe(true));
 		answer('Replace session');
 		expect(await pending).toBe(true);

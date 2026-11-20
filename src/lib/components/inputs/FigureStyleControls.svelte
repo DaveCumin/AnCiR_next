@@ -121,16 +121,14 @@
 	{/if}
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Typeface</p>
+		<ControlInput label="Typeface">
 			<AttributeSelect
 				bind:value={style.fontFamily}
 				options={['sans', 'serif']}
 				optionsDisplay={['Sans serif', 'Serif']}
 			/>
-		</div>
-		<div class="control-input">
-			<p>Type size</p>
+		</ControlInput>
+		<ControlInput label="Type size">
 			<AttributeSelect
 				bind:value={style.fontSize}
 				options={['s', 'm', 'l', 'custom']}
@@ -141,7 +139,7 @@
 					'Custom'
 				]}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 
 	{#if style.fontSize === 'custom'}
@@ -156,8 +154,7 @@
 	     fields are the size it currently is. They were two separate sections in
 	     different units, where choosing a preset silently rewrote the other. -->
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Fixed width</p>
+		<ControlInput label="Fixed width">
 			<AttributeSelect
 				bind:value={style.widthPreset}
 				onChange={() => onFigureChange?.()}
@@ -168,7 +165,7 @@
 					`Double column (${WIDTH_PRESET_MM.double} mm)`
 				]}
 			/>
-		</div>
+		</ControlInput>
 		{#if style.widthPreset === 'custom'}
 			<ControlInput label="Exact width (mm)">
 				<NumberWithUnits
@@ -207,20 +204,18 @@
 	{/if}
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Background</p>
+		<ControlInput label="Background">
 			<AttributeSelect
 				value={bgMode}
 				options={['transparent', 'white', 'custom']}
 				optionsDisplay={['Transparent', 'White', 'Custom']}
 				onChange={(m) => setBackground(m)}
 			/>
-		</div>
+		</ControlInput>
 		{#if bgMode === 'custom'}
-			<div class="control-input control-input-swatch">
-				<p>Colour</p>
+			<ControlInput label="Colour" class="control-input-swatch" associate={false}>
 				<ColourPicker bind:value={style.backgroundColour} />
-			</div>
+			</ControlInput>
 		{/if}
 	</div>
 

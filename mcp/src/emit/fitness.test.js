@@ -251,3 +251,34 @@ test('findings are ordered high-severity first', () => {
 		[...sev].sort((a, b) => (a === 'high' ? -1 : 1) - (b === 'high' ? -1 : 1))
 	);
 });
+
+// A Rayleigh test whose values cannot be in its unit (clock hours as radians: a weak R for a
+// tight cluster) is the one finding here that says the numbers are wrong, not weak.
+const CLOCK_HOURS = Array.from({ length: 24 }, (_, i) => 10.87 + (i * (16.98 - 10.87)) / 23);
+const rayleigh = (values, args = {}, extra = []) =>
+	normalizeSession({
+		columns: [{ name: 'phase', values }, ...extra],
+		analyses: [{ name: 'RayleighTest', args: { yIN: ['phase'], ...args } }]
+	}).session;
+
+test('Rayleigh test: values that do not fit the stated unit are a high finding naming the likely unit', () => {
+	const found = checkFitness(rayleigh(CLOCK_HOURS, { unit: 'radians' }));
+	assert.equal(found.length, 1);
+	assert.equal(found[0].severity, 'high');
+	assert.equal(found[0].node, 'RayleighTest');
+	assert.match(found[0].message, /^RayleighTest: The values run from 10\.87 to 16\.98/);
+	assert.match(found[0].message, /look like clock hours read as radians/);
+	const deg = checkFitness(rayleigh([10, 95, 180, 270, 359], { unit: 'hours' }));
+	assert.equal(deg.length, 1);
+	assert.match(deg[0].message, /look like degrees read as clock hours/);
+});
+
+test('Rayleigh test: no finding when the unit fits, was inferred, or a time is wired', () => {
+	assert.deepEqual(checkFitness(rayleigh(CLOCK_HOURS, { unit: 'hours' })), []);
+	assert.deepEqual(checkFitness(rayleigh(CLOCK_HOURS)), []); // inferred: hours
+	assert.deepEqual(checkFitness(rayleigh([0.2, 1.1, 2.9], { unit: 'degrees' })), []); // fits
+	const timed = rayleigh(CLOCK_HOURS, { timeIN: 'time', unit: 'radians' }, [
+		{ name: 'time', type: 'time', values: CLOCK_HOURS.map((_, i) => i * 6 * 3600000) }
+	]);
+	assert.deepEqual(checkFitness(timed), []);
+});

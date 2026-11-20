@@ -16,6 +16,16 @@
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
 	import {
+		autosave,
+		autosaveStatus,
+		setAutosaveEnabled,
+		clearAutosavedCopies,
+		autosaveEphemeralChanged,
+		MAX_COPIES,
+		MAX_AGE_DAYS
+	} from '$lib/core/autosave.svelte.js';
+	import { formatSavedAt } from '$lib/core/crashRecovery.js';
+	import {
 		listStyles,
 		getStyle,
 		saveStyle,
@@ -42,8 +52,58 @@
 	// --- Privacy -------------------------------------------------------------
 	let clearing = $state(false);
 
+	// --- Autosave (core/autosave.svelte.js) ----------------------------------
+	let clearingAutosave = $state(false);
+
+	/** What autosave is doing, in one sentence, for the line under the checkbox. */
+	const autosaveLine = $derived.by(() => {
+		switch (autosaveStatus()) {
+			case 'on':
+				return autosave.lastSavedAt
+					? `On. This session was last autosaved at ${formatSavedAt(new Date(autosave.lastSavedAt).toISOString())}.`
+					: 'On. Nothing to keep yet: this session has no unsaved changes.';
+			case 'ephemeral':
+				return 'Off because Ephemeral mode is on (see Privacy below).';
+			case 'unavailable':
+				return 'Off: this browser does not let AnCiR use its storage here.';
+			case 'slow':
+				return 'On, but only when you switch away from this tab: this session is large, and writing it while you work would slow AnCiR down.';
+			case 'too-large':
+				return 'Paused: this session is too large for this browser’s storage. Save it to a file.';
+			default:
+				return 'Off. Unsaved work is lost if this tab is closed.';
+		}
+	});
+
+	async function toggleAutosave(on) {
+		const removed = await setAutosaveEnabled(on);
+		addNotification(
+			on
+				? 'Autosave on. Unsaved changes are kept in this browser until you save to a file.'
+				: `Autosave off. Deleted ${removed} autosaved cop${removed === 1 ? 'y' : 'ies'} from this browser.`,
+			'info'
+		);
+	}
+
+	async function clearAutosaveNow() {
+		clearingAutosave = true;
+		try {
+			const n = await clearAutosavedCopies();
+			addNotification(
+				`Deleted ${n} autosaved cop${n === 1 ? 'y' : 'ies'} from this browser.`,
+				'info'
+			);
+		} finally {
+			clearingAutosave = false;
+		}
+	}
+
 	async function toggleEphemeral(on) {
+		// Ephemeral mode keeps nothing in this browser, autosaved copies included: setEphemeral's
+		// clear deletes their database, and autosaveEphemeralChanged stops this tab writing (after
+		// any write already under way) and clears again. Off starts autosave again.
 		await setEphemeral(on);
+		await autosaveEphemeralChanged();
 		loadRecents(); // the list on the start screen must reflect what is actually stored now
 		addNotification(
 			on
@@ -56,13 +116,14 @@
 	async function clearNow() {
 		clearing = true;
 		try {
+			await clearAutosavedCopies();
 			const { keys } = await clearLocalData();
 			loadRecents();
 			// Report the count rather than a bare "done": a number is checkable, and zero is a
 			// meaningful answer the user is entitled to see.
 			addNotification(
 				// 'info': addNotification defaults to 'error', which painted this success red.
-				`Cleared ${keys} stored item${keys === 1 ? '' : 's'} and the saved file handles.`,
+				`Cleared ${keys} stored item${keys === 1 ? '' : 's'}, the saved file handles and the autosaved sessions.`,
 				'info'
 			);
 		} finally {
@@ -454,27 +515,64 @@
 
 	<div class="div-line"></div>
 
+	<div class="control-component" data-testid="settings-autosave">
+		<div class="control-component-title"><p>Autosave</p></div>
+		<label class="privacy-row">
+			<input
+				type="checkbox"
+				data-testid="settings-autosave-toggle"
+				checked={autosave.enabled}
+				onchange={(e) => toggleAutosave(e.currentTarget.checked)}
+			/>
+			<span>Keep unsaved work in this browser</span>
+		</label>
+		<p class="privacy-note" data-testid="settings-autosave-status">{autosaveLine}</p>
+		<p class="privacy-note">
+			A copy of the open session, imported data included, is kept in this browser while it has
+			changes not saved to a file, so a closed tab or a crash does not lose them. The start screen
+			offers it back. Saving to a file deletes the copy. Copies from closed tabs are kept for up to
+			{MAX_AGE_DAYS} days, at most {MAX_COPIES} at a time. Never in ephemeral mode; turning this off,
+			or turning ephemeral mode on, deletes every copy.
+		</p>
+		<p class="privacy-note">
+			In a private browser window autosave still runs, and the browser deletes the copy when the
+			window is closed.
+		</p>
+		<button
+			class="export-py-btn"
+			type="button"
+			data-testid="settings-autosave-clear"
+			disabled={clearingAutosave}
+			onclick={clearAutosaveNow}
+		>
+			{clearingAutosave ? 'Clearing…' : 'Clear autosaved copies'}
+		</button>
+	</div>
+
+	<div class="div-line"></div>
+
 	<div class="control-component">
 		<div class="control-component-title"><p>Privacy</p></div>
 		<label class="privacy-row">
 			<input
 				type="checkbox"
+				data-testid="settings-ephemeral-toggle"
 				checked={privacy.ephemeral}
 				onchange={(e) => toggleEphemeral(e.currentTarget.checked)}
 			/>
 			<span>Ephemeral mode (shared or clinic machine)</span>
 		</label>
 		<p class="privacy-note">
-			Keeps everything in the tab: no recent-session list, no saved file handles, nothing left in
-			this browser once the tab is closed. Your data itself is never uploaded in either mode; this
-			is about what stays behind on the machine.
+			Keeps everything in the tab: no recent-session list, no saved file handles, no autosaved
+			sessions, nothing left in this browser once the tab is closed. Your data itself is never
+			uploaded in either mode; this is about what stays behind on the machine.
 		</p>
 		<button class="export-py-btn" type="button" disabled={clearing} onclick={clearNow}>
 			{clearing ? 'Clearing…' : 'Clear data stored in this browser'}
 		</button>
 		<p class="privacy-note">
-			Removes the recent-session list, the saved file handles and the remembered canvas layout. Your
-			saved session files on disk are untouched.
+			Removes the recent-session list, the saved file handles, the autosaved sessions and the
+			remembered canvas layout. Your saved session files on disk are untouched.
 		</p>
 		<!-- Separate from the button above on purpose. That one clears things the app can
 		     rebuild; a style is authored work and is NOT recoverable from a session file, so

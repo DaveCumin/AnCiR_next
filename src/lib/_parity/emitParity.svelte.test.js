@@ -636,9 +636,19 @@ function resolveOutKey(key, idMap) {
 function runColumnProcess(fx) {
 	const def = appConsts.processMap.get(fx.jsName);
 	if (!def?.func) throw new Error(`no JS column process ${fx.jsName}`);
+	// `columns` ({ref: {type, values}}): other columns the process reads by id (Remove Trend's
+	// x column), named in `args` as "@ref". Recorded as `inputs`, so the ports build the same.
+	const idMap = {};
+	const inputs = {};
+	for (const [ref, spec] of Object.entries(fx.columns ?? {})) {
+		idMap[ref] = mkCol(spec.type ?? 'number', spec.values, ref);
+		inputs[ref] = { type: spec.type ?? 'number', values: safeArray(spec.values) };
+	}
+	const args = resolveTokens(structuredClone(fx.args ?? {}), idMap);
 	return {
 		input: safeArray(fx.input),
-		outputs: { value: safeArray(def.func(fx.input, fx.args ?? {})) }
+		...(fx.columns ? { inputs } : {}),
+		outputs: { value: safeArray(def.func(fx.input, args)) }
 	};
 }
 

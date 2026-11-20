@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { dataEnteringProcess } from '$lib/core/processInput.js';
@@ -116,7 +117,7 @@
 
 <ProcessShell {p}>
 	<div class="edits-container">
-		<button class="icon" onclick={addEdit}>
+		<button type="button" {@attach tooltip('Add an edit')} class="icon" onclick={addEdit}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 		{#each p.args.edits || [] as edit (edit.id)}
@@ -154,6 +155,8 @@
 				</ControlInput>
 
 				<button
+					type="button"
+					{@attach tooltip('Remove this edit')}
 					class="icon remove-edit"
 					onclick={() => removeEdit(edit.id)}
 					style="margin-top: var(--space-6);"

@@ -16,6 +16,9 @@
 	import { getNodeMeta } from '$lib/core/nodeMeta.js';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
+	import { recordGraphMutation } from '$lib/core/operations.js';
+	import { announce } from '$lib/utils/announce.js';
+	import { rovingRows } from '$lib/utils/rovingRows.js';
 
 	let showSwapColumns = $state(false);
 
@@ -46,25 +49,21 @@
 	// '__plots__'). Nodes + Plots start open so they're visible without a click.
 	let openSections = $state({ __data__: true, __nodes__: true, __plots__: true });
 
-	// Toggle a section open/closed from a header click. `<details>` uses
-	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
-	// from also flipping `open` — without it the native toggle and this manual
-	// flip cancel out (double-toggle) and the section never expands. That double
-	// flip is why, previously, sections only opened via canvas selection (which
-	// set the state directly). Skip clicks on the inline name editor or buttons
-	// so renaming / the caret keep their own behaviour.
+	// Toggle a section open/closed from a click on its header row (a mouse convenience; the
+	// caret button is the disclosure control for the keyboard and assistive tech). The header
+	// is a plain row, not a <summary>: a summary is itself a control, and holding the name
+	// editor and the action buttons inside one nested controls in a control (axe
+	// nested-interactive). Skip clicks on the inline name editor or buttons so renaming and
+	// the caret keep their own behaviour.
 	function toggleSection(e, id) {
-		e.preventDefault();
 		if (e.target?.closest?.('.inline-edit-span, .inline-edit-input, input, textarea, button')) {
 			return;
 		}
 		openSections[id] = !openSections[id];
 	}
 
-	// Caret-button toggle: preventDefault for the same reason as above, plus
-	// stopPropagation so the surrounding summary handler doesn't also fire.
+	// Caret-button toggle: stopPropagation so the header row's handler doesn't also fire.
 	function toggleSectionFromCaret(e, id) {
-		e.preventDefault();
 		e.stopPropagation();
 		openSections[id] = !openSections[id];
 	}
@@ -78,7 +77,7 @@
 		return { kind: m[1], id: Number(m[2]) };
 	});
 
-	// Which section owns the selected item? Used to auto-open its <details>.
+	// Which section owns the selected item? Used to auto-open it.
 	// Source columns (grouped or not) all live in the "Data" section now.
 	const selectedSectionId = $derived.by(() => {
 		const sel = canvasSelection;
@@ -224,15 +223,20 @@
 		e.dataTransfer.dropEffect = 'move';
 		plotDragOverIdx = i;
 	}
+	// Move the plot at model index `from` to `to` (core.plots is the stacking order). One undo
+	// step: graphPatch records a list's order (a drag or Alt+Arrow alike).
+	function movePlot(from, to) {
+		if (from === to) return;
+		recordGraphMutation(() => {
+			const updated = [...core.plots];
+			const [moved] = updated.splice(from, 1);
+			updated.splice(to, 0, moved);
+			core.plots = updated;
+		});
+	}
 	function plotDrop(i) {
 		if (plotDraggedIndex === null) return;
-		const target = plotViewToModel(i);
-		if (plotDraggedIndex !== target) {
-			const updated = [...core.plots];
-			const [moved] = updated.splice(plotDraggedIndex, 1);
-			updated.splice(target, 0, moved);
-			core.plots = updated;
-		}
+		movePlot(plotDraggedIndex, plotViewToModel(i));
 		plotDragReset();
 	}
 	function plotDragReset() {
@@ -354,14 +358,17 @@
 		const payload = parsePayload(e.dataTransfer);
 		dropHint = { section: null, beforeId: null };
 		if (!payload) return;
-		if (payload.kind === 'group') {
-			reorderGroup(payload.rest[0], beforeId);
-		} else if (payload.kind === 'col') {
-			const [colIdStr] = payload.rest;
-			moveColumnTo(Number(colIdStr), section, beforeId == null ? null : Number(beforeId));
-		} else if (payload.kind === 'tp') {
-			reorderTP(Number(payload.rest[0]), beforeId == null ? null : Number(beforeId));
-		}
+		// One undo step per drop (graphPatch captures group membership and list order).
+		recordGraphMutation(() => {
+			if (payload.kind === 'group') {
+				reorderGroup(payload.rest[0], beforeId);
+			} else if (payload.kind === 'col') {
+				const [colIdStr] = payload.rest;
+				moveColumnTo(Number(colIdStr), section, beforeId == null ? null : Number(beforeId));
+			} else if (payload.kind === 'tp') {
+				reorderTP(Number(payload.rest[0]), beforeId == null ? null : Number(beforeId));
+			}
+		});
 	}
 
 	function onDragOverSection(e, section, beforeId) {
@@ -369,6 +376,139 @@
 		e.dataTransfer.dropEffect = 'move';
 		dropHint = { section, beforeId };
 	}
+
+	// ─── Keyboard reorder ──────────────────────────────────────────────────────
+	// The Data list (groups and their columns, then the ungrouped columns) and the Plots list
+	// are each ONE Tab stop: a treegrid whose rows take a roving tabindex (utils/rovingRows.js:
+	// Up/Down, Home/End, Right/Left into and out of a group, Tab to the focused row's own
+	// controls). One treegrid for groups AND columns, not one stop per group, because a column
+	// moves between groups with Alt+Arrow: it is one ordering, so one list.
+	//
+	// Alt+ArrowUp / Alt+ArrowDown on a focused group header, column row or plot row moves it one
+	// place, through the same helpers a drop calls (one undo step each, the same result as the
+	// drag), keeps focus on the moved row and says where it went in the app's live region.
+	// Rows say so through aria-keyshortcuts and the hidden hints below.
+	const DATA_HINT_ID = 'data-panel-reorder-hint';
+	const PLOTS_HINT_ID = 'data-panel-plots-hint';
+	const dataRows = rovingRows({
+		onExpand: (row, open) => {
+			const id = row.dataset.groupId;
+			if (id != null) openSections[id] = open;
+		}
+	});
+	const plotRows = rovingRows();
+	const isReorderKey = (e) =>
+		e.altKey &&
+		!e.ctrlKey &&
+		!e.metaKey &&
+		!e.shiftKey &&
+		(e.key === 'ArrowUp' || e.key === 'ArrowDown');
+	// Typing in a field (the inline name editor) keeps its own keys.
+	const isEditing = (e) => !!e.target?.closest?.('input, textarea, [contenteditable="true"]');
+
+	// The moved row's DOM node is re-inserted (or, between groups, re-created), which drops
+	// focus; put it back once the list has re-rendered.
+	async function refocusRow(key) {
+		await tick();
+		document.querySelector(`.display-list [data-reorder-key="${key}"]`)?.focus();
+	}
+
+	function onRowKeydown(e, move) {
+		if (!isReorderKey(e) || isEditing(e)) return false;
+		e.preventDefault();
+		e.stopPropagation();
+		move(e.key === 'ArrowUp' ? -1 : +1);
+		return true;
+	}
+
+	function moveGroupBy(group, delta) {
+		const groups = core.groups ?? [];
+		const from = groups.findIndex((g) => g.id === group.id);
+		const to = from + delta;
+		if (from < 0) return;
+		if (to < 0 || to >= groups.length) {
+			announce(`${group.name} is already ${delta < 0 ? 'first' : 'last'}.`);
+			return;
+		}
+		const beforeId = delta < 0 ? groups[to].id : (groups[to + 1]?.id ?? null);
+		recordGraphMutation(() => reorderGroup(group.id, beforeId));
+		announce(`Moved ${group.name} to position ${to + 1} of ${groups.length}.`);
+		refocusRow(`group-${group.id}`);
+	}
+
+	// A column moves within its group; past either end it moves into the neighbouring group
+	// (as dropping it there would), and down out of the last group it leaves the groups (the
+	// "remove from group" drop zone). An ungrouped column moves up into the end of the last
+	// group. Where the ungrouped columns sit among themselves is their import order, which no
+	// drop can change, so that is where they stop.
+	function moveColumnBy(col, sectionId, delta) {
+		const name = namer(col);
+		const groups = core.groups ?? [];
+		let target = null; // a group, or '__ungrouped__'
+		let beforeId = null;
+		if (sectionId === '__ungrouped__') {
+			if (delta > 0 || groups.length === 0) {
+				announce(`${name} is already ${delta > 0 ? 'last' : 'first'}.`);
+				return;
+			}
+			target = groups[groups.length - 1];
+		} else {
+			const gi = groups.findIndex((g) => g.id === sectionId);
+			if (gi < 0) return;
+			const list = groups[gi].sourceColumnIds ?? [];
+			const i = list.indexOf(col.id);
+			const j = i + delta;
+			if (j >= 0 && j < list.length) {
+				target = groups[gi];
+				beforeId = delta < 0 ? list[j] : (list[j + 1] ?? null);
+			} else if (delta < 0) {
+				if (gi === 0) {
+					announce(`${name} is already first.`);
+					return;
+				}
+				target = groups[gi - 1];
+			} else if (gi < groups.length - 1) {
+				target = groups[gi + 1];
+				beforeId = target.sourceColumnIds?.[0] ?? null;
+			} else {
+				target = '__ungrouped__';
+			}
+		}
+		const toSection = target === '__ungrouped__' ? target : target.id;
+		recordGraphMutation(() => moveColumnTo(col.id, toSection, beforeId));
+		if (target === '__ungrouped__') {
+			announce(`Moved ${name} out of ${groups[groups.length - 1].name}, to the ungrouped columns.`);
+		} else {
+			openSections[target.id] = true;
+			const list = target.sourceColumnIds ?? [];
+			announce(
+				`Moved ${name} to position ${list.indexOf(col.id) + 1} of ${list.length} in ${target.name}.`
+			);
+		}
+		refocusRow(`col-${col.id}`);
+	}
+
+	// Plots are listed topmost first (the reverse of core.plots), so up is a higher index.
+	function movePlotBy(plot, delta) {
+		const n = core.plots.length;
+		const from = core.plots.indexOf(plot);
+		const to = from - delta;
+		if (from < 0) return;
+		if (q) {
+			announce('Clear the search to reorder plots.');
+			return;
+		}
+		if (to < 0 || to >= n) {
+			announce(`${plot.name} is already ${delta < 0 ? 'at the top' : 'at the bottom'}.`);
+			return;
+		}
+		movePlot(from, to);
+		announce(`Moved ${plot.name} to position ${n - to} of ${n}.`);
+		refocusRow(`plot-${plot.id}`);
+	}
+
+	// Enter or Space on a focused row header (not on a control inside it).
+	const isActivate = (e) => e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ');
 </script>
 
 <div class="search-row">
@@ -387,13 +527,62 @@
 	{/if}
 </div>
 
+<!-- One source-column row, in a group or ungrouped: a row of the Data treegrid (level 2 in a
+     group, 1 ungrouped). Dragging it moves it; so does Alt+Up/Down while it has focus. Its
+     controls sit in one gridcell, reached by Tab from the row. -->
+{#snippet columnRow(col, sectionId, colSelected, ownsSelectedProcess)}
+	<div
+		class="second-clps reorder-row"
+		class:canvas-selected={colSelected || ownsSelectedProcess}
+		bind:this={rowRefs[`data_${col.id}`]}
+		draggable="true"
+		role="row"
+		tabindex="-1"
+		aria-level={sectionId === '__ungrouped__' ? 1 : 2}
+		aria-label={`${namer(col)} column`}
+		aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+		aria-describedby={DATA_HINT_ID}
+		data-roving-row
+		data-reorder-key={`col-${col.id}`}
+		ondragstart={(e) => startDragColumn(e, col.id, sectionId)}
+		ondragover={(e) => onDragOverSection(e, sectionId, col.id)}
+		ondrop={(e) => onDropSection(e, sectionId, col.id)}
+		onkeydown={(e) => onRowKeydown(e, (d) => moveColumnBy(col, sectionId, d))}
+	>
+		<div role="gridcell">
+			<ColumnComponent
+				{col}
+				canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
+			/>
+		</div>
+	</div>
+{/snippet}
+
 <div class="display-list">
-	<!-- Data: groups + ungrouped source columns. Swap / import sit on the section
-	     header, revealed on hover. -->
+	<!-- Read by the reorderable rows (aria-describedby). Visually hidden. -->
+	<p id={DATA_HINT_ID} class="sr-only">
+		Up and Down go through the list, Right and Left open and close a group, Tab reaches the row's
+		buttons. Alt+Up or Alt+Down moves it.
+	</p>
+	<p id={PLOTS_HINT_ID} class="sr-only">
+		Up and Down go through the plots, Enter selects one, Tab reaches its buttons. Alt+Up or Alt+Down
+		moves it.
+	</p>
+
+	<!-- Each section and group is a disclosure: a header row (a plain row, so the name editor and
+	     buttons in it are not controls nested in a control) with the caret button as the
+	     disclosure control, and a body that is hidden while closed. -->
+	<!-- Data: groups + ungrouped source columns. Swap sits on the section header, revealed on
+	     hover. Importing is not here (removed 2026-11-21): the start screen, the canvas + menu,
+	     the canvas's add-data prompt, dropping a file and this list's empty-state link do it. -->
 	{#if !q || dataHasContent}
 		<div class="clps-container section">
-			<details class="clps-item" open={isOpen('__data__')}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__data__')}>
+			<div class="clps-item disclosure">
+				<div
+					class="clps-title-container disclosure-head"
+					role="presentation"
+					onclick={(e) => toggleSection(e, '__data__')}
+				>
 					<div class="clps-title"><p class="section-label">Data</p></div>
 					<div class="clps-title-button">
 						<button
@@ -407,20 +596,11 @@
 							<Icon name="swap" width={15} height={15} />
 						</button>
 						<button
-							class="icon section-action"
-							title="Import data"
-							onclick={(e) => {
-								e.stopPropagation();
-								openImportData();
-							}}
-						>
-							<Icon name="add" width={15} height={15} />
-						</button>
-						<button
-							class="icon"
+							class="icon disclosure-caret"
 							type="button"
 							aria-label="Show data"
 							aria-expanded={isOpen('__data__')}
+							aria-controls="data-panel-section-data"
 							onclick={(e) => toggleSectionFromCaret(e, '__data__')}
 						>
 							{#if isOpen('__data__')}
@@ -430,150 +610,159 @@
 							{/if}
 						</button>
 					</div>
-				</summary>
+				</div>
 
-				<!-- Groups (nested under Data) -->
-				{#each core.groups as group (group.id)}
-					{@const visCols = groupVisibleColumns(group)}
-					{#if !q || visCols.length > 0}
-						<div
-							class="clps-container"
-							class:canvas-selected={appState.canvasSelectedNodeId === group.id}
-							draggable="true"
-							role="presentation"
-							ondragstart={(e) => startDragGroup(e, group.id)}
-							ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
-							ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
-						>
-							<details class="clps-item" open={isOpen(group.id)}>
-								<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
-									<div class="clps-title">
-										<p>
-											<Editable
-												value={group.name}
-												onCommit={(v) => commitNodeRename('group', group, v)}
-											/>
-										</p>
-									</div>
-									<div class="clps-title-button">
-										<button
-											class="icon group-find-btn"
-											title="Find on canvas"
-											onclick={(e) => {
-												e.stopPropagation();
-												groupFindSelect(group);
+				<div class="disclosure-body" id="data-panel-section-data" hidden={!isOpen('__data__')}>
+					<!-- Groups (nested under Data) and the ungrouped columns: one treegrid, one Tab
+					     stop (rovingRows). -->
+					<div class="data-tree" role="treegrid" aria-label="Data columns" {@attach dataRows}>
+						{#each core.groups as group (group.id)}
+							{@const visCols = groupVisibleColumns(group)}
+							{#if !q || visCols.length > 0}
+								<div
+									class="clps-container"
+									class:canvas-selected={appState.canvasSelectedNodeId === group.id}
+									draggable="true"
+									role="presentation"
+									ondragstart={(e) => startDragGroup(e, group.id)}
+									ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
+									ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
+								>
+									<div class="clps-item disclosure">
+										<!-- The group's header is a parent row of the Data treegrid (its name
+									     editor and buttons are in its two gridcells): Alt+Arrow moves the
+									     group; Enter or Space opens or closes it, as the summary it replaces
+									     did, and so do Right and Left (rovingRows). -->
+										<div
+											class="clps-title-container disclosure-head reorder-row"
+											role="row"
+											tabindex="-1"
+											aria-level="1"
+											aria-expanded={isOpen(group.id)}
+											aria-label={`${group.name} group`}
+											aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+											aria-describedby={DATA_HINT_ID}
+											data-roving-row
+											data-group-id={group.id}
+											data-reorder-key={`group-${group.id}`}
+											onclick={(e) => toggleSection(e, group.id)}
+											onkeydown={(e) => {
+												if (onRowKeydown(e, (d) => moveGroupBy(group, d))) return;
+												if (isActivate(e)) {
+													e.preventDefault();
+													openSections[group.id] = !openSections[group.id];
+												}
 											}}
 										>
-											<Icon name="process" width={15} height={15} className="menu-icon" />
-										</button>
-										<button
-											class="icon"
-											type="button"
-											aria-label={`Show ${group.name}`}
-											aria-expanded={isOpen(group.id)}
-											onclick={(e) => toggleSectionFromCaret(e, group.id)}
+											<div class="clps-title" role="gridcell">
+												<p>
+													<Editable
+														value={group.name}
+														onCommit={(v) => commitNodeRename('group', group, v)}
+													/>
+												</p>
+											</div>
+											<div class="clps-title-button" role="gridcell">
+												<button
+													class="icon group-find-btn"
+													title="Find on canvas"
+													onclick={(e) => {
+														e.stopPropagation();
+														groupFindSelect(group);
+													}}
+												>
+													<Icon name="process" width={15} height={15} className="menu-icon" />
+												</button>
+												<button
+													class="icon disclosure-caret"
+													type="button"
+													aria-label={`Show ${group.name}`}
+													aria-expanded={isOpen(group.id)}
+													aria-controls={`data-panel-group-${group.id}`}
+													onclick={(e) => toggleSectionFromCaret(e, group.id)}
+												>
+													{#if isOpen(group.id)}
+														<Icon name="caret-down" width={20} height={20} />
+													{:else}
+														<Icon name="caret-right" width={20} height={20} />
+													{/if}
+												</button>
+											</div>
+										</div>
+
+										<div
+											class="disclosure-body"
+											id={`data-panel-group-${group.id}`}
+											hidden={!isOpen(group.id)}
 										>
-											{#if isOpen(group.id)}
-												<Icon name="caret-down" width={20} height={20} />
-											{:else}
-												<Icon name="caret-right" width={20} height={20} />
-											{/if}
-										</button>
-									</div>
-								</summary>
+											{#each visCols as col (col.id)}
+												{@const colSelected =
+													canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+												{@const ownsSelectedProcess =
+													canvasSelection?.kind === 'process' &&
+													col.processes?.some((pr) => pr.id === canvasSelection.id)}
+												{@render columnRow(col, group.id, colSelected, ownsSelectedProcess)}
+											{/each}
 
-								{#each visCols as col (col.id)}
-									{@const colSelected =
-										canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
-									{@const ownsSelectedProcess =
-										canvasSelection?.kind === 'process' &&
-										col.processes?.some((pr) => pr.id === canvasSelection.id)}
-									<div
-										class="second-clps"
-										class:canvas-selected={colSelected || ownsSelectedProcess}
-										bind:this={rowRefs[`data_${col.id}`]}
-										draggable="true"
-										role="presentation"
-										ondragstart={(e) => startDragColumn(e, col.id, group.id)}
-										ondragover={(e) => onDragOverSection(e, group.id, col.id)}
-										ondrop={(e) => onDropSection(e, group.id, col.id)}
-									>
-										<ColumnComponent
-											{col}
-											canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
-										/>
+											<!-- Drop zone at end of group -->
+											<div
+												class="dropzone"
+												class:active={dropHint.section === group.id && dropHint.beforeId == null}
+												role="presentation"
+												ondragover={(e) => onDragOverSection(e, group.id, null)}
+												ondrop={(e) => onDropSection(e, group.id, null)}
+											></div>
+										</div>
 									</div>
-								{/each}
+								</div>
+							{/if}
+						{/each}
 
-								<!-- Drop zone at end of group -->
-								<div
-									class="dropzone"
-									class:active={dropHint.section === group.id && dropHint.beforeId == null}
-									role="presentation"
-									ondragover={(e) => onDragOverSection(e, group.id, null)}
-									ondrop={(e) => onDropSection(e, group.id, null)}
-								></div>
-							</details>
+						<!-- Ungrouped source columns (flat, after the groups) -->
+						{#each filteredUngrouped as col (col.id)}
+							{@const colSelected =
+								canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+							{@const ownsSelectedProcess =
+								canvasSelection?.kind === 'process' &&
+								col.processes?.some((pr) => pr.id === canvasSelection.id)}
+							{@render columnRow(col, '__ungrouped__', colSelected, ownsSelectedProcess)}
+						{/each}
+					</div>
+
+					<!-- Source/generator nodes (Simulate Data, Random, Sequence, Enter Data):
+					     conceptually data, so they live under Data with their output columns. -->
+					{#each filteredSourceNodes as node (node.id)}
+						<div
+							class="second-clps"
+							class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+							bind:this={rowRefs[node.id]}
+						>
+							<NodeSourceItem {node} />
 						</div>
+					{/each}
+
+					{#if !q && !dataHasContent}
+						<!-- Without this the section is a bare heading: its import button only shows on
+						     hover, so an empty session gave no hint of where data comes from (UI-9). -->
+						<p class="data-empty">
+							No data yet. <button
+								type="button"
+								class="data-empty-link"
+								onclick={() => openImportData()}>Import a file</button
+							>, or drop one on the canvas.
+						</p>
 					{/if}
-				{/each}
 
-				<!-- Ungrouped source columns (flat, after the groups) -->
-				{#each filteredUngrouped as col (col.id)}
-					{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
-					{@const ownsSelectedProcess =
-						canvasSelection?.kind === 'process' &&
-						col.processes?.some((pr) => pr.id === canvasSelection.id)}
+					<!-- Drop zone to remove a column from its group -->
 					<div
-						class="second-clps"
-						class:canvas-selected={colSelected || ownsSelectedProcess}
-						bind:this={rowRefs[`data_${col.id}`]}
-						draggable="true"
+						class="dropzone"
+						class:active={dropHint.section === '__ungrouped__' && dropHint.beforeId == null}
 						role="presentation"
-						ondragstart={(e) => startDragColumn(e, col.id, '__ungrouped__')}
-						ondragover={(e) => onDragOverSection(e, '__ungrouped__', col.id)}
-						ondrop={(e) => onDropSection(e, '__ungrouped__', col.id)}
-					>
-						<ColumnComponent
-							{col}
-							canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
-						/>
-					</div>
-				{/each}
-
-				<!-- Source/generator nodes (Simulate Data, Random, Sequence, Enter Data):
-				     conceptually data, so they live under Data with their output columns. -->
-				{#each filteredSourceNodes as node (node.id)}
-					<div
-						class="second-clps"
-						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
-						bind:this={rowRefs[node.id]}
-					>
-						<NodeSourceItem {node} />
-					</div>
-				{/each}
-
-				{#if !q && !dataHasContent}
-					<!-- Without this the section is a bare heading: its import button only shows on
-					     hover, so an empty session gave no hint of where data comes from (UI-9). -->
-					<p class="data-empty">
-						No data yet. <button
-							type="button"
-							class="data-empty-link"
-							onclick={() => openImportData()}>Import a file</button
-						>, or drop one on the canvas.
-					</p>
-				{/if}
-
-				<!-- Drop zone to remove a column from its group -->
-				<div
-					class="dropzone"
-					class:active={dropHint.section === '__ungrouped__' && dropHint.beforeId == null}
-					role="presentation"
-					ondragover={(e) => onDragOverSection(e, '__ungrouped__', null)}
-					ondrop={(e) => onDropSection(e, '__ungrouped__', null)}
-				></div>
-			</details>
+						ondragover={(e) => onDragOverSection(e, '__ungrouped__', null)}
+						ondrop={(e) => onDropSection(e, '__ungrouped__', null)}
+					></div>
+				</div>
+			</div>
 		</div>
 	{/if}
 
@@ -583,17 +772,22 @@
 	     read-only input(s) and its output columns. -->
 	{#if filteredNodeEntries.length > 0}
 		<div class="clps-container section">
-			<details class="clps-item" open={isOpen('__nodes__')}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
+			<div class="clps-item disclosure">
+				<div
+					class="clps-title-container disclosure-head"
+					role="presentation"
+					onclick={(e) => toggleSection(e, '__nodes__')}
+				>
 					<div class="clps-title">
 						<p>Nodes</p>
 					</div>
 					<div class="clps-title-button">
 						<button
-							class="icon"
+							class="icon disclosure-caret"
 							type="button"
 							aria-label="Show nodes"
 							aria-expanded={isOpen('__nodes__')}
+							aria-controls="data-panel-section-nodes"
 							onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}
 						>
 							{#if isOpen('__nodes__')}
@@ -603,38 +797,45 @@
 							{/if}
 						</button>
 					</div>
-				</summary>
+				</div>
 
-				{#each filteredNodeEntries as node (node.id)}
-					<div
-						class="second-clps"
-						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
-						bind:this={rowRefs[node.id]}
-					>
-						<NodeSourceItem {node} />
-					</div>
-				{/each}
-			</details>
+				<div class="disclosure-body" id="data-panel-section-nodes" hidden={!isOpen('__nodes__')}>
+					{#each filteredNodeEntries as node (node.id)}
+						<div
+							class="second-clps"
+							class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+							bind:this={rowRefs[node.id]}
+						>
+							<NodeSourceItem {node} />
+						</div>
+					{/each}
+				</div>
+			</div>
 		</div>
 	{/if}
 
 	<div class="section-sep"></div>
 
 	<!-- Plots: the worksheet stacking order. Topmost row = highest z-index; drag to
-	     reorder (disabled while searching). -->
+	     reorder (disabled while searching), or Alt+Up/Down on a focused row. -->
 	{#if displayPlots.length > 0}
 		<div class="clps-container section">
-			<details class="clps-item" open={isOpen('__plots__')}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__plots__')}>
+			<div class="clps-item disclosure">
+				<div
+					class="clps-title-container disclosure-head"
+					role="presentation"
+					onclick={(e) => toggleSection(e, '__plots__')}
+				>
 					<div class="clps-title">
 						<p>Plots</p>
 					</div>
 					<div class="clps-title-button">
 						<button
-							class="icon"
+							class="icon disclosure-caret"
 							type="button"
 							aria-label="Show plots"
 							aria-expanded={isOpen('__plots__')}
+							aria-controls="data-panel-section-plots"
 							onclick={(e) => toggleSectionFromCaret(e, '__plots__')}
 						>
 							{#if isOpen('__plots__')}
@@ -644,85 +845,104 @@
 							{/if}
 						</button>
 					</div>
-				</summary>
+				</div>
 
-				{#each displayPlots as plot, i (plot.id)}
-					<div
-						class="second-clps plot-row"
-						class:plot-drag-over={!q && plotDragOverIdx === i && plotDraggedViewIndex !== i}
-						class:canvas-selected={plot.selected}
-						draggable={!q}
-						role="presentation"
-						ondragstart={(e) => plotDragStart(e, i)}
-						ondragover={(e) => plotDragOver(e, i)}
-						ondrop={() => plotDrop(i)}
-						ondragend={plotDragReset}
-					>
+				<div
+					class="disclosure-body"
+					id="data-panel-section-plots"
+					hidden={!isOpen('__plots__')}
+					role="treegrid"
+					aria-label="Plots"
+					{@attach plotRows}
+				>
+					{#each displayPlots as plot, i (plot.id)}
+						<!-- A row of the Plots treegrid (one Tab stop, rovingRows), not a button: it
+						     holds the visibility, find and actions buttons and the name editor (in its
+						     gridcell), which a button could not. Enter or Space selects the plot;
+						     Alt+Up/Down moves it. -->
 						<div
-							class="plot-row-inner"
-							role="button"
-							tabindex="0"
+							class="second-clps plot-row reorder-row"
+							class:plot-drag-over={!q && plotDragOverIdx === i && plotDraggedViewIndex !== i}
+							class:canvas-selected={plot.selected}
+							draggable={!q}
+							role="row"
+							tabindex="-1"
+							aria-level="1"
+							aria-label={plot.name}
+							aria-keyshortcuts={q ? undefined : 'Alt+ArrowUp Alt+ArrowDown'}
+							aria-describedby={PLOTS_HINT_ID}
+							data-roving-row
+							data-reorder-key={`plot-${plot.id}`}
+							ondragstart={(e) => plotDragStart(e, i)}
+							ondragover={(e) => plotDragOver(e, i)}
+							ondrop={() => plotDrop(i)}
+							ondragend={plotDragReset}
 							onclick={(e) => plotSelectAndFind(e, plot)}
 							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
+								if (onRowKeydown(e, (d) => movePlotBy(plot, d))) return;
+								if (isActivate(e)) {
 									e.preventDefault();
 									plotSelectAndFind(e, plot);
 								}
 							}}
 						>
-							{#if !q}
-								<div class="plot-drag-handle" title="Drag to reorder (changes stacking order)">
-									⠇
-								</div>
-							{/if}
-							<button
-								class="icon"
-								title="Toggle visibility"
-								onclick={(e) => {
-									e.stopPropagation();
-									changePlotVisibility(plot.id);
-								}}
-							>
-								{#if appState.invisiblePlotIds.includes(plot.id)}
-									<Icon name="eye-slash" width={16} height={16} />
-								{:else}
-									<Icon name="eye" width={16} height={16} className="visible" />
+							<div class="plot-row-inner" role="gridcell">
+								{#if !q}
+									<div
+										class="plot-drag-handle"
+										title="Drag to reorder (changes stacking order), or press Alt+Up/Down on the row"
+									>
+										⠇
+									</div>
 								{/if}
-							</button>
-							<p class="plot-name">
-								<Editable value={plot.name} onCommit={(v) => commitNodeRename('plot', plot, v)} />
-								{#if plot.facet}
-									<!-- A facet generator's panels are views, not plots: one row, with the count. -->
-									<span class="panel-count">({facetUnits(plot).length} panels)</span>
-								{/if}
-							</p>
-							<button
-								class="icon plot-find-btn"
-								title="Find on canvas"
-								onclick={(e) => {
-									e.stopPropagation();
-									plotSelectAndFind({}, plot);
-								}}
-							>
-								<Icon name="process" width={15} height={15} className="menu-icon" />
-							</button>
-							<button
-								class="icon"
-								title="Plot actions"
-								onclick={(e) => {
-									e.stopPropagation();
-									openSinglePlotDropdown(e, plot.id);
-								}}
-							>
-								<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
-							</button>
+								<button
+									class="icon"
+									title="Toggle visibility"
+									onclick={(e) => {
+										e.stopPropagation();
+										changePlotVisibility(plot.id);
+									}}
+								>
+									{#if appState.invisiblePlotIds.includes(plot.id)}
+										<Icon name="eye-slash" width={16} height={16} />
+									{:else}
+										<Icon name="eye" width={16} height={16} className="visible" />
+									{/if}
+								</button>
+								<p class="plot-name">
+									<Editable value={plot.name} onCommit={(v) => commitNodeRename('plot', plot, v)} />
+									{#if plot.facet}
+										<!-- A facet generator's panels are views, not plots: one row, with the count. -->
+										<span class="panel-count">({facetUnits(plot).length} panels)</span>
+									{/if}
+								</p>
+								<button
+									class="icon plot-find-btn"
+									title="Find on canvas"
+									onclick={(e) => {
+										e.stopPropagation();
+										plotSelectAndFind({}, plot);
+									}}
+								>
+									<Icon name="process" width={15} height={15} className="menu-icon" />
+								</button>
+								<button
+									class="icon"
+									title="Plot actions"
+									onclick={(e) => {
+										e.stopPropagation();
+										openSinglePlotDropdown(e, plot.id);
+									}}
+								>
+									<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+								</button>
+							</div>
 						</div>
-					</div>
-				{/each}
-			</details>
+					{/each}
+				</div>
+			</div>
 		</div>
 	{/if}
-
 	<div class="div-block"></div>
 </div>
 
@@ -769,14 +989,14 @@
 		font-size: var(--font-md);
 	}
 
-	/* Swap / import buttons on the Data section header — revealed on hover. Extra
-	   specificity so they beat the section header's resting icon opacity. */
-	.section summary .section-action {
+	/* The swap button on the Data section header, revealed on hover. Extra
+	   specificity so it beats the section header's resting icon opacity. */
+	.section .disclosure-head .section-action {
 		opacity: 0;
 		transition: opacity 0.12s ease;
 	}
-	.section:hover summary .section-action,
-	.section summary .section-action:focus-visible {
+	.section:hover .disclosure-head .section-action,
+	.section .disclosure-head .section-action:focus-visible {
 		opacity: 1;
 	}
 
@@ -792,6 +1012,13 @@
 		padding: var(--space-3) var(--space-4);
 		background-color: var(--surface-card);
 		border-bottom: 1px solid var(--divider-soft);
+	}
+	/* The field has no border of its own, so keyboard focus (and a click, as for any text
+	   field) shows the app's focus ring around it. */
+	.search-input:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: 1px;
+		border-radius: var(--radius-xs);
 	}
 	.search-row :global(.search-icon) {
 		color: var(--color-text-muted);
@@ -864,27 +1091,27 @@
 	}
 
 	/* Find-on-canvas buttons reveal on hover (groups + plots), matching nodes. The
-	   group button needs extra specificity to beat `summary .icon`'s rest opacity. */
-	.clps-container summary .group-find-btn,
+	   group button needs extra specificity to beat `.disclosure-head .icon`'s rest opacity. */
+	.clps-container .disclosure-head .group-find-btn,
 	.plot-row .plot-find-btn {
 		opacity: 0;
 		transition: opacity 0.12s ease;
 		flex-shrink: 0;
 	}
-	.clps-container:hover summary .group-find-btn,
-	.clps-container summary .group-find-btn:focus-visible,
+	.clps-container:hover .disclosure-head .group-find-btn,
+	.clps-container .disclosure-head .group-find-btn:focus-visible,
 	.plot-row:hover .plot-find-btn,
 	.plot-row .plot-find-btn:focus-visible {
 		opacity: 1;
 	}
 
-	details {
+	/* A section or group: what used to be a <details> (see the markup note). */
+	.disclosure {
 		margin: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
 		padding: 0;
 	}
 
-	summary {
-		list-style: none;
+	.disclosure-head {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
@@ -893,25 +1120,40 @@
 		padding: 0;
 	}
 
-	summary p {
+	.disclosure-head p {
 		margin: 0;
 		padding: 0;
 	}
 
-	summary button {
+	.disclosure-head button {
 		margin: 0;
 		padding: 0;
+	}
+
+	/* The 15px find button's pointer box is 24px, given back by a negative margin. It grows
+	   mostly to the left: the caret 4px to its right has a 24px box too, and two boxes that
+	   overlap shrink each other's target. */
+	.clps-container .disclosure-head .group-find-btn {
+		padding: 4.5px 2px 4.5px 7px;
+		margin: -4.5px -2px -4.5px -7px;
+	}
+
+	/* The 20px caret's pointer box is 24px (WCAG 2.5.8): 2px of padding each side, given back
+	   by a negative margin, so nothing moves. */
+	.disclosure-head .disclosure-caret {
+		padding: 2px;
+		margin: -2px;
 	}
 
 	/* Expand/collapse caret is always visible (and clickable) so sections can be
 	   expanded directly, not only when their node is selected on the canvas. */
-	summary .icon {
+	.disclosure-head .icon {
 		opacity: 0.55;
 		pointer-events: auto;
 		transition: opacity 0.2s ease;
 	}
 
-	details:hover summary .icon {
+	.disclosure:hover .disclosure-head .icon {
 		opacity: 1;
 	}
 
@@ -939,6 +1181,7 @@
 	.clps-container[draggable='true'] {
 		cursor: grab;
 	}
+
 	.clps-container[draggable='true']:active {
 		cursor: grabbing;
 	}

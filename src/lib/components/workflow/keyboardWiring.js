@@ -103,3 +103,31 @@ export const PORT_KEYS_HELP =
 	'Enter on an output port starts a wire; Tab then moves between the inputs that can take it ' +
 	'and Enter connects. Enter on an input port lists columns to connect. Delete on an input ' +
 	'port removes its wires.';
+
+/** id of the canvas's visually hidden description of the node-card keys; every node card points
+ *  its aria-describedby at it (the cards are focusable groups, so a screen reader reads it on
+ *  focus). */
+export const NODE_KEYS_HELP_ID = 'canvas-node-keys-help';
+
+/** That description's text. */
+export const NODE_KEYS_HELP =
+	'Enter or Space selects this node, and again opens its settings in the control panel. ' +
+	'Tab moves on to its ports and buttons.';
+
+/**
+ * What a key on a focused node card does: 'select' (the click's path; Shift, Cmd/Ctrl or Alt
+ * add to the selection), 'open' (the double-click's path: show the node in the control panel,
+ * for a node that is already the only one selected), or null (not the card's key: a key on a
+ * port, a button or a field inside the card is theirs).
+ *
+ * @param {{ key: string, target: any, shiftKey?: boolean, metaKey?: boolean, ctrlKey?: boolean, altKey?: boolean }} e the keydown
+ * @param {any} card the node card element
+ * @param {boolean} selected whether the node is the selected one
+ * @returns {null | 'select' | 'open'}
+ */
+export function nodeCardKeyAction(e, card, selected) {
+	if (!card || e.target !== card) return null;
+	if (!ACTIVATE.has(e.key)) return null;
+	const additive = !!(e.shiftKey || e.metaKey || e.ctrlKey || e.altKey);
+	return selected && !additive ? 'open' : 'select';
+}

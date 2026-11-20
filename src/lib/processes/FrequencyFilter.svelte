@@ -51,9 +51,17 @@
 		getWarnings: (p) => frequencyfilterWarnings(p.args ?? {}),
 		nodeSpec: {
 			id: 'process.frequencyfilter',
-			// sameType: true: the filter is only meaningful on number columns; kept at the safe
-			// default (core/processInputRules.js).
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
+			// disallowTypes: a time column is refused: the filter is only meaningful on number
+			// columns (core/processInputRules.js). sameType: true: the safe default.
+			inputs: [
+				{
+					name: 'input',
+					kind: 'column',
+					cardinality: 'one',
+					disallowTypes: ['time'],
+					sameType: true
+				}
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -67,14 +75,13 @@
 </script>
 
 <ProcessShell {p}>
-	<div class="control-input">
-		<p>Filter type</p>
+	<ControlInput label="Filter type">
 		<AttributeSelect
 			bind:value={p.args.type}
 			options={frequencyFilterTypeOptions}
 			optionsDisplay={frequencyFilterTypeDisplay}
 		/>
-	</div>
+	</ControlInput>
 
 	{#if p.args.type === 'high' || p.args.type === 'band'}
 		<ControlInput label="Low cutoff">

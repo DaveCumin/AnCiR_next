@@ -916,6 +916,16 @@ function applySeriesEncodingChange(inner, plot, c, resolve, errors) {
 	}
 }
 
+
+// Args a NEW node reads from its data until the user sets them, and the flag that says it is
+// still doing so (unitAuto.svelte.js, binSizeAuto.svelte.js, periodRangeAuto.svelte.js).
+const FOLLOWING_FLAG_OF = {
+	unit: 'unitAuto',
+	pgBinSize: 'pgBinSizeAuto',
+	minPeriod: 'periodRangeAuto',
+	maxPeriod: 'periodRangeAuto'
+};
+
 /**
  * Apply a plan. Two phases, because an analysis's output columns don't exist until its
  * TableProcess constructor runs — that's what mints them (and per-Y expansion with them). So we
@@ -1004,6 +1014,15 @@ export function applyEdit(plan) {
 	// property op, anything under `plot.` goes into the inner snapshot.
 	for (const c of plan.changes) {
 		if (c.tpId != null) {
+			// A value the node was reading from its data (a new Rayleigh test's unit, a new
+			// periodogram's bin size, a new fit's period range) becomes the user's when an edit
+			// names it, exactly as when they change the control by hand: the following ends in
+			// the same undo step. Without this the node's next read of its data put its own
+			// value back, and the edit did nothing.
+			const flag = FOLLOWING_FLAG_OF[c.key];
+			if (flag && core.tableProcesses.find((t) => t.id === c.tpId)?.args?.[flag]) {
+				ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: flag, value: false });
+			}
 			ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: c.key, value: c.value });
 			continue;
 		}

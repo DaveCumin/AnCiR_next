@@ -104,6 +104,36 @@ describe('offerCrashRecovery', () => {
 	});
 });
 
+describe('the autosaved copy of the same session (autosave.svelte.js)', () => {
+	const keepWithSlot = () =>
+		sessionStorage.setItem(
+			CRASH_SNAPSHOT_KEY,
+			JSON.stringify({
+				savedAt: new Date().toISOString(),
+				autosaveSlot: 'slot-1',
+				session: SESSION
+			})
+		);
+
+	it('is hidden while the offer shows, and adopted when the copy is restored', async () => {
+		keepWithSlot();
+		const onOffered = vi.fn();
+		const onRestored = vi.fn();
+		offerCrashRecovery({ restore: async () => {}, onOffered, onRestored });
+		expect(onOffered.mock.calls[0][0].autosaveSlot).toBe('slot-1');
+		await offer().action.run();
+		expect(onRestored.mock.calls[0][0].autosaveSlot).toBe('slot-1');
+	});
+
+	it('is discarded with the offer', () => {
+		keepWithSlot();
+		const onDiscarded = vi.fn();
+		const id = offerCrashRecovery({ restore: vi.fn(), onDiscarded });
+		dismissNotification(id);
+		expect(onDiscarded.mock.calls[0][0].autosaveSlot).toBe('slot-1');
+	});
+});
+
 describe('helpers', () => {
 	it('describeSession counts what is there', () => {
 		expect(describeSession({ data: [1], tableProcesses: [1, 2], plots: [] })).toBe(

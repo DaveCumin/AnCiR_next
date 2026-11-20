@@ -305,6 +305,7 @@
 	import { zoneLabel } from '$lib/utils/time/zones.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
+	const uid = $props.id();
 
 	// --- Backward compat --- (the compute runs this too, for the headless path)
 	migrateBinnedArgs(p.args);
@@ -513,23 +514,21 @@
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Input</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector
 					bind:value={p.args.xIN}
 					onChange={getBinnedData}
 					excludeColIds={ownOutputIds}
 				/>
-			</div>
-			<div class="control-input">
-				<p>Y columns</p>
+			</ControlInput>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={yExcludeIds}
 					multiple={true}
 					onChange={onYSelectionChange}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}
@@ -593,29 +592,28 @@
 				/>
 			</ControlInput>
 			{#if !xIsTime}
-				<div class="control-input">
-					<p>Bin start (h)</p>
+				<ControlInput label="Bin start (h)">
 					<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 		{#if xIsTime}
 			<!-- Its own row: a date and time with seconds does not fit half the panel, and the
 			     field cut it to "05/04/20". -->
-			<div class="control-input bin-start-time">
-				<p>Bin start ({binStartZone})</p>
+			<ControlInput label="Bin start ({binStartZone})" class="bin-start-time">
 				<input
 					type="datetime-local"
 					step="1"
 					value={binStartDatetimeStr}
 					onchange={handleBinStartDatetime}
 				/>
-			</div>
+			</ControlInput>
 		{/if}
 
-		<p>Different step size</p>
+		<p id="{uid}-diff-step">Different step size</p>
 		<input
 			type="checkbox"
+			aria-labelledby="{uid}-diff-step"
 			bind:checked={p.args.diffStep}
 			onchange={() => {
 				p.args.stepSize = p.args.diffStep ? p.args.binSize : null;
@@ -743,7 +741,7 @@
 </details>
 
 <style>
-	.bin-start-time input {
+	:global(.bin-start-time) input {
 		width: 100%;
 		box-sizing: border-box;
 	}

@@ -376,20 +376,18 @@
 		</div>
 
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} onChange={() => getSmoothedData()} /> <br />
-			</div>
+			</ControlInput>
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Y columns</p>
+				<ControlInput label="Values (y)" associate={false}>
 					<ColumnSelector
 						bind:value={p.args.yIN}
 						excludeColIds={yExcludeIds}
 						multiple={true}
 						onChange={onYSelectionChange}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 	</div>
@@ -401,15 +399,14 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Type</p>
+		<ControlInput label="Type">
 			<AttributeSelect
 				bind:value={p.args.smootherType}
 				options={['whittaker', 'moving', 'savitzky', 'loess']}
 				optionsDisplay={['Whittaker', 'Moving average', 'Savitzky-Golay', 'LOESS']}
 				onChange={() => getSmoothedData()}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 
 	<!-- Type-specific parameters -->
@@ -478,15 +475,14 @@
 					onInput={() => getSmoothedData()}
 				/>
 			</ControlInput>
-			<div class="control-input">
-				<p>Type</p>
+			<ControlInput label="Type">
 				<AttributeSelect
 					bind:value={p.args.movingAvgType}
 					options={['simple', 'weighted', 'exponential']}
 					optionsDisplay={['Simple', 'Weighted', 'Exponential']}
 					onChange={() => getSmoothedData()}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 </div>

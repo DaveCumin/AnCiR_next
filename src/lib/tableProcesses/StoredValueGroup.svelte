@@ -385,6 +385,7 @@
 							min={1}
 							max={Math.max(1, totalRows - 5)}
 							step={1}
+							ariaLabel="First preview row"
 							bind:value={previewStart}
 						/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
 					</p>

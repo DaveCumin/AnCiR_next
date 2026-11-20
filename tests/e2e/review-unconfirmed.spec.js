@@ -97,7 +97,7 @@ test('ROB-U6: an unknown analysis is marked on its card and named in a warning',
 		timeout: 30000
 	});
 	await expect(card.locator('.node-warning-badge')).toBeVisible();
-	await expect(page.getByText(/does not\s+know: "NoSuchAnalysis"/)).toBeVisible();
+	await expect(page.locator('.toast').getByText(/does not\s+know: "NoSuchAnalysis"/)).toBeVisible();
 });
 
 async function openExample(page, name) {

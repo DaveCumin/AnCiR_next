@@ -16,7 +16,7 @@
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { NODE_ROW_H as PORT_H, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, newSlotHint, portLabel } from './portLabels.js';
-	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { PORT_KEYS_HELP_ID, NODE_KEYS_HELP_ID } from './keyboardWiring.js';
 	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	let {
@@ -142,15 +142,18 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class="workflow-node"
 	class:selected
 	class:expanded={hasPanel}
 	class:drop-target={isDropTarget}
 	style="{NODE_ROW_CSS_VARS}{width != null ? ` width:${width}px;` : ''}"
-	role="button"
+	role="group"
+	aria-roledescription="node"
 	tabindex="0"
 	aria-label={nodeName}
+	aria-describedby={NODE_KEYS_HELP_ID}
 >
 	<div class="node-header">
 		<!-- Note button on the LEFT (status side), so it doesn't shift when the
@@ -201,7 +204,8 @@
 				/>
 			</div>
 		{:else}
-			<div class="node-label">{node.label}</div>
+			<!-- title: the full name stays reachable once the label ellipsizes. -->
+			<div class="node-label" title={node.label}>{node.label}</div>
 		{/if}
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
@@ -438,6 +442,10 @@
 		justify-content: space-between;
 		gap: 4px;
 		padding: 0 10px;
+		/* While the editor's action cluster (NodeActions) overlays this header's right end,
+		   it sets --node-actions-reserve on the node wrapper: the title then ellipsizes a
+		   fixed gap before the icons rather than running under them. */
+		padding-right: max(10px, var(--node-actions-reserve, 0px));
 		height: var(--node-header-h); /* its bottom rule included, see nodeRows.js */
 		box-sizing: border-box;
 		background: var(--color-lightness-97);
@@ -475,6 +483,13 @@
 		display: flex;
 		align-items: center;
 		flex-shrink: 0;
+	}
+	/* The note button and the type button are 24 px pointer targets (app.css .hit-target,
+	   button.icon); at the header's 4 px gap their centres were 21 px apart, so the type
+	   button's target covered the note button's (WCAG 2.5.8, tests/e2e/hit-targets.spec.js).
+	   3 px more keeps the two targets apart. */
+	.note-slot + .node-type {
+		margin-left: 3px;
 	}
 
 	.drop-badge {

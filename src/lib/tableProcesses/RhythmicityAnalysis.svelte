@@ -765,14 +765,12 @@
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Input</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
-			<div class="control-input">
-				<p>Y columns</p>
+			</ControlInput>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}
@@ -781,26 +779,24 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Analysis</span></div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Analysis</p>
+		<ControlInput label="Analysis">
 			<AttributeSelect
 				bind:value={p.args.analysis}
 				options={['periodogram', 'fft', 'correlogram']}
 				optionsDisplay={['Periodogram', 'FFT', 'Correlogram']}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 
 	{#if p.args.analysis === 'periodogram'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Method</p>
+			<ControlInput label="Method">
 				<AttributeSelect
 					bind:value={p.args.pgMethod}
 					options={['Lomb-Scargle', 'Chi-squared', 'Enright']}
 					optionsDisplay={['Lomb-Scargle', 'Chi-squared', 'Enright']}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
 			<ControlGroup label={`Period range (${xUnit})`}>

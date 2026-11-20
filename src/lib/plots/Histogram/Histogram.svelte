@@ -656,6 +656,8 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	function parseCutsText(/** @type {string} */ text) {
 		const parts = text.split(/[,\s]+/).filter(Boolean);
@@ -792,8 +794,13 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="Column"></ControlInput>
-							<Column col={datum.column} canChange={true} />
+							<ControlInput label="Column" associate={false} id="{labelUid}-col-{datum.column.id}"
+							></ControlInput>
+							<Column
+								labelledby="{labelUid}-col-{datum.column.id}"
+								col={datum.column}
+								canChange={true}
+							/>
 						</div>
 
 						{#if datum.column?.type === 'time'}
@@ -873,14 +880,12 @@
 						{/if}
 
 						<div class="control-input-horizontal">
-							<div class="control-input">
-								<p>Fill</p>
+							<ControlInput label="Fill" associate={false}>
 								<ColourPicker bind:value={datum.fillColour} />
-							</div>
-							<div class="control-input">
-								<p>Stroke</p>
+							</ControlInput>
+							<ControlInput label="Stroke" associate={false}>
 								<ColourPicker bind:value={datum.stroke} />
-							</div>
+							</ControlInput>
 							<ControlInput label="Opacity">
 								<NumberWithUnits bind:value={datum.fillOpacity} min="0" max="1" step="0.05" />
 							</ControlInput>

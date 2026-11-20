@@ -318,6 +318,8 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 	const colormapOptions = Object.keys(COLORMAP_LABELS);
 	const colormapLabelList = colormapOptions.map((k) => COLORMAP_LABELS[k]);
 </script>
@@ -505,7 +507,7 @@
 					optionsDisplay={colormapLabelList}
 				/>
 			</ControlInput>
-			<ControlInput label="Point colour"
+			<ControlInput label="Point colour" associate={false}
 				><ColourPicker bind:value={theData.pointColour} /></ControlInput
 			>
 			<ControlInput label="Density curve">
@@ -548,8 +550,13 @@
 					/>
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="Column"></ControlInput>
-							<Column col={datum.column} canChange={true} />
+							<ControlInput label="Column" associate={false} id="{labelUid}-col-{datum.column.id}"
+							></ControlInput>
+							<Column
+								labelledby="{labelUid}-col-{datum.column.id}"
+								col={datum.column}
+								canChange={true}
+							/>
 						</div>
 					</div>
 				</div>

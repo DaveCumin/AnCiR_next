@@ -1197,14 +1197,12 @@
 				<ColourPicker bind:value={marker.colour} />
 			</div>
 
-			<div class="control-input">
-				<p>Marker size</p>
+			<ControlInput label="Marker size">
 				<NumberWithUnits min="1" step="0.2" bind:value={marker.markerSize} />
-			</div>
-			<div class="control-input">
-				<p>Line width</p>
+			</ControlInput>
+			<ControlInput label="Line width">
 				<NumberWithUnits min="1" step="0.2" bind:value={marker.lineWidth} />
-			</div>
+			</ControlInput>
 		</div>
 
 		{#if marker.type === 'manual'}
@@ -1808,12 +1806,12 @@
 	}
 
 	.period-marker-row.outside-range {
-		color: var(--color-lightness-60);
+		color: var(--color-text-muted);
 	}
 
 	.outside-note {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-60);
+		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
 

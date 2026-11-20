@@ -474,9 +474,9 @@
 		tip="Wire the node's padj output into a Filter to keep only the rows that survive, or plot padj against the raw p-value to see how hard the correction bit."
 	>
 		<p>
-			The <strong>FDR Correction</strong> node (Analysis family) takes a column of p-values in
-			<code>xIN</code>
-			and returns two columns: <strong>padj</strong> (the adjusted p-values) and
+			The <strong>FDR Correction</strong> node (Analysis family) takes a column of p-values in its
+			<strong>p-values</strong> input and returns two columns: <strong>padj</strong> (the adjusted
+			p-values) and
 			<strong>reject</strong> (whether each survives at your chosen α).
 		</p>
 		<ul>
@@ -545,8 +545,10 @@
 		tip="Start with Block bootstrap and a block length of about a quarter of the period (6 h for a daily rhythm, the default for a new node). If the result is borderline, try AR(1) red noise as well; a rhythm that survives both is a rhythm worth reporting."
 	>
 		<p>
-			The <strong>Surrogate Test</strong> node (Analysis family) takes time in <code>xIN</code> and
-			values in <code>yIN</code>, and returns a <strong>pvalue</strong> and the
+			The <strong>Surrogate Test</strong> node (Analysis family) takes time in its
+			<strong>x</strong>
+			input and values in its <strong>y</strong> input, and returns a <strong>pvalue</strong> and
+			the
 			<strong>observed</strong> statistic as metrics you can wire onward or store.
 		</p>
 		<ul>

@@ -87,8 +87,14 @@
 		openId = openId === id ? null : id;
 	}
 
-	const portLabel = (p) => {
-		const bits = [p.name];
+	// A plot's canvas ports are not named as in the manifest (ProcessNode.svelte.js):
+	// a two-input plot draws each series' inputs as x and y, and a one-input plot
+	// draws a single data port. An analysis input carries the name the canvas shows
+	// as `display` (xIN shows as x). Show the name a user sees on the canvas; the
+	// port's description says what it takes.
+	const PLOT_INPUT_SHOWN = { time: 'x', values: 'y', column: 'data' };
+	const portLabel = (p, plotInput = false) => {
+		const bits = [(plotInput && PLOT_INPUT_SHOWN[p.name]) || p.display || p.name];
 		if (p.cardinality === 'many') bits.push('(many)');
 		if (p.metric) bits.push('• metric');
 		return bits.join(' ');
@@ -98,9 +104,9 @@
 <!-- One input or output port: its name and tags, then the manifest's one-line
      description of what it takes or gives (the same text as the port's tooltip in
      AnCiR). Older manifests have no description, so the line is optional. -->
-{#snippet port(p)}
+{#snippet port(p, plotInput = false)}
 	<li class="port">
-		<span class="port-name">{portLabel(p)}</span>
+		<span class="port-name">{portLabel(p, plotInput)}</span>
 		{#if p.description}<span class="port-desc">{p.description}</span>{/if}
 	</li>
 {/snippet}
@@ -180,7 +186,7 @@
 								{#if n.inputs?.length}
 									<ul>
 										<!-- eslint-disable-next-line svelte/require-each-key -- static port list from the generated node manifest; port names can repeat, so position is the identity -->
-										{#each n.inputs as p}{@render port(p)}{/each}
+										{#each n.inputs as p}{@render port(p, n.kind === 'plot')}{/each}
 									</ul>
 								{:else}
 									<p class="muted">None</p>

@@ -50,6 +50,16 @@ function keyFor(titleEl) {
 	return (label?.textContent ?? titleEl.textContent ?? '').trim();
 }
 
+/**
+ * The element that is the section's disclosure button: the title's own `<p>` (its name), or the
+ * title itself when it has none. Not the whole title: titles carry real controls (auto-scale,
+ * colour, delete), and a button holding other buttons is announced as one control whose
+ * contents a screen reader cannot reach (axe nested-interactive).
+ */
+function toggleFor(titleEl) {
+	return titleEl.querySelector('p') ?? titleEl;
+}
+
 export function isCollapsed(title) {
 	return collapsedSections.has(title);
 }
@@ -96,12 +106,18 @@ export function syncCollapsedState(root) {
 		if (section.getAttribute('data-collapsed') !== want) {
 			section.setAttribute('data-collapsed', want);
 		}
-		if (title.getAttribute('role') !== 'button') {
-			title.setAttribute('role', 'button');
-			title.setAttribute('tabindex', '0');
+		// The title is marked for the styling (+page.svelte: pointer, caret); its name is the
+		// button, for keyboards and screen readers (toggleFor).
+		if (title.getAttribute('data-collapsible') !== 'true') {
+			title.setAttribute('data-collapsible', 'true');
+		}
+		const toggle = toggleFor(title);
+		if (toggle.getAttribute('role') !== 'button') {
+			toggle.setAttribute('role', 'button');
+			toggle.setAttribute('tabindex', '0');
 		}
 		const label = collapsed ? 'false' : 'true';
-		if (title.getAttribute('aria-expanded') !== label) title.setAttribute('aria-expanded', label);
+		if (toggle.getAttribute('aria-expanded') !== label) toggle.setAttribute('aria-expanded', label);
 	}
 }
 
@@ -118,11 +134,14 @@ export function collapsibleSections(node) {
 		const title = target.closest?.('.control-component-title');
 		if (!title || !node.contains(title)) return false;
 		// A control INSIDE the title is not a request to collapse. Deliberately excludes the
-		// title itself: `syncCollapsedState` marks it `role="button"` for screen readers, which
-		// made it match INTERACTIVE and swallowed every click — the feature was entirely dead
-		// until a test caught it.
+		// section's own toggle (the title's name, or the title): `syncCollapsedState` marks it
+		// `role="button"` for screen readers, which made it match INTERACTIVE and swallowed every
+		// click — the feature was entirely dead until a test caught it.
 		const control = target.closest?.(INTERACTIVE);
-		if (control && control !== title && title.contains(control)) return false;
+		const toggle = toggleFor(title);
+		if (control && control !== title && control !== toggle && title.contains(control)) {
+			return false;
+		}
 		toggleSection(keyFor(title));
 		syncCollapsedState(node);
 		return true;

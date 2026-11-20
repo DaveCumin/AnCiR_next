@@ -687,19 +687,17 @@
 			<span>Input</span>
 		</div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
-			<div class="control-input">
-				<p>Y columns</p>
+			</ControlInput>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={yExcludeIds}
 					multiple={true}
 					onChange={onYSelectionChange}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}

@@ -840,7 +840,10 @@
 		canvasSelectedProcessId = null,
 		// What this column is as a node output (core/portDescriptions.js), shown after its name
 		// in the name's hover title and so read as its accessible description. Data panel only.
-		description = null
+		description = null,
+		// The id of the visible label that names this column's picker (a plot's "Time (x)"
+		// row), passed on to the ColumnSelector when the column can be changed.
+		labelledby = null
 	} = $props();
 
 	// Mini data-table preview, expanded per-row (panel display mode only). Matches
@@ -969,7 +972,7 @@
 
 					{#if canChange}
 						<div class="col-picker">
-							<ColumnSelector bind:value={col.refId} bind:onChange />
+							<ColumnSelector bind:value={col.refId} bind:onChange {labelledby} />
 						</div>
 					{:else}
 						<p class="col-name" title={description ? `${shownName}\n${description}` : shownName}>
@@ -999,14 +1002,18 @@
 			</div>
 
 			{#if timeFormatApplies}
-				<div class="control-input display time-format-row">
-					<p>Time format</p>
+				<!-- A <label> around the editable field; a <div> around the read-only one. -->
+				<svelte:element
+					this={canChange ? 'div' : 'label'}
+					class="control-input display time-format-row"
+				>
+					<span class="ci-label">Time format</span>
 					{#if !canChange}
 						<input bind:value={col.timeFormat} />
 					{:else}
 						<span>{getColumnById(col.refId)?.timeFormat}</span>
 					{/if}
-				</div>
+				</svelte:element>
 				{#if timeFormatProblem}
 					<p class="time-format-warning" role="alert">{timeFormatProblem}</p>
 				{/if}
@@ -1047,8 +1054,8 @@
 			{/each}
 
 			{#if !canChange && col.type !== 'time' && col.type !== 'bin' && col.refId == null}
-				<div class="control-input display group-label-row">
-					<p>Label</p>
+				<label class="control-input display group-label-row">
+					<span class="ci-label">Label</span>
 					<input
 						placeholder="group / replicate"
 						title="Group or replicate label used to aggregate this trace with others sharing the label"
@@ -1058,7 +1065,7 @@
 							col.groupLabel = v.trim() === '' ? null : v;
 						}}
 					/>
-				</div>
+				</label>
 			{/if}
 
 			{#if previewOpen && !canChange}
@@ -1090,8 +1097,12 @@
 	.col-chev {
 		background: none;
 		border: none;
-		padding: 0 1px;
-		margin: 0;
+		/* A 24px pointer box (WCAG 2.5.8) around the 12px caret: the padding that makes it is
+		   given back by the negative margin, so the row does not move. It grows to the LEFT
+		   (into the row's indent): the type button 4px to its right grows by 4px too, and two
+		   boxes that overlap shrink each other's target. */
+		padding: 6px 1px 6px 11px;
+		margin: -6px 0 -6px -10px;
 		cursor: pointer;
 		color: var(--color-text-muted);
 		font-size: var(--font-2xs);
@@ -1140,7 +1151,7 @@
 		font-size: var(--font-sm);
 		padding: 2px 4px 4px;
 	}
-	.time-format-row p {
+	.time-format-row > .ci-label {
 		margin: 0;
 		color: var(--color-text-muted);
 	}

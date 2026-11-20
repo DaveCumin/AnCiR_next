@@ -1,5 +1,6 @@
 <script>
 	// @ts-nocheck
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	/**
@@ -26,6 +27,8 @@
 		     in-panel trash only shows for any remaining parent-owned process. -->
 		{#if p.parentCol}
 			<button
+				type="button"
+				{@attach tooltip('Remove this operation')}
 				class="icon"
 				onclick={(e) => {
 					e.stopPropagation();

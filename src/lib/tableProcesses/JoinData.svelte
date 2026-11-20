@@ -561,27 +561,23 @@
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Dataset A</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Time A</p>
+			<ControlInput label="Time A" associate={false}>
 				<ColumnSelector bind:value={p.args.aTimeIN} excludeColIds={ownOutputIds} />
-			</div>
-			<div class="control-input">
-				<p>Values A</p>
+			</ControlInput>
+			<ControlInput label="Values A" associate={false}>
 				<ColumnSelector bind:value={p.args.aValuesIN} excludeColIds={excludeA} multiple={true} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Dataset B</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Time B</p>
+			<ControlInput label="Time B" associate={false}>
 				<ColumnSelector bind:value={p.args.bTimeIN} excludeColIds={ownOutputIds} />
-			</div>
-			<div class="control-input">
-				<p>Values B</p>
+			</ControlInput>
+			<ControlInput label="Values B" associate={false}>
 				<ColumnSelector bind:value={p.args.bValuesIN} excludeColIds={excludeB} multiple={true} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}

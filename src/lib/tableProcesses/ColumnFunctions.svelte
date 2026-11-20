@@ -115,7 +115,7 @@
 		columnIdFields: { array: ['xsIN', 'yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.columnfunctions',
-			inputs: [{ name: 'xsIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'xsIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -248,8 +248,7 @@
 			</div>
 			<!-- The selector lists the chosen columns and removes them; a second list of
 			     names with its own remove buttons beside it only repeated it. -->
-			<div class="control-input">
-				<p>Columns</p>
+			<ControlInput label="Columns" associate={false}>
 				<ColumnSelector
 					value={p.args.xsIN}
 					onChange={(val) => {
@@ -258,7 +257,7 @@
 					}}
 					multiple={true}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

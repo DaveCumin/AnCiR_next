@@ -90,7 +90,7 @@
 <script>
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById, removeColumn, Column } from '$lib/core/Column.svelte';
-	import { displayNameOf } from '$lib/core/columnLabels.js';
+	import { displayNameOf, displayNameById } from '$lib/core/columnLabels.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -728,6 +728,7 @@
 									<input
 										type="text"
 										value={cell}
+										aria-label={`Row ${i + 1}`}
 										data-index={i}
 										oninput={(e) => handleCellInput(e, i)}
 										onkeydown={(e) => handleCellKeydown(e, i)}
@@ -740,6 +741,7 @@
 									<input
 										type="text"
 										value={extraData[ec.colId]?.[i] ?? ''}
+										aria-label={`${displayNameById(ec.colId, 'Column')}, row ${i + 1}`}
 										oninput={(e) => handleExtraInput(ec.colId, i, e.currentTarget.value)}
 									/>
 								</span>

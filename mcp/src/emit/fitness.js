@@ -24,7 +24,10 @@
 // judgement call on a spectrum ("2 cycles" is a convention, not a law), and the user may have
 // excellent reasons we can't see. Being wrong must cost them a sentence, not their session.
 //
-// Pure and dependency-free, like the normalizer: it runs in the Worker.
+// Pure, like the normalizer (its one import is a pure helper of the app's): it runs in the
+// Worker.
+
+import { angleUnitMismatch } from '../../../src/lib/utils/angleUnit.js';
 
 const MS_PER_HOUR = 3600000;
 
@@ -130,6 +133,20 @@ export function checkFitness(session) {
 
 	for (const tp of session.tableProcesses ?? []) {
 		const { name, args } = tp;
+
+		// --- angles read in the wrong unit ---
+		// A Rayleigh test with no time wired reads its y columns as angles in `unit`. Clock
+		// hours read as radians still give an R and a p, and they are wrong. The same notice
+		// the node shows (utils/angleUnit.js), on the columns that hold data now.
+		if (name === 'RayleighTest' && !(Number.isInteger(args?.timeIN) && args.timeIN >= 0)) {
+			const columns = (Array.isArray(args.yIN) ? args.yIN : [])
+				.map(valuesOf)
+				.filter((v) => Array.isArray(v) && v.length);
+			const mismatch = angleUnitMismatch(columns, args.unit ?? 'radians', num(args.period) ?? 24);
+			if (mismatch)
+				out.push({ node: name, severity: 'high', message: `${name}: ${mismatch.message}` });
+		}
+
 		if (EXCLUDED[name] || !PERIOD_OF[name]) continue;
 
 		const xId = timeRef(args);

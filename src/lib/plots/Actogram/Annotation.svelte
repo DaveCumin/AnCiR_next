@@ -246,25 +246,23 @@
 		</ControlInput>
 	</div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Start date/time</p>
+		<ControlInput label="Start date/time" associate={false}>
 			<DateTimeHrs
 				value={annotation.startDateTime}
 				zone={annotation.parentData?.clockZone}
 				onChange={changedStartDateTime}
 				label="Start"
 			/>
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>End date/time</p>
+		<ControlInput label="End date/time" associate={false}>
 			<DateTimeHrs
 				value={annotation.endDateTime}
 				zone={annotation.parentData?.clockZone}
 				onChange={changedEndDateTime}
 				label="End"
 			/>
-		</div>
+		</ControlInput>
 	</div>
 {/snippet}
 

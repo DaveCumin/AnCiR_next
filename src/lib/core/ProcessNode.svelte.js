@@ -10,6 +10,7 @@ import {
 import { createColumnNamer } from './outputLabels.js';
 import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
 import { seriesChannelRefs, plotInnerUsesColumn, isWiredRef } from './seriesChannelRefs.js';
+import { inputPortDisplay } from './inputPortDisplay.js';
 import {
 	encodingPortName,
 	encodedSeries,
@@ -255,10 +256,11 @@ export function groupPlotData(data) {
 function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: [] }) {
 	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) => {
 		const port = makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many');
-		// A spec may name a port for people (`display`) apart from its arg key, which must end
-		// in `IN` for the wiring and the input scrubs to find it (Join Data's `aTimeIN` shows
-		// as "time A").
-		if (p.display) port.display = p.display;
+		// A port is named for people (`display`) apart from its arg key, which must end in `IN`
+		// for the wiring and the input scrubs to find it: xIN / yIN show as x / y, and a spec may
+		// declare its own (Join Data's `aTimeIN` shows as "time A"). core/inputPortDisplay.js.
+		const shown = inputPortDisplay(p);
+		if (shown && shown !== p.name) port.display = shown;
 		return port;
 	});
 	const outputs = (nodeSpec.outputs ?? fallback.outputs ?? []).map((p) =>
@@ -1292,14 +1294,29 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// interface ports (display-only — mirrors group absorption). ---------------
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id lookup built and consumed inside this pure graph builder
 	const compById = new Map((core.composites ?? []).map((c) => [c.id, c]));
+	// An interface port carries the member node it stands for (flattened like the workflow
+	// nodes below) and that node's port, so its tooltip can say what the member's port expects
+	// or produces (portDescriptions.js describeNodePort), even while the member is hidden.
+	const interfacePort = (p) => {
+		const m = nodeMap.get(p.member);
+		// An input shows as the member's port shows (x, not xIN); `p.name` is the stored port
+		// name. Outputs keep it: a col_<id> name resolves to its column's name where drawn.
+		const own = (m?.ports?.inputs ?? []).find((q) => q?.name === p.port);
+		return {
+			name: p.id,
+			display: own?.display ?? p.name,
+			memberNode: m ? flatWorkflowNode(m) : null,
+			memberPort: p.port
+		};
+	};
 	for (const comp of core.composites ?? []) {
 		const cnode = {
 			id: comp.id,
 			label: comp.name,
 			refId: comp.id,
 			ports: {
-				inputs: (comp.interface?.inputs ?? []).map((p) => ({ name: p.id, display: p.name })),
-				outputs: (comp.interface?.outputs ?? []).map((p) => ({ name: p.id, display: p.name }))
+				inputs: (comp.interface?.inputs ?? []).map(interfacePort),
+				outputs: (comp.interface?.outputs ?? []).map(interfacePort)
 			},
 			meta: { type: 'composite', refId: comp.id, compositeObj: comp }
 		};
@@ -1370,16 +1387,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const executionKey = buildNodeExecutionKey(core, n);
 		nextKeys.set(n.id, executionKey);
 		if (_cachedNodeExecutionKeys.get(n.id) !== executionKey) changedNodeIds.push(n.id);
-		return {
-			id: n.id,
-			label: n.label,
-			sublabel: n.sublabel,
-			type: n.meta.type,
-			refId: n.refId,
-			ports: n.ports,
-			executionKey,
-			...n.meta
-		};
+		return { ...flatWorkflowNode(n), executionKey };
 	});
 
 	_cachedHash = nextHash;
@@ -1391,6 +1399,19 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		changedNodeIds
 	};
 	return _cachedGraph;
+}
+
+/** A graph builder node as the workflow cards see it: its meta spread onto the node. */
+function flatWorkflowNode(n) {
+	return {
+		id: n.id,
+		label: n.label,
+		sublabel: n.sublabel,
+		type: n.meta.type,
+		refId: n.refId,
+		ports: n.ports,
+		...n.meta
+	};
 }
 
 export function clearProcessNodeGraphCache() {

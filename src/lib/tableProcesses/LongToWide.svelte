@@ -235,9 +235,9 @@
 		nodeSpec: {
 			id: 'tableprocess.longtowide',
 			inputs: [
-				{ name: 'categoryIN', kind: 'column', cardinality: 'one' },
-				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
-				{ name: 'valueIN', kind: 'column', cardinality: 'one' }
+				{ name: 'categoryIN', display: 'category', kind: 'column', cardinality: 'one' },
+				{ name: 'timeIN', display: 'time', kind: 'column', cardinality: 'one' },
+				{ name: 'valueIN', display: 'value', kind: 'column', cardinality: 'one' }
 			],
 			outputs: [
 				{ name: 'time', kind: 'column', cardinality: 'one' },
@@ -575,26 +575,23 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
 	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Category column</p>
+		<ControlInput label="Category column" associate={false}>
 			<ColumnSelector bind:value={categoryIN_local} onChange={onCategoryChange} />
-		</div>
-		<div class="control-input">
-			<p>Time column</p>
+		</ControlInput>
+		<ControlInput label="Time column" associate={false}>
 			<ColumnSelector
 				bind:value={timeIN_local}
 				excludeColIds={[p.args.categoryIN]}
 				onChange={onTimeChange}
 			/>
-		</div>
-		<div class="control-input">
-			<p>Value column</p>
+		</ControlInput>
+		<ControlInput label="Value column" associate={false}>
 			<ColumnSelector
 				bind:value={valueIN_local}
 				excludeColIds={[p.args.categoryIN, p.args.timeIN]}
 				onChange={onValueChange}
 			/>
-		</div>
+		</ControlInput>
 		{#if errorMessage}
 			<p class="error-message">{errorMessage}</p>
 		{/if}

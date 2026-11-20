@@ -146,8 +146,8 @@
 		nodeSpec: {
 			id: 'tableprocess.logisticregression',
 			inputs: [
-				{ name: 'yIN', kind: 'column', cardinality: 'one' },
-				{ name: 'xIN', kind: 'column', cardinality: 'many' }
+				{ name: 'yIN', display: 'outcome', kind: 'column', cardinality: 'one' },
+				{ name: 'xIN', display: 'predictors', kind: 'column', cardinality: 'many' }
 			],
 			outputs: OUT_KEYS.map((name) => ({ name, kind: 'column', cardinality: 'one' }))
 		}
@@ -165,6 +165,7 @@
 
 <script>
 	// @ts-nocheck
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { onMount, untrack } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
@@ -266,14 +267,12 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Outcome (binary)</p>
+		<ControlInput label="Outcome (binary)" associate={false}>
 			<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
-		</div>
-		<div class="control-input">
-			<p>Predictors</p>
+		</ControlInput>
+		<ControlInput label="Predictors" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.xIN} excludeColIds={outIds} />
-		</div>
+		</ControlInput>
 	{/if}
 	{#if result.rows.length}
 		<p class="hint">
@@ -282,7 +281,10 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Coefficients</summary>
-			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+			<div
+				class="d-table-wrap scroll-fade-x"
+				{@attach scrollFade({ label: 'Logistic regression results' })}
+			>
 				<table class="d-table">
 					<thead>
 						<tr><th>term</th><th>coef</th><th>OR</th><th>p</th></tr>

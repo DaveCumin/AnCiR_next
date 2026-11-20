@@ -104,7 +104,7 @@
 		columnIdFields: {},
 		nodeSpec: {
 			id: 'tableprocess.formulacolumn',
-			inputs: [{ name: 'tokens', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'tokens', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -657,6 +657,7 @@
 					<input
 						type="text"
 						class="formula-text-input"
+						aria-label={`Formula text, part ${i + 1}`}
 						bind:this={inputEls[i]}
 						bind:value={token.value}
 						size={Math.max(2, (token.value?.length ?? 0) + 1)}

@@ -94,7 +94,7 @@
 		columnIdFields: { scalar: ['xIN'] },
 		nodeSpec: {
 			id: 'tableprocess.fdrcorrection',
-			inputs: [{ name: 'xIN', kind: 'column', cardinality: 'one' }],
+			inputs: [{ name: 'xIN', display: 'p-values', kind: 'column', cardinality: 'one' }],
 			outputs: [
 				{ name: 'padj', kind: 'column', cardinality: 'one' },
 				{ name: 'reject', kind: 'column', cardinality: 'one' }
@@ -191,16 +191,14 @@
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
-	<div class="control-input">
-		<p>p-values</p>
+	<ControlInput label="p-values" associate={false}>
 		<ColumnSelector bind:value={p.args.xIN} onChange={recompute} excludeColIds={ownOutputIds} />
-	</div>
+	</ControlInput>
 </div>
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Correction</span></div>
-	<div class="control-input">
-		<p>Method</p>
+	<ControlInput label="Method">
 		<AttributeSelect
 			bind:value={p.args.method}
 			options={PADJUST_METHODS}
@@ -212,7 +210,7 @@
 				'Benjamini-Yekutieli (FDR, any dependence)'
 			]}
 		/>
-	</div>
+	</ControlInput>
 	<ControlInput label="alpha">
 		<NumberWithUnits bind:value={p.args.alpha} onInput={recompute} min="0" max="1" step="0.01" />
 	</ControlInput>

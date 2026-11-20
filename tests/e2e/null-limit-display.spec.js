@@ -61,7 +61,8 @@ test('FFT x limits reset to automatic show the limits in use, not 0', async ({ p
 test('the FFT frequency step set back to automatic is an empty "Auto" box', async ({ page }) => {
 	await openFft(page);
 	await page.evaluate(() => (window.__appState.currentControlTab = 'data'));
-	const label = page.locator('p', { hasText: /^Frequency step$/ }).first();
+	// The label is a <ControlInput>'s .ci-label (it names the box through aria-labelledby).
+	const label = page.locator('.ci-label', { hasText: /^Frequency step$/ }).first();
 	const field = label.locator('xpath=..');
 	await field.locator('button.icon').first().click();
 	await page.waitForTimeout(300);

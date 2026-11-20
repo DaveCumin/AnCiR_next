@@ -34,6 +34,9 @@ import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/over
 // The app's own rule for a new free-period fit's range (pure; periodRangeAuto.svelte.js applies
 // it in the app, the MCP engine's fillOmittedArgs headless).
 import { autoPeriodRange } from '../../../src/lib/utils/periodRangeDefaults.js';
+// A Rayleigh test drafted without a `unit` reads it from its angle columns, as a node added
+// from the palette does (the app's own rule).
+import { inferAngleUnit } from '../../../src/lib/utils/angleUnit.js';
 // Params that name a column without being an input port (outputX, sortOnId): resolved from a
 // name like xIN / yIN. The app's AI-edit planner reads the same list.
 import { columnRefParamsOf } from '../../../src/lib/core/columnRefParams.js';
@@ -348,6 +351,21 @@ export function normalizeSession(
 					})
 				: null;
 			if (range) Object.assign(args, range);
+		}
+
+		// A stated unit is kept. Without one, and with no time wired (the values are then
+		// weights and `unit` is unused), the unit comes from the values that hold data now.
+		if (
+			name === 'RayleighTest' &&
+			args.unit == null &&
+			!(Number.isInteger(args.timeIN) && args.timeIN >= 0)
+		) {
+			const yIds = Array.isArray(args.yIN) ? args.yIN : [args.yIN];
+			const unit = inferAngleUnit(
+				yIds.map((id) => rawData[id] ?? []),
+				args.period ?? 24
+			);
+			if (unit) args.unit = unit;
 		}
 
 		// fill omitted params from defaults (without clobbering supplied values).

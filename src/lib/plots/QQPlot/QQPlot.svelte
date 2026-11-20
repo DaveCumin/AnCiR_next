@@ -645,6 +645,8 @@
 	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	// The sample points of one series as marker paths (plotbits/markerPaths.js): one path in
 	// the series colour, or one per colour bucket (and size layer) when the series is coloured
@@ -880,8 +882,13 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="Column"></ControlInput>
-							<Column col={datum.column} canChange={true} />
+							<ControlInput label="Column" associate={false} id="{labelUid}-col-{datum.column.id}"
+							></ControlInput>
+							<Column
+								labelledby="{labelUid}-col-{datum.column.id}"
+								col={datum.column}
+								canChange={true}
+							/>
 						</div>
 
 						{#if datum.column?.type === 'time'}
@@ -917,10 +924,9 @@
 						{/if}
 
 						<div class="control-input-horizontal">
-							<div class="control-input">
-								<p>Colour</p>
+							<ControlInput label="Colour" associate={false}>
 								<ColourPicker bind:value={datum.colour} />
-							</div>
+							</ControlInput>
 							<ControlInput label="Point size">
 								<NumberWithUnits bind:value={datum.pointRadius} min="0.5" step="0.5" />
 							</ControlInput>

@@ -31,7 +31,7 @@
 		yOutKeyPrefix: 'sortedy_',
 		nodeSpec: {
 			id: 'tableprocess.sort',
-			inputs: [{ name: 'yIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'yIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: [
 				{ name: 'sortedy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'sortedy_' }
 			]
@@ -303,15 +303,14 @@
 	<div class="section-row">
 		<div class="tableProcess-label"><span>Input</span></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Columns</p>
+			<ControlInput label="Columns" associate={false}>
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={ownOutputIds}
 					multiple={true}
 					onChange={onYSelectionChange}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}

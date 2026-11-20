@@ -131,6 +131,20 @@ test('Escape cancels a keyboard wire only; Delete on an input removes its wires'
 	await expect(wires(page)).toHaveCount(before);
 });
 
+test('an analysis input is announced by the name its card shows (y, not yIN)', async ({ page }) => {
+	await page.setViewportSize({ width: 1500, height: 1100 });
+	await loadDemo(page);
+	const before = await wires(page).count();
+	await pressUntil(page, 'Tab', /^tableprocess_\d+:yIN:in$/);
+	await expect(page.locator(':focus')).toHaveAttribute('aria-label', /^Cosinor: input port y,/);
+	await page.keyboard.press('Delete');
+	await expect(status(page)).toHaveText('Removed the wires into Cosinor: y.');
+	// Its wire goes, and with it the wires of the outputs that y fed.
+	await expect.poll(() => wires(page).count()).toBeLessThan(before);
+	await page.keyboard.press('ControlOrMeta+z');
+	await expect(wires(page)).toHaveCount(before);
+});
+
 test('Enter on an input port opens its column list with focus in it', async ({ page }) => {
 	await page.setViewportSize({ width: 1500, height: 1100 });
 	await loadDemo(page);

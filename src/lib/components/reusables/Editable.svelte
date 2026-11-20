@@ -43,6 +43,12 @@
 	// pointerenter (before the browser shows the title) rather than observed.
 	let truncated = $state(false);
 	const shownText = $derived(value && value !== '' ? value : placeholder);
+	// The idle span's accessible name leads with what to do and includes the text it shows
+	// ("Rename analysis Cosinor"), so the visible text is part of the name (WCAG 2.5.3 Label in
+	// Name: a voice user says what they see) and the action is still announced.
+	const spanName = $derived(
+		ariaLabel && shownText ? `${ariaLabel} ${shownText}` : ariaLabel || undefined
+	);
 	const spanTitle = $derived(
 		truncated && shownText ? (title ? `${shownText}\n${title}` : shownText) : title
 	);
@@ -130,7 +136,7 @@
 		class="editable-span"
 		class:editable
 		title={spanTitle}
-		aria-label={ariaLabel}
+		aria-label={spanName}
 		onpointerenter={measureTruncation}
 		ondblclick={startEdit}
 		onpointerdown={(e) => {
@@ -188,6 +194,14 @@
 
 	.editable-span.editable:hover {
 		background: rgba(0, 0, 0, 0.06);
+	}
+
+	/* The base rule drops the outline for the field look; the idle span is a tab stop, so it
+	   gets the app's keyboard focus ring back (keyboard focus only). Drawn inside the span:
+	   node titles and output rows clip overflow, which cut an outside ring on two sides. */
+	.editable-span.editable:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
 	}
 
 	.editable-input {

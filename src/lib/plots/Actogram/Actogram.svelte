@@ -1116,6 +1116,8 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	// Marker-rule OUTPUT PORTS (five per rule: r<id>_tau, _phi, _r2, _rmse, _n; see
 	// plotMetricDefs.js). One writer per plot: the on-screen instance, or the headless one a
@@ -1321,8 +1323,7 @@
 				</p>
 			{:else}
 				<div class="control-input-vertical">
-					<div class="control-input">
-						<p>Start time</p>
+					<ControlInput label="Start time" associate={false}>
 						<div class="start-time-row">
 							<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js). -->
 							<DateTimeHrs
@@ -1343,7 +1344,7 @@
 								</button>
 							{/if}
 						</div>
-					</div>
+					</ControlInput>
 				</div>
 			{/if}
 
@@ -1479,15 +1480,17 @@
 
 					<div class="control-data-container">
 						<div class="control-data">
-							<ControlInput label="x"></ControlInput>
+							<ControlInput label="Time (x)" associate={false} id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
 
-							<Column col={datum.x} canChange={true} />
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y"></ControlInput>
+							<ControlInput label="Values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
 
-							<Column col={datum.y} canChange={true} />
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 					</div>
 

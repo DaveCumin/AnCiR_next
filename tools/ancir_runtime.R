@@ -967,7 +967,9 @@ cp_removetrend <- function(x, args, cols, raw_data) {
       (det[i] - m) / (if (sd == 0) 1 else sd)
     }, numeric(1))
   }
-  out <- y
+  # A row the fit did not see (a blank x or a blank y) is blank in the output, never its raw
+  # value mixed into a detrended column (RemoveTrend.svelte, 2026-11-21).
+  out <- rep(NA_real_, length(y))
   out[ok] <- det
   out
 }
@@ -2304,6 +2306,11 @@ compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
 # whole periods of epochs from the first sample, as nparACT's fulldays = TRUE (Blume, Santhi &
 # Schabus 2016, MethodsX 3:430-435; nparACT_base.R 0.9.1); a record shorter than one period
 # is used whole (fullDaysKept 0).
+# An empty epoch takes no part in any count: IS divides by the profile bins that hold data.
+# With an epoch finer than the sampling step (npcra.js, EPOCH FINER THAN THE SAMPLING) IV's
+# successive pairs are consecutive populated epochs no sample was skipped between, the grid
+# runs one sampling step past the last sample, and an onset is its window's first populated
+# bin, so a regular record scores as with an epoch equal to its sampling step.
 compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
                           m_window = 10, l_window = 5, full_days = FALSE) {
   if (!(epoch_hours > 0) || !(period > 0)) return(NULL)
@@ -2319,8 +2326,12 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   e <- epoch_hours
   # The 1e-9 slack matches the Python: without it a span that is an exact multiple of the
   # epoch gains a spurious final epoch through floating-point drift.
-  n_grid <- max(1, ceiling((t_end - t0) / e + 1e-9))
+  dt <- sampling_step(tf)
+  finer <- isTRUE(dt > 0) && e < dt * (1 - 0.01)
+  n_grid <- if (finer) max(1, ceiling((t_end - t0 + dt) / e - 1e-9))
+            else max(1, ceiling((t_end - t0) / e + 1e-9))
   ssum <- numeric(n_grid); cnt <- integer(n_grid)
+  t_sum <- numeric(n_grid)       # sample times per epoch (hours after t0), for its mean time
   # Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
   # day-unit axis) makes (tf - t0) / e land at 11.999999... for an exact bin edge.
   k <- pmin(pmax(floor((tf - t0) / e + 1e-9), 0), n_grid - 1) + 1
@@ -2329,6 +2340,7 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
     if (is.na(yf[i])) next
     ssum[k[i]] <- ssum[k[i]] + yf[i]
     cnt[k[i]] <- cnt[k[i]] + 1
+    t_sum[k[i]] <- t_sum[k[i]] + (tf[i] - t0)
   }
   p <- max(1, js_round(period / e))
   # Full days: whole periods of epochs from the first sample (npcra.js, FULL DAYS).
@@ -2353,15 +2365,26 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   }
   profile <- ifelse(p_cnt > 0, p_sum / p_cnt, NA_real_)
 
+  # IS over the profile bins that hold data (npcra.js, EMPTY EPOCHS).
   prof_ss <- sum((profile[is.finite(profile)] - xbar)^2)
-  IS <- if (overall_ss > 0) (nn * prof_ss) / (p * overall_ss) else NA_real_
+  p_valid <- sum(is.finite(profile))
+  IS <- if (overall_ss > 0) (nn * prof_ss) / (p_valid * overall_ss) else NA_real_
 
   # IV: mean squared successive difference over the valid successive pairs, over the variance
   # (Witting et al. 1990); with no gaps the pairs are nn - 1, the textbook formula. Dividing by
-  # nn - 1 regardless biased IV low with missing epochs (FIT-8, npcra.js).
-  d <- diff(x)
-  n_pairs <- sum(is.finite(d))
-  diff_ss <- sum(d[is.finite(d)]^2)
+  # nn - 1 regardless biased IV low with missing epochs (FIT-8, npcra.js). A pair is two
+  # adjacent epochs; with an epoch finer than the sampling, also two populated epochs no
+  # sample was skipped between.
+  diff_ss <- 0; n_pairs <- 0; prev <- 0
+  for (kk in seq_len(n_epochs)) {
+    if (!is.finite(x[kk])) next
+    if (prev > 0 && (kk - prev == 1 ||
+        (finer && t_sum[kk] / cnt[kk] - t_sum[prev] / cnt[prev] <= 1.5 * dt))) {
+      diff_ss <- diff_ss + (x[kk] - x[prev])^2
+      n_pairs <- n_pairs + 1
+    }
+    prev <- kk
+  }
   IV <- if (overall_ss > 0 && n_pairs > 0) (diff_ss / n_pairs) / (overall_ss / nn) else NA_real_
 
   # Circular rolling window over the folded profile: M10 is the highest-mean 10 h block,
@@ -2377,19 +2400,31 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
       m <- mean(v)
       if (is.na(best_val) || better(m, best_val)) { best_val <- m; best_start <- st }
     }
-    list(value = best_val, onset = best_start * e)
+    # The onset is the window's first bin that holds data (npcra.js).
+    first <- best_start
+    if (!is.na(best_val)) {
+      for (j in seq_len(w) - 1) {
+        if (is.finite(profile[((best_start + j) %% p) + 1])) {
+          first <- (best_start + j) %% p
+          break
+        }
+      }
+    }
+    list(value = best_val, onset = first * e)
   }
   m10 <- roll(m_window, function(a, b) a > b)
   l5 <- roll(l_window, function(a, b) a < b)
   denom <- m10$value + l5$value
   RA <- if (is.finite(denom) && denom != 0) (m10$value - l5$value) / denom else NA_real_
 
+  fillable <- if (finer) min(n_epochs, n_epochs * e / dt) else n_epochs
   list(IS = IS, IV = IV, RA = RA, M10 = m10$value, L5 = l5$value,
        M10onset = m10$onset, L5onset = l5$onset,
        profile = profile, bin_centres = (seq_len(p) - 1) * e + e / 2,
        n = nn, p = p, n_epochs = n_epochs,
-       missingEpochFraction = (n_epochs - nn) / n_epochs, t0 = t0,
-       fullDaysKept = full_days_kept, droppedEpochs = n_grid - n_epochs)
+       missingEpochFraction = max(0, (fillable - nn) / fillable), t0 = t0,
+       fullDaysKept = full_days_kept, droppedEpochs = n_grid - n_epochs,
+       samplingInterval = dt, pValid = p_valid)
 }
 
 tp_averageprofile <- function(args, env) {

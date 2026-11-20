@@ -117,7 +117,7 @@
 		columnIdFields: { scalar: [], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.normalitytest',
-			inputs: [{ name: 'yIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'yIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: OUT_KEYS.map((name) => ({ name, kind: 'column', cardinality: 'one' }))
 		}
 	};
@@ -221,10 +221,9 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Columns to test</p>
+		<ControlInput label="Columns to test" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={outIds} />
-		</div>
+		</ControlInput>
 	{/if}
 	<ControlInput label="Test">
 		<AttributeSelect
@@ -247,7 +246,10 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Results</summary>
-			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+			<div
+				class="d-table-wrap scroll-fade-x"
+				{@attach scrollFade({ label: 'Normality test results' })}
+			>
 				<table class="d-table">
 					<thead>
 						<tr

@@ -508,21 +508,23 @@
 	{#if !hideInputs}
 		<!-- The two ports read differently per test and input format, so the
 		     labels follow the choices below rather than the raw port names. -->
-		<div class="control-input">
-			<p>
-				{p.args.testType === 'goodness'
-					? 'Column to test'
-					: p.args.dataFormat === 'groups'
-						? 'Group 1'
-						: 'Variable 1 (rows)'}
-			</p>
+		<ControlInput
+			label={p.args.testType === 'goodness'
+				? 'Column to test'
+				: p.args.dataFormat === 'groups'
+					? 'Group 1'
+					: 'Variable 1 (rows)'}
+			associate={false}
+		>
 			<ColumnSelector bind:value={p.args.xIN} excludeColIds={outIds} />
-		</div>
+		</ControlInput>
 		{#if p.args.testType !== 'goodness'}
-			<div class="control-input">
-				<p>{p.args.dataFormat === 'groups' ? 'Group 2' : 'Variable 2 (columns)'}</p>
+			<ControlInput
+				label={p.args.dataFormat === 'groups' ? 'Group 2' : 'Variable 2 (columns)'}
+				associate={false}
+			>
 				<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
-			</div>
+			</ControlInput>
 		{/if}
 	{/if}
 	<ControlInput label="Test">
@@ -629,7 +631,10 @@
 		{#if (result.testType === 'independence' || result.testType === 'fisher') && result.table?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Contingency table</summary>
-				<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+				<div
+					class="d-table-wrap scroll-fade-x"
+					{@attach scrollFade({ label: 'Chi-square results' })}
+				>
 					<table class="d-table">
 						<thead>
 							<tr
@@ -653,7 +658,10 @@
 		{:else if result.testType === 'goodness' && result.observed?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Observed vs expected</summary>
-				<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+				<div
+					class="d-table-wrap scroll-fade-x"
+					{@attach scrollFade({ label: 'Chi-square results' })}
+				>
 					<table class="d-table">
 						<thead>
 							<tr><th>category</th><th>obs</th><th>exp</th></tr>

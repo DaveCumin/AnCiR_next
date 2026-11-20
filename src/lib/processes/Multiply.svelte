@@ -16,9 +16,17 @@
 		defaults: multiply_defaults,
 		nodeSpec: {
 			id: 'process.multiply',
-			// sameType: true: one factor for every input; scaling a time column's ms is not meaningful
-			// beside a number (core/processInputRules.js).
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
+			// disallowTypes: a time column is refused: scaling its epoch milliseconds means
+			// nothing (core/processInputRules.js). sameType: true: one factor for every input.
+			inputs: [
+				{
+					name: 'input',
+					kind: 'column',
+					cardinality: 'one',
+					disallowTypes: ['time'],
+					sameType: true
+				}
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -31,7 +39,7 @@
 </script>
 
 <ProcessShell {p}>
-	<NumberWithUnits bind:value={p.args.value} step="0.001" />
+	<NumberWithUnits bind:value={p.args.value} step="0.001" ariaLabel="Multiply by" />
 </ProcessShell>
 
 <style>

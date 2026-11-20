@@ -90,7 +90,7 @@
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
 	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
-	import NodeActions from './NodeActions.svelte';
+	import NodeActions, { nodeActionsWidth } from './NodeActions.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import {
 		COMPACT_W,
@@ -111,7 +111,10 @@
 		cycleIndex,
 		wiringMessages,
 		PORT_KEYS_HELP_ID,
-		PORT_KEYS_HELP
+		PORT_KEYS_HELP,
+		NODE_KEYS_HELP_ID,
+		NODE_KEYS_HELP,
+		nodeCardKeyAction
 	} from './keyboardWiring.js';
 	import { portLabel } from './portLabels.js';
 	import { getNodeName } from '$lib/core/nodeNaming.js';
@@ -1244,6 +1247,34 @@
 	}
 	// Don't let a pending hide-timer fire (and touch state) after unmount.
 	$effect(() => () => clearTimeout(actionsHoverTimer));
+	// Keyboard focus inside a node reveals its cluster too, so a keyboard user can
+	// reach quick-plot / collapse / delete (they are display:none, so untabbable,
+	// while hidden). Keyboard focus only: a click focuses the card as well, and the
+	// canvas keeps that focus when the user clicks away, which would leave the icons
+	// stuck on (hover and selection already reveal them for the mouse).
+	let actionsFocusId = $state(null);
+	function onNodeFocusIn(e, id) {
+		let keyboard = true;
+		try {
+			keyboard = e.target.matches(':focus-visible');
+		} catch {
+			// engines without :focus-visible: treat focus as keyboard focus
+		}
+		if (keyboard) actionsFocusId = id;
+	}
+	function onNodeFocusOut(e, id) {
+		if (e.currentTarget.contains(e.relatedTarget)) return;
+		if (actionsFocusId === id) actionsFocusId = null;
+	}
+
+	// An expanded node's cluster overlays the header's right end (.node-actions-host:
+	// right 6px). While it shows, the header reserves that strip plus a fixed gap, so
+	// the title ellipsizes before the icons instead of running under them.
+	const ACTIONS_HOST_RIGHT = 6;
+	const ACTIONS_TITLE_GAP = 6;
+	function actionsReservePx(count) {
+		return count > 0 ? nodeActionsWidth(count) + ACTIONS_HOST_RIGHT + ACTIONS_TITLE_GAP : 0;
+	}
 
 	// True while an OS file is dragged over the canvas (drop-to-import).
 	let fileDragOver = $state(false);
@@ -3298,6 +3329,23 @@
 		}
 	}
 
+	/**
+	 * Enter or Space on a focused node card (not on a port, button or field inside it): the
+	 * click's path selects the node, and on a node that is already selected the double-click's
+	 * path opens it in the control panel. The cards are focusable groups (WorkflowNode,
+	 * TableProcessNode, CompactNode), so this is how a keyboard user reaches a node's settings.
+	 */
+	function handleNodeCardKey(e, node, isSelected) {
+		// The card is the wrapper's own child; a key inside it (a port, a button) is not the card's.
+		const card = e.target?.parentElement === e.currentTarget ? e.target : null;
+		const action = nodeCardKeyAction(e, card, isSelected && multiSelectedNodeIds.size <= 1);
+		if (!action) return;
+		e.preventDefault();
+		e.stopPropagation();
+		if (action === 'open') handleNodeDblClick(node);
+		else handleNodeAction(node, e);
+	}
+
 	/** Double-click opens the side Control Panel for the node (consistent with the
 	 *  worksheet's double-click behaviour). Single-click only selects; the in-node
 	 *  inline editor is toggled separately by the header arrow. */
@@ -4541,7 +4589,7 @@
 							handleNodeDblClick({ id: cc.id, type: 'composite', compositeObj: cc.comp });
 						}}
 					>
-						<span class="composite-frame-name">{cc.name}</span>
+						<span class="composite-frame-name" title={cc.name}>{cc.name}</span>
 						<button
 							type="button"
 							class="composite-frame-collapse"
@@ -4583,7 +4631,16 @@
 				{@const nodeZIndex = isDragging
 					? 1000000
 					: Math.max(nodeZ[node.id] ?? 0, isExpanded ? 20 : 1)}
-				{@const actionsRevealed = isSelected || actionsHoverId === node.id}
+				{@const actionsRevealed =
+					isSelected || actionsHoverId === node.id || actionsFocusId === node.id}
+				{@const showQuickPlot = node.type === 'tableprocess' || node.type === 'process'}
+				{@const showCollapse = canToggleCompact(node)}
+				{@const showDelete = node.type !== 'composite' && (node.type !== 'group' || compact)}
+				{@const showUncombine = node.type === 'composite'}
+				{@const actionsReserve =
+					actionsRevealed && !compact && !isGroup
+						? actionsReservePx(+showQuickPlot + +showCollapse + +showDelete + +showUncombine)
+						: 0}
 				{@const clusterNoteId = node.type !== 'group' || compact ? node.id : null}
 				{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}
 				<!-- Expanded composites render as the bordered frame backdrop above,
@@ -4598,7 +4655,9 @@
 						class:multi-selected={isMultiSelected && (multiSelectedNodeIds.size > 1 || !!marquee)}
 						data-node-id={node.id}
 						data-group-id={isGroup ? node.id : null}
-						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
+						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};{actionsReserve
+							? ` --node-actions-reserve: ${actionsReserve}px;`
+							: ''}"
 						aria-label={node.label}
 						onpointerdown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onpointerup={(e) => handleNodeWrapperMouseUp(e, node)}
@@ -4610,11 +4669,14 @@
 							if (hoveredNodeId === node.id) hoveredNodeId = null;
 							hideNodeActionsSoon();
 						}}
+						onfocusin={(e) => onNodeFocusIn(e, node.id)}
+						onfocusout={(e) => onNodeFocusOut(e, node.id)}
 						ondblclick={(e) => {
 							e.stopPropagation();
 							handleNodeDblClick(node);
 						}}
 						onclick={(e) => e.stopPropagation()}
+						onkeydown={(e) => handleNodeCardKey(e, node, isSelected)}
 						role="presentation"
 					>
 						{#if compact}
@@ -4708,15 +4770,15 @@
 									revealed={actionsRevealed}
 									noteNodeId={compact ? clusterNoteId : null}
 									hasNote={clusterHasNote}
-									showCollapse={canToggleCompact(node)}
+									{showCollapse}
 									expanded={!compact}
 									onToggleCollapse={() => handleNodeToggleExpand(node)}
-									showDelete={node.type !== 'composite' && (node.type !== 'group' || compact)}
+									{showDelete}
 									onDelete={() => confirmDeleteNode(node)}
 									deleteTooltip={node.type === 'group' ? 'Delete group' : 'Delete node'}
-									showUncombine={node.type === 'composite'}
+									{showUncombine}
 									onUncombine={() => removeComposite(node.id)}
-									showQuickPlot={node.type === 'tableprocess' || node.type === 'process'}
+									{showQuickPlot}
 									onQuickPlot={() => handleQuickPlot(node)}
 								/>
 							</div>
@@ -4874,6 +4936,7 @@
 <!-- Keyboard wiring: what each port key does (every port's aria-describedby), and the
      narration of a wire in progress. Visually hidden; screen readers only. -->
 <p id={PORT_KEYS_HELP_ID} class="wiring-sr-only">{PORT_KEYS_HELP}</p>
+<p id={NODE_KEYS_HELP_ID} class="wiring-sr-only">{NODE_KEYS_HELP}</p>
 <div
 	class="wiring-sr-only"
 	role="status"
@@ -5051,6 +5114,9 @@
 		position: absolute;
 		top: -11px;
 		left: 10px;
+		/* A long composite name ellipsizes inside the frame instead of running past it. */
+		max-width: calc(100% - 20px);
+		box-sizing: border-box;
 		display: flex;
 		align-items: center;
 		gap: 6px;
@@ -5066,7 +5132,14 @@
 		cursor: grab;
 		user-select: none;
 	}
+	.composite-frame-name {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
 	.composite-frame-collapse {
+		flex-shrink: 0;
 		border: none;
 		background: transparent;
 		cursor: pointer;

@@ -4842,7 +4842,7 @@
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--color-lightness-55);
+		color: var(--color-text-muted);
 	}
 	.example-group-label:first-child {
 		margin-top: 0;
@@ -5076,7 +5076,7 @@
 		padding: 0.1rem var(--space-3);
 	}
 	.preview-table th.label-cell-muted {
-		color: var(--color-lightness-65);
+		color: var(--color-text-muted);
 		font-style: italic;
 		font-weight: 400;
 		text-align: center;

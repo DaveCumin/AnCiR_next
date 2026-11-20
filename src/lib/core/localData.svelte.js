@@ -23,10 +23,19 @@
 //                               see STYLE_KEY for why, and for the caveat about names.
 //   IndexedDB `ancir-recents`   FileSystemFileHandles — no data, but file identity and the
 //                               capability to re-open
+//   IndexedDB `ancir-autosave`  WHOLE SESSIONS, imported data and all: the autosaved copies
+//                               (autosave.svelte.js). Only while a session has unsaved
+//                               changes, never in ephemeral mode, at most
+//                               2 from closed tabs and none older than 14 days. A deliberate change of
+//                               policy (David, November 2026): losing work to a closed tab was
+//                               the bigger everyday risk. Turned off in Settings (which deletes
+//                               every copy), and deleted by clearLocalData() below.
+//   ancir.autosave.enabled      '0' when the user turned autosave off. Exempt from the clear,
+//                               like the ephemeral flag: a privacy choice must not forget itself.
 //
-// The crash snapshot is deliberately NOT on that list any more: it is the one thing that held
-// a whole session, imported data and all, and it now lives in sessionStorage (see
-// errorReporter.js).
+// The crash snapshot is NOT on that list: it also holds a whole session, and lives in
+// sessionStorage, gone with the tab (see errorReporter.js). It stays as the fallback for
+// whenever autosave is off.
 //
 // EPHEMERAL MODE
 //
@@ -52,6 +61,8 @@ const PREFIX = 'ancir';
  * worse than none — and exempted from clearLocalData() for the same reason.
  */
 const MODE_KEY = 'ancir.privacy.ephemeral';
+/** For tabs that follow the mode when another tab changes it (autosave.svelte.js). */
+export const EPHEMERAL_MODE_KEY = MODE_KEY;
 
 /**
  * Saved figure-style presets (plots/styleConfig.js).
@@ -67,8 +78,14 @@ const MODE_KEY = 'ancir.privacy.ephemeral';
  */
 export const STYLE_KEY = 'ancir.style.configs.v1';
 
-/** Keys `clearLocalData()` leaves alone. A set, so a third one is a one-line addition. */
-const EXEMPT = new Set([MODE_KEY, STYLE_KEY]);
+/**
+ * The autosave setting (autosave.svelte.js): '0' when turned off. Declared here, beside the
+ * other exemption, for the same reason as STYLE_KEY.
+ */
+export const AUTOSAVE_PREF_KEY = 'ancir.autosave.enabled';
+
+/** Keys `clearLocalData()` leaves alone. */
+const EXEMPT = new Set([MODE_KEY, STYLE_KEY, AUTOSAVE_PREF_KEY]);
 
 const hasWindow = () => typeof window !== 'undefined';
 
@@ -182,11 +199,11 @@ function deleteDatabase(name) {
 }
 
 /** The IndexedDB databases AnCiR owns. Listed explicitly so a clear cannot quietly miss one. */
-const OWNED_DATABASES = ['ancir-recents'];
+const OWNED_DATABASES = ['ancir-recents', 'ancir-autosave'];
 
 /**
- * Remove everything AnCiR has stored in this browser: both Storage areas and the IndexedDB
- * handle store. The privacy setting and the saved figure styles both survive, deliberately;
+ * Remove everything AnCiR has stored in this browser: both Storage areas, the IndexedDB
+ * handle store and every autosaved session. The privacy setting and the saved figure styles both survive, deliberately;
  * styles are forgotten by their own button (forgetAllStyles) so neither outcome is a
  * surprise.
  *

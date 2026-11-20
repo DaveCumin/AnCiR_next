@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { defaultAxisLabel } from '$lib/plots/axisLabels.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
@@ -684,6 +685,8 @@
 	import SizeKey from '$lib/components/plotbits/SizeKey.svelte';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	onMount(() => {
 		// After the first draw has landed, not from the SVG as it was at mount: see
@@ -818,7 +821,12 @@
 				</ControlInput>
 				{#if theData.ylimsIN[0] != null || theData.ylimsIN[1] != null}
 					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<button
+							type="button"
+							{@attach tooltip('Reset the y limits to automatic')}
+							class="icon"
+							onclick={() => (theData.ylimsIN = [null, null])}
+						>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
 						</button>
 					</div>
@@ -873,10 +881,15 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="x (categories, optional)"></ControlInput>
-							<Column col={datum.x} canChange={true} />
+							<ControlInput
+								label="Categories (x, optional)"
+								associate={false}
+								id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
+									{@attach tooltip('Clear the category column')}
 									type="button"
 									class="icon"
 									onclick={() => {
@@ -888,8 +901,9 @@
 							{/if}
 						</div>
 						<div class="y-select">
-							<ControlInput label="y (values)"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Values (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 
 						<Points pointsData={datum.points} which="controls" />
@@ -902,6 +916,9 @@
 							<div class="control-component-title">
 								<p>Error bars (± SEM)</p>
 								<button
+									type="button"
+									{@attach tooltip('Show error bars')}
+									aria-pressed={!!datum.showError}
 									class="icon"
 									onclick={(e) => {
 										e.stopPropagation();
@@ -917,10 +934,9 @@
 							</div>
 							{#if datum.showError}
 								<div class="control-input-horizontal">
-									<div class="control-input control-input-swatch">
-										<p>Col</p>
+									<ControlInput label="Col" class="control-input-swatch" associate={false}>
 										<ColourPicker bind:value={datum.errorColour} />
-									</div>
+									</ControlInput>
 									<ControlInput label="Width">
 										<NumberWithUnits step="0.1" min={0.1} bind:value={datum.errorWidth} />
 									</ControlInput>

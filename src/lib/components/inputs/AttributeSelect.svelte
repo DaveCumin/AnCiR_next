@@ -8,7 +8,9 @@
 		optionsDisplay = options,
 		other = false,
 		placeholder = '',
-		onChange = () => {}
+		onChange = () => {},
+		// The select's name when nothing labels it (no `label`, no wrapping <label>).
+		ariaLabel = undefined
 	} = $props(); // options must be passed as array
 	let otherValInternal = crypto.randomUUID().replaceAll('-', '').slice(0, 6);
 	let selected = $state();
@@ -72,6 +74,7 @@
 		bind:value={selected}
 		name={label}
 		id={label}
+		aria-label={label ? undefined : ariaLabel}
 		onchange={(e) => {
 			value = e.target.value;
 			if (value == otherValInternal) {

@@ -39,6 +39,30 @@ const KNOWN_WARNINGS = {};
  * false positive of a Svelte rule, not a warning nobody fixed.
  */
 const ALLOWED_IGNORES = {
+	'lib/components/workflow/CompactNode.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex'],
+		reason:
+			'A canvas node card is a focusable role="group" (aria-roledescription "node") selected ' +
+			'with Enter or Space (WorkflowEditor handleNodeCardKey). It holds ports and buttons, so ' +
+			'it cannot be a button (nested-interactive), but Svelte counts every group as ' +
+			'non-interactive.'
+	},
+	'lib/components/workflow/TableProcessNode.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex'],
+		reason:
+			'A canvas node card is a focusable role="group" (aria-roledescription "node") selected ' +
+			'with Enter or Space (WorkflowEditor handleNodeCardKey). It holds ports and buttons, so ' +
+			'it cannot be a button (nested-interactive), but Svelte counts every group as ' +
+			'non-interactive.'
+	},
+	'lib/components/workflow/WorkflowNode.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex'],
+		reason:
+			'A canvas node card is a focusable role="group" (aria-roledescription "node") selected ' +
+			'with Enter or Space (WorkflowEditor handleNodeCardKey). It holds ports and buttons, so ' +
+			'it cannot be a button (nested-interactive), but Svelte counts every group as ' +
+			'non-interactive.'
+	},
 	'lib/components/reusables/Draggable.svelte': {
 		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
 		reason:
@@ -52,6 +76,41 @@ const ALLOWED_IGNORES = {
 			'The Enter Data height handle is a focusable role="separator" (the WAI-ARIA window ' +
 			'splitter, operable with the arrow keys). A focusable separator is a widget in ARIA, ' +
 			'but Svelte counts every separator as non-interactive.'
+	},
+	'lib/components/ControlPanel.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
+		reason:
+			'The control panel edge is a focusable role="separator" (the WAI-ARIA window splitter: ' +
+			'arrows, Home/End, Enter for the default width). A focusable separator is a widget in ' +
+			'ARIA, but Svelte counts every separator as non-interactive.'
+	},
+	'lib/components/DisplayPanel.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
+		reason:
+			'The data panel edge is a focusable role="separator" (the WAI-ARIA window splitter: ' +
+			'arrows, Home/End, Enter for the default width). A focusable separator is a widget in ' +
+			'ARIA, but Svelte counts every separator as non-interactive.'
+	},
+	'lib/plots/Tableplot/Tableplot.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
+		reason:
+			'Each column edge is a focusable role="separator" (the WAI-ARIA window splitter, ' +
+			'resized with the arrow keys). A focusable separator is a widget in ARIA, but Svelte ' +
+			'counts every separator as non-interactive.'
+	},
+	'lib/components/plotbits/Table.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
+		reason:
+			'Each preview-table column edge is a focusable role="separator" (the WAI-ARIA window ' +
+			'splitter, resized with the arrow keys). A focusable separator is a widget in ARIA, ' +
+			'but Svelte counts every separator as non-interactive.'
+	},
+	'lib/components/views/NodeSourceItem.svelte': {
+		codes: ['a11y_no_noninteractive_tabindex', 'a11y_no_noninteractive_element_interactions'],
+		reason:
+			'The node header is a focusable role="group" selected with Enter/Space. It holds the ' +
+			'name editor and the find and delete buttons, which a button role cannot (axe ' +
+			'nested-interactive), but Svelte counts every group as non-interactive.'
 	}
 };
 

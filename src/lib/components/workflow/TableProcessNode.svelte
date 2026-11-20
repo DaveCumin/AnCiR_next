@@ -32,7 +32,7 @@
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
-	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { PORT_KEYS_HELP_ID, NODE_KEYS_HELP_ID } from './keyboardWiring.js';
 	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 
 	let {
@@ -302,6 +302,7 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	bind:this={cardEl}
 	class="tp-card"
@@ -309,9 +310,11 @@
 	class:expanded
 	style="{NODE_ROW_CSS_VARS}{width != null ? ` width:${width}px;` : ''}"
 	onpointerdown={onCardMouseDown}
-	role="button"
+	role="group"
+	aria-roledescription="node"
 	tabindex="0"
 	aria-label={getNodeName(node)}
+	aria-describedby={NODE_KEYS_HELP_ID}
 >
 	<div class="tp-header">
 		{#if hasWarning}
@@ -689,6 +692,10 @@
 		align-items: center;
 		gap: 4px;
 		padding: 0 8px;
+		/* While the editor's action cluster (NodeActions) overlays this header's right end,
+		   it sets --node-actions-reserve on the node wrapper: the title then ellipsizes a
+		   fixed gap before the icons rather than running under them. */
+		padding-right: max(8px, var(--node-actions-reserve, 0px));
 		height: var(--node-header-h);
 		background: var(--color-lightness-97);
 		border-bottom: 1px solid var(--color-lightness-90);

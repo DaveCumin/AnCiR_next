@@ -57,7 +57,7 @@
 		columnIdFields: { scalar: ['xIN'] },
 		nodeSpec: {
 			id: 'tableprocess.threshold',
-			inputs: [{ name: 'xIN', kind: 'column', cardinality: 'one' }],
+			inputs: [{ name: 'xIN', display: 'column', kind: 'column', cardinality: 'one' }],
 			outputs: [{ name: 'binary', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -119,22 +119,20 @@
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
-	<div class="control-input">
-		<p>Column</p>
+	<ControlInput label="Column" associate={false}>
 		<ColumnSelector bind:value={p.args.xIN} onChange={recompute} excludeColIds={ownOutputIds} />
-	</div>
+	</ControlInput>
 </div>
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Rule</span></div>
-	<div class="control-input">
-		<p>Comparison</p>
+	<ControlInput label="Comparison">
 		<AttributeSelect
 			bind:value={p.args.comparison}
 			options={['>', '>=', '<', '<=']}
 			optionsDisplay={['value > t', 'value ≥ t', 'value < t', 'value ≤ t']}
 		/>
-	</div>
+	</ControlInput>
 	<ControlInput label="Threshold (t)">
 		<NumberWithUnits bind:value={p.args.threshold} onInput={recompute} step="0.1" />
 	</ControlInput>

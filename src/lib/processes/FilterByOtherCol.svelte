@@ -123,14 +123,14 @@
 				<ColumnSelector bind:value={condition.byColId} />
 				<div class="operator-input">
 					{#if getColumnById(condition.byColId)?.type === 'category'}
-						<select bind:value={condition.isOperator}>
+						<select bind:value={condition.isOperator} aria-label="Condition">
 							<option value="==">equals</option>
 							<option value="!=">not equals</option>
 							<option value="includes">includes</option>
 							<option value="notincludes">does not include</option>
 						</select>
 					{:else}
-						<select bind:value={condition.isOperator}>
+						<select bind:value={condition.isOperator} aria-label="Condition">
 							<option value="==">=</option>
 							<option value="!=">!=</option>
 							<option value=">">&gt;</option>
@@ -144,14 +144,14 @@
 
 			<div class="second-level-condition">
 				{#if getColumnById(condition.byColId)?.type === 'category'}
-					<input type="text" bind:value={condition.byColValue} />
+					<input type="text" bind:value={condition.byColValue} aria-label="Value" />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
 					<!--TODO: bind a value here so it always shows in ui. The value needs
 					    formatting as new Date(condition.byColValue).toISOString().slice(0, 16),
 					    falling back to '' when byColValue is empty.-->
 					<DateTimeHrs bind:value={condition.byColValue} frame={getColumnById(condition.byColId)} />
 				{:else}
-					<NumberWithUnits bind:value={condition.byColValue} step="0.01" />
+					<NumberWithUnits bind:value={condition.byColValue} step="0.01" ariaLabel="Value" />
 				{/if}
 			</div>
 			{#if p.args.conditions.length > 1}

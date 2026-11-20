@@ -810,25 +810,23 @@
 		{#if scaleData.show}
 			<div class="control-input-horizontal">
 				{#if positionKeys.length > 1}
-					<div class="control-input">
-						<p>Position</p>
+					<ControlInput label="Position">
 						<AttributeSelect
 							bind:value={scaleData.position}
 							options={positionKeys}
 							optionsDisplay={positionKeys.map((k) => POSITIONS[k])}
 							onChange={(v) => onPositionChange(v)}
 						/>
-					</div>
+					</ControlInput>
 				{/if}
 				{#if !categories}
-					<div class="control-input">
-						<p>Layout</p>
+					<ControlInput label="Layout">
 						<AttributeSelect
 							bind:value={scaleData.orientation}
 							options={['vertical', 'horizontal']}
 							optionsDisplay={['Vertical', 'Horizontal']}
 						/>
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 

@@ -152,7 +152,7 @@
 		columnIdFields: { scalar: [], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.correlation',
-			inputs: [{ name: 'yIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'yIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: OUT_KEYS.map((name) => ({ name, kind: 'column', cardinality: 'one' }))
 		}
 	};
@@ -291,7 +291,10 @@
 			<summary class="tp-output-summary">Correlations</summary>
 			<!-- Only the table scrolls sideways (with an edge fade), as in the CFI / NPCRA panels.
 			     The pair name keeps a readable width and ellipsises; the row's title has it all. -->
-			<div class="corr-table-wrap scroll-fade-x" {@attach scrollFade()}>
+			<div
+				class="corr-table-wrap scroll-fade-x"
+				{@attach scrollFade({ label: 'Correlation table' })}
+			>
 				<table class="corr-table">
 					<thead>
 						<tr><th>Pair</th><th>r</th><th>p</th><th title="Holm-adjusted p">p adj</th></tr>

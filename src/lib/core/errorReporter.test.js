@@ -3,6 +3,7 @@
 // The crash handler runs at the worst possible moment, so the thing it must never do is throw.
 // These tests are mostly about it surviving: no storage, a full quota, no network, a session
 // that won't serialise.
+import { getAutosaveSlot } from './autosaveSlot.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
 	reportError,
@@ -171,6 +172,8 @@ describe('crash snapshot', () => {
 		const snap = readCrashSnapshot();
 		expect(snap.savedAt).toBeTruthy();
 		expect(snap.session.data).toHaveLength(1);
+		// Names this tab's autosave slot, so the same session is not offered twice.
+		expect(snap.autosaveSlot).toBe(getAutosaveSlot());
 
 		clearCrashSnapshot();
 		expect(readCrashSnapshot()).toBeNull();

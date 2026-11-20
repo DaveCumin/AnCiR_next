@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { autoSeriesColour, pickedColour } from '$lib/plots/autoSeriesColour.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
@@ -861,6 +862,8 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let { theData, which } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 	const fmtP = (p) => (Number.isFinite(p) ? (p < 1e-4 ? '< 0.0001' : p.toFixed(4)) : '—');
@@ -1277,10 +1280,15 @@
 					<SeriesBlockHeader inner={theData} {datum} index={i} />
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="Time (optional)"></ControlInput>
-							<Column col={datum.x} canChange={true} />
+							<ControlInput
+								label="Time (x, optional)"
+								associate={false}
+								id="{labelUid}-x-{datum.x.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-x-{datum.x.id}" col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
+									{@attach attachTooltip('Clear the time column')}
 									type="button"
 									class="icon"
 									onclick={() => {
@@ -1292,8 +1300,9 @@
 							{/if}
 						</div>
 						<div class="y-select">
-							<ControlInput label="Values (phase column)"></ControlInput>
-							<Column col={datum.y} canChange={true} />
+							<ControlInput label="Phases (y)" associate={false} id="{labelUid}-y-{datum.y.id}"
+							></ControlInput>
+							<Column labelledby="{labelUid}-y-{datum.y.id}" col={datum.y} canChange={true} />
 						</div>
 						{#if datum.timeWired}
 							<p class="cp-hint">
@@ -1302,10 +1311,9 @@
 							</p>
 						{/if}
 						<div class="control-input-horizontal">
-							<div class="control-input control-input-swatch">
-								<p>Col</p>
+							<ControlInput label="Col" class="control-input-swatch" associate={false}>
 								<ColourPicker bind:value={datum.colour} />
-							</div>
+							</ControlInput>
 							<ControlInput label="Shape">
 								<select bind:value={datum.shape}>
 									{#each POINT_SHAPES as s, si (s)}

@@ -2,11 +2,16 @@
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { escapeHtml, safeColour } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import { controlLabel, labelledBy } from './controlLabel.js';
 
 	// `colours` overrides what the swatches show. Settings passes a palette that has been
 	// chosen but not yet applied, so the row previews the choice while the figures still
 	// draw with the palette in `appState.appColours`.
 	let { onSelect = () => {}, colours = undefined } = $props();
+
+	// Named "<ControlInput label>, Change" when it sits in a <ControlInput associate={false}>.
+	const ownLabel = controlLabel();
+	const triggerId = $props.id();
 
 	const shown = $derived(colours ?? appState.appColours);
 
@@ -51,7 +56,14 @@
 <div class="palette-control">
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- swatches() shape-validates and escapes each colour -->
 	<div class="palette-swatches">{@html swatches(shown)}</div>
-	<button type="button" class="palette-trigger" onclick={openList} bind:this={dropdownLabel}>
+	<button
+		type="button"
+		class="palette-trigger"
+		id={triggerId}
+		aria-labelledby={labelledBy(ownLabel?.id, triggerId)}
+		onclick={openList}
+		bind:this={dropdownLabel}
+	>
 		Change<span class="palette-caret" aria-hidden="true">▾</span>
 	</button>
 </div>

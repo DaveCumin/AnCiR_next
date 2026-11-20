@@ -18,6 +18,7 @@ import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { plotMetricManifestOutputs } from '$lib/plots/plotMetricDefs.js';
 import { manifestPortDescription } from '$lib/core/portDescriptions.js';
+import { inputPortDisplay } from '$lib/core/inputPortDisplay.js';
 
 export const MANIFEST_PATH = join(process.cwd(), 'static', 'nodes.json');
 const INDEX = join(process.cwd(), 'static', 'sessions', 'demos', 'index.json');
@@ -57,11 +58,15 @@ function paramsFromDefaults(defaults) {
 
 // `describe(name)`: what the port expects or produces (core/portDescriptions.js, the same text
 // the canvas tooltips show), so the handbook's Node Reference can show it too.
-function portList(ports, describe = () => null) {
+// `shown(port)`: the name the canvas shows for an input (core/inputPortDisplay.js), carried
+// as `display` where it differs from the internal name, so the Node Reference can show it.
+function portList(ports, describe = () => null, shown = () => null) {
 	return (ports ?? []).map((p) => {
 		const description = describe(p.name);
+		const display = shown(p);
 		return {
 			name: p.name,
+			...(display && display !== p.name ? { display } : {}),
 			kind: p.artifactKind ?? p.kind ?? 'column',
 			cardinality: p.dynamic || p.cardinality === 'many' ? 'many' : 'one',
 			...(p.metric ? { metric: true } : {}),
@@ -91,7 +96,11 @@ export async function buildNodeManifest() {
 
 	const pushTPorProc = (id, entry, kind) => {
 		const spec = entry.nodeSpec ?? entry.definition?.nodeSpec ?? {};
-		const inputs = portList(spec.inputs, (n) => manifestPortDescription(kind, id, n, 'in'));
+		const inputs = portList(
+			spec.inputs,
+			(n) => manifestPortDescription(kind, id, n, 'in'),
+			inputPortDisplay
+		);
 		// Params are configuration only — drop keys that are wired input ports.
 		const inputNames = new Set(inputs.map((i) => i.name));
 		const params = paramsFromDefaults(entry.defaults).filter((p) => !inputNames.has(p.name));

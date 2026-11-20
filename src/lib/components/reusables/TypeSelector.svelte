@@ -68,7 +68,7 @@
 	<div class="type-selector">
 		{#if value}
 			<button
-				class="icon"
+				class="icon type-trigger"
 				aria-label={`Type: ${current.label}. Change type`}
 				aria-expanded={showDropdown}
 				onclick={(e) => toggleDropdown(e)}
@@ -115,7 +115,17 @@
 		padding: 0;
 	}
 
-	.type-selector button:hover {
+	/* The 16px type button's pointer box is 24px (WCAG 2.5.8): 4px of padding each side,
+	   given back by a negative margin so nothing around it moves. Scoped to the trigger (the
+	   dropdown's option buttons keep their own size). */
+	.type-trigger {
+		padding: 4px;
+		margin: -4px;
+	}
+
+	/* The hover tint stays on the 16px icon, as it was before the box grew. */
+	.type-trigger:hover :global(.static-icon),
+	.option button:hover {
 		border-radius: var(--radius-sm);
 		background-color: var(--color-lightness-90);
 	}

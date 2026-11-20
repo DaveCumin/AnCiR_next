@@ -178,7 +178,8 @@ test.describe('facets as views', () => {
 			].join('\n')
 		]);
 		// And it is on screen as one toast, not four.
-		const toast = page.getByText('had its own padding top (40)');
+		// The toast itself, not its copy in the app's live region (utils/announce.js).
+		const toast = page.locator('.toast').getByText('had its own padding top (40)');
 		await expect(toast).toBeVisible();
 		await expect(page.locator('.toast-close')).toHaveCount(1);
 	});

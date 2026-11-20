@@ -119,8 +119,8 @@
 		nodeSpec: {
 			id: 'tableprocess.widetolong',
 			inputs: [
-				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
-				{ name: 'valueColIds', kind: 'column', cardinality: 'many' }
+				{ name: 'timeIN', display: 'time', kind: 'column', cardinality: 'one' },
+				{ name: 'valueColIds', display: 'values', kind: 'column', cardinality: 'many' }
 			],
 			outputs: [
 				{ name: 'time', kind: 'column', cardinality: 'one' },

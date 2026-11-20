@@ -59,3 +59,39 @@ describe('scrollFade attachment', () => {
 		expect(el.hasAttribute('data-more-above')).toBe(true);
 	});
 });
+
+describe('scrollFade keyboard access', () => {
+	const box = (sw, cw) => {
+		const el = document.createElement('div');
+		Object.defineProperty(el, 'scrollWidth', { value: sw, configurable: true });
+		Object.defineProperty(el, 'clientWidth', { value: cw, configurable: true });
+		Object.defineProperty(el, 'scrollHeight', { value: 10, configurable: true });
+		Object.defineProperty(el, 'clientHeight', { value: 10, configurable: true });
+		return el;
+	};
+
+	it('makes a box that scrolls a named, focusable region', () => {
+		const el = box(500, 200);
+		const cleanup = scrollFade({ label: 'Results' })(el);
+		expect(el.getAttribute('tabindex')).toBe('0');
+		expect(el.getAttribute('role')).toBe('region');
+		expect(el.getAttribute('aria-label')).toBe('Results');
+		cleanup();
+	});
+
+	it('adds no tab stop to a box that fits', () => {
+		const el = box(200, 200);
+		const cleanup = scrollFade({ label: 'Results' })(el);
+		expect(el.hasAttribute('tabindex')).toBe(false);
+		expect(el.hasAttribute('role')).toBe(false);
+		cleanup();
+	});
+
+	it("leaves a box's own tabindex alone", () => {
+		const el = box(500, 200);
+		el.setAttribute('tabindex', '-1');
+		const cleanup = scrollFade({ label: 'Results' })(el);
+		expect(el.getAttribute('tabindex')).toBe('-1');
+		cleanup();
+	});
+});

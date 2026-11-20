@@ -1,5 +1,6 @@
 <script>
 	import Editable from '../inputs/Editable.svelte';
+	import { separatorKeyValue } from '$lib/utils/separatorKeys.js';
 
 	let { headers, data, editable = false, onInput = () => {} } = $props();
 
@@ -10,6 +11,8 @@
 	let resizingIndex = -1;
 	let table;
 	const minWidth = 30; // Minimum column width in pixels
+	const maxWidth = 1200; // and the widest (a splitter states its range; End goes there)
+	const widthOf = (i) => parseFloat(widths[i]) || defaultColWidth;
 
 	function startResize(index) {
 		resizingIndex = index;
@@ -20,7 +23,10 @@
 	function handleMouseMove(event) {
 		if (resizingIndex >= 0) {
 			const th = table.querySelectorAll('th')[resizingIndex];
-			const newWidth = Math.max(minWidth, event.clientX - th.getBoundingClientRect().left);
+			const newWidth = Math.min(
+				maxWidth,
+				Math.max(minWidth, event.clientX - th.getBoundingClientRect().left)
+			);
 			widths = widths.map((w, i) => (i === resizingIndex ? `${newWidth}px` : w));
 		}
 	}
@@ -29,6 +35,16 @@
 		resizingIndex = -1;
 		window.removeEventListener('mousemove', handleMouseMove);
 		window.removeEventListener('mouseup', handleMouseUp);
+	}
+
+	// The same edge from the keyboard (separatorKeys.js): arrows step, Home/End go to the ends.
+	// The widths are a viewing convenience, not session state, so nothing is recorded.
+	function onResizeKeydown(e, index) {
+		const next = separatorKeyValue(e, { value: widthOf(index), min: minWidth, max: maxWidth });
+		if (next == null) return;
+		e.preventDefault();
+		e.stopPropagation();
+		widths = widths.map((w, i) => (i === index ? `${next}px` : w));
 	}
 
 	// Drop any dangling drag listeners if this unmounts mid-gesture.
@@ -52,8 +68,22 @@
 							value={header}
 							onInput={(v) => onInput({ col: index, row: 'h', value: v, old: oldVal })}
 						/>
-						<!-- Pointer-only drag strip (the widths are a viewing convenience). -->
-						<div class="resizer" role="presentation" onmousedown={() => startResize(index)}></div>
+						<!-- Drag strip, or focus it and use the arrow keys (a WAI-ARIA window splitter;
+						     Svelte counts every separator as static, hence the ignore, see
+						     svelteWarnings.guard.test.js). -->
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+						<div
+							class="resizer"
+							role="separator"
+							tabindex="0"
+							aria-orientation="vertical"
+							aria-label={`Resize column ${header}`}
+							aria-valuenow={Math.round(widthOf(index))}
+							aria-valuemin={minWidth}
+							aria-valuemax={maxWidth}
+							onmousedown={() => startResize(index)}
+							onkeydown={(e) => onResizeKeydown(e, index)}
+						></div>
 					</th>
 				{/each}
 			</tr>
@@ -176,5 +206,10 @@
 
 	.resizer:hover {
 		background-color: #e0e0e0;
+	}
+	/* Keyboard focus only; inside the strip, since the cell clips past its edge. */
+	.resizer:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
 	}
 </style>

@@ -126,6 +126,13 @@
 		cursor: pointer;
 	}
 
+	/* The base rule above drops the outline for the field look; the idle span is a tab stop, so
+	   it gets the app's keyboard focus ring back (keyboard focus only). */
+	.inline-edit-span.editable:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: 1px;
+	}
+
 	.inline-edit-input {
 		border-color: var(--color-lightness-50);
 		border-radius: 2px;

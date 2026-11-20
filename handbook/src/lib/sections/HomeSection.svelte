@@ -56,7 +56,7 @@
 		</a>
 		<a class="toc-card" href="#ch3">
 			<div class="card-num">Chapter 3</div>
-			<div class="card-title">Simulating Data</div>
+			<div class="card-title">Simulating Chronobiological Data</div>
 		</a>
 		<a class="toc-card" href="#ch4">
 			<div class="card-num">Chapter 4</div>
@@ -88,7 +88,7 @@
 		</a>
 		<a class="toc-card" href="#ch11">
 			<div class="card-num">Chapter 11</div>
-			<div class="card-title">Linear & Additive Models</div>
+			<div class="card-title">General Linear and Additive Models</div>
 		</a>
 		<a class="toc-card" href="#ch12">
 			<div class="card-num">Chapter 12</div>
@@ -96,7 +96,7 @@
 		</a>
 		<a class="toc-card" href="#ch13">
 			<div class="card-num">Chapter 13</div>
-			<div class="card-title">Best Practices & Reporting</div>
+			<div class="card-title">Best Practices and Reporting</div>
 		</a>
 	</div>
 </section>

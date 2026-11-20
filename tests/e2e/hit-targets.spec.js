@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { openApp } from './helpers.js';
+import { openApp, failingTargets as failing } from './helpers.js';
 
 // UI-16: icon buttons have a pointer target of at least 24 x 24 CSS px (WCAG 2.2 SC 2.5.8,
 // Target Size (Minimum)), measured on the rendered page: a 24 x 24 square centred on the
@@ -18,64 +18,6 @@ import { openApp } from './helpers.js';
 // panel's rows (series blocks, banner).
 
 const DEMO = path.resolve('static/sessions/demos/demo-tp-cosinor.json');
-
-/** Runs in the page. One entry per visible target matched by `selector`. */
-function measure(selector) {
-	const visible = (e) => {
-		const r = e.getBoundingClientRect();
-		const cs = getComputedStyle(e);
-		return (
-			r.width > 0 &&
-			r.height > 0 &&
-			cs.visibility !== 'hidden' &&
-			cs.display !== 'none' &&
-			Number(cs.opacity) > 0 &&
-			r.top >= 0 &&
-			r.left >= 0 &&
-			r.bottom <= innerHeight &&
-			r.right <= innerWidth
-		);
-	};
-	const targets = [...document.querySelectorAll(selector)].filter(visible).map((el) => {
-		const r = el.getBoundingClientRect();
-		const cx = r.left + r.width / 2;
-		const cy = r.top + r.height / 2;
-		let full = true;
-		for (let dx = -11.5; dx <= 11.5; dx += 2.875) {
-			for (let dy = -11.5; dy <= 11.5; dy += 2.875) {
-				const hit = document.elementFromPoint(cx + dx, cy + dy);
-				if (!hit || !(hit === el || el.contains(hit))) full = false;
-			}
-		}
-		return { el, r, cx, cy, full };
-	});
-	return targets.map((t) => {
-		const spaced =
-			!t.full &&
-			targets.every((o) => {
-				if (o === t) return true;
-				const nx = Math.max(o.r.left, Math.min(t.cx, o.r.right));
-				const ny = Math.max(o.r.top, Math.min(t.cy, o.r.bottom));
-				if (Math.hypot(nx - t.cx, ny - t.cy) < 12) return false;
-				return o.full || Math.hypot(o.cx - t.cx, o.cy - t.cy) >= 24;
-			});
-		const label =
-			t.el.getAttribute('aria-label') ||
-			t.el.getAttribute('title') ||
-			t.el.textContent.trim().slice(0, 24) ||
-			t.el.className;
-		return {
-			label: `${label} (${Math.round(t.r.width)}x${Math.round(t.r.height)})`,
-			ok: t.full || spaced
-		};
-	});
-}
-
-async function failing(page, selector, minCount) {
-	const all = await page.evaluate(measure, selector);
-	expect(all.length, `targets matched by ${selector}`).toBeGreaterThanOrEqual(minCount);
-	return all.filter((t) => !t.ok).map((t) => t.label);
-}
 
 async function loadDemo(page) {
 	await openApp(page);

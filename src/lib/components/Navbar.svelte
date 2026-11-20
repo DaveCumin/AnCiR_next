@@ -10,11 +10,15 @@
 	import { openPicker } from '$lib/core/tourRunner.svelte.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
+	import { saveTarget } from '$lib/core/saveTarget.svelte.js';
+	import { supportsSaveDialog } from '$lib/core/sessionSave.svelte.js';
 	import LoadSessionModal from './workflow/LoadSessionModal.svelte';
 	import AiPrompt from './views/modals/AiPrompt.svelte';
 	import { NL_CONFIGURED, checkNlHealth } from '$lib/utils/nlSession.js';
 	import { helpHint, dismissHelpHint } from '$lib/core/helpHint.svelte.js';
 	import { isOfflineFile } from '$lib/start/offline.js';
+	import { tick } from 'svelte';
+	import { menuKeyAction, menuIndex, menuItems } from '$lib/utils/menuKeys.js';
 
 	// Callbacks from +page: summon the welcome/start screen (Help → "Welcome screen"), and start
 	// a new session (asks first when there is unsaved work; see core/newSession.svelte.js).
@@ -26,6 +30,33 @@
 	let showLoadModal = $state(false);
 	let showAi = $state(false);
 	let helpAnchor;
+	let helpButton = $state();
+	let helpMenu = $state();
+
+	// The Help menu's keyboard contract (utils/menuKeys.js): opened from the keyboard, focus goes
+	// to its first item; arrows move, Escape closes and returns focus to Help, Tab closes it.
+	async function focusHelpItem(action) {
+		await tick();
+		const items = menuItems(helpMenu);
+		const at = menuIndex(action, items.indexOf(document.activeElement), items.length);
+		items[at]?.focus();
+	}
+	function onHelpMenuKeydown(e) {
+		const action = menuKeyAction(e);
+		if (!action) return;
+		if (action === 'leave') {
+			showHelpMenu = false;
+			return;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		if (action === 'close') {
+			showHelpMenu = false;
+			helpButton?.focus();
+			return;
+		}
+		focusHelpItem(action);
+	}
 
 	let exists = $state(false);
 
@@ -34,6 +65,12 @@
 		typeof navigator !== 'undefined' &&
 		(navigator.platform.toUpperCase().includes('MAC') ||
 			navigator.userAgent.toUpperCase().includes('MAC'));
+
+	const saveKey = isMac ? 'Cmd+S' : 'Ctrl+S';
+	const saveAsKey = isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S';
+	// Save as only differs from Save where there is a save dialog (Chromium). Elsewhere both
+	// download, so a second button would be a duplicate.
+	const canSaveAs = supportsSaveDialog();
 
 	async function checkFile() {
 		// The offline download (file://) ships without the handbook, and a fetch from
@@ -170,15 +207,34 @@
 		>
 			<Icon name="sessionload" width={22} height={22} />
 		</button>
+		<!-- Save writes to the session's file once it has one (the save dialog's first answer);
+		     Save as always asks. Shift+click is Save as too, as Shift is in the shortcut. -->
 		<button
 			class="rail-btn"
 			data-testid="nav-save-session"
-			aria-label="Save this session"
-			onclick={exportJson}
-			{@attach tooltip('Save this session')}
+			aria-label={saveTarget.fileName ? `Save to ${saveTarget.fileName}` : 'Save this session'}
+			aria-keyshortcuts={isMac ? 'Meta+S' : 'Control+S'}
+			onclick={(e) => exportJson({ saveAs: e.shiftKey })}
+			{@attach tooltip(
+				saveTarget.fileName
+					? `Save to "${saveTarget.fileName}" (${saveKey})`
+					: `Save this session (${saveKey})`
+			)}
 		>
 			<Icon name="sessionsave" width={22} height={22} />
 		</button>
+		{#if canSaveAs}
+			<button
+				class="rail-btn"
+				data-testid="nav-save-session-as"
+				aria-label="Save as a new file"
+				aria-keyshortcuts={isMac ? 'Meta+Shift+S' : 'Control+Shift+S'}
+				onclick={() => exportJson({ saveAs: true })}
+				{@attach tooltip(`Save as a new file (${saveAsKey})`)}
+			>
+				<Icon name="sessionsaveas" width={22} height={22} />
+			</button>
+		{/if}
 
 		<div class="rail-sep"></div>
 
@@ -243,10 +299,23 @@
 				class:hint-halo={helpHint.visible}
 				data-testid="nav-help"
 				aria-label="Help"
-				onclick={() => {
+				bind:this={helpButton}
+				onclick={(e) => {
 					dismissHelpHint();
 					checkFile();
 					showHelpMenu = !showHelpMenu;
+					// A keyboard press (Enter/Space) has no pointer position: put focus in the menu.
+					if (showHelpMenu && e.detail === 0) focusHelpItem('first');
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+						e.preventDefault();
+						showHelpMenu = true;
+						focusHelpItem(e.key === 'ArrowDown' ? 'first' : 'last');
+					} else if (e.key === 'Escape' && showHelpMenu) {
+						e.preventDefault();
+						showHelpMenu = false;
+					}
 				}}
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
@@ -255,7 +324,14 @@
 				<Icon name="query" />
 			</button>
 			{#if showHelpMenu}
-				<div class="help-menu" role="menu">
+				<div
+					class="help-menu"
+					role="menu"
+					aria-label="Help"
+					tabindex="-1"
+					bind:this={helpMenu}
+					onkeydown={onHelpMenuKeydown}
+				>
 					<button
 						type="button"
 						role="menuitem"

@@ -30,6 +30,13 @@
 	import { startNewSession } from '$lib/core/newSession.svelte.js';
 	import { offerCrashRecovery } from '$lib/core/crashRecovery.js';
 	import { initUnsavedChanges, installUnloadGuard } from '$lib/core/unsavedChanges.svelte.js';
+	import {
+		initAutosave,
+		hideAutosaveOffer,
+		adoptAutosaveSlot,
+		discardAutosave
+	} from '$lib/core/autosave.svelte.js';
+	import { saveTarget } from '$lib/core/saveTarget.svelte.js';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -81,6 +88,10 @@
 	// their work (the brief's "consider skipping it entirely"); Navbar's "New session" clears
 	// core, which brings this back on its own.
 	let deepLinkPending = $state(false);
+	const pageTitle = $derived(
+		`${saveTarget.fileName ? `${saveTarget.fileName} - ` : ''}AnCiR ${appConsts.version}: ` +
+			'Circadian Rhythm and Time-Series Data Analysis'
+	);
 	let startDismissed = $state(false);
 	const sessionIsEmpty = $derived(
 		core.data.length === 0 && core.plots.length === 0 && core.tableProcesses.length === 0
@@ -476,18 +487,21 @@
 					event.preventDefault();
 					newSession();
 				}
-				// SAVE THE SESSION: the same save as the Save session button (a copy of it lived
-				// here, and only the button's copy marked the session as saved, ROB-5).
-				if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
+				// SAVE / SAVE AS: Cmd/Ctrl+S and Cmd/Ctrl+Shift+S, the same saves as the toolbar's
+				// buttons (core/sessionSave.svelte.js). Taken in text fields too, where the
+				// browser's own "save this web page" is never what is meant. Not with Alt, so a
+				// keyboard layout typing a character with AltGr+S keeps it.
+				if (MODIFIER && !ALT && event.key.toLowerCase() === 's') {
 					event.preventDefault();
-					exportJson();
+					if (!event.repeat) exportJson({ saveAs: event.shiftKey });
 				}
 			}
 		};
 		document.addEventListener('keydown', onKeyDown);
 
-		// Ask before the tab closes or reloads with unsaved work (ROB-5). There is no autosave,
-		// so this prompt is the last chance.
+		// Ask before the tab closes or reloads with unsaved work (ROB-5). Autosave keeps a copy
+		// where it can, but it is off in ephemeral mode and by choice, and a copy in the browser
+		// is not a file, so the prompt stays.
 		const removeUnloadGuard = installUnloadGuard(window);
 
 		startApp();
@@ -505,6 +519,9 @@
 
 	/** The awaited part of startup: load the node maps, then offer crash recovery or a deep link. */
 	async function startApp() {
+		// Autosave (core/autosave.svelte.js): lists the copies left by closed tabs for the start
+		// screen straight away, while the node maps load.
+		void initAutosave();
 		//load the maps
 		appState.loadingState.loadingMsg = 'Loading maths ...';
 		appConsts.processMap = await loadProcesses();
@@ -528,7 +545,11 @@
 					appState.loadingState.loadingMsg = '';
 				}
 			},
-			confirmReplace: confirmReplaceSession
+			confirmReplace: confirmReplaceSession,
+			// The crash copy and this tab's autosaved copy are the same session: offer it once.
+			onOffered: (snap) => hideAutosaveOffer(snap?.autosaveSlot),
+			onRestored: (snap) => void adoptAutosaveSlot(snap?.autosaveSlot),
+			onDiscarded: (snap) => void discardAutosave(snap?.autosaveSlot)
 		});
 
 		//Check for query url
@@ -880,7 +901,9 @@
 	<!-- Keep this in step with the static <title> in src/app.html: once the bundle
 	     boots this replaces it, so it must stay descriptive (and not shrink back to
 	     the bare product name) for JS-rendering crawlers. -->
-	<title>AnCiR {appConsts.version}: Circadian Rhythm and Time-Series Data Analysis</title>
+	<!-- Once the session is saved to a file through the save dialog, the tab is named after
+	     the file, as a desktop program names its window. -->
+	<title>{pageTitle}</title>
 </svelte:head>
 
 {#if !appState.loadingState.isLoading || core.data.length > 0}
@@ -893,11 +916,18 @@
 	<!-- The workspace always renders; the start screen floats over it as an overlay. On an empty
 	     session that means the backdrop is a blank canvas, so dismissing the overlay leaves the
 	     user somewhere coherent rather than swapping one whole view for another. -->
-	{#if appState.view === 'canvas'}
-		<WorkflowEditor inline={true} addDataPrompt={overlay.offerAddData} />
-	{:else}
-		<PlotDisplay addDataPrompt={overlay.offerAddData} />
-	{/if}
+	<!-- The canvas or the workspace is the page's main landmark, under the page's one heading
+	     (visually hidden: the app shows its name in the tab title and the start screen). -->
+	<main aria-labelledby="app-heading">
+		<h1 id="app-heading" class="sr-only">
+			AnCiR: {appState.view === 'canvas' ? 'workflow canvas' : 'plot workspace'}
+		</h1>
+		{#if appState.view === 'canvas'}
+			<WorkflowEditor inline={true} addDataPrompt={overlay.offerAddData} />
+		{:else}
+			<PlotDisplay addDataPrompt={overlay.offerAddData} />
+		{/if}
+	</main>
 	<!-- Every node that is not shown anywhere (collapsed on the canvas, inside a collapsed
 	     composite, a plot hidden from the workspace, an unselected node in the plots view)
 	     still computes: this host mounts a hidden instance of its component, and stands it
@@ -1333,7 +1363,7 @@
 	/* Collapsible sections. The attribute is written by the delegated action in
 	   views/collapsibleSections.svelte.js; everything visual is here, next to the rest of the
 	   control-panel styling, so a section anywhere in the app collapses the same way. */
-	:global(.control-component-title[role='button']) {
+	:global(.control-component-title[data-collapsible='true']) {
 		cursor: pointer;
 		user-select: none;
 	}
@@ -1344,7 +1374,7 @@
 	   It is the SAME caret the rest of the app collapses with (icons/caret-down.svg, used by
 	   Column.svelte's row chevrons at 12px), drawn as a mask so it takes the muted text colour
 	   and can rotate. A text glyph was tried first and read as a dot at this size. */
-	:global(.control-component-title[role='button'] > p::before) {
+	:global(.control-component-title[data-collapsible='true'] > p::before) {
 		content: '';
 		display: inline-block;
 		width: 12px;

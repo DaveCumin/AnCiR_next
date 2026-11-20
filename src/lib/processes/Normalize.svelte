@@ -180,9 +180,18 @@
 		},
 		nodeSpec: {
 			id: 'process.normalize',
-			// sameType: true: the method's range or centre is read in the inputs' units
-			// (core/processInputRules.js).
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
+			// disallowTypes: a time column is refused: its epoch milliseconds are not a measure
+			// to rescale (core/processInputRules.js). sameType: true: the method's range or
+			// centre is read in the inputs' units.
+			inputs: [
+				{
+					name: 'input',
+					kind: 'column',
+					cardinality: 'one',
+					disallowTypes: ['time'],
+					sameType: true
+				}
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -204,7 +213,7 @@
 
 <ProcessShell {p}>
 	<div class="control-input">
-		<select bind:value={p.args.normalizationType}>
+		<select bind:value={p.args.normalizationType} aria-label="Method">
 			{#each normalizationTypes as type (type.value)}
 				<option value={type.value}>{type.label}</option>
 			{/each}

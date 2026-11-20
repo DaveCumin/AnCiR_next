@@ -3760,7 +3760,9 @@ def _proc_removetrend(x, args, cols):
             sd = math.sqrt(var) if var > 0 else 0.0
             new.append((detrended[i] - m) / (sd or 1.0))
         detrended = new
-    out = list(x)
+    # A row the fit did not see (a blank x or a blank y) is blank in the output, never its
+    # raw value mixed into a detrended column (RemoveTrend.svelte, 2026-11-21).
+    out = [None] * len(x)
     for k, i in enumerate(valid):
         out[i] = detrended[k]
     return out
@@ -4486,7 +4488,13 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
 
     full_days: keep floor(epochs / p) whole periods of epochs from the first sample, as
     nparACT's fulldays = TRUE (Blume, Santhi & Schabus 2016, MethodsX 3:430-435; nparACT_base.R
-    0.9.1). A record shorter than one period is used whole (fullDaysKept 0)."""
+    0.9.1). A record shorter than one period is used whole (fullDaysKept 0).
+
+    An empty epoch takes no part in any count: IS divides by the profile bins that hold data.
+    With an epoch finer than the sampling step (npcra.js, EPOCH FINER THAN THE SAMPLING) IV's
+    successive pairs are consecutive populated epochs no sample was skipped between, the grid
+    runs one sampling step past the last sample, and an onset is its window's first populated
+    bin, so a regular record scores as with an epoch equal to its sampling step."""
     if not (epoch_hours > 0) or not (period > 0):
         return None
     pairs = []
@@ -4509,9 +4517,15 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     t0 = pairs[0][0]
     t_end = pairs[-1][0]
     e = epoch_hours
-    n_grid = max(1, math.ceil((t_end - t0) / e + 1e-9))
+    dt = sampling_step([pr[0] for pr in pairs])
+    finer = dt > 0 and e < dt * (1 - 0.01)
+    if finer:
+        n_grid = max(1, math.ceil((t_end - t0 + dt) / e - 1e-9))
+    else:
+        n_grid = max(1, math.ceil((t_end - t0) / e + 1e-9))
     ssum = [0.0] * n_grid
     cnt = [0] * n_grid
+    t_sum = [0.0] * n_grid  # sample times per epoch (hours after t0), for its mean time
     for (ti, yi) in pairs:
         if math.isnan(yi):
             continue
@@ -4522,6 +4536,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
             k = n_grid - 1
         ssum[k] += yi
         cnt[k] += 1
+        t_sum[k] += ti - t0
     p = max(1, _js_round(period / e))
     # Full days: whole periods of epochs from the first sample (npcra.js, FULL DAYS).
     full_days_kept = (n_grid // p) if full_days else None
@@ -4545,18 +4560,27 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
         p_cnt[h] += 1
     profile = [(p_sum[h] / p_cnt[h]) if p_cnt[h] > 0 else float('nan') for h in range(p)]
 
+    # IS over the profile bins that hold data (npcra.js, EMPTY EPOCHS).
     prof_ss = sum((profile[h] - xbar) ** 2 for h in range(p) if not math.isnan(profile[h]))
-    IS = (nn * prof_ss) / (p * overall_ss) if overall_ss > 0 else float('nan')
+    p_valid = sum(1 for h in range(p) if not math.isnan(profile[h]))
+    IS = (nn * prof_ss) / (p_valid * overall_ss) if overall_ss > 0 else float('nan')
 
     # IV: mean squared successive difference over the valid successive pairs, over the
     # variance (Witting et al. 1990); with no gaps n_pairs = nn - 1, the textbook formula.
     # Dividing by nn - 1 regardless biased IV low with missing epochs (FIT-8, npcra.js).
+    # A pair is two adjacent epochs; with an epoch finer than the sampling, also two
+    # populated epochs no sample was skipped between.
     diff_ss = 0.0
     n_pairs = 0
-    for k in range(1, n_epochs):
-        if not math.isnan(x[k]) and not math.isnan(x[k - 1]):
-            diff_ss += (x[k] - x[k - 1]) ** 2
+    prev = -1
+    for k in range(n_epochs):
+        if math.isnan(x[k]):
+            continue
+        if prev >= 0 and (k - prev == 1 or (
+                finer and t_sum[k] / cnt[k] - t_sum[prev] / cnt[prev] <= 1.5 * dt)):
+            diff_ss += (x[k] - x[prev]) ** 2
             n_pairs += 1
+        prev = k
     IV = (diff_ss / n_pairs / (overall_ss / nn)
           if (overall_ss > 0 and n_pairs > 0) else float('nan'))
 
@@ -4578,7 +4602,14 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
             if best_val is None or better(m, best_val):
                 best_val = m
                 best_start = s
-        return best_val, best_start * e
+        # The onset is the window's first bin that holds data (npcra.js).
+        first = best_start
+        if best_val is not None:
+            for j in range(w):
+                if not math.isnan(profile[(best_start + j) % p]):
+                    first = (best_start + j) % p
+                    break
+        return best_val, first * e
 
     M10, m_onset = roll(m_window, lambda m, b: m > b)
     L5, l_onset = roll(l_window, lambda m, b: m < b)
@@ -4590,13 +4621,15 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     RA = ((M10 - L5) / denom
           if (not math.isnan(M10) and not math.isnan(L5) and denom != 0) else float('nan'))
     bin_centres = [h * e + e / 2 for h in range(p)]
+    fillable = min(n_epochs, n_epochs * e / dt) if finer else n_epochs
     return {
         'IS': IS, 'IV': IV, 'RA': RA, 'M10': M10, 'L5': L5,
         'M10onset': m_onset, 'L5onset': l_onset,
         'profile': profile, 'bin_centres': bin_centres, 'n': nn, 'p': p, 'n_epochs': n_epochs,
-        'missingEpochFraction': (n_epochs - nn) / n_epochs,
+        'missingEpochFraction': max(0, (fillable - nn) / fillable),
         't0': t0,
         'fullDaysKept': full_days_kept, 'droppedEpochs': n_grid - n_epochs,
+        'samplingInterval': dt, 'pValid': p_valid,
     }
 
 

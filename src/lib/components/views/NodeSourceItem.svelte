@@ -92,13 +92,20 @@
 </script>
 
 <div class="node-item">
+	<!-- A focusable role="group", not a button: the header holds the name editor and the find
+	     and delete buttons, which a button cannot (axe nested-interactive). Enter or Space on
+	     the header itself selects the node. Svelte counts every group as non-interactive, hence
+	     the ignore (svelteWarnings.guard.test.js). -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<div
 		class="node-head"
-		role="button"
+		role="group"
 		tabindex="0"
+		aria-label={getNodeName(node)}
 		title="Select to show controls in the panel"
 		onclick={selectNode}
 		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
 			if (e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
 				selectNode(e);

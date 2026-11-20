@@ -119,3 +119,134 @@ for (const demo of DEMOS) {
 		await expect.poll(() => cutText(page), { timeout: 15000 }).toEqual([]);
 	});
 }
+
+// A node's hover/focus action cluster (NodeActions: quick plot, collapse, delete) overlays
+// the right end of its header. A long title used to run under it ("Logistic regression"
+// touched the quick-plot icon). While the cluster shows, the title must end a fixed gap
+// before the first icon, ellipsized, with the full name kept for hover and screen readers.
+const TITLE_ICON_GAP = 4; // px; the header reserves 6, less the span's 1 px border and rounding
+
+/** The node's visible title text box, its icons, and how its full name is exposed. */
+function titleAndIcons(page, id) {
+	return page.evaluate((id) => {
+		const w = document.querySelector(`.workflow-node-wrapper[data-node-id="${id}"]`);
+		const el = w.querySelector(
+			'.tp-header .editable-span, .node-header .editable-span, .node-header .node-label'
+		);
+		el.dispatchEvent(new PointerEvent('pointerenter')); // Editable titles itself on hover
+		const cs = getComputedStyle(el);
+		const box = el.getBoundingClientRect();
+		const range = document.createRange();
+		range.selectNodeContents(el);
+		const text = range.getBoundingClientRect();
+		const contentRight = box.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+		const host = w.querySelector('.node-actions-host');
+		const icons = [...(host?.querySelectorAll('.na-btn') ?? [])]
+			.filter((b) => getComputedStyle(host).opacity === '1' && b.getClientRects().length)
+			.map((b) => {
+				const r = b.getBoundingClientRect();
+				return { name: b.getAttribute('aria-label'), left: r.left, top: r.top, bottom: r.bottom };
+			});
+		return {
+			name: el.textContent.trim(),
+			textRight: Math.min(text.right, contentRight),
+			textTop: text.top,
+			textBottom: text.bottom,
+			ellipsized: text.width > contentRight - box.left + 0.05,
+			title: el.getAttribute('title') ?? '',
+			ariaLabel: el.getAttribute('aria-label') ?? el.textContent.trim(),
+			icons
+		};
+	}, id);
+}
+
+function expectTitleClear(m, what) {
+	expect(m.icons.length, `${what}: action icons shown`).toBeGreaterThan(0);
+	for (const icon of m.icons) {
+		const sameRow = icon.top < m.textBottom && icon.bottom > m.textTop;
+		if (!sameRow) continue;
+		expect(
+			icon.left - m.textRight,
+			`${what}: "${m.name}" ends ${(icon.left - m.textRight).toFixed(1)} px before ${icon.name}`
+		).toBeGreaterThanOrEqual(TITLE_ICON_GAP);
+	}
+	if (m.ellipsized) expect(m.title, `${what}: full name on hover`).toContain(m.name);
+	expect(m.ariaLabel, `${what}: full name for screen readers`).toContain(m.name);
+}
+
+test('a node title never runs under its hover or focus action icons', async ({ page }) => {
+	const errors = [];
+	page.on('pageerror', (e) => errors.push(e.message));
+	await page.setViewportSize({ width: 1600, height: 1000 });
+	await openApp(page);
+	await page.locator('button.primary-card', { hasText: 'Start with a blank canvas' }).click();
+	const ids = () =>
+		page.evaluate(() =>
+			[...document.querySelectorAll('.workflow-node-wrapper')].map((e) => e.dataset.nodeId)
+		);
+	const wrapper = (id) => page.locator(`.workflow-node-wrapper[data-node-id="${id}"]`);
+	const LONG = 'A renamed transform with a really very long descriptive name';
+	const made = [];
+	// Analyses (quick plot + collapse + delete), a transform, a plot (delete only).
+	for (const type of [
+		'LogisticRegression',
+		'CircadianFunctionIndex',
+		'RhythmicityAnalysis',
+		'Add',
+		'scatterplot'
+	]) {
+		const before = await ids();
+		await page.getByTestId('palette-trigger').click();
+		await page.getByTestId(`palette-item-${type}`).click();
+		await expect(page.locator('.workflow-node-wrapper')).toHaveCount(before.length + 1);
+		await page.waitForTimeout(300); // second placement pass
+		const id = (await ids()).find((i) => !before.includes(i));
+		made.push({ type, id });
+		// Spread them out so each can be hovered on its own.
+		const b = await wrapper(id).boundingBox();
+		const i = made.length - 1;
+		await page.mouse.move(b.x + 30, b.y + 8);
+		await page.mouse.down();
+		await page.mouse.move(80 + (i % 3) * 460, 160 + Math.floor(i / 3) * 400, { steps: 8 });
+		await page.mouse.up();
+	}
+	// A renamed node with a very long name.
+	const add = made.find((m) => m.type === 'Add').id;
+	await wrapper(add).locator('.editable-span').first().dblclick();
+	await page.keyboard.press('ControlOrMeta+a');
+	await page.keyboard.type(LONG);
+	await page.keyboard.press('Enter');
+	await expect(wrapper(add).locator('.editable-span').first()).toHaveText(LONG);
+
+	const canvas = await page.locator('.workflow-editor.inline').boundingBox();
+	const away = async () => {
+		await page.evaluate(() => document.activeElement?.blur());
+		// Empty canvas (the corners hold the zoom buttons).
+		await page.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height - 30);
+		await page.waitForTimeout(600); // the cluster's hide grace period
+	};
+	await away();
+	for (const { type, id } of made) {
+		// Hover.
+		const b = await wrapper(id).boundingBox();
+		await page.mouse.move(b.x + b.width / 2, b.y + 40);
+		await expect.poll(async () => (await titleAndIcons(page, id)).icons.length).toBeGreaterThan(0);
+		expectTitleClear(await titleAndIcons(page, id), `${type} hover`);
+		await away();
+		// Keyboard focus inside the card reveals the cluster as well.
+		await expect.poll(async () => (await titleAndIcons(page, id)).icons.length).toBe(0);
+		// A key press first, so the browser treats the focus as keyboard focus (:focus-visible).
+		await page.keyboard.press('Shift');
+		await wrapper(id).locator('[aria-roledescription="node"]').first().focus();
+		await expect.poll(async () => (await titleAndIcons(page, id)).icons.length).toBeGreaterThan(0);
+		expectTitleClear(await titleAndIcons(page, id), `${type} focus`);
+		await away();
+	}
+	// The long names really were cut, so the checks above covered the ellipsis case.
+	const lr = made.find((m) => m.type === 'LogisticRegression').id;
+	await wrapper(lr).hover();
+	expect((await titleAndIcons(page, lr)).ellipsized).toBe(true);
+	await wrapper(add).hover();
+	expect((await titleAndIcons(page, add)).ellipsized).toBe(true);
+	expect(errors).toEqual([]);
+});

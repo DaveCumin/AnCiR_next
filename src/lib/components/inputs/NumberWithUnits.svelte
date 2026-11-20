@@ -16,6 +16,7 @@
 <script>
 	import { onMount, tick } from 'svelte';
 	import { displayNumber, readableNumber } from './numberDisplay.js';
+	import { controlLabel } from './controlLabel.js';
 	let {
 		value = $bindable(),
 		step = 1,
@@ -31,10 +32,16 @@
 		placeholder = undefined,
 		selectedUnitStart = 'default',
 		className = '',
-		style = ''
+		style = '',
+		// The box's name where nothing labels it (no <ControlInput> around it): a bare value box
+		// in an operation's panel or a condition row.
+		ariaLabel = undefined
 	} = $props();
 
 	let inputElement = $state(null);
+	// Inside a <ControlInput associate={false}> (a field with a note or a reset button
+	// beside it) the box is named by that label; in a wrapping <label> it needs nothing.
+	const ownLabel = controlLabel();
 
 	// eg units:
 	// 		{
@@ -175,6 +182,8 @@
 	<input
 		bind:this={inputElement}
 		type="number"
+		aria-labelledby={ownLabel?.id ?? undefined}
+		aria-label={ownLabel ? undefined : ariaLabel}
 		{step}
 		min={typeof unitFactor === 'object' ? min : min / unitFactor}
 		max={typeof unitFactor === 'object' ? max : max / unitFactor}

@@ -181,7 +181,8 @@
 				From the <strong>node palette</strong> (the <strong>+</strong> button, top-right), under
 				<strong>Binning</strong>, choose <strong>Interpolate</strong>, and wire your
 				<strong>time</strong>
-				column into <strong>x</strong> and the column with gaps into <strong>y</strong>.
+				column into its <strong>x</strong> input and the column with gaps into its
+				<strong>y</strong> input.
 			</li>
 			<li>
 				Choose the <strong>Method</strong>: <strong>Linear</strong> (the safe default),
@@ -226,8 +227,8 @@
 				<strong>Bin Data</strong>.
 			</li>
 			<li>
-				Expand the node and pick your <strong>X column</strong> (time) and one or more
-				<strong>Y columns</strong>. Multiple Y columns can be binned in one step.
+				Expand the node and pick your <strong>Time (x)</strong> column and one or more
+				<strong>Values (y)</strong> columns. Several value columns can be binned in one step.
 			</li>
 			<li>
 				Set the <strong>Bin size (h)</strong> (e.g., 1 h) and <strong>Bin start</strong> offset.
@@ -244,7 +245,7 @@
 				Tick <strong>Different step size</strong> and set a smaller <strong>Step size (h)</strong> for
 				a sliding-window (overlapping) average.
 			</li>
-			<li>The node outputs new binned X and Y columns to wire into plots or further processes.</li>
+			<li>The node outputs new binned x and y columns to wire into plots or further processes.</li>
 		</ol>
 		<DemoLink
 			session="sessions/demos/demo-tp-binneddata.json"
@@ -372,15 +373,15 @@
 				<strong>Smooth Data</strong>.
 			</li>
 			<li>
-				Expand the node and select the <strong>X column</strong> (time) and
-				<strong>Y column(s)</strong>. Multiple Y columns can be smoothed in one step.
+				Expand the node and select the <strong>Time (x)</strong> column and one or more
+				<strong>Values (y)</strong> columns. Several value columns can be smoothed in one step.
 			</li>
 			<li>
 				Choose a <strong>Type</strong> (moving average, LOESS, Savitzky-Golay, or Whittaker-Eilers)
 				and set its parameters. <em>Whittaker-Eilers with Lambda = 100</em> works well for most circadian
 				recordings.
 			</li>
-			<li>The node outputs smoothed X and Y columns.</li>
+			<li>The node outputs smoothed x and y columns.</li>
 			<li>Wire these smoothed columns into your Actogram or Periodogram.</li>
 		</ol>
 		<DemoLink
@@ -458,7 +459,9 @@
 			<li>
 				The output column holds the <a class="gloss" href="#gloss-residual">residuals</a> (original
 				− fitted trend). The fitted <a class="gloss" href="#gloss-r-squared">R²</a> and
-				<a class="gloss" href="#gloss-rmse">RMSE</a> are shown in the node.
+				<a class="gloss" href="#gloss-rmse">RMSE</a> are shown in the node. A row with no x value (or
+				no value of its own) is left out of the fit and is blank in the output, so the column holds only
+				detrended values.
 			</li>
 			<li>The original data is always preserved; delete the node to restore it.</li>
 		</ol>

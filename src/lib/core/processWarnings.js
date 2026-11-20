@@ -18,14 +18,23 @@
  * failures render as "no warnings", never as an error.
  */
 import { appConsts } from '$lib/core/core.svelte.js';
+import { refusedInputWarnings } from '$lib/core/processInputRules.js';
 
 export function processNodeWarnings(p) {
 	if (!p?.name) return [];
-	const getWarnings = appConsts.processMap.get(p.name)?.definition?.getWarnings;
-	if (typeof getWarnings !== 'function') return [];
+	// An input of a type the process refuses (a saved session wired before the rule) is
+	// passed through, and said so, for every process (core/processInputRules.js).
+	let refused = [];
 	try {
-		return getWarnings(p) ?? [];
+		refused = refusedInputWarnings(p);
 	} catch {
-		return [];
+		refused = [];
+	}
+	const getWarnings = appConsts.processMap.get(p.name)?.definition?.getWarnings;
+	if (typeof getWarnings !== 'function') return refused;
+	try {
+		return [...refused, ...(getWarnings(p) ?? [])];
+	} catch {
+		return refused;
 	}
 }

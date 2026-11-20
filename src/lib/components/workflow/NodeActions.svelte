@@ -1,3 +1,14 @@
+<script module>
+	// Button box and gap of the cluster (.na-btn width/height, .node-actions gap below).
+	export const NODE_ACTION_SIZE = 24;
+	export const NODE_ACTION_GAP = 1;
+
+	/** Width in px of a revealed cluster showing `count` action buttons. */
+	export function nodeActionsWidth(count) {
+		return count > 0 ? count * NODE_ACTION_SIZE + (count - 1) * NODE_ACTION_GAP : 0;
+	}
+</script>
+
 <script>
 	// @ts-nocheck
 	// Shared node/plot action cluster: note · maximise · collapse/expand · delete.

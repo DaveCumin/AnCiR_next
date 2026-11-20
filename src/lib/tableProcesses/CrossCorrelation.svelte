@@ -221,14 +221,12 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Series A</p>
+		<ControlInput label="Series A (x)" associate={false}>
 			<ColumnSelector bind:value={p.args.xIN} excludeColIds={outIds} />
-		</div>
-		<div class="control-input">
-			<p>Series B</p>
+		</ControlInput>
+		<ControlInput label="Series B (y)" associate={false}>
 			<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
-		</div>
+		</ControlInput>
 	{/if}
 	<ControlInput label="Method">
 		<AttributeSelect
@@ -258,7 +256,10 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">{result.aName} × {result.bName}</summary>
-			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+			<div
+				class="d-table-wrap scroll-fade-x"
+				{@attach scrollFade({ label: 'Cross-correlation results' })}
+			>
 				<table class="d-table">
 					<thead>
 						<tr><th>lag</th><th>r</th><th>r (prewhitened)</th><th>p (prewhitened)</th></tr>

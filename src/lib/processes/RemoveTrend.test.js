@@ -160,10 +160,10 @@ describe('removetrend — index axis, linear', () => {
 		out.forEach((v) => expect(v).toBeCloseTo(0, 8));
 	});
 
-	it('preserves null/NaN entries at their positions', () => {
+	it('keeps blank (null / NaN) entries blank at their positions, as null', () => {
 		const out = removetrend([3, null, 7, NaN, 11], { xColId: -1, model: 'linear' });
 		expect(out[1]).toBeNull();
-		expect(Number.isNaN(out[3])).toBe(true);
+		expect(out[3]).toBeNull();
 		// the three valid points lie on a perfect line → residuals ≈ 0
 		[0, 2, 4].forEach((i) => expect(out[i]).toBeCloseTo(0, 8));
 	});

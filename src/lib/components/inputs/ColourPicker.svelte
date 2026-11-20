@@ -21,6 +21,7 @@
 	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { markPopup } from '$lib/components/reusables/editScopePopup.js';
+	import { controlLabel, labelledBy } from './controlLabel.js';
 	// `value` is bindable for the controls that own their colour outright (bind:value). A
 	// control whose colour is derived (Settings' appearance map draws each row from the session
 	// map) passes `onChange` instead: it is called with every colour the USER chooses, and the
@@ -28,6 +29,10 @@
 	let { value = $bindable(), onChange = undefined } = $props();
 	// Prefix for the ids that tie each slider and the hex box to its <label>.
 	const uid = $props.id();
+	// The popup renders inside this component (not portalled), so a wrapping <label> would
+	// turn every click on its background into a click on its first button. A picker in a
+	// <ControlInput associate={false}> is named "<label>, Choose colour" instead.
+	const ownLabel = controlLabel();
 
 	//for moving around
 	let pos = $state({ x: 100, y: 100, width: 300, height: 250 });
@@ -713,7 +718,9 @@
 <button
 	type="button"
 	class="cp-preview"
+	id="{uid}-swatch"
 	aria-label="Choose colour"
+	aria-labelledby={labelledBy(ownLabel?.id, `${uid}-swatch`)}
 	bind:this={swatchEl}
 	style="background-color: {value};"
 	onclick={(e) => open(e)}

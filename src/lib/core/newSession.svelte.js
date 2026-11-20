@@ -21,6 +21,8 @@ import { resetSession, confirmDiscard } from './sessionLoad.svelte.js';
 import { hasUnsavedChanges, markSessionSaved } from './unsavedChanges.svelte.js';
 import { history } from './opHistory.svelte.js';
 import { paramDiffWatcher } from './paramDiffWatcher.svelte.js';
+import { clearSaveTarget } from './saveTarget.svelte.js';
+import { autosaveSessionReplaced } from './autosave.svelte.js';
 
 export const NEW_SESSION_LABEL = 'New session';
 
@@ -67,6 +69,10 @@ export async function startNewSession({ onReset } = {}) {
 			history.endLoad();
 		}
 		markSessionSaved();
+		// A new session is not the file Save wrote to, and the old session's autosaved copy goes:
+		// the user agreed to discard it, or it had nothing unsaved.
+		clearSaveTarget();
+		void autosaveSessionReplaced();
 		onReset?.();
 		return true;
 	} finally {

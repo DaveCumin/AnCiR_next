@@ -13,6 +13,25 @@
 // Pure, and dependent only on the house missing-value rule (isInvalidValue) — O(n), safe
 // to run synchronously (no worker).
 import { isInvalidValue } from './stats.js';
+import { samplingStep } from './samplingInterval.js';
+
+// An epoch counts as finer than the sampling only when it is more than this share shorter
+// than the sampling step, so times stored to a few decimals (1-min data as 0.0167 h) with an
+// epoch equal to the step stay on the ordinary path.
+const FINER_TOLERANCE = 0.01;
+
+/**
+ * Whether the epoch is shorter than the record's sampling step: most epochs then hold no
+ * sample, and the statistics can be no finer than the data (see EPOCH FINER THAN THE
+ * SAMPLING on computeNPCRA).
+ *
+ * @param {number} epochHours
+ * @param {number} samplingInterval  the record's sampling step (h); NaN when unknown
+ * @returns {boolean}
+ */
+export function epochFinerThanSampling(epochHours, samplingInterval) {
+	return samplingInterval > 0 && epochHours < samplingInterval * (1 - FINER_TOLERANCE);
+}
 
 /**
  * @param {number[]} t  time in hours (any origin; only differences matter)
@@ -27,10 +46,31 @@ import { isInvalidValue } from './stats.js';
  * @returns {{IS:number,IV:number,RA:number,M10:number,L5:number,M10onset:number,
  *   L5onset:number,profile:number[],binCentres:number[],n:number,p:number,
  *   nEpochs:number,missingEpochFraction:number,t0:number,fullDaysKept:number|null,
- *   droppedEpochs:number}|null}  null when there is no usable data. `missingEpochFraction`
- *   is (nEpochs - n) / nEpochs, the empty epochs. `nEpochs` counts the epochs used (after
- *   the full-days cut); `fullDaysKept` is the number of whole periods kept (null with
- *   fullDays off) and `droppedEpochs` the epochs the cut left out.
+ *   droppedEpochs:number,samplingInterval:number,pValid:number}|null}  null when there is no
+ *   usable data. `missingEpochFraction` is (nEpochs - n) / nEpochs, the empty epochs (with an
+ *   epoch finer than the sampling: the share of the epochs the sampling could fill that are
+ *   empty). `nEpochs` counts the epochs used (after the full-days cut); `fullDaysKept` is the
+ *   number of whole periods kept (null with fullDays off) and `droppedEpochs` the epochs the
+ *   cut left out. `samplingInterval` is the record's sampling step (h, NaN when unknown) and
+ *   `pValid` the number of profile bins that hold data.
+ *
+ * EMPTY EPOCHS. An epoch with no sample is missing, and a missing epoch takes no part in any
+ * count, mean or variance. IS = n·Σ_h(x̄_h − X̄)² / (p·Σ_i(x_i − X̄)²) (Van Someren et al.
+ * 1999, p.509) is the variance of the p hourly means over the variance of the n epochs, so
+ * its p is the number of profile bins that HAVE a mean (`pValid`); the published formula
+ * assumes every bin of the day is observed, where the two are the same number.
+ *
+ * EPOCH FINER THAN THE SAMPLING. With an epoch shorter than the sampling step (0.25 h epochs
+ * on hourly data) only every few epochs can hold a sample. The statistics are then those of
+ * the samples themselves, so a regular record gives the same IS and IV as an epoch equal to
+ * its sampling step:
+ *  - IV's successive differences (Witting et al. 1990) are taken between consecutive
+ *    populated epochs that no sample was skipped between (their mean sample times at most
+ *    1.5 sampling steps apart). A longer gap is missing data and breaks the pair, exactly as
+ *    an empty epoch does at an ordinary epoch length.
+ *  - The last sample stands for one sampling step, so the epoch grid runs to the end of it
+ *    (else Full days would lose the last day to a grid one sampling step short).
+ *  - An onset is the first populated bin of its window (the window may start on empty bins).
  *
  * FULL DAYS. nparACT (Blume, Santhi & Schabus 2016, MethodsX 3:430-435,
  * doi:10.1016/j.mex.2016.05.006) defaults to fulldays = TRUE and cuts the record to whole
@@ -75,7 +115,12 @@ export function computeNPCRA(t, y, opts = {}) {
 	// 2. Resample into equal epochs (epoch value = mean of samples in the bin;
 	//    an empty bin is missing → NaN).
 	const e = epochHours;
-	const nGrid = Math.max(1, Math.ceil((tEnd - t0) / e + 1e-9));
+	const samplingInterval = samplingStep(pairs.map((pr) => pr[0]));
+	const finer = epochFinerThanSampling(e, samplingInterval);
+	const nGrid = Math.max(
+		1,
+		finer ? Math.ceil((tEnd - t0 + samplingInterval) / e - 1e-9) : Math.ceil((tEnd - t0) / e + 1e-9)
+	);
 	// A non-time X axis with a very large value range yields a huge span/epoch ratio
 	// (epochHours>0 is already guaranteed above), so nEpochs can be enormous and
 	// `new Float64Array(nEpochs)` throws / OOMs. Cap at a sane window count; beyond
@@ -83,6 +128,8 @@ export function computeNPCRA(t, y, opts = {}) {
 	if (!Number.isFinite(nGrid) || nGrid > 1e7) return null;
 	const sum = new Float64Array(nGrid);
 	const cnt = new Float64Array(nGrid);
+	// Sum of the sample times in each epoch (hours after t0), for the epoch's mean time.
+	const tSum = new Float64Array(nGrid);
 	for (const [ti, yi] of pairs) {
 		if (!Number.isFinite(yi)) continue;
 		// Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
@@ -92,6 +139,7 @@ export function computeNPCRA(t, y, opts = {}) {
 		else if (k >= nGrid) k = nGrid - 1;
 		sum[k] += yi;
 		cnt[k] += 1;
+		tSum[k] += ti - t0;
 	}
 	// Epochs per period (the folded profile's bins).
 	const p = Math.max(1, Math.round(period / e));
@@ -126,27 +174,47 @@ export function computeNPCRA(t, y, opts = {}) {
 	const profile = new Array(p);
 	for (let h = 0; h < p; h++) profile[h] = pCnt[h] > 0 ? pSum[h] / pCnt[h] : NaN;
 
-	// 5. IS = n·Σ_h(profile−X̄)²  /  (p·Σ_i(x−X̄)²)
+	// 5. IS = n·Σ_h(profile−X̄)²  /  (pValid·Σ_i(x−X̄)²), over the profile bins that hold data
+	//    (see EMPTY EPOCHS above). Dividing by all p bins read 0.25 h epochs on hourly data
+	//    as IS 0.25 instead of 0.99: three bins in four were never observed.
 	let profSS = 0;
-	for (let h = 0; h < p; h++) if (Number.isFinite(profile[h])) profSS += (profile[h] - Xbar) ** 2;
-	const IS = overallSS > 0 ? (n * profSS) / (p * overallSS) : NaN;
+	let pValid = 0;
+	for (let h = 0; h < p; h++) {
+		if (!Number.isFinite(profile[h])) continue;
+		profSS += (profile[h] - Xbar) ** 2;
+		pValid++;
+	}
+	const IS = overallSS > 0 ? (n * profSS) / (pValid * overallSS) : NaN;
 
 	// 6. IV = [Σ(xᵢ−xᵢ₋₁)² / nPairs]  /  [Σ_i(x−X̄)² / n], over the successive pairs whose two
 	//    epochs are both present. The mean squared successive difference over the variance
 	//    (Witting et al. 1990; Van Someren et al. 1999, p.509); with no gaps nPairs = n − 1 and
 	//    this is the textbook n·Σ(xᵢ−xᵢ₋₁)² / ((n−1)·Σ(x−X̄)²). Dividing by n − 1 regardless
-	//    (FIT-8) biased IV low in proportion to the missing epochs.
+	//    (FIT-8) biased IV low in proportion to the missing epochs. A pair is two adjacent
+	//    epochs; with an epoch finer than the sampling, also two populated epochs no sample
+	//    was skipped between (see EPOCH FINER THAN THE SAMPLING above), without which there
+	//    is no pair at all and IV is blank.
 	let diffSS = 0;
 	let nPairs = 0;
-	for (let k = 1; k < nEpochs; k++) {
-		if (Number.isFinite(x[k]) && Number.isFinite(x[k - 1])) {
-			diffSS += (x[k] - x[k - 1]) ** 2;
+	let prev = -1;
+	for (let k = 0; k < nEpochs; k++) {
+		if (!Number.isFinite(x[k])) continue;
+		if (
+			prev >= 0 &&
+			(k - prev === 1 ||
+				(finer && tSum[k] / cnt[k] - tSum[prev] / cnt[prev] <= 1.5 * samplingInterval))
+		) {
+			diffSS += (x[k] - x[prev]) ** 2;
 			nPairs++;
 		}
+		prev = k;
 	}
 	const IV = overallSS > 0 && nPairs > 0 ? diffSS / nPairs / (overallSS / n) : NaN;
-	// Share of the epoch grid with no valid sample; the node warns above 10%.
-	const missingEpochFraction = (nEpochs - n) / nEpochs;
+	// Share of the epoch grid with no valid sample; the node warns above 10%. With an epoch
+	// finer than the sampling only one epoch in samplingInterval / e can hold a sample, so
+	// the share is of those.
+	const fillable = finer ? Math.min(nEpochs, (nEpochs * e) / samplingInterval) : nEpochs;
+	const missingEpochFraction = Math.max(0, (fillable - n) / fillable);
 
 	// 7. M10 / L5 as circular rolling-window means over the daily profile.
 	const roll = (widthHours, better) => {
@@ -167,7 +235,19 @@ export function computeNPCRA(t, y, opts = {}) {
 				bestStart = s;
 			}
 		}
-		return { value: bestVal, onset: bestStart * e };
+		// The onset is the window's first bin that holds data: with an epoch finer than the
+		// sampling the first window to reach the best mean starts on empty bins, which read
+		// an 08:00 onset as 07:15.
+		let first = bestStart;
+		if (bestVal !== null) {
+			for (let j = 0; j < w; j++) {
+				if (Number.isFinite(profile[(bestStart + j) % p])) {
+					first = (bestStart + j) % p;
+					break;
+				}
+			}
+		}
+		return { value: bestVal, onset: first * e };
 	};
 	const M = roll(mWindow, (m, b) => m > b);
 	const L = roll(lWindow, (m, b) => m < b);
@@ -193,7 +273,9 @@ export function computeNPCRA(t, y, opts = {}) {
 		missingEpochFraction,
 		t0,
 		fullDaysKept,
-		droppedEpochs
+		droppedEpochs,
+		samplingInterval,
+		pValid
 	};
 }
 
@@ -209,9 +291,32 @@ export const NPCRA_MAX_MISSING_EPOCHS = 0.1;
  * @param {string} name                    the series' column name
  * @param {number} missingEpochFraction    computeNPCRA's (nEpochs - n) / nEpochs
  * @param {number} epochHours              the epoch length (h)
+ * @param {number} [samplingInterval]      computeNPCRA's samplingInterval (h)
  * @returns {string|null}
  */
-export function missingEpochWarning(name, missingEpochFraction, epochHours) {
+export function missingEpochWarning(name, missingEpochFraction, epochHours, samplingInterval) {
 	if (!(missingEpochFraction > NPCRA_MAX_MISSING_EPOCHS)) return null;
+	if (epochFinerThanSampling(epochHours, samplingInterval)) {
+		return `"${name}": about ${Math.round(missingEpochFraction * 100)}% of the samples expected at the ${formatHours(samplingInterval)} h sampling interval are missing. IS and IV use only the samples (and, for IV, the successive pairs) that are present, so they rest on less of the recording than its length suggests.`;
+	}
 	return `"${name}": ${Math.round(missingEpochFraction * 100)}% of the ${epochHours} h epochs have no data. IS and IV use only the epochs (and, for IV, the successive pairs) that are present, so they rest on less of the recording than its length suggests.`;
+}
+
+const formatHours = (h) => String(Number(h.toPrecision(3)));
+
+/**
+ * The notice for an epoch shorter than the record's sampling step, or null when it is not.
+ * Most epochs are then empty: the statistics are computed from the epochs that hold data and
+ * are the same as with an epoch equal to the sampling step, and the profile has a value only
+ * in the bins a sample falls in. One text for every node that takes an NPCRA epoch
+ * (NonparametricRA, CFI, Moving Analysis).
+ *
+ * @param {number} epochHours        the epoch length (h)
+ * @param {number} samplingInterval  the record's sampling step (h)
+ * @returns {string|null}
+ */
+export function epochFinerWarning(epochHours, samplingInterval) {
+	if (!epochFinerThanSampling(epochHours, samplingInterval)) return null;
+	const dt = formatHours(samplingInterval);
+	return `The ${epochHours} h epoch is shorter than the data's sampling interval (about ${dt} h), so most epochs are empty. The results are no finer than the data: they are the same as with a ${dt} h epoch.`;
 }

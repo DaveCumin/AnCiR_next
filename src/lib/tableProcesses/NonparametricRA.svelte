@@ -11,7 +11,7 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { computeNPCRA, missingEpochWarning } from '$lib/utils/npcra.js';
+	import { computeNPCRA, missingEpochWarning, epochFinerWarning } from '$lib/utils/npcra.js';
 	import {
 		applyPhaseReference,
 		relabelFoldedProfile,
@@ -167,7 +167,11 @@
 			if (v < lo) lo = v;
 			if (v > hi) hi = v;
 		}
-		const spanHours = hi - lo;
+		// The record covers its last sample's interval too: 168 hourly samples are 7 days of
+		// data, not the 6.96 between the first and last sample time (which warned "7.0 cycles
+		// ... very noisy below ~7 days").
+		const samplingInterval = Object.values(perY)[0].samplingInterval;
+		const spanHours = hi - lo + (samplingInterval > 0 ? samplingInterval : 0);
 		const period = opts.period || 24;
 		const days = spanHours / period;
 
@@ -176,6 +180,11 @@
 				`Short recording: ${days.toFixed(1)} cycles of data (about ${days.toFixed(1)} days at a ${period} h period). Interdaily stability is a between-day statistic and is very noisy below ~${NPCRA_MIN_DAYS} days; IS and RA here should be read as indicative, not quantitative.`
 			);
 		}
+
+		// An epoch shorter than the sampling interval: the result is no finer than the data.
+		// The interval is the time column's, so it is the same for every series.
+		const finer = epochFinerWarning(opts.epochHours, samplingInterval);
+		if (finer) warnings.push(finer);
 
 		const epochsPerCycle = period / (opts.epochHours || 1);
 		if (epochsPerCycle < NPCRA_MIN_EPOCHS_PER_CYCLE) {
@@ -198,7 +207,12 @@
 		let namer = null;
 		for (const [yId, res] of Object.entries(perY)) {
 			const name = displayNameById(Number(yId), `column ${yId}`, (namer ??= columnNamer()));
-			const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
+			const w = missingEpochWarning(
+				name,
+				res.missingEpochFraction,
+				opts.epochHours,
+				res.samplingInterval
+			);
 			if (w) warnings.push(w);
 		}
 
@@ -440,14 +454,12 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Time (x)</p>
+		<ControlInput label="Time (x)" associate={false}>
 			<ColumnSelector bind:value={p.args.xIN} excludeColIds={xExcludeIds} />
-		</div>
-		<div class="control-input">
-			<p>Activity (y)</p>
+		</ControlInput>
+		<ControlInput label="Activity (y)" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<div class="control-input-horizontal">
@@ -492,7 +504,10 @@
 {:else if rows.length}
 	<div class="npcra-results">
 		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
-		<div class="npcra-table scroll-fade-x" {@attach scrollFade()}>
+		<div
+			class="npcra-table scroll-fade-x"
+			{@attach scrollFade({ label: 'Nonparametric rhythm results' })}
+		>
 			<table>
 				<thead>
 					<tr>

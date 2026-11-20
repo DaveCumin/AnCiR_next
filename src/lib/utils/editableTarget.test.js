@@ -119,7 +119,10 @@ describe('guard: window and document Escape handlers decide about fields', () =>
 			'excluded by editingKey',
 		'lib/components/workflow/NodeNoteButton.svelte':
 			'a note popover: Escape closes it from its own text box, and preventDefault keeps the ' +
-			'canvas from also deselecting'
+			'canvas from also deselecting',
+		'lib/components/reusables/Notifications.svelte':
+			'its window keydown is the Alt+T / F8 jump to a toast, not Escape; Escape is handled on ' +
+			'a toast element (which holds only buttons) and stops there'
 	};
 
 	const handlers = ALL.filter((f) => {

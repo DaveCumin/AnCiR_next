@@ -12,6 +12,8 @@
 	import { ENCODING_MODE_LABELS, sizeModesFor, MIN_RADIUS_FLOOR } from './encodings.js';
 
 	let { datum } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	const on = $derived(!!datum?.sizeEncoding && !!datum?.sizeBy);
 	const enc = $derived(datum?.sizeEncoding);
@@ -45,14 +47,13 @@
 
 	{#if on}
 		<div class="size-by-column">
-			<ControlInput label="Column"></ControlInput>
-			<Column col={datum.sizeBy} canChange={true} />
+			<ControlInput label="Column" associate={false} id="{labelUid}-size"></ControlInput>
+			<Column labelledby="{labelUid}-size" col={datum.sizeBy} canChange={true} />
 		</div>
 
 		{#if wired}
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Size read as</p>
+				<ControlInput label="Size read as">
 					<AttributeSelect
 						bind:value={
 							() => (modeOptions.includes(enc.mode) ? enc.mode : 'auto'), (v) => (enc.mode = v)
@@ -60,7 +61,7 @@
 						options={modeOptions}
 						optionsDisplay={modeLabels}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 
 			<!-- The point radius, px, at the range's ends; the AREA is linear in between. -->

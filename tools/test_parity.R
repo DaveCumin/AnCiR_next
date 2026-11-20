@@ -231,6 +231,32 @@ run_clock_zone_fixture <- function(fx, rec) {
   )
 }
 
+# A column-process fixture's `columns` (other columns the process reads by id, such as
+# Remove Trend's x column): the emitter records them as rec$inputs and the args name them
+# as "@ref". Builds those columns and resolves the tokens, as run_column_process() in
+# test_parity.py does.
+build_cp_columns <- function(fx, rec) {
+  cols <- list(); raw_data <- list(); ref_to_id <- list(); next_id <- 1
+  for (nm in names(rec$inputs)) {
+    spec <- rec$inputs[[nm]]
+    id <- next_id; next_id <- next_id + 1
+    ref_to_id[[nm]] <- id
+    raw_data[[as.character(id)]] <- unwrap_input(spec)
+    cols[[as.character(id)]] <- new_column(id = id, name = nm,
+      type = if (!is.null(spec$type)) spec$type else "number", data = id)
+  }
+  resolve <- function(v) {
+    if (is.character(v) && length(v) == 1 && startsWith(v, "@")) {
+      r <- substring(v, 2)
+      return(if (!is.null(ref_to_id[[r]])) ref_to_id[[r]] else -1)
+    }
+    if (is.list(v)) return(lapply(v, resolve))
+    v
+  }
+  list(args = if (is.null(fx$args)) list() else lapply(fx$args, resolve),
+       cols = cols, raw_data = raw_data)
+}
+
 run_tp_fixture <- function(fx, rec) {
   env <- new.env()
   env$raw_data <- list()
@@ -516,13 +542,16 @@ for (fx in fixtures) {
          else if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
          # A column process is a bare array -> array; the emitter records the input at the
          # TOP level (rec$input, not rec$inputs) and names the result "value".
-         else if (is_cp) tryCatch(
+         else if (is_cp) tryCatch({
+           cp <- build_cp_columns(fx, rec)
            list(value = run_column_process(rfunc,
              # `rawInputs`: cells as JSON gave them (text stays text, null becomes NA), since
              # unlist() would drop a null and shift every later cell.
              if (isTRUE(fx$rawInputs)) lapply(rec$input, function(e) if (is.null(e)) NA else e)
-             else unlist(rec$input, use.names = FALSE),
-             fx$args, list(), list())),
+             else unlist(lapply(rec$input, function(e) if (is.null(e)) NA else e),
+                         use.names = FALSE),
+             cp$args, cp$cols, cp$raw_data))
+           },
            error = function(e) e)
          else tryCatch(do.call(fn, call_args), error = function(e) e)
   if (inherits(got, "error")) {

@@ -46,10 +46,27 @@
 				palette and wired together.
 			</li>
 			<li>
-				Save your work with the <strong>Save this session</strong> icon on the left toolbar; it
-				produces a session file (<code>.json</code>) you can reload later with
-				<strong>Load a session</strong> or by dropping it onto the canvas. Session files named
-				<code>.ancir</code> open the same way.
+				Save your work with the <strong>Save this session</strong> icon on the left toolbar, or
+				<strong>Cmd+S</strong> (Mac) / <strong>Ctrl+S</strong> (Windows). It writes a session file
+				named after your data and the date (<code>.ancir</code>) that you can reload later with
+				<strong>Load a session</strong> or by dropping it onto the canvas; older
+				<code>.json</code> session files open the same way. In Chrome and Edge the first save asks
+				where to put the file, and later saves update that file without asking;
+				<strong>Save as</strong> (the icon below it, or <strong>Cmd+Shift+S</strong> /
+				<strong>Ctrl+Shift+S</strong>) saves to a new file. Firefox and Safari download the file
+				instead. In Chrome and Edge, files you save or open this way are listed under
+				<strong>Recent files</strong> on the start screen and reopen in one click; remove one with
+				its <strong>×</strong>, or empty the list with <strong>Clear recent files</strong>.
+			</li>
+			<li>
+				<strong>Autosave.</strong> While a session has changes you have not saved to a file, AnCiR
+				keeps a copy of it, data included, in your browser's own storage on this computer (nothing
+				is uploaded). If the tab closes or the browser crashes, the start screen offers to restore
+				it, or you can discard it. Saving to a file deletes the copy. Copies from closed tabs are
+				kept for up to 14 days, at most 2 at a time. Autosave is off while
+				<strong>Ephemeral mode</strong> is on (turning it on deletes every copy), and you can turn
+				autosave off, or clear the copies, in <strong>Settings</strong>. In a private browser window
+				autosave still runs, and the browser deletes the copy when the window is closed.
 			</li>
 			<li>
 				Undo/redo with the <strong>Undo</strong> / <strong>Redo</strong> buttons on the left toolbar

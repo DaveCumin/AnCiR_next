@@ -14,11 +14,29 @@ https://svelte.dev/playground/modal?version=5.33.7
 		button,
 		showCloseButton = true,
 		width = '36rem',
-		max_height = '75vh'
+		max_height = '75vh',
+		// The dialog's accessible name. Without it the dialog is named by the first heading in
+		// the header snippet (every modal's <h2>), so a screen reader says "Settings, dialog".
+		label = ''
 	} = $props();
 	import { fade } from 'svelte/transition';
 
 	let dialog = $state();
+
+	const headingId = $props.id();
+	let headerEl = $state();
+
+	// Name the dialog after its header's heading (aria-labelledby), unless `label` names it.
+	$effect(() => {
+		if (!dialog || label) return;
+		const heading = headerEl?.querySelector('h1, h2, h3, h4, h5, h6');
+		if (!heading) {
+			dialog.removeAttribute('aria-labelledby');
+			return;
+		}
+		if (!heading.id) heading.id = `${headingId}-heading`;
+		dialog.setAttribute('aria-labelledby', heading.id);
+	});
 
 	$effect(() => {
 		if (showModal && !dialog?.open) {
@@ -46,6 +64,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		<dialog
 			style="width: calc({width} + 2em); max-height: calc({max_height} + 2em)"
 			bind:this={dialog}
+			aria-label={label || undefined}
 			onclose={() => {
 				// The browser closed the dialog itself (Escape), so close() never ran and the
 				// caller's onclose is still owed (ROB-25). When close() did run it set showModal
@@ -77,7 +96,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 
 			<div class="modal-body" class:no-topbar={!showCloseButton}>
 				<div class="dialog-container">
-					{@render header?.()}
+					{#if header}<div class="modal-header" bind:this={headerEl}>{@render header()}</div>{/if}
 					{@render children?.()}
 					{@render button?.()}
 				</div>

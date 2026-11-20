@@ -9,10 +9,10 @@ import {
 	NotASessionError,
 	sessionShapeProblem
 } from '$lib/core/sessionLoad.svelte.js';
-import { SESSION_PICKER_TYPES, sessionBaseName } from '$lib/core/sessionFiles.js';
+import { SESSION_PICKER_TYPES } from '$lib/core/sessionFiles.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
-import { recordRecent } from '$lib/start/recentSessions.svelte.js';
-import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
+import { recordRecentFile, sessionCounts } from '$lib/start/recentSessions.svelte.js';
+import { setSaveTarget, setSessionLabel } from '$lib/core/saveTarget.svelte.js';
 import { fetchAppAsset } from '$lib/start/offline.js';
 
 /**
@@ -42,25 +42,14 @@ export async function openExample(session, onProgress) {
 	const res = await fetchAppAsset(url);
 	const data = await res.json();
 	await importJson(data, onProgress);
-	// Examples earn a recent row too: the url makes them reopenable in one click anywhere, which
-	// is the whole point of the section. Keyed by example id so re-opening refreshes in place.
-	await recordRecent({
-		id: `example::${session.id}`,
-		name: displayName(session.name),
-		meta: sessionMeta(),
-		workflow: session.id,
-		thumb: thumbnailForWorkflow(session.id),
-		url: session.url
-	});
+	setSessionLabel(displayName(session.name));
+	// Not a recent file: examples are on the start screen already (recentSessions.svelte.js).
 	return true;
 }
 
 /** A one-line "what's in here" for a recent row, read off the session we just loaded. */
 export function sessionMeta() {
-	const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-	return [plural(core.data?.length ?? 0, 'column'), plural(core.plots?.length ?? 0, 'plot')].join(
-		' · '
-	);
+	return sessionCounts(core);
 }
 
 /**
@@ -83,14 +72,13 @@ export async function openSessionFile(file, handle = null, onProgress) {
 	if (problem) throw new NotASessionError(problem);
 	if (!(await confirmReplaceSession(`"${file.name}"`))) return false;
 	await importJson(data, onProgress);
-	const name = sessionBaseName(file.name);
-	await recordRecent({
-		id: `file::${file.name}`,
-		name,
-		meta: sessionMeta(),
-		thumb: thumbnailForWorkflow(name), // unknown id → deterministic procedural fallback
-		handle
-	});
+	// Save writes back to the file it was opened from (UI-15), asking for write permission the
+	// first time. A file opened without a handle (Firefox, Safari) has nothing to write back to.
+	if (handle) setSaveTarget(handle);
+	else setSessionLabel(file.name);
+	// A file opened through a handle joins the recent files, so it reopens in one click. Without
+	// one (Firefox, Safari, the Load session modal) there is nothing to reopen it by.
+	if (handle) await recordRecentFile(handle, { action: 'opened', meta: sessionMeta() });
 	return true;
 }
 

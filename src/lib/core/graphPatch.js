@@ -23,6 +23,11 @@
 // alive. That is what stops deleted data being written into a saved session (ROB-19) while
 // still letting undo bring it back.
 //
+// Each list's ORDER is part of the state too: a list whose shared entities changed places (a
+// group, plot or analysis dragged to a new position) carries the target id order, applied in
+// place after the adds and removes. Before that a reorder made an empty patch and could not
+// be undone.
+//
 // Restoration keeps object identity wherever the change allows it: args and plain objects are
 // patched in place, so an open editor keeps its bindings, and only an entity that is gone is
 // rebuilt (through the same fromJSON paths session load uses).
@@ -104,7 +109,43 @@ function diffList(from, to) {
 		}
 	}
 	add.sort((a, b) => a.index - b.index);
-	return remove.length || add.length || update.length ? { remove, add, update } : null;
+	const order = orderChange(from, to);
+	if (!(remove.length || add.length || update.length || order)) return null;
+	return order ? { remove, add, update, order } : { remove, add, update };
+}
+
+// Ids in list order.
+const idsInOrder = (m) =>
+	[...m.entries()].sort((a, b) => a[1].index - b[1].index).map(([id]) => id);
+
+// The target state's id order, when the entities both states share are in a different order
+// (a reorder: a group, plot or analysis dragged to a new place). Null when they are not, so
+// a patch that only adds or removes carries no order and applies as it always has.
+function orderChange(from, to) {
+	const fromIds = idsInOrder(from).filter((id) => to.has(id));
+	const toIds = idsInOrder(to);
+	const shared = toIds.filter((id) => from.has(id));
+	if (shared.every((id, i) => id === fromIds[i])) return null;
+	return toIds;
+}
+
+// Put `arr` into `order` (ids) in place, keeping every object's identity. Only the slots the
+// listed entities occupy are rewritten; an entity the order does not name (one an unrelated
+// edit added meanwhile) keeps its slot.
+function applyOrder(arr, order) {
+	const rank = new Map(order.map((id, i) => [id, i]));
+	const slots = [];
+	const items = [];
+	arr.forEach((item, i) => {
+		if (rank.has(item?.id)) {
+			slots.push(i);
+			items.push(item);
+		}
+	});
+	items.sort((a, b) => rank.get(a.id) - rank.get(b.id));
+	slots.forEach((slot, k) => {
+		if (arr[slot] !== items[k]) arr[slot] = items[k];
+	});
 }
 
 function diffMap(from, to) {
@@ -347,6 +388,7 @@ export function applyPatch(patch) {
 		for (const id of d.remove) APPLY[key].remove(id);
 		for (const a of d.add) APPLY[key].add(a);
 		for (const u of d.update) APPLY[key].update(u);
+		if (d.order) applyOrder(core[key], d.order);
 	}
 	for (const key of MAPS) {
 		const d = patch[key];

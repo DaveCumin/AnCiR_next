@@ -25,6 +25,8 @@
 		toRadiansColumn
 	} from '$lib/utils/circular.js';
 	import { weightedSeriesStats } from '$lib/utils/circularPlot.js';
+	import { angleUnitMismatch } from '$lib/utils/angleUnit.js';
+	import { newUnitArgs } from '$lib/tableProcesses/unitAuto.svelte.js';
 	// A bare `export { x } from './y.js'` re-export does NOT bind `x` in this
 	// module's own scope, and pUpperFromF is used internally below (in
 	// watsonWilliams's callback) — so import it normally and re-export it.
@@ -70,11 +72,14 @@
 		displayName,
 		defaults,
 		func: rayleigh,
+		// A NEW node reads its unit from the data until the user picks one
+		// (unitAuto.svelte.js). Not a default: a saved session keeps its unit.
+		newNodeArgs: newUnitArgs,
 		columnIdFields: { scalar: ['timeIN'], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.rayleightest',
 			inputs: [
-				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
+				{ name: 'timeIN', display: 'time', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
 			],
 			outputs: [
@@ -193,6 +198,18 @@
 		return warnings;
 	}
 
+	/**
+	 * The unit the node reads cannot be right for these values (clock hours read as radians,
+	 * say): one notice naming the likely unit. Nothing is changed; the unit is the user's.
+	 */
+	function unitWarnings(argsIN) {
+		const columns = normalizeYInputs(argsIN.yIN)
+			.map((yId) => getColumnById(yId)?.getData())
+			.filter(Boolean);
+		const mismatch = angleUnitMismatch(columns, argsIN.unit ?? 'radians', argsIN.period ?? 24);
+		return mismatch ? [mismatch.message] : [];
+	}
+
 	// Watson-Williams: the Y columns are the groups. Returns { ...stats, valid }.
 	export function evaluateWatsonWilliams(argsIN) {
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -247,7 +264,7 @@
 			? [
 					'Timed mode reports R and the acrophase but no p-value (and no z). The values act as weights, and the weighted Rayleigh p changes when a constant baseline is added to the series, so it is not a valid test. To test for a rhythm, use the Cosinor node.'
 				]
-			: rayleighSampleWarnings(rayleighRes.perY ?? {});
+			: [...unitWarnings(argsIN), ...rayleighSampleWarnings(rayleighRes.perY ?? {})];
 		if (ww?.valid && ww.smallGroups > 0) {
 			warnings.push(
 				`Watson-Williams: ${ww.smallGroups} group${ww.smallGroups > 1 ? 's have' : ' has'} fewer than 5 angles. The F approximation assumes reasonably sized, concentrated groups, so treat this p-value cautiously.`
@@ -269,6 +286,7 @@
 	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { getColumnById as getColumnByIdLocal } from '$lib/core/Column.svelte';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
+	import { useUnitAuto, takeOverUnit } from '$lib/tableProcesses/unitAuto.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
@@ -297,6 +315,12 @@
 	);
 	let timeCol = $derived.by(() =>
 		p.args.timeIN != null && p.args.timeIN !== -1 ? getColumnByIdLocal(p.args.timeIN) : null
+	);
+	// A new node's unit follows its data until the user picks one (unitAuto.svelte.js).
+	useUnitAuto(
+		p,
+		() => yCols,
+		() => !!timeCol
 	);
 	let outIds = $derived.by(() => {
 		const ids = [];
@@ -391,20 +415,27 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Time (optional: when the values were measured)</p>
+		<ControlInput label="Time (optional)" associate={false}>
 			<ColumnSelector bind:value={p.args.timeIN} excludeColIds={yExcludeIds} />
-		</div>
-		<div class="control-input">
-			<p>Angle columns (y)</p>
+		</ControlInput>
+		<ControlInput label="Angles (y)" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<div class="control-input-horizontal">
 		{#if !isWeighted}
 			<ControlInput label="Unit">
-				<select bind:value={p.args.unit}>
+				<!-- Not bind:value: choosing a unit (even the one already shown) also makes it
+				     the user's, in the same undo step. -->
+				<select
+					value={p.args.unit}
+					onchange={(e) => {
+						const unit = e.currentTarget.value;
+						if (p.args.unitAuto) takeOverUnit(p, unit);
+						else p.args.unit = unit;
+					}}
+				>
 					<option value="radians">Radians</option>
 					<option value="degrees">Degrees</option>
 					<option value="hours">Clock hours</option>
@@ -417,6 +448,9 @@
 			</ControlInput>
 		{/if}
 	</div>
+	{#if p.args.unitAuto && !isWeighted && yCols.length}
+		<p class="unit-note">Unit read from the values. Choose another if it is wrong.</p>
+	{/if}
 
 	<div class="control-input">
 		<label class="ww-toggle">
@@ -429,7 +463,10 @@
 {#if rows.length}
 	<div class="rayleigh-results">
 		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
-		<div class="rayleigh-table scroll-fade-x" {@attach scrollFade()}>
+		<div
+			class="rayleigh-table scroll-fade-x"
+			{@attach scrollFade({ label: 'Rayleigh test results' })}
+		>
 			<table>
 				<thead>
 					<tr>
@@ -584,6 +621,12 @@
 	.rayleigh-results th:first-child,
 	.rayleigh-results td:first-child {
 		text-align: left;
+	}
+	.unit-note {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		line-height: 1.4;
+		margin: 0;
 	}
 	.ww-toggle {
 		display: flex;

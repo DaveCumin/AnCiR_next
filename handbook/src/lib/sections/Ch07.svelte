@@ -154,9 +154,9 @@
 	<NoteBox title="Population-mean cosinor and AnCiR">
 		<p>
 			AnCiR does not yet implement the population-mean cosinor as a single test: wiring several <strong
-				>Y columns</strong
+				>Values (y)</strong
 			>
-			(one per subject) into a <strong>Cosinor</strong> node fits each subject
+			columns (one per subject) into a <strong>Cosinor</strong> node fits each subject
 			<em>independently</em>
 			and returns a per-subject results table. To obtain a group-level estimate, export that table (via
 			a <strong>Table</strong> or <strong>Save session</strong>) and vector-average the individual
@@ -174,8 +174,8 @@
 				<strong>Fitting</strong>, choose <strong>Cosinor</strong>.
 			</li>
 			<li>
-				Expand the node and choose your <strong>X column</strong> (time) and one or more
-				<strong>Y columns</strong>. Multiple Y columns are fitted independently in one step.
+				Expand the node and choose your <strong>Time (x)</strong> column and one or more
+				<strong>Values (y)</strong> columns. Several value columns are fitted independently in one step.
 			</li>
 			<li>
 				Choose the mode:
@@ -230,7 +230,7 @@
 			</li>
 			<li>
 				Every scalar result (period, MESOR, amplitude, acrophase, R², p-value) is also an
-				<strong>output port</strong> on the node, one value per Y column: wire it straight into
+				<strong>output port</strong> on the node, one value per y column: wire it straight into
 				<strong>Describe Data</strong>, a <strong>Rayleigh test</strong> or a
 				<strong>Formula Column</strong>. Each of those numbers is also a
 				<strong>stored value</strong>

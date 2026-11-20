@@ -143,7 +143,6 @@ export const PROPER_NOUNS = new Set([
  */
 export const LOWER_START = new Set([
 	'x',
-	'y',
 	'k1',
 	'k2',
 	'alpha',

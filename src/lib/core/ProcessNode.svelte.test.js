@@ -130,6 +130,22 @@ describe('TableProcess inline output columns', () => {
 		expect(metricPorts).toEqual(['col_102', 'col_103']);
 	});
 
+	it('analysis inputs show x / y on the canvas, keeping xIN / yIN as their port names', () => {
+		const appConsts = makeAppConsts();
+		const graph = getCachedProcessNodeGraph(makeCore(), appConsts);
+		const tp = graph.nodes.find((n) => n.id === 'tableprocess_5');
+		expect(tp.ports.inputs.map((p) => [p.name, p.display])).toEqual([
+			['xIN', 'x'],
+			['yIN', 'y']
+		]);
+		// A spec's own `display` wins (Logistic regression's yIN shows as "outcome").
+		appConsts.tableProcessMap.get('fakeTP').nodeSpec.inputs[1].display = 'outcome';
+		clearProcessNodeGraphCache();
+		const again = getCachedProcessNodeGraph(makeCore(), appConsts);
+		const tp2 = again.nodes.find((n) => n.id === 'tableprocess_5');
+		expect(tp2.ports.inputs.map((p) => p.display)).toEqual(['x', 'outcome']);
+	});
+
 	it('output ports and rows carry the display label; a renamed column keeps its name (UI-4)', () => {
 		const core = makeCore();
 		core.data.push(

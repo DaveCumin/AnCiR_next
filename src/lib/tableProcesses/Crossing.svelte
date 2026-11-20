@@ -229,7 +229,7 @@
 			inputs: [
 				{ name: 'xIN', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' },
-				{ name: 'thresholdIN', kind: 'column', cardinality: 'many' }
+				{ name: 'thresholdIN', display: 'thresholds', kind: 'column', cardinality: 'many' }
 			],
 			outputs: [
 				{ name: 'breach', kind: 'column', cardinality: 'one' },
@@ -332,28 +332,25 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Inputs</span></div>
 	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Time / index (x, optional)</p>
+		<ControlInput label="Time (x, optional)" associate={false}>
 			<ColumnSelector bind:value={p.args.xIN} onChange={recompute} excludeColIds={ownOutputIds} />
-		</div>
-		<div class="control-input">
-			<p>Series</p>
+		</ControlInput>
+		<ControlInput label="Values (y)" associate={false}>
 			<ColumnSelector
 				bind:value={p.args.yIN}
 				multiple={true}
 				excludeColIds={ownOutputIds}
 				onChange={recompute}
 			/>
-		</div>
-		<div class="control-input">
-			<p>Thresholds (scalar columns, optional)</p>
+		</ControlInput>
+		<ControlInput label="Thresholds (scalar columns, optional)" associate={false}>
 			<ColumnSelector
 				bind:value={p.args.thresholdIN}
 				multiple={true}
 				excludeColIds={ownOutputIds}
 				onChange={recompute}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 </div>
 
@@ -367,7 +364,7 @@
 			{#each group as cond, c (c)}
 				<div class="control-input crossing-condition">
 					{#if c > 0}<span class="crossing-and-label">and</span>{/if}
-					<select bind:value={cond.target} onchange={recompute}>
+					<select bind:value={cond.target} onchange={recompute} aria-label="Compare">
 						<option value={-1}>(series)</option>
 						{#each yOptions as opt (opt.id)}
 							<option value={opt.id}>{opt.name}</option>
@@ -378,17 +375,23 @@
 					</select>
 					<AttributeSelect
 						bind:value={cond.isOperator}
+						ariaLabel="Comparison"
 						options={['>', '>=', '<', '<=']}
 						optionsDisplay={['above (>)', 'at or above (≥)', 'below (<)', 'at or below (≤)']}
 					/>
-					<select bind:value={cond.source} onchange={recompute}>
+					<select bind:value={cond.source} onchange={recompute} aria-label="With">
 						<option value={-1}>typed value</option>
 						{#each thresholdOptions as opt (opt.id)}
 							<option value={opt.id}>{opt.name}</option>
 						{/each}
 					</select>
 					{#if cond.source === -1}
-						<NumberWithUnits bind:value={cond.value} onInput={recompute} step="0.1" />
+						<NumberWithUnits
+							bind:value={cond.value}
+							onInput={recompute}
+							step="0.1"
+							ariaLabel="Threshold value"
+						/>
 					{/if}
 					<button
 						class="icon control-block-remove"

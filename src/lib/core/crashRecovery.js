@@ -22,6 +22,11 @@
 // sessionStorage, so the copy and this offer are scoped to the tab that crashed, which is the
 // privacy decision recorded in errorReporter.js. That also means the offer only appears in a
 // reload of THAT tab, which is exactly the case it is for.
+//
+// Autosave (autosave.svelte.js) may hold a copy of the same session too. The crash copy names
+// that tab's autosave slot, and the caller's hooks keep the two from being offered twice:
+// while this offer shows, the start screen leaves that copy out; restoring here adopts the
+// slot, and discarding here discards that copy as well.
 import { readCrashSnapshot, clearCrashSnapshot } from './errorReporter.js';
 import { addNotification } from './notifications.svelte.js';
 import { markSessionUnsaved } from './unsavedChanges.svelte.js';
@@ -55,9 +60,19 @@ export function describeSession(session) {
  * @param {(session: object) => Promise<any>} deps.restore  load a session (importJson)
  * @param {(what: string) => Promise<boolean>} [deps.confirmReplace]  ask before replacing open
  *   work (confirmReplaceSession); resolves true when nothing is open
+ * @param {(snap: object) => void} [deps.onOffered]  the offer is showing (autosave then leaves
+ *   out its copy of the same session, `snap.autosaveSlot`)
+ * @param {(snap: object) => void} [deps.onRestored]  the copy was restored
+ * @param {(snap: object) => void} [deps.onDiscarded]  the user closed the offer, discarding it
  * @returns {string|null} the notification id, or null when there was nothing to offer
  */
-export function offerCrashRecovery({ restore, confirmReplace = async () => true }) {
+export function offerCrashRecovery({
+	restore,
+	confirmReplace = async () => true,
+	onOffered = () => {},
+	onRestored = () => {},
+	onDiscarded = () => {}
+}) {
 	const snap = readCrashSnapshot();
 	const session = snap?.session;
 	const what = describeSession(session);
@@ -89,6 +104,7 @@ export function offerCrashRecovery({ restore, confirmReplace = async () => true 
 			}
 			await restore(session);
 			clearCrashSnapshot();
+			onRestored(snap);
 			// Its only other copy is gone now, so closing the tab must ask (unsavedChanges).
 			markSessionUnsaved();
 			addNotification('Restored the session from before the error.', 'info', 6000);
@@ -104,11 +120,17 @@ export function offerCrashRecovery({ restore, confirmReplace = async () => true 
 		}
 	}
 
+	onOffered(snap);
 	return addNotification(
 		message,
 		'warning',
 		0,
 		{ label: 'Restore session', run },
-		{ onDismiss: () => clearCrashSnapshot() }
+		{
+			onDismiss: () => {
+				clearCrashSnapshot();
+				onDiscarded(snap);
+			}
+		}
 	);
 }

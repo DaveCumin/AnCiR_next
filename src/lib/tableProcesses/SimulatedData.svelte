@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import minstd from '@stdlib/random-base-minstd-shuffle';
@@ -249,10 +250,9 @@
 		<span>Simulation settings</span>
 	</div>
 
-	<div class="control-input">
-		<p>Start time</p>
+	<ControlInput label="Start time" associate={false}>
 		<DateTimeHrs bind:value={p.args.startTime} onChange={doSimulated} />
-	</div>
+	</ControlInput>
 
 	<ControlInput label="Sampling period">
 		<div style="display:flex;">
@@ -287,7 +287,12 @@
 		<div style="display: flex; justify-content: space-between; align-items: center;">
 			<strong>Section {index + 1}</strong>
 			{#if p.args.sections.length > 1}
-				<button class="icon" onclick={() => removeSection(index)}>
+				<button
+					type="button"
+					{@attach tooltip('Remove this section')}
+					class="icon"
+					onclick={() => removeSection(index)}
+				>
 					<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 				</button>
 			{/if}
@@ -381,8 +386,7 @@
 		</label>
 
 		{#if section.noiseEnabled}
-			<div class="control-input">
-				<p>Noise mode</p>
+			<ControlInput label="Noise mode" associate={false}>
 				<Toggle
 					Labels={['Multiply', 'Add']}
 					onChange={(v) => {
@@ -390,7 +394,7 @@
 						doSimulated();
 					}}
 				/>
-			</div>
+			</ControlInput>
 
 			<ControlInput label="Noise amplitude">
 				<NumberWithUnits
@@ -408,7 +412,7 @@
 <div class="section-row">
 	<div class="tableProcess-label">
 		<span>Data sections</span>
-		<button class="icon" onclick={addSection}>
+		<button type="button" {@attach tooltip('Add a data section')} class="icon" onclick={addSection}>
 			<Icon name="add" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>

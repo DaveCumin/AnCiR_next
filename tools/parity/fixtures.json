@@ -326,6 +326,91 @@
 			"rFunc": "nonparametricra"
 		},
 		{
+			"id": "tp-npcra-epoch-finer",
+			"_comment": "Epoch finer than the sampling (2026-11-15): 0.25 h epochs on 7.5 days of hourly data, full days. Empty epochs take no part in any count, so IS, IV, RA, M10, L5 and the onsets equal tp-npcra-full-days (1 h epochs); they used to read IS a quarter of its value and IV blank.",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"rFunc": "nonparametricra",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 0.25,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+		},
+		{
+			"id": "tp-npcra-epoch-finer-gaps",
+			"_comment": "Epoch finer than the sampling, not a whole fraction of it (0.3 h on hourly data), with every third sample missing: a skipped sample still breaks an IV pair, so IS and IV equal tp-npcra-iv-missing-epochs (1 h epochs).",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"rFunc": "nonparametricra",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 29,
+				"missingEvery": 3,
+				"missingOffset": 1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 0.3,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+		},
+		{
 			"id": "tp-npcra-rhythm-day-units",
 			"kind": "tableProcess",
 			"jsName": "NonparametricRA",
@@ -1885,6 +1970,44 @@
 				"xIN": "@t",
 				"yIN": ["@y"],
 				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"fullDays": true,
+				"out": {
+					"CFI": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1
+				}
+			},
+			"compareOutputs": ["CFI", "IS", "IV", "RA"]
+		},
+		{
+			"id": "tp-cfi-epoch-finer",
+			"_comment": "Epoch finer than the sampling (2026-11-15), as tp-npcra-epoch-finer: 0.25 h epochs on hourly data give the CFI of tp-cfi-full-days (1 h epochs).",
+			"kind": "tableProcess",
+			"jsName": "CircadianFunctionIndex",
+			"pyFunc": "circadianfunctionindex",
+			"rFunc": "circadianfunctionindex",
+			"generate": {
+				"type": "rhythm",
+				"n": 180,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 0.25,
 				"period": 24,
 				"mWindow": 10,
 				"lWindow": 5,
@@ -6021,6 +6144,47 @@
 				"polyDegree": 2,
 				"slidingWindow": false,
 				"windowSize": 10
+			}
+		},
+		{
+			"id": "col-removetrend-blank-x",
+			"_comment": "A row the fit does not see is BLANK in the output (2026-11-21): rows 3 and 7 have a blank x (a null in the wired x column) and row 5 a blank y. Before, rows 3 and 7 kept their raw, un-detrended values, so one column mixed raw and detrended numbers.",
+			"kind": "columnProcess",
+			"jsName": "RemoveTrend",
+			"pyFunc": "removetrend",
+			"rFunc": "removetrend",
+			"input": [3, 5.2, 6.9, 9.1, 11.0, null, 14.8, 17.1, 19.0, 21.2],
+			"columns": {
+				"xc": { "type": "number", "values": [0, 1, 2, null, 4, 5, 6, null, 8, 9] }
+			},
+			"args": {
+				"xColId": "@xc",
+				"model": "linear",
+				"polyDegree": 2,
+				"slidingWindow": false,
+				"windowSize": 10
+			}
+		},
+		{
+			"id": "col-removetrend-blank-x-sliding",
+			"_comment": "The same blank rows with sliding-window standardisation on: the window runs over the fitted rows only, and the unfitted rows stay blank.",
+			"kind": "columnProcess",
+			"jsName": "RemoveTrend",
+			"pyFunc": "removetrend",
+			"rFunc": "removetrend",
+			"input": [3, 5.2, 6.9, 9.1, 11.0, null, 14.8, 17.1, 19.0, 21.2, 22.9, 25.3],
+			"columns": {
+				"xc": {
+					"type": "number",
+					"values": [0, 1, 2, null, 4, 5, 6, null, 8, 9, 10, 11]
+				}
+			},
+			"args": {
+				"xColId": "@xc",
+				"model": "polynomial",
+				"polyDegree": 2,
+				"slidingWindow": true,
+				"windowSize": 3
 			}
 		},
 		{

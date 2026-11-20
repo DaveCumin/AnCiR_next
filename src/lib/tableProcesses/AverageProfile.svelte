@@ -327,14 +327,12 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Time (x)</p>
+		<ControlInput label="Time (x)" associate={false}>
 			<ColumnSelector bind:value={p.args.xIN} excludeColIds={xExcludeIds} />
-		</div>
-		<div class="control-input">
-			<p>Values (y)</p>
+		</ControlInput>
+		<ControlInput label="Values (y)" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<div class="control-input-horizontal">
@@ -362,7 +360,10 @@
 {:else if rows.length}
 	<div class="avgprof-results">
 		<!-- Only the table scrolls sideways (with an edge fade); the notes below wrap. -->
-		<div class="avgprof-table scroll-fade-x" {@attach scrollFade()}>
+		<div
+			class="avgprof-table scroll-fade-x"
+			{@attach scrollFade({ label: 'Average profile table' })}
+		>
 			<table>
 				<thead>
 					<tr>

@@ -449,23 +449,21 @@
 
 		{#if legendData.show}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Position</p>
+				<ControlInput label="Position">
 					<AttributeSelect
 						bind:value={legendData.position}
 						options={positionOptions.map((o) => o.value)}
 						optionsDisplay={positionOptions.map((o) => o.label)}
 						onChange={(v) => onPositionChange(v)}
 					/>
-				</div>
-				<div class="control-input">
-					<p>Layout</p>
+				</ControlInput>
+				<ControlInput label="Layout">
 					<AttributeSelect
 						bind:value={legendData.orientation}
 						options={['vertical', 'horizontal']}
 						optionsDisplay={['Vertical', 'Horizontal']}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="control-input-horizontal">

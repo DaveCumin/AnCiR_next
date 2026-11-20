@@ -159,8 +159,8 @@
 			</li>
 			<li>
 				Add a <strong>Smooth Data</strong> node (<strong>Smoothing</strong> family) and wire
-				<strong>Stimulus CT into <code>xIN</code></strong>
-				and <strong>Phase Shift into <code>yIN</code></strong>; set the smoother to
+				<strong>Stimulus CT into its x input</strong>
+				and <strong>Phase Shift into its y input</strong>; set the smoother to
 				<a class="gloss" href="#gloss-loess">LOESS</a>
 				or <a class="gloss" href="#gloss-whittaker-eilers">Whittaker-Eilers</a>.
 				<strong>Sort the rows by CT first</strong>. The smoother works <em>along x</em>, so

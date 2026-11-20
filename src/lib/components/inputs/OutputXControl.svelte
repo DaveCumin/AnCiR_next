@@ -116,10 +116,9 @@
 	</div>
 	{#if mode === OUTPUT_X_MODE_COLUMN}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Output x column</p>
+			<ControlInput label="Output x column" associate={false}>
 				<ColumnSelector bind:value={args.outputX} excludeColIds={columnExclude} />
-			</div>
+			</ControlInput>
 		</div>
 	{:else}
 		<div class="output-x-seq">

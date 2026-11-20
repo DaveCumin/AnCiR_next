@@ -580,6 +580,8 @@
 						<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 					</button>
 					<button
+						type="button"
+						{@attach tooltip('Delete the selected plots')}
 						class="icon"
 						onclick={(e) => {
 							e.stopPropagation();
@@ -610,10 +612,14 @@
 			</div>
 
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Vertically</p>
+				<ControlInput label="Vertically" associate={false} group>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={() => alignPlots('top')}>
+						<button
+							type="button"
+							{@attach tooltip('Align tops')}
+							class="icon"
+							onclick={() => alignPlots('top')}
+						>
 							<Icon
 								name="align-top"
 								width={24}
@@ -621,7 +627,12 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={() => alignPlots('middle')}>
+						<button
+							type="button"
+							{@attach tooltip('Align middles')}
+							class="icon"
+							onclick={() => alignPlots('middle')}
+						>
 							<Icon
 								name="align-middle"
 								width={24}
@@ -629,7 +640,12 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={() => alignPlots('bottom')}>
+						<button
+							type="button"
+							{@attach tooltip('Align bottoms')}
+							class="icon"
+							onclick={() => alignPlots('bottom')}
+						>
 							<Icon
 								name="align-bottom"
 								width={24}
@@ -638,12 +654,16 @@
 							/>
 						</button>
 					</div>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Horizontally</p>
+				<ControlInput label="Horizontally" associate={false} group>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={() => alignPlots('left')}>
+						<button
+							type="button"
+							{@attach tooltip('Align left edges')}
+							class="icon"
+							onclick={() => alignPlots('left')}
+						>
 							<Icon
 								name="align-left"
 								width={24}
@@ -651,7 +671,12 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={() => alignPlots('center')}>
+						<button
+							type="button"
+							{@attach tooltip('Align centres')}
+							class="icon"
+							onclick={() => alignPlots('center')}
+						>
 							<Icon
 								name="align-centre"
 								width={24}
@@ -659,7 +684,12 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={() => alignPlots('right')}>
+						<button
+							type="button"
+							{@attach tooltip('Align right edges')}
+							class="icon"
+							onclick={() => alignPlots('right')}
+						>
 							<Icon
 								name="align-right"
 								width={24}
@@ -668,7 +698,7 @@
 							/>
 						</button>
 					</div>
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="div-line"></div>
@@ -678,10 +708,14 @@
 			</div>
 
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Vertically (gap)</p>
+				<ControlInput label="Vertically (gap)" associate={false} group>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={() => distributePlots('verticalEqual')}>
+						<button
+							type="button"
+							{@attach tooltip('Space evenly, vertically')}
+							class="icon"
+							onclick={() => distributePlots('verticalEqual')}
+						>
 							<Icon
 								name="distribute-vertical"
 								width={24}
@@ -701,12 +735,16 @@
 								: 0}px)"
 						/>
 					</div>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Horizontally (gap)</p>
+				<ControlInput label="Horizontally (gap)" associate={false} group>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={() => distributePlots('horizontalEqual')}>
+						<button
+							type="button"
+							{@attach tooltip('Space evenly, horizontally')}
+							class="icon"
+							onclick={() => distributePlots('horizontalEqual')}
+						>
 							<Icon
 								name="distribute-horizontal"
 								width={24}
@@ -729,7 +767,7 @@
 								: 0}px)"
 						/>
 					</div>
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="div-line"></div>
@@ -843,11 +881,11 @@
 						</div>
 						<div class="control-input-vertical">
 							{#each row.fields as field (field.path)}
-								<div class="control-input">
-									<p>
+								<ControlInput>
+									{#snippet labelContent()}
 										{field.label}
 										{#if !field.allEqual}<span class="mixed-tag">mixed</span>{/if}
-									</p>
+									{/snippet}
 
 									{#if field.input === 'number'}
 										<!-- No box of its own: catches the number box's commit and Escape. -->
@@ -909,7 +947,7 @@
 											onkeydown={sharedPreviewKeydown}
 										/>
 									{/if}
-								</div>
+								</ControlInput>
 
 								{#if !field.allEqual}
 									<div class="set-all-row">

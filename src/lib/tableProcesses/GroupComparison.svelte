@@ -1137,15 +1137,13 @@
 
 	{#if !hideInputs}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Group column (optional with 2+ Y columns)</p>
+			<ControlInput label="Group column (optional with 2+ Y columns)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
+			</ControlInput>
 
-			<div class="control-input">
-				<p>Y columns</p>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector bind:value={p.args.yIN} multiple={true} excludeColIds={yExcludeIds} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

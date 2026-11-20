@@ -136,7 +136,11 @@ test('the app works under its policy with no CSP violation', async ({ page, cont
 	await expect.poll(() => workers, { timeout: 20000 }).toBeGreaterThan(0);
 	expect(await violations(), 'worker analysis').toEqual([]);
 
-	// Save the session (blob: download) and export Python (sidecar dynamic import).
+	// Save the session (blob: download) and export Python (sidecar dynamic import). Chromium
+	// saves through the save dialog (sessionSave.svelte.js), which a headless run cannot answer;
+	// without it Save takes the blob: download route Firefox and Safari use, which is what this
+	// checks against the policy.
+	await page.evaluate(() => delete window.showSaveFilePicker);
 	await Promise.all([page.waitForEvent('download'), page.getByTestId('nav-save-session').click()]);
 	await page.getByTestId('nav-settings').click();
 	await Promise.all([

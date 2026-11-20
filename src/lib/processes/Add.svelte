@@ -39,9 +39,14 @@
 
 <ProcessShell {p}>
 	{#if isTimeInput}
-		<NumberWithUnits bind:value={p.args.value} step="0.01" units={TIME_UNITS} />
+		<NumberWithUnits
+			bind:value={p.args.value}
+			step="0.01"
+			units={TIME_UNITS}
+			ariaLabel="Value to add"
+		/>
 	{:else}
-		<NumberWithUnits bind:value={p.args.value} step="0.01" />
+		<NumberWithUnits bind:value={p.args.value} step="0.01" ariaLabel="Value to add" />
 	{/if}
 </ProcessShell>
 

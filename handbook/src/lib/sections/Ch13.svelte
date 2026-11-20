@@ -74,7 +74,12 @@
 			['Curve fitting (square wave)', '✅', '✅', 'Rectangular Wave (Fitting)'],
 			['Curve fitting (double logistic)', '✅', '✅', 'Double Logistic (Fitting)'],
 			['ANOVA (generalised additive model, GAM)', '✅', '✅', '<em>not available</em>'],
-			['ANOVA (general linear model, GLM)', '✅', '✅', '<em>not available</em>']
+			[
+				'ANOVA (general linear model, GLM)',
+				'✅',
+				'✅',
+				'One-way ANOVA only: Compare groups (stats) (Analysis); no further factors or covariates'
+			]
 		]}
 	/>
 	<p>

@@ -83,28 +83,34 @@
 	}
 </script>
 
+<!-- An ARIA table needs rows of cells (axe aria-required-children): the header, every value
+     and the footer are rows, each holding one cell. The cell carries the row's layout. -->
 <div class="mini-table" role="table" aria-label={`Preview of ${headerName}`}>
-	<div class="mini-header">{column?.name != null ? headerName : '(unnamed)'}</div>
-	<div class="mini-rows">
+	<div class="mini-header" role="row">
+		<span role="columnheader">{column?.name != null ? headerName : '(unnamed)'}</span>
+	</div>
+	<div class="mini-rows" role="rowgroup">
 		{#each { length: previewN }, i (i)}
 			{@const cell = cellAt(i)}
-			<div class="mini-row">
-				{#if cell && cell.isTime}
-					<span class="mt-raw">{cell.raw}</span>
-					{#if String(cell.computed) !== String(cell.raw)}
-						<span class="mt-computed">{cell.computed}{cell.unit ? ' ' + cell.unit : ''}</span>
+			<div class="mini-row" role="row">
+				<div class="mini-cell" role="cell">
+					{#if cell && cell.isTime}
+						<span class="mt-raw">{cell.raw}</span>
+						{#if String(cell.computed) !== String(cell.raw)}
+							<span class="mt-computed">{cell.computed}{cell.unit ? ' ' + cell.unit : ''}</span>
+						{/if}
+					{:else}
+						{cell}
 					{/if}
-				{:else}
-					{cell}
-				{/if}
+				</div>
 			</div>
 		{/each}
 		{#if total === 0}
-			<div class="mini-row empty">no data</div>
+			<div class="mini-row empty" role="row"><span role="cell">no data</span></div>
 		{/if}
 	</div>
 	{#if total > 0}
-		<div class="mini-footer">{total} rows total</div>
+		<div class="mini-footer" role="row"><span role="cell">{total} rows total</span></div>
 	{/if}
 </div>
 
@@ -131,10 +137,12 @@
 		gap: var(--space-1);
 	}
 	.mini-row {
-		display: flex;
-		flex-direction: column;
 		padding: var(--space-1) 0;
 		color: var(--color-lightness-35);
+	}
+	.mini-cell {
+		display: flex;
+		flex-direction: column;
 	}
 	.mt-computed {
 		font-size: 0.85em;

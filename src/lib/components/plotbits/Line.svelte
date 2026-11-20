@@ -317,14 +317,15 @@
 {#snippet styleRow(lineData)}
 	<div class="control-input-horizontal">
 		<div class="control-input control-input-swatch">
-			<p style="color:white;">Col</p>
+			<!-- An invisible spacer that sizes the swatch column, not a label: the swatch is
+			     named "Choose colour". -->
+			<span class="ci-label" aria-hidden="true" style="color:white;">Col</span>
 			<ColourPicker bind:value={lineData.colour} />
 		</div>
 		<ControlInput label="Width">
 			<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
 		</ControlInput>
-		<div class="control-input">
-			<p>Stroke</p>
+		<ControlInput label="Stroke">
 			<div class="stroke-field" class:invalid={lineData.stroke === -1}>
 				<AttributeSelect
 					value={lineData.stroke}
@@ -347,7 +348,7 @@
 					Invalid pattern
 				</span>
 			{/if}
-		</div>
+		</ControlInput>
 	</div>
 {/snippet}
 

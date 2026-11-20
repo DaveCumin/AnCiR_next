@@ -270,15 +270,14 @@
 		{#if scaleData.show}
 			<div class="control-input-horizontal">
 				{#if positionKeys.length > 1}
-					<div class="control-input">
-						<p>Position</p>
+					<ControlInput label="Position">
 						<AttributeSelect
 							bind:value={scaleData.position}
 							options={positionKeys}
 							optionsDisplay={positionKeys.map((k) => POSITIONS[k])}
 							onChange={(v) => onPositionChange(v)}
 						/>
-					</div>
+					</ControlInput>
 				{/if}
 				<ControlInput label="Font size">
 					<NumberWithUnits

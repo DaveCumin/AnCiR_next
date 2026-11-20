@@ -1451,21 +1451,19 @@
 		</div>
 
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
+			</ControlInput>
 
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Y columns</p>
+				<ControlInput label="Values (y)" associate={false}>
 					<ColumnSelector
 						bind:value={p.args.yIN}
 						excludeColIds={yExcludeIds}
 						multiple={true}
 						onChange={onYSelectionChange}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 	</div>
@@ -1477,15 +1475,14 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Model</p>
+		<ControlInput label="Model">
 			<AttributeSelect
 				bind:value={p.args.model}
 				options={['cosinor', 'rectangular', 'doublelogistic']}
 				optionsDisplay={['Cosinor', 'Rectangular wave', 'Double logistic']}
 				onChange={() => getFit()}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 
 	{#if p.args.model === 'cosinor'}
@@ -1769,15 +1766,14 @@
 					onInput={() => getFit()}
 				/>
 			</ControlInput>
-			<div class="control-input">
-				<p>Statistic</p>
+			<ControlInput label="Statistic">
 				<AttributeSelect
 					bind:value={p.args.permutationStatistic}
 					options={['rSquared', 'rmse']}
 					optionsDisplay={['R²', 'RMSE']}
 					onChange={() => getFit()}
 				/>
-			</div>
+			</ControlInput>
 			<ControlInput label="Permute">
 				<select
 					bind:value={p.args.permutationScheme}

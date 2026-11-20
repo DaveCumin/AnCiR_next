@@ -1739,3 +1739,45 @@ test('outputX and sortOnId resolve from a column name; an unknown name is refuse
 		/Cosinor\.outputX: no column named "nope"\. Available: time_h, signal, grid/
 	);
 });
+
+// A Rayleigh test drafted with no `unit` used to take the default, radians, whatever the
+// values were: clock hours read as radians, a weak R and no warning. The draft now gets the
+// unit the values are in, by the app's own rule (utils/angleUnit.js); a stated unit is kept.
+const CLOCK_HOURS = Array.from({ length: 24 }, (_, i) => 10.87 + (i * (16.98 - 10.87)) / 23);
+const rayleighDraft = (values, args = {}, extra = []) =>
+	normalizeSession({
+		columns: [{ name: 'phase', values }, ...extra],
+		analyses: [{ name: 'RayleighTest', args: { yIN: ['phase'], ...args } }]
+	});
+
+test('Rayleigh test: an omitted unit is read from the values', () => {
+	for (const [values, unit] of [
+		[CLOCK_HOURS, 'hours'],
+		[[0.1, 1.2, 3.1, 6.2, 2.2], 'radians'],
+		[[-3.1, -1, 0.5, 3.1], 'radians'],
+		[[-11, -3, 4, 11.5], 'hours'],
+		[[10, 95, 180, 270, 359], 'degrees'],
+		[[-170, -20, 40, 175], 'degrees'],
+		[[400, 900, 1300], 'radians']
+	]) {
+		const { session, errors } = rayleighDraft(values);
+		assert.equal(errors.length, 0, errors.join('; '));
+		assert.equal(findTP(session, 'RayleighTest').args.unit, unit, JSON.stringify(values));
+	}
+	// The period the hours run over is the draft's.
+	const long = rayleighDraft([2, 9, 17, 26, 27.5], { period: 28 });
+	assert.equal(findTP(long.session, 'RayleighTest').args.unit, 'hours');
+});
+
+test('Rayleigh test: a stated unit is kept, and a timed test infers nothing', () => {
+	for (const unit of ['radians', 'degrees', 'hours']) {
+		const { session } = rayleighDraft(CLOCK_HOURS, { unit });
+		assert.equal(findTP(session, 'RayleighTest').args.unit, unit);
+	}
+	// With a time wired the values are weights (counts), not angles: the default stands.
+	const timed = rayleighDraft(CLOCK_HOURS, { timeIN: 'time' }, [
+		{ name: 'time', type: 'time', values: CLOCK_HOURS.map((_, i) => i * 3600000) }
+	]);
+	assert.equal(timed.errors.length, 0, timed.errors.join('; '));
+	assert.equal(findTP(timed.session, 'RayleighTest').args.unit, 'radians');
+});

@@ -177,6 +177,8 @@
 	// The two selects show 'auto' while the stored choice does not apply to this column (a map
 	// for the other kind of scale, a mode the column cannot be read as): that is what draws.
 	let { datum } = $props();
+	// Prefix for the ids that tie each series row's label to its column picker.
+	const labelUid = $props.id();
 
 	const on = $derived(!!datum?.colourEncoding && !!datum?.colourBy);
 	const enc = $derived(datum?.colourEncoding);
@@ -225,14 +227,13 @@
 
 	{#if on}
 		<div class="colour-by-column">
-			<ControlInput label="Column"></ControlInput>
-			<Column col={datum.colourBy} canChange={true} />
+			<ControlInput label="Column" associate={false} id="{labelUid}-colour"></ControlInput>
+			<Column labelledby="{labelUid}-colour" col={datum.colourBy} canChange={true} />
 		</div>
 
 		{#if wired}
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Read as</p>
+				<ControlInput label="Read as">
 					<AttributeSelect
 						bind:value={
 							() => (modeOptions.includes(enc.mode) ? enc.mode : 'auto'), (v) => (enc.mode = v)
@@ -240,10 +241,9 @@
 						options={modeOptions}
 						optionsDisplay={modeLabels}
 					/>
-				</div>
+				</ControlInput>
 				{#if !categorical}
-					<div class="control-input">
-						<p>Colours</p>
+					<ControlInput label="Colours">
 						<AttributeSelect
 							bind:value={
 								() => (mapOptions.includes(enc.colormap) ? enc.colormap : 'auto'),
@@ -252,7 +252,7 @@
 							options={mapOptions}
 							optionsDisplay={mapLabels}
 						/>
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 

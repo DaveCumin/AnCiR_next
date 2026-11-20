@@ -5,6 +5,7 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { columnNamer } from '$lib/core/columnLabels.js';
 	import { commitNodeRename } from '$lib/core/nodeNaming.js';
+	import { controlLabel, labelledBy } from './controlLabel.js';
 
 	let {
 		onChange = () => {},
@@ -24,8 +25,15 @@
 		// `anchor` ({ x, y } in viewport coords) positions the dropdown.
 		open = $bindable(false),
 		hideTrigger = false,
-		anchor = null
+		anchor = null,
+		// The id of the visible label that names this picker (the trigger is then read as
+		// "<label>, <selected column>"). Defaults to the enclosing <ControlInput
+		// associate={false}>'s label; Column passes it for the plot series rows.
+		labelledby = null
 	} = $props();
+
+	const ownLabel = controlLabel();
+	const triggerId = $props.id();
 
 	// Build a tree of nodes from core state. Each node carries a stable `key`
 	// (used for expansion tracking and {#each}) so renames don't reset state.
@@ -549,6 +557,8 @@
 		     aria-expanded flips the chevron while the list is open. -->
 		<button
 			bind:this={triggerEl}
+			id={triggerId}
+			aria-labelledby={labelledBy(labelledby ?? ownLabel?.id, triggerId)}
 			class="trigger ui-select"
 			title={selectedLabel}
 			onclick={toggleDropdown}

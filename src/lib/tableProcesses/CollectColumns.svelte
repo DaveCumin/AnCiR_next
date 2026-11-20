@@ -104,7 +104,15 @@
 			id: 'tableprocess.collectcolumns',
 			// Manages its own column picker (reads colIds directly, not via
 			// normalizeYInputs), so it opts out of accepting a Column Set bundle.
-			inputs: [{ name: 'colIds', kind: 'column', cardinality: 'many', acceptsColumnSet: false }],
+			inputs: [
+				{
+					name: 'colIds',
+					display: 'columns',
+					kind: 'column',
+					cardinality: 'many',
+					acceptsColumnSet: false
+				}
+			],
 			outputs: [{ name: 'outCols', kind: 'column', cardinality: 'many' }]
 		}
 	};

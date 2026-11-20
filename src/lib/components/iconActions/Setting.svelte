@@ -29,34 +29,19 @@
 	} from '$lib/core/sessionLoad.svelte.js';
 	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
 	import { clearNotesFromPlots } from '$lib/core/notePlacement.js';
-	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
-	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
+	import { saveSession } from '$lib/core/sessionSave.svelte.js';
+	import { clearSaveTarget } from '$lib/core/saveTarget.svelte.js';
+	import { autosaveSessionReplaced } from '$lib/core/autosave.svelte.js';
 	import { downloadBlob } from '$lib/utils/downloadBlob.js';
 	import { trackReads, loadKeepingUnknown } from '$lib/core/unknownFields.js';
 	import { unknownAnalysesWarning } from '$lib/core/unknownNode.js';
-	export function exportJson() {
-		try {
-			// outputCoreAsJson builds this with JSON.stringify, so it is valid JSON by construction.
-			// It used to be parsed again here just to check, a full extra pass over a large session.
-			const jsonStr = outputCoreAsJson();
-			if (typeof jsonStr !== 'string' || !jsonStr) {
-				throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
-			}
-
-			// "<data source> <YYYY-MM-DD>.ancir" rather than "session.json" every time (UI-15).
-			const fileName = sessionSaveFileName(sessionNameForSave(core));
-			downloadBlob(fileName, new Blob([jsonStr], { type: 'application/json' }));
-
-			// The open session is now in a file: nothing to warn about on close (ROB-5), and
-			// a crash copy kept from earlier is older than the file, so it is not offered back.
-			markSessionSaved();
-			clearCrashSnapshot();
-
-			addNotification(`Session saved as "${fileName}".`, 'info');
-		} catch (error) {
-			console.error('Failed to save the session:', error.message);
-			addNotification('Could not save the session: ' + error.message);
-		}
+	/**
+	 * Save the session: the toolbar button, Cmd/Ctrl+S and (with saveAs) Cmd/Ctrl+Shift+S. The
+	 * save dialog, the kept file and the download fallback are in core/sessionSave.svelte.js.
+	 * @param {{ saveAs?: boolean }} [opts]
+	 */
+	export function exportJson(opts) {
+		return saveSession(opts);
 	}
 
 	/**
@@ -245,6 +230,11 @@
 			history.clear();
 			// What is open now is exactly a file the user has: not unsaved work (ROB-5).
 			markSessionSaved();
+			// It is not the file Save wrote to before (a caller that loaded from a file handle sets
+			// that again), and the replaced session's autosaved copy goes with it: the user agreed
+			// to discard it, or it had nothing unsaved.
+			clearSaveTarget();
+			void autosaveSessionReplaced();
 			reportLoad(jsonData, report);
 		} catch (err) {
 			restoreSession(snap);

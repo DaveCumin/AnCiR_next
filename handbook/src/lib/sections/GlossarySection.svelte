@@ -183,9 +183,9 @@
 			>
 			<tr id="gloss-iv"
 				><td>IV (Intradaily Variability)</td><td
-					>How choppy the rhythm is within a single day. 0 is perfectly smooth; the theoretical
-					maximum is 4, and IV ≈ 2 is the value expected from random noise, so values near or above
-					2 mean a highly fragmented record. Strongly dependent on the epoch length.</td
+					>How choppy the rhythm is within a single day. 0 is perfectly smooth; the maximum is about
+					4, and IV ≈ 2 is the value expected from random noise, so values near or above 2 mean a
+					highly fragmented record. Strongly dependent on the epoch length.</td
 				></tr
 			>
 			<tr id="gloss-lasso"

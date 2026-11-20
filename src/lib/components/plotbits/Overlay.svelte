@@ -805,6 +805,8 @@
 		inner,
 		which = 'controls'
 	} = $props();
+	// Prefix for the ids that tie each channel's label to its column picker.
+	const labelUid = $props.id();
 
 	const FORM_LABELS = {
 		vertical: 'Vertical',
@@ -948,7 +950,7 @@
 	{@const ch = overlay.channels[key]}
 	<div class="overlay-channel">
 		<div class="overlay-channel-head">
-			<ControlInput label={spec.display}></ControlInput>
+			<ControlInput label={spec.display} associate={false} id="{labelUid}-ch-{key}"></ControlInput>
 		</div>
 		<div class="overlay-channel-pickers">
 			<!-- Exactly one picker per channel: the wired column when wired, else
@@ -957,6 +959,7 @@
 				{#key ch.columns[0].id}
 					<Column
 						col={ch.columns[0]}
+						labelledby="{labelUid}-ch-{key}"
 						canChange={true}
 						onChange={(refId) => onWireChange(key, refId)}
 					/>
@@ -965,6 +968,7 @@
 				{#key blankGen[key] ?? 0}
 					<Column
 						col={blankFor(key)}
+						labelledby="{labelUid}-ch-{key}"
 						canChange={true}
 						onChange={(refId) => onBlankChange(key, refId)}
 					/>
@@ -1016,8 +1020,8 @@
 	</div>
 
 	{#if !overlay.useDataMin}
-		<div class="control-input">
-			<p>Start time (h)</p>
+		<!-- The time fields name themselves ("Start time (date)"); a number box takes the label. -->
+		<ControlInput label="Start time (h)" associate={!isTimeX}>
 			{#if isTimeX}
 				<DateTimeHrs
 					step="0.5"
@@ -1028,7 +1032,7 @@
 			{:else}
 				<NumberWithUnits step="0.5" bind:value={overlay.startTimeHours} />
 			{/if}
-		</div>
+		</ControlInput>
 	{:else}
 		<div class="control-input">
 			<p>Start Time: Data Min + {overlay.startTimeHours} h</p>
@@ -1093,10 +1097,9 @@
 		<Line lineData={overlay} which="styleRow" />
 	{:else}
 		<div class="control-input-horizontal">
-			<div class="control-input overlay-swatch">
-				<p>Fill</p>
+			<ControlInput label="Fill" class="overlay-swatch" associate={false}>
 				<ColourPicker bind:value={overlay.fill} />
-			</div>
+			</ControlInput>
 			<label class="overlay-check">
 				<input type="checkbox" bind:checked={overlay.edge} />
 				<span>Edge line</span>
@@ -1104,10 +1107,9 @@
 		</div>
 		{#if overlay.edge}
 			<div class="control-input-horizontal">
-				<div class="control-input overlay-swatch">
-					<p>Edge</p>
+				<ControlInput label="Edge" class="overlay-swatch" associate={false}>
 					<ColourPicker bind:value={overlay.edgeColour} />
-				</div>
+				</ControlInput>
 				<ControlInput label="Edge width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={overlay.edgeWidth} />
 				</ControlInput>
@@ -1277,10 +1279,11 @@
 	}
 	/* The Fill / Edge swatch columns: wide enough for their four-letter labels
 	   (Line.svelte's 1.5rem "Col" column wraps "Edge" onto two lines). */
-	.overlay-swatch {
+	/* Global: the column is ControlInput's element, outside this component's scope. */
+	:global(.control-input.overlay-swatch) {
 		max-width: 2.5rem;
 	}
-	.overlay-swatch p {
+	:global(.overlay-swatch > .ci-label) {
 		white-space: nowrap;
 	}
 </style>

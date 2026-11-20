@@ -98,10 +98,10 @@ const R2 = 'R²: the share of the variance in y that the fit explains, 0 to 1.';
 const RMSE_N = 'Root mean square error, sqrt(SS / n), in y units.';
 const RESIDUAL_SE_TEXT = 'Residual standard error, sqrt(SS / (n - p)), in y units.';
 const CURVE_X =
-	'x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers.';
-/** "<what>, at the fit x rows, in y units. Shorter than the input when y has blanks." */
+	'x of the fitted curves: every input row with an x value, or the output x set in the panel. Time for a time x, else numbers.';
+/** "<what>, at the fit x rows, in y units. ..." (one shared x, so a blank y never shortens it). */
 const curveY = (what) =>
-	`${what}, at the fit x rows, in y units. Shorter than the input when y has blanks.`;
+	`${what}, at the fit x rows, in y units. Same length as the fit x; blank y cells do not shorten it.`;
 const CI_LOW_HIGH = (end) => `${end} end of the CI (the level set in the panel, 95% by default).`;
 
 // ---------------------------------------------------------------------------------------------
@@ -119,6 +119,9 @@ const PEAK_POWER = (ctx) => {
 	return 'Power at the peak: unitless for Lomb-Scargle, Qp for Chi-squared, y units for Enright.';
 };
 
+// Moving window folds each window's phase onto the fixed period, else 24 h (movinganalysis.js).
+const FOLD = 'folded onto the fixed period (24 h for a free period)';
+
 export const STAT_DESCRIPTIONS = {
 	pvalue: 'p-value of the test; not corrected for multiple tests.',
 	perm_pvalue: PERM_P,
@@ -128,7 +131,7 @@ export const STAT_DESCRIPTIONS = {
 		ctx?.args?.analysis === 'cosinor' && ctx?.args?.useFixedPeriod ? RESIDUAL_SE_TEXT : RMSE_N,
 	rmse_n: RMSE_N,
 	n: 'Number of values used.',
-	period: (ctx) => `Fitted period, in ${xUnit(ctx)}.`,
+	period: (ctx) => `Period of the fit, fitted or fixed, in ${xUnit(ctx)}.`,
 	mesor: (ctx) => {
 		const a = ctx?.args?.analysis;
 		if (a === 'rectfit')
@@ -140,12 +143,13 @@ export const STAT_DESCRIPTIONS = {
 	amplitude: 'Amplitude of the fit (half the peak-to-trough range for a cosine), in y units.',
 	rel_amplitude:
 		'Harmonic 1 amplitude divided by the MESOR, no units. Blank when the MESOR is near 0.',
-	acrophase: (ctx) => `Time of the fitted peak, ${phaseFrame(ctx)}.`,
+	// The per-window phases of Moving window, folded like its node does (movinganalysis.js).
+	acrophase: (ctx) => `Time of the fitted peak, ${phaseFrame(ctx)}, ${FOLD}.`,
 	bathyphase: (ctx) => `Time of the fitted trough, ${phaseFrame(ctx)}.`,
 	duty_cycle: 'Fraction of each cycle spent at the high (active) level, 0 to 1.',
 	kappa: 'Edge sharpness of the rectangular wave; larger is more square.',
-	onset: (ctx) => `Time the activity bout starts (the rise), ${phaseFrame(ctx)}.`,
-	offset: (ctx) => `Time the activity bout ends (the fall), ${phaseFrame(ctx)}.`,
+	onset: (ctx) => `Time the activity bout starts (the rise), ${phaseFrame(ctx)}, ${FOLD}.`,
+	offset: (ctx) => `Time the activity bout ends (the fall), ${phaseFrame(ctx)}, ${FOLD}.`,
 	k1: (ctx) => `Steepness of the rise, ${perXUnit(ctx)}.`,
 	k2: (ctx) => `Steepness of the fall, ${perXUnit(ctx)}.`,
 	slope: (ctx) => `Slope of the linear trend, in y units ${perXUnit(ctx)}.`,
@@ -153,7 +157,7 @@ export const STAT_DESCRIPTIONS = {
 	a: 'Coefficient a: the scale of y = a·e^(b·x) (exponential) or the offset of y = a + b·ln(x) (logarithmic).',
 	b: 'Coefficient b: the growth rate of y = a·e^(b·x) (exponential) or the slope on ln(x) of y = a + b·ln(x) (logarithmic).',
 	IS: 'Interdaily stability, 0 to 1: how alike the days are. Higher is more stable.',
-	IV: 'Intradaily variability, about 0 to 2: how fragmented the rhythm is within a day. Higher is more fragmented.',
+	IV: 'Intradaily variability, 0 to about 4 (about 2 for random noise): how fragmented the rhythm is within a day. Higher is more fragmented.',
 	RA: 'Relative amplitude, (M10 - L5) / (M10 + L5): 0 to 1 for non-negative data.',
 	M10: (ctx) =>
 		`Mean of the most active ${npcraWindow(ctx, 'M')} h of the average day, in y units.`,
@@ -165,14 +169,14 @@ export const STAT_DESCRIPTIONS = {
 		`Start of the least active ${npcraWindow(ctx, 'L')} h window, ${hoursFrame(ctx)}, folded onto the period.`,
 	CFI: 'Mean of IS, (2 - IV) / 2 and RA, each clamped to 0 to 1. Higher is a stronger rhythm; blank if a part is missing.',
 	peak_period: (ctx) =>
-		`Period of the highest peak, in ${xUnit(ctx)}. Blank when there is no peak.`,
+		`Period of the peak, in ${xUnit(ctx)}: the highest power, or for Chi-squared the largest excess over the threshold. Blank when there is no peak.`,
 	peak_power: PEAK_POWER,
 	peak_pvalue:
 		'Family-wise p of the peak, corrected for every period tested (Chi-squared folds; Lomb-Scargle by Baluev’s false-alarm probability). Blank for Enright.',
 	peak_frequency: (ctx) => `Frequency of the highest FFT peak, in cycles ${perXUnit(ctx)}.`,
 	peak_magnitude: 'Amplitude of the highest FFT peak, in y units.',
 	peak_lag: (ctx) =>
-		`Lag of the first clear autocorrelation peak after the first dip below 0, in ${xUnit(ctx)}.`,
+		`Lag of the highest r in the first positive stretch after r first dips below 0 (else the highest r at any lag), in ${xUnit(ctx)}.`,
 	peak_correlation: 'Autocorrelation r at that peak, -1 to 1.',
 	mean: 'Mean, in y units.',
 	sd: 'Sample standard deviation (n - 1), in y units.',
@@ -252,6 +256,9 @@ const cosinorPorts = (dflt) => ({
 	)
 });
 
+// utils/cosinor.js acrophaseCIDetermined: undetermined unless both F-tests pass and 2·t·SE < period.
+const ACRO_CI_BLANK = 'blank for a free period, no significant rhythm, or a CI a period wide.';
+
 const COSINOR = cosinorPorts(false);
 const FIT_COSINOR = cosinorPorts(true);
 const fitModel = (ctx) => ctx?.args?.model ?? 'cosinor';
@@ -281,12 +288,8 @@ export const NODE_PORT_DESCRIPTIONS = {
 			bathyphase_h1: perY((ctx) => `Trough time of harmonic 1 alone, ${phaseFrame(ctx)}.`),
 			amplitude_ciLow: perY(`${CI_LOW_HIGH('Lower')} Harmonic 1 amplitude; fixed period only.`),
 			amplitude_ciHigh: perY(`${CI_LOW_HIGH('Upper')} Harmonic 1 amplitude; fixed period only.`),
-			acrophase_ciLow: perY(
-				`${CI_LOW_HIGH('Lower')} Harmonic 1 peak time; blank for a free period or no clear rhythm.`
-			),
-			acrophase_ciHigh: perY(
-				`${CI_LOW_HIGH('Upper')} Harmonic 1 peak time; blank for a free period or no clear rhythm.`
-			),
+			acrophase_ciLow: perY(`${CI_LOW_HIGH('Lower')} Harmonic 1 peak time; ${ACRO_CI_BLANK}`),
+			acrophase_ciHigh: perY(`${CI_LOW_HIGH('Upper')} Harmonic 1 peak time; ${ACRO_CI_BLANK}`),
 			rsquared: perY(R2),
 			pvalue: perY(
 				'p of the zero-amplitude F-test (is there a rhythm). Fixed period only. Not corrected across series.'
@@ -437,7 +440,9 @@ export const NODE_PORT_DESCRIPTIONS = {
 			'trendy_*': curveY('The fitted trend'),
 			'resid_*': RESIDUALS,
 			'permstats_*': PERM_STATS,
-			r2: perY('R² on the original y scale, 0 to 1.'),
+			r2: perY(
+				'R² on the original y scale; 1 is a perfect fit. Below 0 is possible for the exponential model, fitted to log y.'
+			),
 			rmse: perY(RMSE_N),
 			'coef_*':
 				'A trend coefficient, one value per wired y column: slope and intercept, a and b, or c0 to cN, by model.'
@@ -460,9 +465,9 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			smoothedx:
-				'x of the smoothed points: the rows with both x and y, sorted by x. A time column for a time x.',
+				'x of the smoothed points: every row with an x value, sorted by x. A time column for a time x.',
 			'smoothedy_*':
-				'Smoothed y at the smoothed x rows (Whittaker, moving average, Savitzky-Golay or LOESS), in y units. Not aligned with the input rows.',
+				'Smoothed y at the smoothed x rows (Whittaker, moving average, Savitzky-Golay or LOESS), in y units. Blank where y is blank; sorted by x, not input order.',
 			'resid_*':
 				'Observed minus smoothed y at the smoothed x rows, in y units. Lines up with the smoothed x output, not with the input.'
 		}
@@ -474,7 +479,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			interpx:
-				'Fill mode: a copy of the input x. Resample mode: an even grid, one row per step across the data. Time for a time x.',
+				'Fill mode: a copy of the input x. Resample mode: an even grid, one row per step from the start to the end set in the panel (the x range by default).',
 			'interpy_*':
 				'y at each output x, filled by linear, nearest or cubic spline interpolation. Blank outside the range of known x (no extrapolation).'
 		}
@@ -486,9 +491,9 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			binnedx:
-				'Start (left edge) of each bin. A time column for a time x, else numbers. Points before the first bin are dropped.',
+				'Start (left edge) of each bin. A time column for a time x, else numbers. Points before the first bin, or past the last custom edge, are dropped.',
 			'binnedy_*':
-				'y summarised per bin by the function in the panel (mean by default; median, min, max, SD or count). Blank for an empty bin, except count, which is 0.'
+				'y per bin by the function in the panel: mean (default), median, min, max, SD or count. Blank for an empty bin (SD needs 2 values); count is 0 within the column’s range.'
 		}
 	},
 	AverageProfile: {
@@ -498,7 +503,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			avgprofx: (ctx) =>
-				`Centre of each profile bin, ${isClock(ctx) ? 'as clock time of day, in hours' : 'in hours after that series’ first sample'}, across one period.`,
+				`Centre of each profile bin across one period, ${isClock(ctx) ? 'as clock time of day, in hours' : `in ${xUnit(ctx)} after that series’ first sample`}.`,
 			'avgprof_*':
 				'Mean profile over one period: each day is averaged within the bin first, then the day means are averaged. In y units; blank for an empty bin.',
 			'avgprofsem_*':
@@ -614,34 +619,34 @@ export const NODE_PORT_DESCRIPTIONS = {
 		inputs: {
 			timeIN:
 				'Optional time column (or hours as numbers). Wired: each y value becomes a weight at its time folded onto the period. Empty: the y columns hold the angles.',
-			yIN: 'Number columns, one or more, each a group: angles in the unit set in the panel, or weights when a time column is wired.'
+			yIN: "Number columns, one or more, each a group: angles in the panel's unit, or weights when a time column is wired. A new node reads the unit from the values' range until you choose one."
 		},
 		outputs: {
 			R: perY(
-				'Mean vector length, 0 to 1: 0 is spread evenly round the cycle, 1 is all at one phase.'
+				'How tightly the phases cluster, 0 to 1: 0 is spread evenly round the cycle, 1 is all at one phase.'
 			),
 			z: perY('Rayleigh z = n·R². Blank when a time column is wired (weighted mode).'),
 			pvalue: perY(
 				'Rayleigh test p (are the phases clustered); not corrected across columns. Blank when a time column is wired.'
 			),
 			acrophase: perY(
-				'Mean direction, as hours of a cycle of the period set in the panel (24 by default), 0 up to the period.'
+				'Mean direction as hours into one cycle, from 0 up to the period (set in the panel for clock hours or a time column; 24 otherwise).'
 			),
-			F: 'Watson-Williams F comparing the mean directions of the y columns: one value for the node. Blank when the test is off, weighted, or with fewer than 2 groups.',
+			F: 'Watson-Williams F comparing the mean directions of the y columns, one value for the node. Blank when off or weighted, under 2 groups, or one angle per group.',
 			ww_pvalue:
-				'Watson-Williams p (do the groups share a mean direction): one value for the node. Blank when the test is off, weighted, or with fewer than 2 groups.'
+				'Watson-Williams p (do the groups share a mean direction), one value for the node. Blank when off or weighted, under 2 groups, or one angle per group.'
 		}
 	},
 	SurrogateTest: {
 		inputs: {
 			xIN: `${X_TIME_OR_NUMBERS} ${NEED_X}`,
-			yIN: 'One number column to test for a rhythm. Needs at least 8 rows; gaps longer than 3 samples are refused.'
+			yIN: 'One number column to test, sampled on a regular grid. Needs at least 8 rows; a gap over 3 samples, or more than 10% missing, is refused.'
 		},
 		outputs: {
 			pvalue:
-				'Share of surrogate series whose statistic reaches the observed one, one value for the node. The smallest possible p is 1 / (surrogates + 1).',
+				'(1 + the surrogates whose statistic reaches the observed one) / (surrogates + 1), one value for the node. Never below 1 / (surrogates + 1).',
 			observed:
-				'The test statistic on the real data: the largest FFT amplitude in the period band, in y units. One value for the node.'
+				'The test statistic on the real data: the largest FFT amplitude in the period band, in y units (0 when no period falls in the band). One value for the node.'
 		}
 	},
 	CrossCorrelation: {
@@ -672,9 +677,9 @@ export const NODE_PORT_DESCRIPTIONS = {
 			effectSize:
 				"Effect size, one value for the node: Cramér's V (independence), Cohen's w (goodness of fit) or the conditional odds ratio (Fisher).",
 			ciLow:
-				'Lower end of the exact 95% interval of the Fisher odds ratio, one value for the node. Blank for chi-square.',
+				'Lower end of the exact 95% interval of the Fisher odds ratio, one value for the node; 0 for a one-sided less test. Blank for chi-square.',
 			ciHigh:
-				'Upper end of the exact 95% interval of the Fisher odds ratio, one value for the node. Blank for chi-square.'
+				'Upper end of the exact 95% interval of the Fisher odds ratio, one value for the node; infinite for a one-sided greater test. Blank for chi-square.'
 		}
 	},
 	Correlation: {
@@ -703,7 +708,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 			n: 'Number of values (blanks left out), one row per column.',
 			mean: 'Mean, in the column’s units, one row per column.',
 			median: 'Median, in the column’s units, one row per column.',
-			sd: 'Sample standard deviation (n - 1), in the column’s units.',
+			sd: 'Sample standard deviation (n - 1), in the column’s units. Blank below 2 values.',
 			sem: 'Standard error of the mean, SD / sqrt(n), in the column’s units. Blank below 2 values.',
 			ciLow:
 				'Lower end of the 95% confidence interval of the mean (Student t, n - 1 df). Blank below 2 values.',
@@ -715,9 +720,10 @@ export const NODE_PORT_DESCRIPTIONS = {
 			q1: '25th percentile (linear interpolation), one row per column.',
 			q3: '75th percentile (linear interpolation), one row per column.',
 			iqr: 'Interquartile range, Q3 minus Q1, one row per column.',
-			skewness: 'Skewness (bias-corrected), no units. Blank with fewer than 3 values.',
+			skewness:
+				'Skewness (bias-corrected), no units. Blank with fewer than 3 values or when all values are equal.',
 			kurtosis:
-				'Excess kurtosis (0 for a normal distribution), no units. Blank with fewer than 4 values.'
+				'Excess kurtosis (0 for a normal distribution), no units. Blank with fewer than 4 values or all values equal.'
 		}
 	},
 	FDRCorrection: {
@@ -726,12 +732,13 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			padj: 'Adjusted p for each input row (false discovery rate or family-wise, by method). Blank where the input p is unusable.',
-			reject: '1 when the adjusted p is below alpha, else 0, for each input row.'
+			reject:
+				'1 when the adjusted p is below alpha, else 0, for each input row. Blank where the input p is unusable.'
 		}
 	},
 	GroupComparison: {
 		inputs: {
-			xIN: 'One column of group labels (text or numbers, read as categories). Empty: each y column is its own group, compared with the others.',
+			xIN: 'One column of group labels (text or numbers, read as categories). Empty: two or more y columns, each its own group, compared in one test.',
 			yIN: 'Number columns, one or more: the values compared across the groups. Each is tested separately.'
 		},
 		outputs: {
@@ -758,8 +765,9 @@ export const NODE_PORT_DESCRIPTIONS = {
 			ciLow: 'Lower end of the 95% interval of the odds ratio, per term.',
 			ciHigh: 'Upper end of the 95% interval of the odds ratio, per term.',
 			outcome: 'The 0/1 outcome actually used, one row per input row (blank for dropped rows).',
-			eta: 'Linear predictor (log-odds) for each input row.',
-			fitted: 'Fitted probability that the outcome is 1, for each input row.'
+			eta: 'Linear predictor (log-odds) for each input row; blank for dropped rows.',
+			fitted:
+				'Fitted probability that the outcome is 1, for each input row; blank for dropped rows.'
 		}
 	},
 	NormalityTest: {
@@ -770,7 +778,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 			variable: 'Name of each input column, one row per column.',
 			statistic: 'Test statistic: Shapiro-Wilk W, D’Agostino K² or Jarque-Bera JB, by method.',
 			pvalue:
-				'p of the normality test, per column. Blank if n is too small (or above 5000 for Shapiro-Wilk).',
+				'p of the normality test, per column. Blank if n is too small, all values are equal, or n is above 5000 for Shapiro-Wilk.',
 			n: 'Number of values tested, per column.',
 			normal:
 				'1 when p is at least alpha: normality not rejected, so the data are consistent with a normal distribution (not shown to be normal). 0 when rejected (non-normal). Blank when the test could not run.'
@@ -836,7 +844,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 		inputs: {},
 		outputs: {
 			'group_*':
-				'The stored values listed in this group, one row each, in key order. Feed it to a plot or test to compare groups.',
+				'The stored values listed in this group, one row each, in the order listed; values that are not numbers are left out.',
 			category: 'Group name of each stored value (older sessions only).',
 			value: 'The stored values of every group (older sessions only).'
 		}
@@ -858,13 +866,13 @@ export const NODE_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			result:
-				'One value per row from the chosen function across the columns (add, average, min, max, SD or percentile). As long as the first column.'
+				'One value per row from the chosen function (add, average, min, max, SD or percentile); add joins text if a column is text. As long as the first column.'
 		}
 	},
 	ColumnSet: {
 		inputs: {
 			colsIN:
-				'Candidate columns of any type, one or more. The set keeps those whose name or group label contains the match text.'
+				'Candidate columns of any type, one or more. The set keeps those whose name or group label (as set) contains the match text; empty text keeps all.'
 		},
 		outputs: {
 			set: 'A live set of the matching columns down one wire. Connects only to an input that takes one or more columns (marked *).'
@@ -884,7 +892,7 @@ export const NODE_PORT_DESCRIPTIONS = {
 			aTimeIN:
 				'Time of dataset A: a time column, or numbers. Wire a time for both A and B (rows interleave in time order) or for neither (B is stacked under A).',
 			aValuesIN:
-				'Columns of dataset A, one or more. Each pairs with the B column of the same name.',
+				'Columns of dataset A, one or more. Each pairs with the B column of the same name, unless paired otherwise in the panel.',
 			bTimeIN:
 				'Time of dataset B, the same kind as time A (both time, or both numbers). Leave both times empty to stack B under A.',
 			bValuesIN:
@@ -934,17 +942,17 @@ export const NODE_PORT_DESCRIPTIONS = {
 	Split: {
 		inputs: {
 			xIN: 'One time or number column the split points are read on (dates for time, numbers otherwise). Required.',
-			yIN: 'Columns, one or more, to cut into segments.'
+			yIN: 'Number or time columns, one or more, to cut into segments. A text column comes out blank.'
 		},
 		outputs: {
 			segments:
-				'One column per wired y column and segment: full length, with values only between that segment’s split points.'
+				'One column per wired y column and segment: full length, with values from a split point up to (not including) the next, blank elsewhere.'
 		},
 		special: [
 			{
 				re: /^(\d+)_(\d+)$/,
 				text: () =>
-					'This segment of the column: full length, with values only between its split points and blank elsewhere.'
+					'This segment of the column: full length, with values from its split point up to (not including) the next, and blank elsewhere.'
 			}
 		]
 	}
@@ -966,7 +974,7 @@ export const PROCESS_PORT_DESCRIPTIONS = {
 		}
 	},
 	Multiply: {
-		inputs: { input: 'A number column.' },
+		inputs: { input: 'A number column; a time column is refused.' },
 		outputs: { output: 'The input times the value, row by row. Same length; blanks stay blank.' }
 	},
 	Sub: {
@@ -990,21 +998,21 @@ export const PROCESS_PORT_DESCRIPTIONS = {
 		}
 	},
 	FrequencyFilter: {
-		inputs: { input: 'An evenly sampled number column.' },
+		inputs: { input: 'An evenly sampled number column; a time column is refused.' },
 		outputs: {
 			output:
 				'The input after the low-, high- or band-pass FFT filter (cutoffs as fractions of the Nyquist frequency), in its own units. Blanks stay blank.'
 		}
 	},
 	normalize: {
-		inputs: { input: 'A number column.' },
+		inputs: { input: 'A number column; a time column is refused.' },
 		outputs: {
 			output:
 				'The input rescaled (z-score, min-max, robust median and MAD, or unit vector), with no units. Blanks stay blank.'
 		}
 	},
 	OutlierRemoval: {
-		inputs: { input: 'A number column.' },
+		inputs: { input: 'A number column; a time column is refused.' },
 		outputs: {
 			output:
 				'The input with outliers (by z-score or IQR fences) blanked. Same length; with fewer than 4 values it passes through.'
@@ -1017,7 +1025,7 @@ export const PROCESS_PORT_DESCRIPTIONS = {
 		},
 		outputs: {
 			output:
-				'The input minus its fitted trend, in its own units (or a sliding z-score). Unchanged where the fit is refused.'
+				'The input minus its fitted trend, in its own units, then a sliding z-score if set. Blank in rows with no x or no value; unchanged where the fit is refused.'
 		}
 	}
 };
@@ -1079,7 +1087,8 @@ export const PLOT_PORT_DESCRIPTIONS = {
 			values: PLOT_VALUES
 		},
 		outputs: {
-			peak_lag: `Lag of the first clear peak after lag 0, in hours. One value per series.`,
+			peak_lag:
+				'Lag of the highest r in the first positive stretch after r first dips below 0 (else the highest r), within the axis limits. In hours; one value per series.',
 			peak_correlation: 'Autocorrelation r at that peak, -1 to 1. One value per series.'
 		}
 	},
@@ -1100,7 +1109,8 @@ export const PLOT_PORT_DESCRIPTIONS = {
 	},
 	histogram: {
 		inputs: {
-			column: 'Number columns, one or more; each is its own histogram. Time columns are refused.'
+			column:
+				'Number columns, one or more; each is its own histogram. A time column draws nothing and shows a warning.'
 		},
 		outputs: {}
 	},
@@ -1120,7 +1130,7 @@ export const PLOT_PORT_DESCRIPTIONS = {
 	periodogram: {
 		inputs: { time: TIME_HOURS, values: PLOT_VALUES },
 		outputs: {
-			peak_period: `Period of ${VISIBLE_PEAK}, in hours. One value per series.`,
+			peak_period: `Period of ${VISIBLE_PEAK}, in hours; for Chi-squared the largest excess over the threshold. One value per series.`,
 			peak_power: `${PEAK_POWER({})} One value per series.`,
 			peak_pvalue:
 				'Family-wise p of the peak, corrected for the periods tested (Chi-squared folds; Lomb-Scargle by Baluev’s false-alarm probability). Blank for Enright. One value per series.'
@@ -1132,7 +1142,7 @@ export const PLOT_PORT_DESCRIPTIONS = {
 				'Number columns, one or more, each compared with a normal distribution. Needs at least 3 values.'
 		},
 		outputs: {
-			qq_r: 'Correlation of the Q-Q points with the normal line, up to 1 (1 is perfectly normal), one value per series. Blank for constant data or n under 3.',
+			qq_r: 'Correlation of the sorted values with their normal quantiles, up to 1 (a straight line). One value per series; blank for constant data or n under 3.',
 			qq_n: 'Number of values used. One value per series.'
 		}
 	},
@@ -1177,6 +1187,7 @@ const NEW_LINE_DESCRIPTION =
 
 const PASSTHROUGH =
 	'The column wired into this plot, passed on so it can be wired onward from here.';
+// Fallbacks when the member node behind a composite's interface port is not known.
 const COMPOSITE_IN = 'Input of a node inside this composite; it takes what that node’s port takes.';
 const COMPOSITE_OUT = 'Output of a node inside this composite, passed out unchanged.';
 
@@ -1356,6 +1367,15 @@ export function describeNodePort(node, port, dir, env = {}) {
 	if (type === 'data') {
 		return dir === 'out' ? columnCarries(env.col?.(node.refId)) : null;
 	}
-	if (type === 'composite') return dir === 'in' ? COMPOSITE_IN : COMPOSITE_OUT;
+	if (type === 'composite') {
+		// An interface port stands for a member node's port (ProcessNode.svelte.js): say what
+		// that port expects or produces, else the generic pass-through sentence.
+		const member = port.memberNode;
+		const inner =
+			member && member.type !== 'composite' && typeof port.memberPort === 'string'
+				? describeNodePort(member, { name: port.memberPort }, dir, env)
+				: null;
+		return inner ?? (dir === 'in' ? COMPOSITE_IN : COMPOSITE_OUT);
+	}
 	return null;
 }

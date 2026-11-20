@@ -3,6 +3,7 @@
 	import { appConsts, core } from '$lib/core/core.svelte';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 	import { loadKeepingUnknown } from '$lib/core/unknownFields.js';
+	import { refusesInputType } from '$lib/core/processInputRules.js';
 
 	let _counter = 0;
 	let _linkedGroupCounter = 0;
@@ -105,6 +106,13 @@
 				reportUnknownNode('column process', this.name);
 				return data;
 			}
+			// A column of a type the process refuses (`disallowTypes`), wired before the rule
+			// existed (a saved session), passes through unchanged; the node says why
+			// (processInputRules.refusedInputWarnings). Computing on it would treat a time
+			// column's epoch milliseconds as numbers.
+			const inCol =
+				inputColId != null ? (core.data ?? []).find((c) => c.id === inputColId) : this.parentCol;
+			if (refusesInputType(proc, inCol?.type)) return data;
 			const args = inputColId == null ? this.args : { ...this.args, parentColId: inputColId };
 			return proc.func(data, args);
 		}

@@ -37,11 +37,38 @@ function setFlag(el, name, on) {
 	else el.removeAttribute(name);
 }
 
-export function scrollFade() {
+/**
+ * @param {{ label?: string }} [opts] label: the box's name. While its content overflows (it
+ *   scrolls), the box is a keyboard tab stop, so someone without a mouse or trackpad can scroll
+ *   it with the arrow keys (WCAG 2.1.1; axe scrollable-region-focusable), and with a label it is
+ *   a named region ("Results table") rather than an unnamed stop. A box that fits is left alone,
+ *   so it adds no tab stop.
+ */
+export function scrollFade({ label } = {}) {
 	return (el) => {
+		const ownTabindex = el.hasAttribute('tabindex');
+		let focusable = false;
+		const setFocusable = (on) => {
+			if (on === focusable || ownTabindex) return;
+			focusable = on;
+			if (on) {
+				el.setAttribute('tabindex', '0');
+				if (label) {
+					el.setAttribute('role', 'region');
+					el.setAttribute('aria-label', label);
+				}
+			} else {
+				el.removeAttribute('tabindex');
+				if (label) {
+					el.removeAttribute('role');
+					el.removeAttribute('aria-label');
+				}
+			}
+		};
 		const update = () => {
 			const edges = scrollEdges(el);
 			for (const edge in FLAGS) setFlag(el, FLAGS[edge], edges[edge]);
+			setFocusable(el.scrollWidth - el.clientWidth > 1 || el.scrollHeight - el.clientHeight > 1);
 		};
 		update();
 		el.addEventListener('scroll', update, { passive: true });

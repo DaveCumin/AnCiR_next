@@ -98,7 +98,9 @@
 			detrended = slidingStandardisation(detrended, args.windowSize);
 		}
 
-		const out = [...x];
+		// A row the fit did not see (a blank x or a blank y) is blank in the output. Keeping
+		// its raw value mixed un-detrended values into a detrended column (2026-11-21).
+		const out = new Array(x.length).fill(null);
 		for (let k = 0; k < validIndices.length; k++) out[validIndices[k]] = detrended[k];
 		return out;
 	}
@@ -167,21 +169,19 @@
 
 <ProcessShell {p}>
 	<!-- X column for trend fitting -->
-	<div class="control-input">
-		<p>X axis</p>
+	<ControlInput label="X axis" associate={false}>
 		<ColumnSelector bind:value={p.args.xColId} />
-	</div>
+	</ControlInput>
 
 	<!-- Trend model -->
-	<div class="control-input">
-		<p>Model</p>
+	<ControlInput label="Model">
 		<AttributeSelect
 			bind:value={p.args.model}
 			label=""
 			options={['linear', 'exponential', 'logarithmic', 'polynomial']}
 			optionsDisplay={['Linear', 'Exponential', 'Logarithmic', 'Polynomial']}
 		/>
-	</div>
+	</ControlInput>
 
 	{#if p.args.model === 'polynomial'}
 		<ControlInput label="Degree">

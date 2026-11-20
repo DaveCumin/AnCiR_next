@@ -17,7 +17,7 @@ const ADD_ID = 9;
 const FILTER_NODE = 'process_4';
 const ADD_NODE = `process_${ADD_ID}`;
 
-function fixture() {
+function fixture({ multiplyOnTime = false } = {}) {
 	const s = JSON.parse(
 		readFileSync('static/sessions/demos/demo-process-filterbyothercol.json', 'utf8')
 	);
@@ -48,13 +48,48 @@ function fixture() {
 	s.orphanProcesses.push({ id: ADD_ID, name: 'Add', args: { value: 5, inIN: [618] } });
 	s.nodeLayout[`data_${TIME_ID}`] = { x: 60, y: 560 };
 	s.nodeLayout[ADD_NODE] = { x: 440, y: 560 };
+	// A session saved before Multiply refused time columns: one already wired to the time
+	// column, and one on the number column to drag the time column onto.
+	if (multiplyOnTime) {
+		s.orphanProcesses.push(
+			{ id: MUL_TIME_ID, name: 'Multiply', args: { value: 2, inIN: [TIME_ID] } },
+			{ id: MUL_NUM_ID, name: 'Multiply', args: { value: 2, inIN: [618] } }
+		);
+		s.data.push(
+			{
+				id: 702,
+				name: 'Multiply time',
+				data: null,
+				type: 'time',
+				producerNodeId: `process_${MUL_TIME_ID}`,
+				producerPort: `out_${TIME_ID}`,
+				producerArtifactKind: 'column',
+				processes: []
+			},
+			{
+				id: 703,
+				name: 'Multiply y',
+				data: null,
+				type: 'number',
+				producerNodeId: `process_${MUL_NUM_ID}`,
+				producerPort: 'out_618',
+				producerArtifactKind: 'column',
+				processes: []
+			}
+		);
+		s.nodeLayout[`process_${MUL_TIME_ID}`] = { x: 800, y: 560 };
+		s.nodeLayout[`process_${MUL_NUM_ID}`] = { x: 800, y: 200 };
+	}
 	return JSON.stringify(s);
 }
 
-async function load(page) {
+const MUL_TIME_ID = 10;
+const MUL_NUM_ID = 11;
+
+async function load(page, opts = {}) {
 	await page.routeWebSocket(/.*/, () => {}); // no live reload mid-test
 	await page.route('**/e2e-mixed-inputs.json', (route) =>
-		route.fulfill({ contentType: 'application/json', body: fixture() })
+		route.fulfill({ contentType: 'application/json', body: fixture(opts) })
 	);
 	await page.goto(`/?loadFromURL=${encodeURIComponent('/e2e-mixed-inputs.json')}`);
 	await page.waitForFunction(
@@ -118,7 +153,7 @@ test('Filter takes a time and a number column; Add refuses the mix; undo and red
 	// Add: wiring the time column next to the number column is refused, with the reason.
 	await dragWire(page, time, port(page, ADD_NODE, 'in', 'input'));
 	await expect(
-		page.getByText(/Add inputs must all be the same type \(already number\)/)
+		page.locator('.toast').getByText(/Add inputs must all be the same type \(already number\)/)
 	).toBeVisible();
 	expect((await nodeState(page, ADD_ID)).inIN).toEqual([618]);
 
@@ -147,4 +182,30 @@ test('Filter takes a time and a number column; Add refuses the mix; undo and red
 	await page.keyboard.press('ControlOrMeta+Shift+z');
 	await expect.poll(async () => (await nodeState(page, 4)).inIN).toEqual([618, TIME_ID]);
 	expect((await nodeState(page, 4)).outs.map((o) => o.type)).toEqual(['number', 'time']);
+});
+
+test('Multiply refuses a time column; a saved one passes through with the refusal shown', async ({
+	page
+}) => {
+	await load(page, { multiplyOnTime: true });
+
+	// The saved wire loads: the node shows the standard refusal as its warning, and its output
+	// is the time column unchanged (not its epoch milliseconds doubled).
+	const node = page.locator(`.workflow-node-wrapper:has([data-node-id="process_${MUL_TIME_ID}"])`);
+	const badge = node.locator('.node-warning-badge').first();
+	await expect(badge).toBeVisible();
+	await expect(badge).toHaveAttribute(
+		'aria-label',
+		"Warning: Multiply doesn't support time columns yet. Its time input passes through unchanged."
+	);
+	const s = await nodeState(page, MUL_TIME_ID);
+	expect(s.outs).toHaveLength(1);
+	expect(s.outs[0].data).toEqual(s.t);
+
+	// A new wire from the time column is refused with the same words, and wires nothing.
+	await dragWire(page, await timeOut(page), port(page, `process_${MUL_NUM_ID}`, 'in', 'input'));
+	await expect(
+		page.locator('.toast').getByText("Multiply doesn't support time columns yet.")
+	).toBeVisible();
+	expect((await nodeState(page, MUL_NUM_ID)).inIN).toEqual([618]);
 });

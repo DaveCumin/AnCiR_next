@@ -1,4 +1,5 @@
 <script module>
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { columnNamer, displayNameById, displayNameOf } from '$lib/core/columnLabels.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -139,6 +140,7 @@
 
 <script>
 	// @ts-nocheck
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
@@ -484,8 +486,7 @@
 			<span>Input</span>
 		</div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column (time or number)</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector
 					bind:value={p.args.xIN}
 					optionDisabled={(id) => {
@@ -495,11 +496,10 @@
 							: 'X must be a time or number column to split on.';
 					}}
 				/>
-			</div>
-			<div class="control-input">
-				<p>Y columns to split</p>
+			</ControlInput>
+			<ControlInput label="Values (y)" associate={false}>
 				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/if}
@@ -519,10 +519,19 @@
 						<!-- Read and typed as the x column's times are shown (its zone). -->
 						<DateTimeHrs bind:value={p.args.splitTimes[idx]} frame={xIN_col} />
 					{:else}
-						<NumberWithUnits bind:value={p.args.splitTimes[idx]} step="0.1" />
+						<NumberWithUnits
+							bind:value={p.args.splitTimes[idx]}
+							step="0.1"
+							ariaLabel={`Split ${idx + 1}`}
+						/>
 					{/if}
 
-					<button class="icon" onclick={() => removeSplitTime(idx)}>
+					<button
+						type="button"
+						{@attach tooltip('Remove this split time')}
+						class="icon"
+						onclick={() => removeSplitTime(idx)}
+					>
 						<Icon name="trash" width={16} height={16} className="menu-icon" />
 					</button>
 				</div>

@@ -206,3 +206,48 @@ describe('defaults that depend on the x (as a new node in the app)', () => {
 		}
 	});
 });
+
+// A Rayleigh test run with no `unit` used to take the default, radians, whatever the values
+// were (clock hours read as radians: R 0.015 for a cluster whose R is 0.89, and no warning).
+describe('Rayleigh test unit', () => {
+	const CLOCK_HOURS = Array.from({ length: 24 }, (_, i) => 10.87 + (i * (16.98 - 10.87)) / 23);
+	const run = async (id, args, extra = []) => {
+		const s = new AncirSession(id);
+		s.importColumns([{ name: 'phase', values: CLOCK_HOURS }, ...extra]);
+		return s.runTableProcess('RayleighTest', { yIN: ['phase'], ...args });
+	};
+	const R = (r) => outData(r, 'R').preview[0];
+
+	it('no unit: read from the values, as a node added in the app', async () => {
+		const r = await run('rayleigh-auto', {});
+		expect(r.valid, r.error).toBe(true);
+		expect(tpArgs(r)).toMatchObject({ unit: 'hours', unitAuto: true });
+		expect(R(r)).toBeGreaterThan(0.85);
+		expect(r.warnings).toBeUndefined();
+	});
+
+	it('an explicit unit is respected, and the result says when the values contradict it', async () => {
+		const r = await run('rayleigh-explicit', { unit: 'radians' });
+		expect(r.valid, r.error).toBe(true);
+		expect(tpArgs(r)).toMatchObject({ unit: 'radians', unitAuto: false });
+		expect(R(r)).toBeLessThan(0.1);
+		expect(r.warnings).toHaveLength(1);
+		expect(r.warnings[0]).toMatch(/look like clock hours read as radians/);
+		const ok = await run('rayleigh-explicit-ok', { unit: 'hours' });
+		expect(tpArgs(ok)).toMatchObject({ unit: 'hours', unitAuto: false });
+		expect(R(ok)).toBeCloseTo(R(await run('rayleigh-auto-2', {})), 12);
+		expect(ok.warnings).toBeUndefined();
+	});
+
+	it('with a time wired the values are weights: nothing is inferred', async () => {
+		const r = await run('rayleigh-timed', { timeIN: 't' }, [
+			{
+				name: 't',
+				type: 'time',
+				values: CLOCK_HOURS.map((_, i) => Date.UTC(2024, 3, 1) + i * 6 * H)
+			}
+		]);
+		expect(r.valid, r.error).toBe(true);
+		expect(tpArgs(r).unit).toBe('radians');
+	});
+});

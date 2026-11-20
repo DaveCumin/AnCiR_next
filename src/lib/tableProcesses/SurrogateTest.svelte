@@ -266,26 +266,23 @@
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
-	<div class="control-input">
-		<p>Time</p>
+	<ControlInput label="Time (x)" associate={false}>
 		<ColumnSelector bind:value={p.args.xIN} onChange={recompute} />
-	</div>
-	<div class="control-input">
-		<p>Values</p>
+	</ControlInput>
+	<ControlInput label="Values (y)" associate={false}>
 		<ColumnSelector bind:value={p.args.yIN} onChange={recompute} />
-	</div>
+	</ControlInput>
 </div>
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Null model</span></div>
-	<div class="control-input">
-		<p>Surrogate</p>
+	<ControlInput label="Surrogate">
 		<AttributeSelect
 			bind:value={p.args.method}
 			options={['block', 'ar1', 'shuffle']}
 			optionsDisplay={['Block bootstrap', 'AR(1) red noise', 'Shuffle (not recommended)']}
 		/>
-	</div>
+	</ControlInput>
 	<p class="tp-hint">
 		Phase-randomised and AAFT surrogates are not offered: they keep the power spectrum, so they keep
 		the rhythm being tested and cannot answer whether it is there.

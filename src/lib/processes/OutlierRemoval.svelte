@@ -137,9 +137,18 @@
 		},
 		nodeSpec: {
 			id: 'process.outlierremoval',
-			// sameType: true: the fences are computed and compared in the inputs' units
-			// (core/processInputRules.js).
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one', sameType: true }],
+			// disallowTypes: a time column is refused: fences on epoch milliseconds would drop
+			// the first or last samples, not outliers (core/processInputRules.js). sameType:
+			// true: the fences are computed and compared in the inputs' units.
+			inputs: [
+				{
+					name: 'input',
+					kind: 'column',
+					cardinality: 'one',
+					disallowTypes: ['time'],
+					sameType: true
+				}
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};
@@ -230,14 +239,13 @@
 </script>
 
 <ProcessShell {p}>
-	<div class="control-input">
-		<p>Method</p>
+	<ControlInput label="Method">
 		<AttributeSelect
 			bind:value={p.args.method}
 			options={['iqr', 'zscore']}
 			optionsDisplay={['IQR', 'Z-score']}
 		/>
-	</div>
+	</ControlInput>
 	{#if p.args.method === 'iqr'}
 		<ControlInput label="IQR multiplier">
 			<NumberWithUnits bind:value={p.args.iqrMultiplier} step="0.1" min={0.1} max={5} />

@@ -600,7 +600,7 @@
 
 <style>
 	.draggable:focus-visible {
-		outline: 2px solid var(--color-accent);
+		outline: var(--focus-ring);
 		outline-offset: 2px;
 	}
 	.draggable {

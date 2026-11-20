@@ -1368,16 +1368,14 @@
 		</div>
 
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>X column</p>
+			<ControlInput label="Time (x)" associate={false}>
 				<ColumnSelector bind:value={p.args.xIN} />
-			</div>
+			</ControlInput>
 
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Y columns</p>
+				<ControlInput label="Values (y)" associate={false}>
 					<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 	</div>

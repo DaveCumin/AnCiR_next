@@ -96,7 +96,7 @@
 		columnIdFields: { scalar: [], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.describedata',
-			inputs: [{ name: 'yIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'yIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			outputs: OUT_KEYS.map((name) => ({ name, kind: 'column', cardinality: 'one' }))
 		}
 	};
@@ -117,6 +117,7 @@
 
 <script>
 	// @ts-nocheck
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
@@ -210,10 +211,9 @@
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Columns to describe</p>
+		<ControlInput label="Columns to describe" associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={outIds} />
-		</div>
+		</ControlInput>
 	{/if}
 	{#if result.rows.length}
 		<p class="hint">
@@ -223,7 +223,7 @@
 			<summary class="tp-output-summary">Summary</summary>
 			<!-- Scrolls sideways in a narrow panel (as RayleighTest does) instead of
 			     letting the browser wrap numbers one character per line. -->
-			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
+			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade({ label: 'Summary statistics' })}>
 				<table class="d-table">
 					<thead>
 						<tr

@@ -21,6 +21,7 @@
 import { addNotification } from './notifications.svelte.js';
 import { core, appConsts, outputCoreAsJson } from './core.svelte.js';
 import { NL_URL, NL_CONFIGURED } from '$lib/utils/nlSession.js';
+import { getAutosaveSlot } from './autosaveSlot.js';
 
 /** Where a crashed session is parked. One slot: the latest crash is the one being debugged. */
 export const CRASH_SNAPSHOT_KEY = 'ancir:last-crash-session';
@@ -86,7 +87,13 @@ export function saveCrashSnapshot() {
 	try {
 		s.setItem(
 			CRASH_SNAPSHOT_KEY,
-			JSON.stringify({ savedAt: new Date().toISOString(), session: JSON.parse(outputCoreAsJson()) })
+			JSON.stringify({
+				savedAt: new Date().toISOString(),
+				// This tab's autosave slot: the same session may also have an autosaved copy, and
+				// the start screen must not offer it a second time (autosave.svelte.js).
+				autosaveSlot: getAutosaveSlot(),
+				session: JSON.parse(outputCoreAsJson())
+			})
 		);
 		return true;
 	} catch {

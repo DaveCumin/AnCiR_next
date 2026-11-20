@@ -30,7 +30,7 @@
 		columnIdFields: { array: ['colsIN'] },
 		nodeSpec: {
 			id: 'tableprocess.columnset',
-			inputs: [{ name: 'colsIN', kind: 'column', cardinality: 'many' }],
+			inputs: [{ name: 'colsIN', display: 'columns', kind: 'column', cardinality: 'many' }],
 			// One bundle output carrying the selected columns. `columnset` kind →
 			// rendered as a single `set` port; only connectable to a many-in input.
 			outputs: [{ name: 'set', kind: 'columnset', cardinality: 'many' }]
