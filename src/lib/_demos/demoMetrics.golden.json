@@ -451,13 +451,10 @@
 	},
 	"demo-workflow-crepuscular.json": {
 		"RayleighTest.R": [
-			0.345620921
+			0.09576971
 		],
-		"RayleighTest.pvalue": [
-			0
-		],
-		"RayleighTest.z": [
-			40.136483923
+		"RayleighTest.acrophase": [
+			0.733398953
 		]
 	},
 	"demo-workflow-free-running.json": {

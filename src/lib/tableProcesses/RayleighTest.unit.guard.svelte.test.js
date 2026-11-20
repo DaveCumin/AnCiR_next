@@ -14,10 +14,9 @@
 // Generalises the 2026-11-15 bug: 24 clock hours (10.9 to 17) wired to a new node gave
 // R 0.099, p 0.79 as radians where the hours give R 0.886, p 1e-8, with nothing on screen.
 //
-// KNOWN_MISREAD: the shipped crepuscular example wires its time of day to `xIN`, which the
-// Rayleigh test does not read (its time input is `timeIN`), so the node tests the activity
-// counts (0 to 83) as clock hours. The new notice says so. The example is generated
-// (_demos/generateDemos.svelte.test.js) and is left as shipped until it is regenerated.
+// The shipped crepuscular example once wired its time of day to `xIN`, which the Rayleigh
+// test does not read (its time input is `timeIN`), so the node tested the activity counts
+// (0 to 83) as clock hours and showed this notice. No shipped example may show it now.
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
@@ -383,7 +382,6 @@ describe('saved sessions keep their unit and their numbers', () => {
 	const withRayleigh = readdirSync(DEMOS)
 		.filter((f) => f.endsWith('.json') && f !== 'index.json' && !f.includes('[conflicted]'))
 		.filter((f) => (demo(f).tableProcesses ?? []).some((t) => t.name === 'RayleighTest'));
-	const KNOWN_MISREAD = new Set(['demo-workflow-crepuscular.json']);
 	it('the shipped examples are found', () => expect(withRayleigh.length).toBeGreaterThanOrEqual(3));
 	for (const file of withRayleigh) {
 		it(`${file}: unit unchanged, not following, no unit notice`, async () => {
@@ -397,9 +395,7 @@ describe('saved sessions keep their unit and their numbers', () => {
 				const tp = core.tableProcesses.find((t) => t.id === id);
 				expect(tp.args.unit).toBe(unit);
 				expect(tp.args.unitAuto ?? false).toBe(false);
-				expect((tp.warnings ?? []).some((w) => /set the unit to/.test(w))).toBe(
-					KNOWN_MISREAD.has(file)
-				);
+				expect((tp.warnings ?? []).filter((w) => /set the unit to/.test(w))).toEqual([]);
 			}
 		});
 	}

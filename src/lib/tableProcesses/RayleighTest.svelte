@@ -418,7 +418,8 @@
 		<ControlInput label="Time (optional)" associate={false}>
 			<ColumnSelector bind:value={p.args.timeIN} excludeColIds={yExcludeIds} />
 		</ControlInput>
-		<ControlInput label="Angles (y)" associate={false}>
+		<!-- With a time wired the y values are weights (activity per sample), not angles. -->
+		<ControlInput label={isWeighted ? 'Weights (y)' : 'Angles (y)'} associate={false}>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
 		</ControlInput>
 	{/if}

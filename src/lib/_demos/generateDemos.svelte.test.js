@@ -2251,17 +2251,20 @@ const WORKFLOWS = [
 		name: 'Workflow: crepuscular (bimodal) activity',
 		family: 'Workflows',
 		description:
-			'Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.',
-		showcases: ['periodogram', 'actogram', 'RayleighTest'],
+			'Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: its dominant peak is at 12 h, with only a small peak at 24 h, there because the two bouts here are 13 h apart rather than exactly 12. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.',
+		showcases: ['periodogram', 'actogram', 'circularphase', 'RayleighTest'],
 		async build() {
 			const rng = mulberry32(71);
 			const DAYS = 14;
 			const hours = seq(24 * DAYS, (i) => i);
-			// Peaks centred on 06:00 and 18:00, quiet at midday and midnight.
+			// Peaks centred on 06:00 and 19:00, quiet at midday and through the night.
+			// Not exactly 12 h apart (dawn and dusk rarely are): with two equal peaks
+			// exactly opposite each other the two halves cancel, so there is no 24 h
+			// component for the periodogram to show and the mean phase is set by noise.
 			const activity = hours.map((h) => {
 				const tod = h % 24;
 				const dawn = Math.exp(-((tod - 6) ** 2) / 4);
-				const dusk = Math.exp(-((tod - 18) ** 2) / 4);
+				const dusk = Math.exp(-((tod - 19) ** 2) / 4);
 				return Math.max(0, 6 + 70 * (dawn + dusk) + normal(rng, 0, 5));
 			});
 			const hoursId = mkCol('number', hours, 'hour');
@@ -2273,29 +2276,36 @@ const WORKFLOWS = [
 			acto.plot.doublePlot = 2;
 			pushObj(acto);
 
-			const pg = new Plot({ name: 'Periodogram: 24 h and 12 h', type: 'periodogram' });
+			const pg = new Plot({ name: 'Periodogram: a dominant 12 h peak', type: 'periodogram' });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
 			pg.plot.periodlimsIN = [6, 30];
 			pg.plot.periodSteps = 0.02;
 			pushObj(pg);
 
+			// The distribution itself: activity around a 24 h clock (a timed series, so
+			// each sample sits at its time of day with radius = activity), with the
+			// activity-weighted mean vector drawn over it.
+			const clock = new Plot({ name: 'Two peaks, one mean vector', type: 'circularphase' });
+			clock.plot.addData({ time: { refId: hoursId }, values: { refId: actId }, label: 'activity' });
+			pushObj(clock);
+
 			// Time of day, weighted by activity: the circular summary of a bimodal
-			// distribution. The resultant is short because the two peaks oppose.
-			const todId = mkCol(
-				'number',
-				hours.map((h) => h % 24),
-				'time of day'
-			);
+			// distribution. The time goes to `timeIN` (the node takes it modulo the
+			// period) and the activity counts are the weights. The resultant is short
+			// because the two peaks nearly oppose, and its direction falls in the
+			// quiet night between them. Timed mode reports R and the acrophase only,
+			// so only those two outputs are seeded (the node adds the rest on load).
+			// The node shows both values itself; no separate table is needed.
 			const rayleigh = new TableProcess(
 				{
 					name: 'RayleighTest',
 					args: {
-						xIN: todId,
+						timeIN: hoursId,
 						yIN: [actId],
 						period: 24,
 						unit: 'hours',
-						testType: 'rayleigh',
-						out: { R: -1, z: -1, pvalue: -1 }
+						showWatsonWilliams: false,
+						out: { R: -1, acrophase: -1 }
 					}
 				},
 				null
@@ -2303,11 +2313,6 @@ const WORKFLOWS = [
 			rayleigh.displayName = 'Rayleigh: one mean phase for two peaks';
 			pushObj(rayleigh);
 			await rayleigh.doProcess();
-			tablePlot('Circular summary', [
-				rayleigh.args.out.R,
-				rayleigh.args.out.z,
-				rayleigh.args.out.pvalue
-			]);
 		}
 	},
 	{

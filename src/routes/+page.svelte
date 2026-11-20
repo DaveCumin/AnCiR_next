@@ -1506,7 +1506,10 @@
 		margin: 0 0 4px 0;
 	}
 
+	/* border-box: full width INCLUDING padding and border. Content-box made every notice
+	   18 px wider than its column, so its right edge ran past a node card and was cut. */
 	:global(.data-warning) {
+		box-sizing: border-box;
 		width: 100%;
 		padding: 6px 8px;
 		margin-bottom: var(--space-4);
