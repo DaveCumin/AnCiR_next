@@ -2323,7 +2323,7 @@
               "processes": []
             },
             "label": "",
-            "colour": "#234154",
+            "colour": null,
             "draw": true,
             "phaseMarkers": []
           }
@@ -2430,7 +2430,7 @@
               "processes": []
             },
             "label": "",
-            "colour": "#234154",
+            "colour": null,
             "draw": true,
             "phaseMarkers": []
           }
@@ -2791,5 +2791,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

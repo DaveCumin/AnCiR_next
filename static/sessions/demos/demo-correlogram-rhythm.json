@@ -484,6 +484,7 @@
             },
             "maxLag": null,
             "minLag": 0,
+            "biased": false,
             "showConfidenceBounds": true,
             "confidenceLevel": 0.95,
             "bandMethod": "bartlett"
@@ -610,5 +611,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

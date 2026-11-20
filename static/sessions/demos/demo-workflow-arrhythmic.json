@@ -1548,7 +1548,7 @@
       "name": "stat_peak_period_28",
       "data": 348,
       "type": "number",
-      "tableProcessGUId": "078eaea9-a950-45a6-9c5e-832c251b54e6",
+      "tableProcessGUId": "4cc1ed44-f955-433b-ab29-f63d8eb4ba21",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1559,7 +1559,7 @@
       "name": "stat_peak_power_28",
       "data": 349,
       "type": "number",
-      "tableProcessGUId": "078eaea9-a950-45a6-9c5e-832c251b54e6",
+      "tableProcessGUId": "4cc1ed44-f955-433b-ab29-f63d8eb4ba21",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1570,7 +1570,7 @@
       "name": "rhythmicityy_338_28",
       "data": 350,
       "type": "number",
-      "tableProcessGUId": "078eaea9-a950-45a6-9c5e-832c251b54e6",
+      "tableProcessGUId": "4cc1ed44-f955-433b-ab29-f63d8eb4ba21",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1581,7 +1581,7 @@
       "name": "rhythmicityy_339_28",
       "data": 351,
       "type": "number",
-      "tableProcessGUId": "078eaea9-a950-45a6-9c5e-832c251b54e6",
+      "tableProcessGUId": "4cc1ed44-f955-433b-ab29-f63d8eb4ba21",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1689,7 +1689,7 @@
               "processes": []
             },
             "label": "",
-            "colour": "#234154",
+            "colour": null,
             "draw": true,
             "phaseMarkers": []
           },
@@ -1717,7 +1717,7 @@
               "processes": []
             },
             "label": "",
-            "colour": "#BE796B",
+            "colour": null,
             "draw": true,
             "phaseMarkers": []
           }
@@ -2108,5 +2108,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

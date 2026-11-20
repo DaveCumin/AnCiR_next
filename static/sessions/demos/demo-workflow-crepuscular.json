@@ -1063,7 +1063,7 @@
       "name": "R_34",
       "data": 452,
       "type": "number",
-      "tableProcessGUId": "52ab356b-f2aa-4d46-8391-6e7cd2d47679",
+      "tableProcessGUId": "fb08da1a-7dcc-4a8c-bf74-445f4fc85b5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_34",
       "data": 453,
       "type": "number",
-      "tableProcessGUId": "52ab356b-f2aa-4d46-8391-6e7cd2d47679",
+      "tableProcessGUId": "fb08da1a-7dcc-4a8c-bf74-445f4fc85b5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_34",
       "data": 454,
       "type": "number",
-      "tableProcessGUId": "52ab356b-f2aa-4d46-8391-6e7cd2d47679",
+      "tableProcessGUId": "fb08da1a-7dcc-4a8c-bf74-445f4fc85b5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1193,7 +1193,7 @@
               "processes": []
             },
             "label": "",
-            "colour": "#234154",
+            "colour": null,
             "draw": true,
             "phaseMarkers": []
           }
@@ -1531,5 +1531,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

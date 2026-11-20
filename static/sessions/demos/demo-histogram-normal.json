@@ -596,7 +596,7 @@
             "stepSize": null,
             "diffStep": false,
             "cuts": [],
-            "fillColour": "#234154",
+            "fillColour": null,
             "fillOpacity": 0.5,
             "strokeWidth": 1,
             "stroke": "#000000",
@@ -735,5 +735,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

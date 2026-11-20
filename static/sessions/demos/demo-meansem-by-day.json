@@ -463,7 +463,7 @@
               "draw": false,
               "joinGaps": false
             },
-            "errorColour": "#234154",
+            "errorColour": null,
             "errorWidth": 1.5,
             "errorCapWidth": 6,
             "showError": true
@@ -603,5 +603,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }

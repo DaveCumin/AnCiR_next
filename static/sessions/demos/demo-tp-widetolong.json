@@ -504,7 +504,7 @@
       "data": 923,
       "type": "time",
       "timeFormat": null,
-      "tableProcessGUId": "20d04e97-2a16-45f8-8b4b-512b18229eba",
+      "tableProcessGUId": "a40afbd7-86eb-41d5-8e5b-1247021575e1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,7 +515,7 @@
       "name": "category_96",
       "data": 924,
       "type": "category",
-      "tableProcessGUId": "20d04e97-2a16-45f8-8b4b-512b18229eba",
+      "tableProcessGUId": "a40afbd7-86eb-41d5-8e5b-1247021575e1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -526,7 +526,7 @@
       "name": "value_96",
       "data": 925,
       "type": "number",
-      "tableProcessGUId": "20d04e97-2a16-45f8-8b4b-512b18229eba",
+      "tableProcessGUId": "a40afbd7-86eb-41d5-8e5b-1247021575e1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -738,5 +738,5 @@
       "No"
     ]
   },
-  "version": "β.82.67"
+  "version": "β.82.69"
 }
