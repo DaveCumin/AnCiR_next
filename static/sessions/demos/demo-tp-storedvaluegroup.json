@@ -11,7 +11,7 @@
       "name": "group_g1_91",
       "data": 893,
       "type": "number",
-      "tableProcessGUId": "57e5e43f-48c5-453a-8f5c-67f2684b547b",
+      "tableProcessGUId": "dfb272e6-a376-4030-8c22-e73ff470a354",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -209,5 +209,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

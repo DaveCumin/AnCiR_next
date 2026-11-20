@@ -348,7 +348,7 @@
       "data": 0,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "9dd70b2e-062d-43e0-928e-9685997baa21",
+      "tableProcessGUId": "df481547-a59b-41f7-8342-0448aa56ddd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,7 +359,7 @@
       "name": "values_0",
       "data": 1,
       "type": "number",
-      "tableProcessGUId": "9dd70b2e-062d-43e0-928e-9685997baa21",
+      "tableProcessGUId": "df481547-a59b-41f7-8342-0448aa56ddd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -753,5 +753,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

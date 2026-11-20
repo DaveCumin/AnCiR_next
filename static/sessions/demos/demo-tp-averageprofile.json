@@ -277,7 +277,7 @@
       "name": "avgprofx_97",
       "data": 928,
       "type": "number",
-      "tableProcessGUId": "354448e2-3a74-43d1-a80c-e7f7cd8d52ba",
+      "tableProcessGUId": "7997426b-7096-4293-a395-b2fd442d4d05",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -288,7 +288,7 @@
       "name": "avgprof_927_97",
       "data": 929,
       "type": "number",
-      "tableProcessGUId": "354448e2-3a74-43d1-a80c-e7f7cd8d52ba",
+      "tableProcessGUId": "7997426b-7096-4293-a395-b2fd442d4d05",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -489,5 +489,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

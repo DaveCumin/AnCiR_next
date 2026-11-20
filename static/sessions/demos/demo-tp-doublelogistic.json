@@ -224,7 +224,7 @@
       "name": "x",
       "data": 720,
       "type": "number",
-      "tableProcessGUId": "b556653b-50c8-416c-9748-2d820ebe4e20",
+      "tableProcessGUId": "7212ea45-3e5d-4bff-88ef-d5fe4762f550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -246,7 +246,7 @@
       "name": "dlogx_66",
       "data": 722,
       "type": "number",
-      "tableProcessGUId": "c2df7bbb-96ff-44e0-bbc1-1ad4b225e040",
+      "tableProcessGUId": "621981ae-6d5c-4c7e-93d5-0aaab0d35ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
       "name": "perm_pvalue_66",
       "data": 723,
       "type": "number",
-      "tableProcessGUId": "60aea68d-a2c7-4c50-9ab9-c528c04e73f2",
+      "tableProcessGUId": "e7f9faa0-06dd-478b-8971-a9e78574f773",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -268,7 +268,7 @@
       "name": "r2_66",
       "data": 724,
       "type": "number",
-      "tableProcessGUId": "60aea68d-a2c7-4c50-9ab9-c528c04e73f2",
+      "tableProcessGUId": "e7f9faa0-06dd-478b-8971-a9e78574f773",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -279,7 +279,7 @@
       "name": "rmse_66",
       "data": 725,
       "type": "number",
-      "tableProcessGUId": "60aea68d-a2c7-4c50-9ab9-c528c04e73f2",
+      "tableProcessGUId": "e7f9faa0-06dd-478b-8971-a9e78574f773",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "dlogy_721_66",
       "data": 726,
       "type": "number",
-      "tableProcessGUId": "c2df7bbb-96ff-44e0-bbc1-1ad4b225e040",
+      "tableProcessGUId": "621981ae-6d5c-4c7e-93d5-0aaab0d35ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -683,5 +683,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

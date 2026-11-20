@@ -237,7 +237,7 @@
       "name": "sortedy_665_54",
       "data": 667,
       "type": "number",
-      "tableProcessGUId": "52d57cdf-c4b2-4348-b987-4eea83201551",
+      "tableProcessGUId": "42d6bcc4-65cb-4056-909d-ee19ebda2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_666_54",
       "data": 668,
       "type": "number",
-      "tableProcessGUId": "52d57cdf-c4b2-4348-b987-4eea83201551",
+      "tableProcessGUId": "42d6bcc4-65cb-4056-909d-ee19ebda2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -449,5 +449,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

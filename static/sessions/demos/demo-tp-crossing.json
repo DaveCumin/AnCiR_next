@@ -193,7 +193,7 @@
       "name": "breach_60",
       "data": 683,
       "type": "number",
-      "tableProcessGUId": "afe9a975-e241-484a-b984-57c82b738ff7",
+      "tableProcessGUId": "3ecada95-2ede-4bf5-962a-e5e5d40e673a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -204,7 +204,7 @@
       "name": "crossing_60",
       "data": 684,
       "type": "number",
-      "tableProcessGUId": "afe9a975-e241-484a-b984-57c82b738ff7",
+      "tableProcessGUId": "3ecada95-2ede-4bf5-962a-e5e5d40e673a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,7 +215,7 @@
       "name": "count_60",
       "data": 685,
       "type": "number",
-      "tableProcessGUId": "afe9a975-e241-484a-b984-57c82b738ff7",
+      "tableProcessGUId": "3ecada95-2ede-4bf5-962a-e5e5d40e673a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -619,5 +619,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

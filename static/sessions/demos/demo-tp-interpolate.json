@@ -187,7 +187,7 @@
       "name": "interpx_53",
       "data": 663,
       "type": "number",
-      "tableProcessGUId": "86cf44dc-e865-4e9b-8f11-92c3007992ef",
+      "tableProcessGUId": "69707a31-6c6e-4877-97b1-baabd7f18122",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_662_53",
       "data": 664,
       "type": "number",
-      "tableProcessGUId": "86cf44dc-e865-4e9b-8f11-92c3007992ef",
+      "tableProcessGUId": "69707a31-6c6e-4877-97b1-baabd7f18122",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -401,5 +401,5 @@
       "No"
     ]
   },
-  "version": "β.82.69"
+  "version": "β.82.70"
 }

@@ -348,7 +348,7 @@
       "id": "workflow-crepuscular",
       "name": "Workflow: crepuscular (bimodal) activity",
       "family": "Workflows",
-      "description": "Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.",
+      "description": "Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: its dominant peak is at 12 h, with only a small peak at 24 h, there because the two bouts here are 13 h apart rather than exactly 12. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.",
       "summary": "Two activity peaks a day, and why one mean phase misleads.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/demo-workflow-crepuscular.json",
@@ -356,9 +356,10 @@
       "showcases": [
         "periodogram",
         "actogram",
+        "circularphase",
         "RayleighTest"
       ],
-      "keywords": "workflow: crepuscular (bimodal) activity many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. the periodogram shows this directly: power at 12 h as well as 24 h. it also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. look at the distribution before you summarise it with one number. workflows periodogram actogram rayleightest"
+      "keywords": "workflow: crepuscular (bimodal) activity many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. the periodogram shows this directly: its dominant peak is at 12 h, with only a small peak at 24 h, there because the two bouts here are 13 h apart rather than exactly 12. it also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. look at the distribution before you summarise it with one number. workflows periodogram actogram circularphase rayleightest"
     },
     {
       "id": "workflow-masking",
@@ -686,13 +687,13 @@
       "id": "dataset-workflow-crepuscular",
       "name": "Crepuscular (bimodal) activity",
       "family": "Sources",
-      "description": "Two activity peaks a day, and why one mean phase misleads. Data only: 3 columns × 336 rows, no analysis.",
+      "description": "Two activity peaks a day, and why one mean phase misleads. Data only: 2 columns × 336 rows, no analysis.",
       "summary": "Two activity peaks a day, and why one mean phase misleads.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/crepuscular-bimodal-activity.csv",
       "kind": "dataset",
       "showcases": [],
-      "keywords": "crepuscular (bimodal) activity two activity peaks a day, and why one mean phase misleads. data only: 3 columns × 336 rows, no analysis. sources"
+      "keywords": "crepuscular (bimodal) activity two activity peaks a day, and why one mean phase misleads. data only: 2 columns × 336 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-masking",
