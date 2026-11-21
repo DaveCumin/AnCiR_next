@@ -164,7 +164,7 @@ describe.runIf(HAVE_PYTHON)('an exported Python script draws plots with overlays
 		const files = sessionToPythonFiles(session, PY_RUNTIME, {});
 		const { dir, res } = runExport(files, PYTHON, 'session.py');
 		expect(res.error).toBeUndefined();
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		expect(res.stdout).not.toContain('error rendering');
 		const out = join(dir, 'session_output');
 		const pngs = readdirSync(out).filter((f) => f.endsWith('.png'));
@@ -182,7 +182,7 @@ describe.runIf(HAVE_R)('an exported R script of a session with overlays', () => 
 		const files = sessionToRFiles(session, R_RUNTIME, {});
 		const { dir, res } = runExport(files, 'Rscript', 'session.R');
 		expect(res.error).toBeUndefined();
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		expect(existsSync(join(dir, 'session_output', 'columns_after_analyses.csv'))).toBe(true);
 	}, 240_000);
 });

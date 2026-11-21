@@ -12,7 +12,8 @@
 // undo puts back the old port set with the same column ids; redo puts back the new set with
 // its ids. The full click-through (a real <select> change, numbers and wires) is pinned per
 // node in TrendFit.modelUndo, Cosinor.curvesUndo and FitFunction.curves.
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, expect, beforeAll, afterEach } from 'vitest';
+import { trackedTests } from '$test/trackedTests.js';
 import { render, cleanup } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { readFileSync } from 'node:fs';
@@ -42,13 +43,17 @@ beforeAll(async () => {
 	setWorkerFactory(() => new ThrowOnPost());
 	history.init();
 });
-afterEach(() => {
+// A timed-out test keeps running after Vitest moves on, holding importJson's load lock
+// ("Another session is still loading") into the next test: wait for it (trackedTests.js).
+const { it, settled } = trackedTests();
+afterEach(async () => {
+	await settled();
 	cleanup();
 	paramDiffWatcher._disposeForTests();
 	_resetComputeOwners();
 	appState.canvasSelectedNodeId = null;
 	history.clear();
-});
+}, 60000);
 
 async function settle(rounds = 6) {
 	for (let i = 0; i < rounds; i++) {

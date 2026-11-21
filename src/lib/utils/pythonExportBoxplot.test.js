@@ -78,7 +78,7 @@ describe.runIf(existsSync(PYTHON))('exported box plots render (tools/.venv)', ()
 				timeout: 180_000,
 				env: { ...process.env, MPLBACKEND: 'Agg' }
 			});
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			expect(res.stdout).not.toContain('[ancir-plot] error');
 			const pngs = readdirSync(join(dir, 'session_output')).filter((f) => f.endsWith('.png'));
 			for (const plot of g.plots) {

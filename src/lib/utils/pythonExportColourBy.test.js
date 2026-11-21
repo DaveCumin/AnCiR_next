@@ -105,7 +105,7 @@ describe.runIf(existsSync(PYTHON))('a coloured export runs (tools/.venv)', () =>
 				encoding: 'utf8',
 				timeout: 180_000
 			});
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			expect(res.stdout).not.toContain('[ancir-plot] error');
 			const pngs = readdirSync(join(dir, 'session_output')).filter((f) => f.endsWith('.png'));
 			expect(pngs.length).toBe(s.plots.length);

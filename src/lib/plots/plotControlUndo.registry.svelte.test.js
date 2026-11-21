@@ -19,7 +19,7 @@
  * EXCLUSIONS is the list of controls that do not meet this, each with its reason. It only
  * shrinks (the guard below fails on a stale entry as well as on a new failure).
  */
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
@@ -33,6 +33,7 @@ import {
 	hasUnsavedChanges
 } from '$lib/core/unsavedChanges.svelte.js';
 import { loadPlots } from '$test/plotRegistry.js';
+import { trackedTests } from '$test/trackedTests.js';
 import ControlDisplay from '$lib/components/views/ControlDisplay.svelte';
 
 const PLOTS = await loadPlots();
@@ -71,8 +72,15 @@ function resetSession() {
 	history.clear();
 	clearProcessNodeGraphCache();
 }
+// A timed-out audit keeps mounting panels after Vitest moves on, which empties the next type's
+// panel: wait for it (trackedTests.js), so a slow type only fails itself. The same ceiling as
+// the longest test below.
+const { it, settled } = trackedTests();
 beforeEach(resetSession);
-afterEach(() => cleanup());
+afterEach(async () => {
+	await settled();
+	cleanup();
+}, 240000);
 
 const N = 48;
 function mkCol(name, values) {

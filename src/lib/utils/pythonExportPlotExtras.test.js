@@ -89,7 +89,7 @@ describe.runIf(existsSync(PYTHON))('exported extras render (tools/.venv)', () =>
 				timeout: 240_000,
 				env: { ...process.env, MPLBACKEND: 'Agg' }
 			});
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			expect(res.stdout).not.toContain('[ancir-plot] error');
 			expect(res.stdout).not.toContain('[ancir-plotdata] error');
 			const pngs = readdirSync(join(dir, 'session_output')).filter((f) => f.endsWith('.png'));

@@ -217,10 +217,14 @@
 		if (loadInFlight) {
 			throw new Error('Another session is still loading. Wait for it to finish, then try again.');
 		}
+		// Everything after taking the lock is inside the try, so the finally releases the lock and
+		// history's load flag however the load ends: a snapshot that threw used to leave both set,
+		// refusing every later load as "still loading" with undo and redo off for good.
 		loadInFlight = true;
 		history.beginLoad();
-		const snap = snapshotSession();
+		let snap = null;
 		try {
+			snap = snapshotSession();
 			const report = await buildSession(jsonData, onProgress);
 			await settle();
 			// A note never opens on top of a plot (UI-7): notes that cover one get a lane above the
@@ -237,6 +241,8 @@
 			void autosaveSessionReplaced();
 			reportLoad(jsonData, report);
 		} catch (err) {
+			// No snapshot: the load failed before it changed anything, so there is nothing to undo.
+			if (!snap) throw err;
 			restoreSession(snap);
 			// The build may have bumped the id counters past the incoming session's ids; re-sync to
 			// what is actually open. Cached results were cleared for the incoming session, and the

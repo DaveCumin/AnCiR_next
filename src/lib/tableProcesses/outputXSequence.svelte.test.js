@@ -6,7 +6,8 @@
 // same path as an output x COLUMN: a time x comes out as a time column of epoch ms, the fitted
 // curve is evaluated on it, residuals stay at the input x. Switching back to Column gives the
 // column behaviour again, and every control gesture is one undo step.
-import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { trackedTests } from '$test/trackedTests.js';
 import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { readFileSync } from 'node:fs';
@@ -53,7 +54,11 @@ beforeEach(() => {
 	appState.view = 'canvas';
 	appState.canvasSelectedNodeId = null;
 });
-afterEach(() => {
+// A timed-out test keeps running after Vitest moves on, holding importJson's load lock
+// ("Another session is still loading") into the next test: wait for it (trackedTests.js).
+const { it, settled } = trackedTests();
+afterEach(async () => {
+	await settled();
 	cleanup();
 	_resetComputeOwners();
 	history.clear();

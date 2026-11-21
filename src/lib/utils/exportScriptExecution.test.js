@@ -98,7 +98,7 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts execute (tools/.venv)', () 
 			}
 			const { dir, res } = runExport(files, PYTHON, entry);
 			expect(res.error).toBeUndefined();
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8');
 			results[label] = out;
 			// Key numbers match what the app computed (stored in the session).
@@ -190,7 +190,7 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts write the plot-data CSVs (a
 			const main = files.find((f) => f.name === entry);
 			main.text += '\nprint("[zone]", DISPLAY_TIMEZONE)\n';
 			const { dir, res } = runExport(files, PYTHON, entry);
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			expect(res.stdout).toContain(`[zone] ${ZONE}`);
 			expect(res.stdout).toContain('[ancir-plotdata] wrote');
 			expect(cli).not.toBeNull();
@@ -221,7 +221,7 @@ describe.runIf(HAVE_R)('exported R scripts execute (Rscript)', () => {
 			}
 			const { dir, res } = runExport(files, 'Rscript', entry);
 			expect(res.error).toBeUndefined();
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8');
 			results[label] = out;
 			// The R port matches the JS fit to well past 1e-6 on this fixture.
@@ -295,7 +295,7 @@ describe.runIf(HAVE_R)('R split+CSV export under interactive invocation modes', 
 			encoding: 'utf8',
 			timeout: 180_000
 		});
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		// Output lands NEXT TO the script, not in the unrelated working directory.
 		expect(existsSync(join(elsewhere, 'analysis_output'))).toBe(false);
 		assertKeyNumbers(join(dir, 'analysis_output', 'columns_after_analyses.csv'));
@@ -315,7 +315,7 @@ describe.runIf(HAVE_R)('R split+CSV export under interactive invocation modes', 
 			encoding: 'utf8',
 			timeout: 180_000
 		});
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		// ANCIR_DIR wins for companions AND output.
 		assertKeyNumbers(join(dir, 'analysis_output', 'columns_after_analyses.csv'));
 	}, 240_000);
@@ -337,7 +337,7 @@ describe.runIf(HAVE_R)('R split+CSV export under interactive invocation modes', 
 			timeout: 180_000
 		});
 		expect(res.stderr).not.toContain('Truncating console input');
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		expect(res.stderr).toContain("[ancir] Could not determine this script's location");
 		// With no detectable script name the output falls back to session_output/.
 		assertKeyNumbers(join(dir, 'session_output', 'columns_after_analyses.csv'));
@@ -359,7 +359,7 @@ describe.runIf(HAVE_PYTHON)('Python split+CSV export from a different working di
 			encoding: 'utf8',
 			timeout: 180_000
 		});
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		const out = readFileSync(join(dir, 'analysis_output', 'columns_after_tables.csv'), 'utf8');
 		expect(scalarFromCsv(out, AMPLITUDE_HEADER)).toBeCloseTo(SESSION_AMPLITUDE, 9);
 		expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 9);
@@ -411,7 +411,7 @@ describe('exported scripts write the names the app shows into node results', () 
 				PYTHON,
 				'session.py'
 			);
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, 'session_output', 'columns_after_tables.csv'), 'utf8');
 			expect(cellFromCsv(out, header)).toBe('Residuals: y');
 		},
@@ -423,7 +423,7 @@ describe('exported scripts write the names the app shows into node results', () 
 		() => {
 			const { session, header } = labelledSession();
 			const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME), 'Rscript', 'session.R');
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, 'session_output', 'columns_after_analyses.csv'), 'utf8');
 			expect(cellFromCsv(out, header)).toBe('Residuals: y');
 		},
@@ -455,7 +455,7 @@ describe('exported scripts write Wide To Long categories as the app shows them',
 				PYTHON,
 				'session.py'
 			);
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, 'session_output', 'columns_after_tables.csv'), 'utf8');
 			expect(cellFromCsv(out, header)).toBe('Shown name');
 		},
@@ -467,7 +467,7 @@ describe('exported scripts write Wide To Long categories as the app shows them',
 		() => {
 			const { session, header } = wideToLongSession();
 			const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME), 'Rscript', 'session.R');
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = readFileSync(join(dir, 'session_output', 'columns_after_analyses.csv'), 'utf8');
 			expect(cellFromCsv(out, header)).toBe('Shown name');
 		},
@@ -526,7 +526,7 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 					PYTHON,
 					entry
 				);
-				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 				check(readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8'));
 				printsNodeMessages(res.stderr);
 			}
@@ -542,7 +542,7 @@ describe('exported scripts resolve per-column time zones (parity-zoned-time)', (
 				[{ split: true, dataAsCsv: true, version: '72.22-test' }, 'analysis.R', 'analysis_output']
 			]) {
 				const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME, opts), 'Rscript', entry);
-				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 				check(readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8'));
 				printsNodeMessages(res.stderr);
 			}
@@ -608,7 +608,7 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts fold the actogram at its ch
 				PYTHON,
 				entry
 			);
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			const out = join(dir, outDir);
 			const csv = readdirSync(out).find((f) => /^plot_70_.*_data\.csv$/.test(f));
 			expect(csv, readdirSync(out).join()).toBeTruthy();
@@ -645,7 +645,7 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts fold the actogram at its ch
 			PYTHON,
 			'session.py'
 		);
-		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 		const out = join(dir, 'session_output');
 		const csv = readdirSync(out).find((f) => /^plot_70_.*_data\.csv$/.test(f));
 		const got = rowsOf(readFileSync(join(out, csv), 'utf8'));
@@ -716,7 +716,7 @@ describe('exported scripts read numbers saved as text (parity-numeric-text)', ()
 					PYTHON,
 					entry
 				);
-				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 				check(
 					readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8'),
 					res.stderr + res.stdout
@@ -740,7 +740,7 @@ describe('exported scripts read numbers saved as text (parity-numeric-text)', ()
 			`R (${label}): sums, counts and the warning match the app`,
 			() => {
 				const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME, opts), 'Rscript', entry);
-				expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+				expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 				check(
 					readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8'),
 					res.stderr + res.stdout

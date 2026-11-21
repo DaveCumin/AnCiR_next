@@ -89,7 +89,7 @@ describe.runIf(existsSync(PYTHON))('styled exports run (tools/.venv)', () => {
 				encoding: 'utf8',
 				timeout: 180_000
 			});
-			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			expect(res.status, `${res.error?.message ?? ''}\nstderr:\n${res.stderr}`).toBe(0);
 			expect(res.stdout).not.toContain('[ancir-plot] error');
 			const out = join(dir, 'session_output');
 			const pngs = readdirSync(out).filter((f) => f.endsWith('.png'));
